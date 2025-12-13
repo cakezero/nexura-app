@@ -11,7 +11,7 @@ const router = Router();
 
 router
 	.get("/profile", authenticateUser, fetchUser)
-	.get("/referrer-info", authenticateUser, referralInfo)
+	.get("/referral-info", authenticateUser, referralInfo)
 	.post("/sign-up", signUp)
 	.post("/sign-in", signIn)
 	.patch("/update", authenticateUser, updateUsername);

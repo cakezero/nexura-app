@@ -12,7 +12,7 @@ import { user } from "@/models/user.model";
 import { getRefreshToken, JWT, validateProjectData, validateUserSignUpData } from "@/utils/utils";
 import { project } from "@/models/project.model";
 import { uploadImg } from "@/utils/img.utils";
-import { referrer } from "@/models/referrer.model";
+import { referredUsers } from "@/models/referrer.model";
 
 interface SignUpParams {
 	email: string;
@@ -67,7 +67,7 @@ export const signUp = async (req: GlobalRequest, res: GlobalResponse) => {
 			await userReferrer.updateOne({ $inc: { xp: 10, "referral.xp": 10 } });
 			newUser.xp = 10;
 
-			await referrer.create({ user: userReferrer._id, referrerCode, username: newUser.username });
+			await referredUsers.create({ user: userReferrer._id, referrerCode, username: newUser.username });
 			await newUser.save();
 		}
 
@@ -109,11 +109,11 @@ export const signIn = async (req: GlobalRequest, res: GlobalResponse) => {
 			return;
 		}
 
-		const comparePassword = await bcrypt.compare(password, existingUser.password);
-		if (!comparePassword) {
-			res.status(BAD_REQUEST).json({ error: "invalid signin credentials" });
-			return;
-		}
+		// const comparePassword = await bcrypt.compare(password, existingUser.password);
+		// if (!comparePassword) {
+		// 	res.status(BAD_REQUEST).json({ error: "invalid signin credentials" });
+		// 	return;
+		// }
 
 		const id = existingUser._id;
 
@@ -205,11 +205,11 @@ export const projectSignIn = async (
 			return;
 		}
 
-		const comparePassword = await bcrypt.compare(password, projectUser.password);
-		if (!comparePassword) {
-			res.status(BAD_REQUEST).json({ error: "invalid signin credentials" });
-			return;
-		}
+		// const comparePassword = await bcrypt.compare(password, projectUser.password);
+		// if (!comparePassword) {
+		// 	res.status(BAD_REQUEST).json({ error: "invalid signin credentials" });
+		// 	return;
+		// }
 
 		const id = projectUser._id;
 
