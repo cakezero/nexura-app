@@ -3,7 +3,7 @@ import { useParams } from "wouter";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import AnimatedBackground from "@/components/AnimatedBackground";
-import { getStoredAccessToken, apiRequestV2 } from "../lib/queryClient";
+import { getStoredAccessToken, apiRequestV2, apiRequest } from "@/lib/queryClient";
 
 type Quest = {
   text: string;
@@ -33,10 +33,9 @@ export default function QuestEnvironment() {
 
   useEffect(() => {
     (async () => {
-      console.log({ questId });
-
       const { miniQuests: quests, totalXp, title: t, questNumber: quest_no, sub_title: st } = await apiRequestV2("GET", `/api/quest/fetch-mini-quests?id=${questId}`);
 
+      console.log("ggg")
       setMiniQuests(quests);
       setTotalXP(totalXp);
       setQuestNumber(quest_no);
@@ -67,7 +66,10 @@ export default function QuestEnvironment() {
       setClaimedQuests([...claimedQuests, miniQuestId]);
     }
 
-    await apiRequestV2("POST", `/api/quest/claim-mini-quest`, { id: miniQuestId, questId });
+    const res = await apiRequest("POST", `/api/quest/claim-mini-quest`, { id: miniQuestId, questId });
+    if (!res.ok) return;
+
+    window.location.reload();
   };
 
   const visitQuest = (quest: Quest) => {

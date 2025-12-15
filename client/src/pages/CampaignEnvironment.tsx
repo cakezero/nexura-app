@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, Play } from "lucide-react";
 import AnimatedBackground from "@/components/AnimatedBackground";
-import { apiRequestV2 } from "../lib/queryClient";
+import { apiRequestV2, apiRequest } from "@/lib/queryClient";
 
 type Quest = {
   quest: string;
@@ -73,7 +73,10 @@ export default function CampaignEnvironment() {
     //   return prev.map((t, i) => i === index ? { ...t, status: newStatus } : t);
     // });
 
-    await apiRequestV2("POST", `/api/quest/perform-campaign-quest?id=${questId}`);
+    const res = await apiRequest("POST", `/api/quest/perform-campaign-quest`, { id: questId, campaignId });
+    if (!res.ok) return;
+
+    window.location.reload();
   };
 
   const markQuestAsVisted = (quest: Quest) => {
@@ -102,7 +105,7 @@ export default function CampaignEnvironment() {
               <p className="text-sm opacity-70 uppercase">Total XP</p>
               <div className="bg-purple-600/30 border border-purple-500/40 px-4 py-2 rounded-full flex items-center gap-2">
                 <span className="font-bold">
-                  {quests.reduce((a, q) => a + (q.done ? q.reward : 0), 0)} XP
+                  {reward.xp} XP
                 </span>
               </div>
             </div>

@@ -63,6 +63,8 @@ export default function Quests() {
       const res = await apiRequestV2("GET", "/api/quests");
       return res;
     },
+    refetchInterval: 5000,     // send request every 5s
+    refetchIntervalInBackground: true,
   });
 
   const now = new Date();

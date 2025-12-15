@@ -4,7 +4,6 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { ExternalLink, Clock, Users } from "lucide-react";
 import { useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import { apiRequestV2 } from "@/lib/queryClient";
 
@@ -40,28 +39,24 @@ const TASKS_CARD: Campaign = {
 
 export default function Campaigns() {
   const [, setLocation] = useLocation();
-  const [visitedTasks, setVisitedTasks] = useState<string[]>([]);
-  const [claimedTasks, setClaimedTasks] = useState<string[]>([]);
-  // const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  // const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  const { data: campaigns, isLoading, isError, error } = useQuery({
-    queryKey: ["/api/campaigns"],
-    queryFn: async () => {
-      const res = await apiRequestV2("GET", "/api/campaigns");
+  useEffect(() => {
+    (async () => {
+      const res = await apiRequestV2("GET", `/api/campaigns`);
 
-      return res.campaigns;
-    },
-    enabled: true,
-    networkMode: "always",
-  });
+      setCampaigns(res.campaigns);
+      setIsLoading(false);
+    })();
+  }, []);
 
-  // useEffect(() => {
-  //   (async () => {
-  //     const res = await apiRequestV2("GET", "/api/campaigns");
-  //     setCampaigns(res.campaigns);
-  //   })();
-  // }, []);
+  setInterval(async () => {
+    const res = await apiRequestV2("GET", `/api/campaigns`);
+
+    setCampaigns(res.campaigns);
+    setIsLoading(false);
+  }, 300000);
 
   const now = new Date();
 
