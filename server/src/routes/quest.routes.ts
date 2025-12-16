@@ -18,7 +18,7 @@ const router = Router();
 
 router
 	.post("/claim-ecosystem-quest", authenticateUser, claimEcosystemQuest)
-	.post("/eco-timer", authenticateUser, setTimer)
+	.post("/set-timer", authenticateUser, setTimer)
 	// .post("/create-quest", authenticateUser, createQuest)
 	.post("/create-mini-quest", authenticateUser, createMiniQuest)
 	.get("/fetch-mini-quests", authenticateUser2, fetchMiniQuests)

@@ -17,7 +17,7 @@ const router = Router();
 router
 	.get("/", home)
 	.use("/admin", adminRoutes)
-	.get("/ecosystem-quests", fetchEcosystemDapps)
+	.get("/ecosystem-quests", authenticateUser2, fetchEcosystemDapps)
 	.get("/quests", authenticateUser2, fetchQuests)
 	.get("/campaigns", authenticateUser2, fetchCampaigns)
 	.use("/campaign", campaignRoutes)
