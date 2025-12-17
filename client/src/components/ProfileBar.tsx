@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth";
 import { useWallet } from "@/hooks/use-wallet";
 import SignUpPopup from "@/components/SignUpPopup";
+import { getIntuitionNetworkParams } from "@/lib/utils";
 
 interface ProfileBarProps {
   userId?: string;
@@ -55,6 +56,9 @@ export default function ProfileBar({ userId = "user-123" }: ProfileBarProps) {
   const [location, setLocation] = useLocation();
   const { toast } = useToast();
 
+  const isMainnet = import.meta.env.network === "mainnet";
+  const chainId = isMainnet ? "0x483" : "0x350b";
+
   const handleLogout = () => {
     signOut();
     try { localStorage.removeItem("nexura:wallet"); } catch {}
@@ -63,6 +67,13 @@ export default function ProfileBar({ userId = "user-123" }: ProfileBarProps) {
     toast({ title: "Signed out", description: "Your session was cleared." });
   };
 
+  const switchNetwork = async () => {
+    await window.ethereum.request({
+      method: "wallet_switchEthereumChain",
+      params: [{ chainId }]
+    });
+  }
+
   const handleAddAndSwitchNetwork = async () => {
     if (!window.ethereum) {
       toast({ title: "Wallet not found", description: "Please install MetaMask or another Web3 wallet", variant: "destructive" });
@@ -70,30 +81,27 @@ export default function ProfileBar({ userId = "user-123" }: ProfileBarProps) {
     }
 
     try {
-      const chainId = "0x350b";
-      // todo: add utils to add network
-      await window.ethereum.request({
-        method: "wallet_addEthereumChain",
-        params: [{
-          chainId,
-          chainName: "Intuition Testnet",
-          nativeCurrency: { name: "Trust", symbol: "TRUST", decimals: 18 },
-          rpcUrls: ["https://testnet.rpc.intuition.systems"],
-          blockExplorerUrls: ["https://testnet.explorer.intuition.systems"]
-        }]
-      });
+      await switchNetwork();
 
-      await window.ethereum.request({
-        method: "wallet_switchEthereumChain",
-        params: [{ chainId }]
-      });
-
-      toast({ title: "Network added!", description: "Intuition Testnet has been added to your wallet" });
+      toast({ title: "Network switched!", description: "Network switched!" });
     } catch (error: any) {
-      console.error('Failed to add network:', error);
+      // console.error('Failed to add network:', error);
+      console.error('failed to switch', error.code);
       if (error.code === 4001) {
-        toast({ title: "Request cancelled", description: "You cancelled the network addition", variant: "destructive" });
-      } else {
+        toast({ title: "Request cancelled", description: "You cancelled the request", variant: "destructive" });
+      } else if (error.code === 4902) {
+        const params = getIntuitionNetworkParams(!isMainnet, chainId);
+
+        await window.ethereum.request({
+          method: "wallet_addEthereumChain",
+          params
+        });
+
+        await switchNetwork();
+
+        toast({ title: "Network added!", description: `Intuition ${isMainnet ? "Mainnet" : "Testnet"} has been added to your wallet` });
+      }
+      else {
         toast({ title: "Failed to add and switch network", description: error.message || "Please try again", variant: "destructive" });
       }
     }
@@ -106,7 +114,7 @@ export default function ProfileBar({ userId = "user-123" }: ProfileBarProps) {
       title="Add Intuition Testnet to wallet"
     >
       <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-      <span className="text-sm font-medium text-white">Intuition Testnet</span>
+      <span className="text-sm font-medium text-white">Intuition {isMainnet ? "Testnet" : "Mainnet"}</span>
     </button>
   );
 
