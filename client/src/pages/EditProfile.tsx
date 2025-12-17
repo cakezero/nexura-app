@@ -82,6 +82,7 @@ export default function EditProfile() {
     // Show toast and navigate
     toast({ title: "Profile updated", description: "Your profile has been successfully updated." });
     setLocation("/profile");
+    window.location.reload();
   } catch (e) {
     console.error('Profile update error:', e);
     toast({ title: "Update failed", description: String(e), variant: "destructive" });
