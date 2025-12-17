@@ -32,7 +32,7 @@ export default function CampaignEnvironment() {
   const [sub_title, setSubTitle] = useState("");
   const [project_name, setProjectName] = useState("");
   const [campaignNumber, setCampaignNumber] = useState("000");
-  const [completed, setCompleted] = useState<{questsCompleted: boolean, campaignCompleted: boolean}>({ questsCompleted: false, campaignCompleted: false });
+  const [completed, setCompleted] = useState<{questsCompleted: boolean, campaignCompleted: boolean} | null>({ questsCompleted: false, campaignCompleted: false });
   const [reward, setReward] = useState<{trustTokens: number, xp: number}>({ trustTokens: 0, xp: 0 });
 
   const { campaignId } = useParams();
@@ -165,15 +165,19 @@ export default function CampaignEnvironment() {
 
               <Button
                 onClick={() => claimCampaignReward()}
-                disabled={!completed.questsCompleted || completed.campaignCompleted}
+                disabled={!completed?.questsCompleted || completed?.campaignCompleted}
                 className={`w-full font-semibold rounded-xl py-3 mt-6 
-                  ${completed
+                  ${completed?.questsCompleted || !completed?.campaignCompleted
                     ? "bg-purple-600 hover:bg-purple-700 text-white"
                     : "bg-gray-600 cursor-not-allowed text-gray-300"
                   }`
                 }
               >
-                {!completed.questsCompleted ? "Claim Rewards" : "Campaign Completed"}
+                {completed?.questsCompleted
+                  ? completed?.campaignCompleted
+                    ? "Completed"
+                    : "Claim Rewards"
+                  : "Complete Quests"}
               </Button>
             </div>
           </div>
