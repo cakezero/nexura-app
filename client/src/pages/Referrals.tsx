@@ -6,7 +6,7 @@ import { Copy, Users, Star, Gift } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequestV2, queryClient } from "@/lib/queryClient";
 import { emitSessionChange } from "@/lib/session";
 import { useAuth } from "@/lib/auth";
 import AuthGuard from "@/components/AuthGuard";
@@ -19,14 +19,15 @@ export default function Referrals() {
 
   const { user } = useAuth();
   const userId = user ? (user.id ?? user._id ?? user.userId ?? null) : null;
+  const appUrl = (typeof window !== "undefined" && (window as any).__APP_URL__) || (typeof window !== "undefined" ? window.location.origin : "");
 
-  const { data: referralStats, isLoading, error } = useQuery<ReferralStats>({
+  const { data: referralStats, isLoading, error } = useQuery({
     queryKey: userId ? ['/api/referrals/stats', userId] : ['referrals', 'none'],
     enabled: Boolean(userId),
     queryFn: async () => {
-      if (!userId) return null as unknown as ReferralStats;
-      const res = await apiRequest("GET", `/api/referrals/stats/${userId}`);
-      return res.json();
+      if (!userId) return null;
+      const res = await apiRequestV2("GET", `/api/user/referral-info`);
+      return res;
     },
     retry: 1,
   });
@@ -37,44 +38,33 @@ export default function Referrals() {
     enabled: Boolean(userId),
     queryFn: async () => {
       if (!userId) return { events: [] };
-      const res = await apiRequest('GET', `/api/referrals/list/${userId}`);
-      return res.json();
+      const res = await apiRequestV2('GET', `/api/referrals/list/${userId}`);
+      return res;
     },
     retry: 1,
   });
 
+  const totalReferrals = referralStats?.usersReferred.length ?? 0;
+
   // Note: Reward claiming functionality will be added later
 
   const handleCopyLink = () => {
-    const link = referralStats?.referralLink ? (() => {
-      try {
-        const rl = referralStats.referralLink;
-        if (typeof rl === 'string' && rl.startsWith('/')) {
-          // Prefer an injected canonical app URL, fall back to current origin
-          const appUrl = (typeof window !== 'undefined' && (window as any).__APP_URL__) || (typeof window !== 'undefined' ? window.location.origin : '');
-          return `${appUrl}${rl}`;
-        }
-        return rl;
-      } catch (e) { return referralStats.referralLink; }
-    })() : null;
-    if (link) {
-      navigator.clipboard.writeText(link);
-      setCopied(true);
-      toast({
-        title: "Link copied!",
-        description: "Share this link with friends",
-      });
-      setTimeout(() => setCopied(false), 2000);
-    }
+    navigator.clipboard.writeText(`${appUrl}/${referralStats.referralCode}`);
+    setCopied(true);
+    toast({
+      title: "Link copied!",
+      description: "Share this link with friends",
+    });
+    setTimeout(() => setCopied(false), 2000);
   };
 
   // Claim functionality will be added later
 
   // Calculate progress to next milestone
   const nextMilestone = !referralStats ? 3 : 
-    referralStats.totalReferrals >= 10 ? Math.ceil((referralStats.totalReferrals + 1) / 10) * 10 : 
-    (referralStats.totalReferrals >= 3 ? 10 : 3);
-  const progress = !referralStats ? 0 : (referralStats.totalReferrals / nextMilestone) * 100;
+    totalReferrals >= 10 ? Math.ceil((totalReferrals + 1) / 10) * 10 : 
+    (totalReferrals >= 3 ? 10 : 3);
+  const progress = !referralStats ? 0 : (totalReferrals / nextMilestone) * 100;
 
   if (!userId) {
     return (
@@ -115,14 +105,7 @@ export default function Referrals() {
 
   // Normalize referral link for display (server may return relative paths)
   const displayReferralLink = (() => {
-    try {
-      const rl = referralStats?.referralLink;
-      if (!rl) return "";
-      if (typeof rl === 'string' && rl.startsWith('/')) {
-        return ((typeof window !== 'undefined' && (window as any).__APP_URL__) || window.location.origin) + rl;
-      }
-      return rl;
-    } catch (e) { return referralStats?.referralLink ?? ""; }
+    return `${appUrl}/${referralStats.referralCode}`;
   })();
 
   return (
@@ -147,7 +130,7 @@ export default function Referrals() {
             <CardContent>
               <div className="flex items-center space-x-2">
                 <Users className="w-5 h-5 text-blue-400" />
-                <div className="text-2xl font-bold text-white">{referralStats.totalReferrals}</div>
+                <div className="text-2xl font-bold text-white">{totalReferrals}</div>
               </div>
               <p className="text-xs text-white/50 mt-1">Friends joined</p>
             </CardContent>
@@ -197,7 +180,7 @@ export default function Referrals() {
             <CardContent>
               <div className="flex items-center space-x-2">
                 <Star className="w-5 h-5 text-yellow-400" />
-                <div className="text-2xl font-bold text-white">{referralStats.totalReferrals}</div>
+                <div className="text-2xl font-bold text-white">{totalReferrals}</div>
               </div>
               <p className="text-xs text-white/50 mt-1">Friends joined</p>
             </CardContent>
@@ -258,7 +241,7 @@ export default function Referrals() {
             <div className="space-y-2">
               <div className="flex justify-between text-sm text-white">
                 <span className="text-white/60">Progress to {nextMilestone} referrals</span>
-                <span>{referralStats.totalReferrals} / {nextMilestone}</span>
+                <span>{totalReferrals} / {nextMilestone}</span>
               </div>
               <Progress value={progress} className="h-2" />
             </div>
@@ -274,7 +257,7 @@ export default function Referrals() {
                   </div>
                 </div>
                 <p className="text-sm text-white/60">
-                  {referralStats.totalReferrals >= 3 ? "✅ Completed" : "First milestone"}
+                  {totalReferrals >= 3 ? "✅ Completed" : "First milestone"}
                 </p>
               </div>
 
@@ -287,7 +270,7 @@ export default function Referrals() {
                   </div>
                 </div>
                 <p className="text-sm text-white/60">
-                  {referralStats.totalReferrals >= 10 ? "✅ Completed" : "Bonus tier"}
+                  {totalReferrals >= 10 ? "✅ Completed" : "Bonus tier"}
                 </p>
               </div>
             </div>
