@@ -148,7 +148,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     (async () => {
       try {
         // call server to clear httpOnly cookie/session
-        await apiRequest("POST", "/auth/logout");
+        await apiRequest("POST", "/api/user/logout");
       } catch (e) {
         // ignore server logout errors, proceed to clear client state
         console.warn("server logout failed", e);
