@@ -36,8 +36,9 @@ const LEVELS = [
 ];
 
 function getLevelByXp(currentXp: number) {
-  for (let i = LEVELS.length - 1; i >= 0; i--) {
-    if (currentXp >= LEVELS[i].xp) return { ...LEVELS[i], index: i + 1 };
+  for (let i = 0; i < LEVELS.length; i++) {
+    const nextLevel = LEVELS[i + 1];
+    if (currentXp <= LEVELS[i].xp && (!nextLevel || currentXp < nextLevel.xp)) return { ...LEVELS[i], index: i + 1 };
   }
   return { ...LEVELS[0], index: 1 };
 }
