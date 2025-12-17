@@ -39,6 +39,7 @@ export const fetchCampaigns = async (
 ) => {
 	try {
 		const campaigns = await campaign.find();
+		// todo: add a campaign joined data to the response
 
 		res.status(OK).json({ message: "campaigns fetched!", campaigns });
 	} catch (error) {
@@ -303,13 +304,6 @@ export const claimCampaignRewards = async (
 			res.status(FORBIDDEN).json({
 				error: "all quests must be completed before rewards can be claimed",
 			});
-			return;
-		}
-
-		if (!completedCampaign) {
-			res
-				.status(FORBIDDEN)
-				.json({ error: "kindly complete the campaign to claim rewards" });
 			return;
 		}
 
