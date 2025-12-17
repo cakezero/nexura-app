@@ -63,37 +63,45 @@ export default function ProfileBar({ userId = "user-123" }: ProfileBarProps) {
     toast({ title: "Signed out", description: "Your session was cleared." });
   };
 
-  const handleAddNetwork = async () => {
+  const handleAddAndSwitchNetwork = async () => {
     if (!window.ethereum) {
       toast({ title: "Wallet not found", description: "Please install MetaMask or another Web3 wallet", variant: "destructive" });
       return;
     }
 
     try {
+      const chainId = "0x350b";
+      // todo: add utils to add network
       await window.ethereum.request({
-        method: 'wallet_addEthereumChain',
+        method: "wallet_addEthereumChain",
         params: [{
-          chainId: '0x350b',
-          chainName: 'Intuition Testnet',
-          nativeCurrency: { name: 'Ethereum', symbol: 'ETH', decimals: 18 },
-          rpcUrls: ['https://testnet.rpc.intuition.systems'],
-          blockExplorerUrls: ['https://testnet.explorer.intuition.systems']
+          chainId,
+          chainName: "Intuition Testnet",
+          nativeCurrency: { name: "Trust", symbol: "TRUST", decimals: 18 },
+          rpcUrls: ["https://testnet.rpc.intuition.systems"],
+          blockExplorerUrls: ["https://testnet.explorer.intuition.systems"]
         }]
       });
+
+      await window.ethereum.request({
+        method: "wallet_switchEthereumChain",
+        params: [{ chainId }]
+      });
+
       toast({ title: "Network added!", description: "Intuition Testnet has been added to your wallet" });
     } catch (error: any) {
       console.error('Failed to add network:', error);
       if (error.code === 4001) {
         toast({ title: "Request cancelled", description: "You cancelled the network addition", variant: "destructive" });
       } else {
-        toast({ title: "Failed to add network", description: error.message || "Please try again", variant: "destructive" });
+        toast({ title: "Failed to add and switch network", description: error.message || "Please try again", variant: "destructive" });
       }
     }
   };
 
   const NetworkBadge = () => (
     <button
-      onClick={handleAddNetwork}
+      onClick={handleAddAndSwitchNetwork}
       className="flex items-center gap-2 glass glass-hover px-4 py-2 rounded-full transition-all cursor-pointer"
       title="Add Intuition Testnet to wallet"
     >
@@ -136,9 +144,9 @@ export default function ProfileBar({ userId = "user-123" }: ProfileBarProps) {
                   <div className="absolute bottom-0 left-0 w-3 h-3 bg-green-500 border-2 border-background rounded-full z-0"></div>
                 </Avatar>
               </Button>
-              <div className="absolute top-1 right-1 bg-background/90 border border-border rounded px-1.5 py-0.5 text-xs font-bold text-foreground z-10" data-testid="text-level">
+              {/* <div className="absolute top-1 right-1 bg-background/90 border border-border rounded px-1.5 py-0.5 text-xs font-bold text-foreground z-10" data-testid="text-level">
                 Lv{levelNumber} - {levelName}
-              </div>
+              </div> */}
             </div>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-64 p-2 glass rounded-3xl border-white/10" align="end" data-testid="profile-dropdown-menu">
@@ -152,12 +160,12 @@ export default function ProfileBar({ userId = "user-123" }: ProfileBarProps) {
                 <span>My Profile</span>
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem asChild>
+            {/* <DropdownMenuItem asChild>
               <Link href="/achievements" className="w-full cursor-pointer p-3 text-base">
                 <Trophy className="mr-3 h-5 w-5" />
                 <span>Achievements</span>
               </Link>
-            </DropdownMenuItem>
+            </DropdownMenuItem> */}
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout} className="cursor-pointer p-3 text-base">
               <LogOut className="mr-3 h-5 w-5" />
