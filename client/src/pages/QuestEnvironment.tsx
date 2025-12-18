@@ -36,7 +36,7 @@ export default function QuestEnvironment() {
     return JSON.parse(localStorage.getItem('nexura:quest:claimed') || '[]');
   });
   const [questCompleted, setQuestCompleted] = useState<boolean>(() => {
-    return Boolean(JSON.parse(localStorage.getItem('nexura:quest:completed') || ""));
+    try { return Boolean(JSON.parse(localStorage.getItem('nexura:quest:completed') || "")?.questCompleted); } catch (error) { return false }
   });
 
   const { questId } = useParams();
@@ -76,7 +76,7 @@ export default function QuestEnvironment() {
     localStorage.setItem('nexura:quest:claimed', JSON.stringify(claimedQuests))
   }, [claimedQuests]);
   useEffect(() => {
-    localStorage.setItem('nexura:quest:completed', JSON.stringify(questCompleted))
+    localStorage.setItem('nexura:quest:completed', JSON.stringify({ questCompleted }))
   }, [questCompleted]);
 
   const miniQuestsCompleted = miniQuests.filter((m) => m.done === true).length === miniQuests.length;

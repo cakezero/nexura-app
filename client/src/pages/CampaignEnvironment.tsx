@@ -33,7 +33,7 @@ export default function CampaignEnvironment() {
     return JSON.parse(localStorage.getItem('nexura:campaign:claimed') || '[]');
   });
   const [campaignCompleted, setCampaignCompleted] = useState<boolean>(() => {
-    return Boolean(JSON.parse(localStorage.getItem('nexura:campaign:completed') || ""));
+    try { return Boolean(JSON.parse(localStorage.getItem('nexura:campaign:completed') || "")?.campaignCompleted) } catch (error) { return false }
   });
   const [description, setDescription] = useState("");
   const [title, setTitle] = useState("");
@@ -83,7 +83,7 @@ export default function CampaignEnvironment() {
     localStorage.setItem('nexura:campaign:claimed', JSON.stringify(claimedQuests))
   }, [claimedQuests]);
   useEffect(() => {
-    localStorage.setItem('nexura:campaign:completed', JSON.stringify(campaignCompleted))
+    localStorage.setItem('nexura:campaign:completed', JSON.stringify({ campaignCompleted }))
   }, [campaignCompleted]);
 
   const claimQuest = async (questId: string) => {
@@ -109,6 +109,7 @@ export default function CampaignEnvironment() {
 
       // window.location.reload();
     } catch (error: any) {
+      console.error(error);
       toast.error({ title: "Error", description: error.message, variant: "destructive" })
     }
   };
