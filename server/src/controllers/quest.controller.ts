@@ -190,7 +190,7 @@ export const fetchCampaignQuests = async (
 			campaignQuests.push(mergedCampaignQuest);
 		}
 
-		if (currentCampaign.noOfQuests === campaignQuestsCompleted.length && !completedCampaign) {
+		if (currentCampaign.noOfQuests === campaignQuestsCompleted.length && !completedCampaign?.questsCompleted) {
 
 			await performIntuitionOnchainAction({
 				action: "allow-claim",
@@ -198,7 +198,8 @@ export const fetchCampaignQuests = async (
 				contractAddress: currentCampaign.contractAddress!,
 			});
 
-			await campaignCompleted.create({ questsCompleted: true, campaign: id, user: userId });
+			completedCampaign!.questsCompleted = true;
+			await completedCampaign!.save();
 		}
 
 		const campaignNumber = padNumber(currentCampaign.campaignNumber);
