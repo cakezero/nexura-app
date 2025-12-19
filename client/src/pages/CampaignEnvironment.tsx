@@ -7,6 +7,7 @@ import AnimatedBackground from "@/components/AnimatedBackground";
 import { apiRequestV2, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth";
+import { claimCampaignOnchainReward } from "@/lib/performOnchainAction";
 
 type Quest = {
   quest: string;
@@ -46,6 +47,7 @@ export default function CampaignEnvironment() {
   const [campaignNumber, setCampaignNumber] = useState("000");
   const [completed, setCompleted] = useState<{questsCompleted: boolean, campaignCompleted: boolean} | null>({ questsCompleted: false, campaignCompleted: false });
   const [reward, setReward] = useState<{trustTokens: number, xp: number}>({ trustTokens: 0, xp: 0 });
+  const [campaignAddress, setCampaignAddress] = useState<string>("");
 
   const { campaignId } = useParams();
   const { toast } = useToast();
@@ -55,6 +57,7 @@ export default function CampaignEnvironment() {
       const {
         campaignQuests,
         campaignCompleted,
+        address,
         description: desc,
         title: t,
         sub_title: st,
@@ -64,6 +67,7 @@ export default function CampaignEnvironment() {
       } = await apiRequestV2("GET", `/api/campaign/quests?id=${campaignId}`);
 
       setQuests(campaignQuests);
+      setCampaignAddress(address);
       setCompleted(campaignCompleted);
       setDescription(desc);
       setTitle(t);
@@ -129,6 +133,7 @@ export default function CampaignEnvironment() {
 
   const claimCampaignReward = async () => {
     try {
+      await claimCampaignOnchainReward({ campaignAddress, userId });
       await apiRequestV2("POST", `/api/campaign/complete-campaign?id=${campaignId}`);
 
       setCampaignCompleted(true);

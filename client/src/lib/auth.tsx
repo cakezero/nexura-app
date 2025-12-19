@@ -54,7 +54,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Validate that user is an object before setting
         const userData = json?.user ? { ...json.user, ...(json.profile || {}) } : null;
         
-        console.log('[AuthProvider] Received data from /api/me:', {
+        console.log('[AuthProvider] Received data from /api/user/profile:', {
           hasUser: !!json?.user,
           hasProfile: !!json?.profile,
           userDataType: typeof userData,
@@ -62,7 +62,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           isNull: userData === null,
           keys: userData ? Object.keys(userData) : []
         });
-        
+
         if (userData && typeof userData === 'object' && !Array.isArray(userData) && userData !== null) {
           console.log('[AuthProvider] Setting valid user data');
           console.log("dilly");

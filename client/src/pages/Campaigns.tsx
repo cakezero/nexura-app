@@ -62,13 +62,15 @@ export default function Campaigns() {
   const goToCampaign = async (campaign: Campaign, active: boolean) => {
     if (!active) return;
 
-    if (!campaign.joined) {
-      setLocation(`/campaign/${campaign._id}`);
+    const campaignId = campaign._id;
+
+    if (campaign.joined) {
+      setLocation(`/campaign/${campaignId}`);
       return;
     }
 
-    await apiRequestV2("POST", `/api/campaign/join-campaign?id=${campaign._id}`);
-    setLocation(`/campaign/${campaign._id}`);
+    await apiRequestV2("POST", `/api/campaign/join-campaign?id=${campaignId}`);
+    setLocation(`/campaign/${campaignId}`);
   }
 
   const now = new Date();
