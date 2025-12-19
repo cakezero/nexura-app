@@ -1,5 +1,5 @@
 import { defineChain } from "viem";
-import { environment } from "./env.utils";
+import { network } from "./env.utils";
 
 const intuitionMainnet = defineChain({
   id: 1155,
@@ -37,6 +37,6 @@ const intuitionTestnet = defineChain({
 	},
 });
 
-const chain = environment === "production" ? intuitionMainnet : intuitionTestnet;
+const chain = network === "mainnet" ? intuitionMainnet : intuitionTestnet;
 
 export default chain;
