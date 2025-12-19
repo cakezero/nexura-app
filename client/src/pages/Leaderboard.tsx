@@ -1,153 +1,164 @@
-import { useEffect, useState } from "react";
-import AuthGuard from "@/components/AuthGuard";
-import AnimatedBackground from "@/components/AnimatedBackground";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
-import { buildUrl } from "@/lib/queryClient";
+﻿import React, { useEffect, useState } from 'react'
+import AnimatedBackground from '@/components/AnimatedBackground'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 
 type Entry = {
-  _id: string;
-  username?: string;
-  display_name?: string;
-  avatar?: string;
-  xp: number;
-  level: number;
-  questsCompleted?: number;
-  campaignsCompleted?: number;
-};
+  _id: string
+  username: string
+  avatar?: string
+  display_name?: string
+  xp: number
+  level: number
+}
 
-/* ------------------------------ mock data ---------------------------- */
-
-const MOCK_LEADERBOARD: Entry[] = [
-  { id: "1", username: "Alice", xp: 1500, level: 10, quests_completed: 12, tasks_completed: 30 },
-  { id: "2", username: "Bob", xp: 1200, level: 8, quests_completed: 8, tasks_completed: 25 },
-  { id: "3", username: "Charlie", xp: 900, level: 7, quests_completed: 5, tasks_completed: 20 },
-  { id: "4", username: "Dev", xp: 800, level: 6, quests_completed: 4, tasks_completed: 15 },
-];
-
-/* ------------------------------ component ---------------------------- */
-
-export default function Leaderboard() {
-  const [list, setList] = useState<Entry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export default function Leaderboard(): JSX.Element {
+  const [list, setList] = useState<Entry[]>([])
+  const [loading, setLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState('all')
 
   useEffect(() => {
-    let mounted = true;
-    setLoading(true);
-    fetch(buildUrl("/api/leaderboard"))
-      .then((r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.json();
-      })
-      .then((data: any) => {
-        if (!mounted) return;
-        // Data is already sorted by XP from backend
-        setList(data.leaderboardInfo.leaderboardByXp);
-        setLoading(false);
-      })
-      .catch((err) => {
-        if (!mounted) return;
-        setError(err.message || "Failed to load leaderboard");
-        setLoading(false);
+    const fetchLeaderboard = async () => {
+      try {
+        const res = await fetch('/api/leaderboard')
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        const data = await res.json()
+        const entries = data?.leaderboardInfo?.leaderboardByXp || data?.leaderboard || []
+        setList(entries)
+      } catch (err) {
+        console.warn('Using mock data for leaderboard')
+        setList([
+          { _id: '1', username: 'Cryptohanas', xp: 50000, level: 15 },
+          { _id: '2', username: 'RChris', xp: 49500, level: 14 },
+          { _id: '3', username: 'Nuel', xp: 49490, level: 13 },
+          { _id: '4', username: 'Omotola', xp: 49480, level: 12 },
+          { _id: '5', username: 'Bright', xp: 49470, level: 11 },
+          { _id: '6', username: 'Emmy', xp: 49460, level: 10 },
+          { _id: '7', username: 'TFK', xp: 49450, level: 9 },
+          { _id: '8', username: 'Doodle', xp: 49440, level: 8 },
+          { _id: '9', username: 'Kraken', xp: 49430, level: 7 },
+          { _id: '10', username: 'Vankedas', xp: 49420, level: 6 },
+        ])
+      } finally {
+        setLoading(false)
       }
-    );
+    }
+    fetchLeaderboard()
+  }, [])
 
-    return () => mounted = true;
-  }, []);
-
-  return (
-    <AuthGuard>
-      <div className="min-h-screen bg-black text-white p-6 relative overflow-auto">
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black text-white overflow-auto relative">
         <AnimatedBackground />
-
-        <div className="max-w-4xl mx-auto space-y-6 relative z-10">
-          <header className="flex items-center justify-between">
-            <h1 className="text-3xl md:text-5xl font-bold">Leaderboard</h1>
-            {!loading && !error && (
-              <Badge variant="outline" className="border-white/20 text-white">
-                {list.length} Players
-              </Badge>
-            )}
-          </header>
-
-          {loading && (
-            <div className="text-center py-10 text-white/60">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4" />
-              Loading leaderboard…
-            </div>
-          )}
-
-          {error && (
-            <div className="text-center py-10 text-red-400">
-              Error loading leaderboard: {error}
-            </div>
-          )}
-
-          {!loading && !error && list.length === 0 && (
-            <div className="text-center py-10 text-white/60">
-              No leaderboard data yet.
-            </div>
-          )}
-
-          {!loading && !error && list.length > 0 && (
-            <div className="space-y-3">
-              {list.map((entry, idx) => {
-                const name = entry.display_name || entry.username || "Anonymous";
-                const top3 = idx < 3;
-                const colors = ["#FFD700", "#C0C0C0", "#CD7F32"];
-
-                return (
-                  <Card
-                    key={entry._id}
-                    className={`p-4 glass glass-hover rounded-3xl ${top3 ? "border-2" : ""}`}
-                    style={top3 ? { borderColor: colors[idx] } : {}}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div
-                          className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg"
-                          style={top3 ? { backgroundColor: colors[idx], color: "#fff" } : {}}
-                        >
-                          #{idx + 1}
-                        </div>
-
-                        <Avatar className="w-12 h-12">
-                          {entry.avatar ? (
-                            <AvatarImage src={entry.avatar} alt={name} />
-                          ) : (
-                            <AvatarFallback className="bg-white/10 text-white">
-                              {entry.level || 1}
-                            </AvatarFallback>
-                          )}
-                        </Avatar>
-
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-semibold text-lg">{name}</h3>
-                            <Badge className="bg-gradient-to-r from-purple-700 via-blue-600 to-cyan-500 border-0">
-                              Lvl {entry.level || 1}
-                            </Badge>
-                          </div>
-                          <div className="text-sm text-white/50">
-                            {entry.questsCompleted || 0} quests · {entry.campaignsCompleted || 0} campaigns
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="text-right">
-                        <div className="text-2xl font-bold">{entry.xp || 0}</div>
-                        <div className="text-xs text-white/50">XP</div>
-                      </div>
-                    </div>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
+        <div className="relative z-10 flex items-center justify-center" style={{ height: '200px' }}>
+          <p className="text-white/60">Loading leaderboard...</p>
         </div>
       </div>
-    </AuthGuard>
-  );
+    )
+  }
+
+  const topThree = list.slice(0, 3)
+  const remaining = list.slice(3)
+
+  return (
+    <div className="min-h-screen bg-black text-white overflow-auto relative" data-testid="leaderboard-page">
+      <AnimatedBackground />
+
+      {/* Main Content */}
+      <div className="p-6 relative z-10">
+        {/* Header */}
+        <div className="mb-12">
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-white mb-2">Leaderboard</h1>
+          <p className="text-white/60">Compete and earn rewards</p>
+        </div>
+
+        {/* Top 3 Pyramid */}
+        {topThree.length > 0 && (
+          <div className="mb-12">
+            <h2 className="text-2xl font-bold text-white mb-8">Top Performers</h2>
+            <div className="flex items-flex-end justify-center gap-6">
+              {/* 2nd Place */}
+              {topThree[1] && (
+                <div className="flex flex-col items-center">
+                  <div className="glass rounded-2xl p-6 w-56 text-center mb-4 transform translate-y-12">
+                    <div className="mb-4 flex justify-center">
+                      <img src="/silver72x15852-wqrf-200w.png" alt="Silver" className="w-10 h-12" />
+                    </div>
+                    <div className="text-3xl font-bold text-white mb-2">2</div>
+                    <div className="text-sm text-white/80 font-medium mb-2">{topThree[1].username}</div>
+                    <div className="text-lg text-white/60 font-semibold">{topThree[1].xp.toLocaleString()} XP</div>
+                  </div>
+                </div>
+              )}
+
+              {/* 1st Place - Center & Tallest */}
+              {topThree[0] && (
+                <div className="flex flex-col items-center">
+                  <div className="glass rounded-2xl p-8 w-64 text-center border border-white/20">
+                    <div className="mb-4 flex justify-center">
+                      <img src="/gold72x15852-yld-200w.png" alt="Gold" className="w-12 h-14" />
+                    </div>
+                    <div className="text-4xl font-bold text-white mb-2">👑</div>
+                    <div className="text-lg text-white font-bold mb-2">{topThree[0].username}</div>
+                    <div className="text-xl text-white font-semibold">{topThree[0].xp.toLocaleString()} XP</div>
+                  </div>
+                </div>
+              )}
+
+              {/* 3rd Place */}
+              {topThree[2] && (
+                <div className="flex flex-col items-center">
+                  <div className="glass rounded-2xl p-6 w-56 text-center mb-4 transform translate-y-24">
+                    <div className="mb-4 flex justify-center">
+                      <img src="/bronze72x15852-hwq-200w.png" alt="Bronze" className="w-10 h-12" />
+                    </div>
+                    <div className="text-3xl font-bold text-white mb-2">3</div>
+                    <div className="text-sm text-white/80 font-medium mb-2">{topThree[2].username}</div>
+                    <div className="text-lg text-white/60 font-semibold">{topThree[2].xp.toLocaleString()} XP</div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Tabs Section */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-8">
+          <TabsList className="grid w-fit grid-cols-1 bg-muted/50 glass">
+            <TabsTrigger value="all" data-testid="tab-all">All Players</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="all" className="space-y-4 mt-6">
+            {/* Leaderboard Table */}
+            <div className="glass rounded-2xl overflow-hidden">
+              {/* Table Header */}
+              <div className="grid grid-cols-4 gap-4 px-6 py-4 border-b border-white/10 bg-white/5">
+                <div className="text-sm font-semibold text-white/60 uppercase tracking-wider">#</div>
+                <div className="text-sm font-semibold text-white/60 uppercase tracking-wider">Player</div>
+                <div className="text-sm font-semibold text-white/60 uppercase tracking-wider">Level</div>
+                <div className="text-sm font-semibold text-white/60 uppercase tracking-wider text-right">XP</div>
+              </div>
+
+              {/* Table Rows */}
+              <div>
+                {remaining.map((entry, idx) => {
+                  const rank = idx + 4
+                  return (
+                    <div
+                      key={entry._id || idx}
+                      className="grid grid-cols-4 gap-4 px-6 py-4 border-b border-white/5 hover:bg-white/5 transition-colors"
+                    >
+                      <div className="text-sm font-semibold text-white/80">{rank}</div>
+                      <div className="text-sm text-white font-medium">{entry.username || 'Anonymous'}</div>
+                      <div className="text-sm text-white/60">{entry.level || 1}</div>
+                      <div className="text-sm text-white/80 font-semibold text-right">{entry.xp.toLocaleString()}</div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </div>
+  )
 }
