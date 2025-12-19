@@ -98,7 +98,9 @@ export function useWallet() {
             console.warn("⚠️ Backend auth failed, wallet connected locally only");
           }
         } else {
-          const checkedData = await apiRequestV2("POST", "/api/user/sign-in", { address });
+          const referrer = localStorage.getItem("ref");
+
+          const checkedData = await apiRequestV2("POST", "/api/user/sign-in", { address, referrer });
           // console.log("hehe", checkedData);
           if (checkedData.user) {
             localStorage.setItem("user_profile", JSON.stringify(checkedData.user));

@@ -157,15 +157,15 @@ export const signIn = async (req: GlobalRequest, res: GlobalResponse) => {
 
 			const newUser = new user({ address, username: slicedAddress, referral, dateJoined });
 
+			const id = newUser._id;
+
 			if (userReferrer) {
-				await userReferrer.updateOne({ $inc: { xp: 10, "referral.xp": 10 } });
-				newUser.xp = 10;
-				await newUser.save();
+				const signedUp = formatDate(new Date(), "MMM dd, y");
+
+				await referredUsers.create({ user: userReferrer._id, newUser: id, signedUp, username: slicedAddress });
 			}
 
 			await newUser.save();
-
-			const id = newUser._id;
 
 			const accessToken = JWT.sign({ id, status: "user" });
 			const refreshToken = getRefreshToken(id);

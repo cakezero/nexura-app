@@ -1,6 +1,7 @@
 import logger from "@/config/logger";
 import { campaign, campaignCompleted } from "@/models/campaign.model";
 import { project } from "@/models/project.model";
+import { referredUsers } from "@/models/referrer.model";
 import { user } from "@/models/user.model";
 import { performIntuitionOnchainAction } from "@/utils/account";
 import { uploadImg } from "@/utils/img.utils";
@@ -324,6 +325,17 @@ export const claimCampaignRewards = async (
 		if (completedCampaign.campaignCompleted) {
 			res.status(FORBIDDEN).json({ error: "campaign reward has been claimed" });
 			return;
+		}
+
+		if (userToReward.status !== "Active") {
+			userToReward.status = "Active";
+
+			const userReferred = await referredUsers.findOne({ newUser: userToReward._id });
+			if (userReferred && userReferred.status !== "Active") {
+				userReferred.status = "Active";
+	
+				await userReferred.save();
+			}
 		}
 
 		const xp = campaignToClaimRewards.reward?.xp as number;

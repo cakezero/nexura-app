@@ -19,6 +19,7 @@ import EditProfile from "@/pages/EditProfile";
 import Achievements from "@/pages/Achievements";
 import Leaderboard from "@/pages/Leaderboard";
 import Levels from "@/pages/Levels";
+import UserReferred from "@/pages/UserReferred";
 import Projects from "@/pages/Projects";
 import ProjectCreate from "@/pages/ProjectCreate";
 import ProjectDashboard from "@/pages/project/ProjectDashboard";
@@ -63,6 +64,8 @@ function Router() {
       <Route path="/studio/register" component={ProjectRegistration} />
       <Route path="/project/:projectId/*" component={ProjectDashboard} />
       <Route path="/project/:projectId/:rest*" component={ProjectDashboard} />
+      {/* Referral */}
+      <Route path="/ref/:referrerCode" component={UserReferred} />
       {/* Fallback to 404 */}
       <Route component={NotFound} />
     </Switch>

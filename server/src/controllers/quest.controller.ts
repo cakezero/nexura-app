@@ -8,6 +8,7 @@ import {
 	questCompleted,
 } from "@/models/questsCompleted.models";
 import { user } from "@/models/user.model";
+import { referredUsers } from "@/models/referrer.model";
 import { performIntuitionOnchainAction } from "@/utils/account";
 import {
 	INTERNAL_SERVER_ERROR,
@@ -430,6 +431,17 @@ export const claimQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 				user: questUser._id,
 				category,
 			});
+		}
+
+		if (questUser.status !== "Active") {
+			questUser.status = "Active";
+
+			const userReferred = await referredUsers.findOne({ newUser: questUser._id });
+			if (userReferred && userReferred.status !== "Active") {
+				userReferred.status = "Active";
+	
+				await userReferred.save();
+			}
 		}
 
 		await questUser.save();

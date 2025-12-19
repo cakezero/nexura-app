@@ -5,6 +5,10 @@ const referredUsersSchema = new Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "user",
   },
+  newUser: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "user",
+  },
   status: {
     type: String,
     default: "Inactive",
