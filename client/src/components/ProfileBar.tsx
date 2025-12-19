@@ -16,6 +16,7 @@ import { useAuth } from "@/lib/auth";
 import { useWallet } from "@/hooks/use-wallet";
 import SignUpPopup from "@/components/SignUpPopup";
 import { getIntuitionNetworkParams } from "@/lib/utils";
+import { network } from "@/lib/constants";
 
 interface ProfileBarProps {
   userId?: string;
@@ -57,7 +58,7 @@ export default function ProfileBar({ userId = "user-123" }: ProfileBarProps) {
   const [location, setLocation] = useLocation();
   const { toast } = useToast();
 
-  const isMainnet = import.meta.env.network === "mainnet";
+  const isMainnet = network === "mainnet";
   const chainId = isMainnet ? "0x483" : "0x350b";
 
   const handleLogout = () => {

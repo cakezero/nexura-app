@@ -1,4 +1,5 @@
 import { defineChain } from "viem";
+import { network } from "./constants";
 
 const intuitionMainnet = defineChain({
   id: 1155,
@@ -36,6 +37,6 @@ const intuitionTestnet = defineChain({
   },
 });
 
-const chain = import.meta.env.network === "mainnet" ? intuitionMainnet : intuitionTestnet;
+const chain = network === "mainnet" ? intuitionMainnet : intuitionTestnet;
 
 export default chain;
