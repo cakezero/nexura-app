@@ -27,7 +27,7 @@ export default function QuestEnvironment() {
   const [totalXP, setTotalXP] = useState(0);
   const { user } = useAuth();
 
-  const userId = user._id || "";
+  const userId = user?._id || "";
 
   const [questNumber, setQuestNumber] = useState<string>("000");
   const [sub_title, setSubTitle] = useState<string>("");
@@ -65,12 +65,6 @@ export default function QuestEnvironment() {
       setQuestNumber(quest_no);
       setTitle(t);
       setSubTitle(st);
-
-      if (questCompleted) {
-        for (const key of ['nexura:quest:visited', 'nexura:quest:claimed', 'nexura:quest:completed']) {
-          localStorage.removeItem(key);
-        }
-      }
     })();
   }, []);
 

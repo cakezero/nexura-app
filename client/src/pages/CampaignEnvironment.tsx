@@ -28,7 +28,7 @@ const campaignQuestsInitial: Quest[] = [
 
 export default function CampaignEnvironment() {
   const { user } = useAuth();
-  const userId = user._id ?? "";
+  const userId = user?._id || "";
 
   const [quests, setQuests] = useState<Quest[]>(campaignQuestsInitial);
   const [visitedQuests, setVisitedQuests] = useState<string[]>(() => {
@@ -75,12 +75,6 @@ export default function CampaignEnvironment() {
       setSubTitle(st);
       setProjectName(p_name);
       setCampaignNumber(campaignNo);
-
-      if (campaignCompleted) {
-        for (const key of ['nexura:campaign:visited', 'nexura:campaign:claimed', 'nexura:campaign:completed']) {
-          localStorage.removeItem(key);
-        }
-      }
     })();
   }, []);
 
@@ -124,7 +118,10 @@ export default function CampaignEnvironment() {
 
       setClaimedQuests([...claimedQuests, questId]);
 
-      // window.location.reload();
+      if (claimedQuests.length === quests.length) { 
+        window.location.reload();
+      }
+
     } catch (error: any) {
       console.error(error);
       toast.error({ title: "Error", description: error.message, variant: "destructive" })
@@ -235,10 +232,12 @@ export default function CampaignEnvironment() {
         <div className="space-y-4 sm:space-y-6">
           {quests.map((quest, index) => {
             const visited = visitedQuests.includes(quest._id);
+            const claimed = quest.done || claimedQuests.includes(quest._id);
 
             let buttonText = "Start Quest";
+
             if (visited) buttonText = `Claim`;
-            if (quest.done || claimedQuests.includes(quest._id)) buttonText = "Completed";
+            if (claimed) buttonText = "Completed";
 
             return (
               <div
@@ -247,16 +246,16 @@ export default function CampaignEnvironment() {
               >
                 <div className="flex items-center gap-3 w-full sm:w-2/3">
                   <div className="w-6 h-6 sm:w-6 sm:h-6 rounded-full flex items-center justify-center bg-white/10 text-white">
-                    {quest.done ? <CheckCircle2 className="w-4 h-4 text-green-400" /> : <Play className="w-4 h-4" />}
+                    {claimed ? <CheckCircle2 className="w-4 h-4 text-green-400" /> : <Play className="w-4 h-4" />}
                   </div>
                   <span className="text-sm sm:text-base font-medium">{quest.quest}</span>
                 </div>
 
                 <button
-                  disabled={quest.done || claimedQuests.includes(quest._id)}
+                  disabled={claimed}
                   onClick={() => !visited ? markQuestAsVisted(quest) : claimQuest(quest._id)}
                   className={`w-full sm:w-auto px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-sm sm:text-base font-semibold ${
-                    quest.done || claimedQuests.includes(quest._id) ? "bg-gray-600 cursor-not-allowed" : "bg-purple-700 hover:bg-purple-800"
+                    claimed ? "bg-gray-600 cursor-not-allowed" : "bg-purple-700 hover:bg-purple-800"
                   }`}
                 >
                   {buttonText}

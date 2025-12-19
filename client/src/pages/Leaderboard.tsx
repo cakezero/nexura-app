@@ -4,7 +4,6 @@ import AnimatedBackground from "@/components/AnimatedBackground";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import AnimatedBackground from "@/components/AnimatedBackground";
 import { buildUrl } from "@/lib/queryClient";
 
 type Entry = {
@@ -46,16 +45,16 @@ export default function Leaderboard() {
         if (!mounted) return;
         // Data is already sorted by XP from backend
         setList(data.leaderboardInfo.leaderboardByXp);
+        setLoading(false);
       })
       .catch((err) => {
         if (!mounted) return;
         setError(err.message || "Failed to load leaderboard");
-      } finally {
         setLoading(false);
       }
-    }, 500);
+    );
 
-    return () => clearTimeout(timer);
+    return () => mounted = true;
   }, []);
 
   return (

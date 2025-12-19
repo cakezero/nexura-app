@@ -6,6 +6,7 @@ import { ExternalLink, Clock, Users } from "lucide-react";
 import { useLocation } from "wouter";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import { apiRequestV2 } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface Campaign {
   _id: string;
@@ -42,6 +43,9 @@ export default function Campaigns() {
   const [, setLocation] = useLocation();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(false);
+
+  const { toast } = useToast();
 
   useEffect(() => {
     (async () => {
@@ -60,17 +64,24 @@ export default function Campaigns() {
   }, 300000);
 
   const goToCampaign = async (campaign: Campaign, active: boolean) => {
-    if (!active) return;
+    try {
+      if (!active) return;
 
-    const campaignId = campaign._id;
+      const campaignId = campaign._id;
+      setLoading(true);
 
-    if (campaign.joined) {
+      if (campaign.joined) {
+        setLocation(`/campaign/${campaignId}`);
+        return;
+      }
+
+      await apiRequestV2("POST", `/api/campaign/join-campaign?id=${campaignId}`);
       setLocation(`/campaign/${campaignId}`);
-      return;
+    } catch (error: any) {
+      console.error(error);
+      setLoading(false);
+      toast.error({ title: "Error", description: error.message, variant: "destructive" });
     }
-
-    await apiRequestV2("POST", `/api/campaign/join-campaign?id=${campaignId}`);
-    setLocation(`/campaign/${campaignId}`);
   }
 
   const now = new Date();
@@ -198,20 +209,24 @@ export default function Campaigns() {
 
           {/* Action Button */}
           <Button
-              className={`w-full mt-2 sm:mt-3 py-2.5 sm:py-3 text-sm sm:text-base font-medium rounded-xl ${isActive
+              className={`w-full mt-2 sm:mt-3 py-2.5 sm:py-3 text-sm sm:text-base font-medium rounded-xl ${!loading || isActive
                 ? "bg-[#1f6feb] hover:bg-[#388bfd] text-white"
                 : "bg-gray-600 cursor-not-allowed text-gray-300"
               }`}
             onClick={
               (e) => { e.stopPropagation(); goToCampaign(campaign, isActive) }
             }
-            disabled={!isActive}
+            disabled={loading || !isActive}
           >
             {isActive ? (
-              <>
-                <ExternalLink className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                {"Join Campaign"}
-              </>
+              loading ? (
+                <>Joining...</>
+              ) : (
+                <>
+                  <ExternalLink className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                  {"Join Campaign"}
+                </>
+              )
             ) : (
               <>
                 <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" /> Coming Soon
