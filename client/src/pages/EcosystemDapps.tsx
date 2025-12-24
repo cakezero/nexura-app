@@ -6,11 +6,9 @@ import { ExternalLink, Target, Star } from "lucide-react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
-import { emitSessionChange } from "@/lib/session";
 import AnimatedBackground from "@/components/AnimatedBackground";
-import { buildUrl } from "@/lib/queryClient";
 import { motion } from "framer-motion";
-import { apiRequest, apiRequestV2, getStoredAccessToken } from "../lib/queryClient";
+import { apiRequestV2, getStoredAccessToken } from "../lib/queryClient";
 
 interface Dapp {
   _id: string;
@@ -147,20 +145,11 @@ export default function EcosystemDapps() {
     <div className="min-h-screen bg-black text-white overflow-auto p-4 sm:p-6 relative" data-testid="ecosystem-dapps-page">
       <AnimatedBackground />
       <div className="max-w-7xl mx-auto space-y-8 relative z-10">
-<<<<<<< HEAD
         {/* Header */}
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">Ecosystem Dapps</h1>
           <p className="text-muted-foreground">
             Explore popular dapps in the ecosystem and complete one-time quests to earn rewards
-=======
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent">
-            Ecosystem Dapps
-          </h1>
-          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            Explore the diverse range of applications built on our ecosystem.
->>>>>>> origin/backend-dev
           </p>
         </div>
 
@@ -220,70 +209,39 @@ export default function EcosystemDapps() {
                     <span className="text-muted-foreground">Timer:</span>
                     <span className="font-bold text-primary">1 Minute</span>
                   </div>
-<<<<<<< HEAD
                   
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-muted-foreground">Reward:</span>
-                    <span className="text-xs font-bold text-primary">{dapp.questReward}</span>
+                    <span className="text-xs font-bold text-primary">{dapp.reward}</span>
                   </div>
-                </div>
                 
-                <div className="flex flex-col sm:flex-row gap-2 mt-auto">
-                  <a
-                    href={dapp.websiteUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => { e.stopPropagation(); markVisited(dapp.id); }}
-                    className="flex-1 inline-flex items-center justify-center rounded-md border border-white/10 px-3 py-2 text-sm text-white hover:opacity-90"
-                    data-testid={`explore-${dapp.id}`}
-                  >
-                    <ExternalLink className="w-4 h-4 mr-2" />
-                    Explore
-                  </a>
-
-                  <Button
-                    size="sm"
-                    className="w-full sm:w-40"
-                    variant={claimedDapps.includes(dapp.id) ? 'outline' : 'quest'}
-                    disabled={!visitedDapps.includes(dapp.id) || claimedDapps.includes(dapp.id)}
-                    onClick={(e) => { e.stopPropagation(); handleClaim(dapp); }}
-                    data-testid={`claim-dapp-${dapp.id}`}
-                  >
-                    {claimedDapps.includes(dapp.id) ? 'Claimed' : `Claim ${dapp.questReward}`}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-=======
-
-                  <div className="flex gap-2">
-                    <Button
-                      asChild
-                      className="flex-1"
-                      variant="outline"
-                      onClick={() => markVisited(dapp)}
+                  <div className="flex flex-col sm:flex-row gap-2 mt-auto">
+                    <a
+                      href={dapp.websiteUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => { e.stopPropagation(); markVisited(dapp); }}
+                      className="flex-1 inline-flex items-center justify-center rounded-md border border-white/10 px-3 py-2 text-sm text-white hover:opacity-90"
+                      data-testid={`explore-${dapp._id}`}
                     >
-                      <a href={dapp.websiteUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2">
-                        Launch App <ExternalLink className="w-4 h-4" />
-                      </a>
-                    </Button>
+                      <ExternalLink className="w-4 h-4 mr-2" />
+                      Explore
+                    </a>
 
                     <Button
-                      className="flex-1"
-                      variant={claimedDapps.includes(dapp._id) || dapp.done ? 'secondary' : 'default'}
-                      disabled={!visitedDapps.includes(dapp._id) || claimedDapps.includes(dapp._id) || dapp.done}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleClaim(dapp);
-                      }}
+                      size="sm"
+                      className="w-full sm:w-40"
+                      variant={claimedDapps.includes(dapp._id) ? 'outline' : 'quest'}
+                      disabled={!visitedDapps.includes(dapp._id) || claimedDapps.includes(dapp._id)}
+                      onClick={(e) => { e.stopPropagation(); handleClaim(dapp); }}
+                      data-testid={`claim-dapp-${dapp._id}`}
                     >
-                      {claimedDapps.includes(dapp._id) || dapp.done ? 'Claimed' : 'Claim XP'}
+                      {claimedDapps.includes(dapp._id) ? 'Claimed' : `Claim ${dapp.reward}`}
                     </Button>
                   </div>
                 </CardContent>
               </Card>
             </motion.div>
->>>>>>> origin/backend-dev
           ))}
         </div>
 
