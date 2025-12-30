@@ -35,7 +35,7 @@ export default function CampaignEnvironment() {
   const { campaignId } = useParams();
   const { toast } = useToast();
 
-  const [quests, setQuests] = useState<Quest[]>(campaignQuestsInitial);
+  const [quests, setQuests] = useState<Quest[]>([]);
   const [visitedQuests, setVisitedQuests] = useState<string[]>(() => {
     const stored = JSON.parse(localStorage.getItem("nexura:campaign:visited") || "{}");
     return stored[userId] || [];
@@ -44,14 +44,7 @@ export default function CampaignEnvironment() {
     const stored = JSON.parse(localStorage.getItem("nexura:campaign:claimed") || "{}");
     return stored[userId] || [];
   });
-  const [campaignCompleted, setCampaignCompleted] = useState<boolean>(() => {
-    const stored = JSON.parse(localStorage.getItem("nexura:campaign:completed") || "{}");
-    return stored[userId] || false;
-  });
-  const [discordJoined, setDiscordJoined] = useState<boolean>(() => {
-    const stored = JSON.parse(localStorage.getItem("nexura:campaign:discord-joined") || "{}");
-    return stored[userId] || false;
-  });
+  const [campaignCompleted, setCampaignCompleted] = useState<boolean>();
 
   const [description, setDescription] = useState("");
   const [title, setTitle] = useState("");
@@ -69,6 +62,7 @@ export default function CampaignEnvironment() {
       const res = await apiRequestV2("GET", `/api/campaign/quests?id=${campaignId}`);
 
       setQuests(res.campaignQuests || []);
+      setCampaignCompleted(res.campaignCompleted?.campaignCompleted || false);
       setCampaignAddress(res.address || "");
       setDescription(res.description || "");
       setTitle(res.title || "");
@@ -179,7 +173,6 @@ export default function CampaignEnvironment() {
 
   const completedQuestsCount = quests.filter((q) => q.done || claimedQuests.includes(q._id)).length;
   const progressPercentage = Math.round((completedQuestsCount / quests.length) * 100);
-  const allQuestsDone = completedQuestsCount === quests.length;
 
   return (
     <div className="min-h-screen bg-[#0a0615] text-white relative p-4 sm:p-6">
@@ -228,12 +221,12 @@ export default function CampaignEnvironment() {
 
               <Button
                 onClick={claimCampaignReward}
-                disabled={!allQuestsDone || campaignCompleted}
-                className={`w-full font-semibold rounded-xl py-3 mt-6 ${allQuestsDone && !campaignCompleted ? "bg-purple-600 hover:bg-purple-700 text-white" : "bg-gray-600 cursor-not-allowed text-gray-300"}`}
+                disabled={!questsCompleted || campaignCompleted}
+                className={`w-full font-semibold rounded-xl py-3 mt-6 ${!campaignCompleted ? "bg-purple-600 hover:bg-purple-700 text-white" : "bg-gray-600 cursor-not-allowed text-gray-300"}`}
               >
                 {campaignCompleted
                   ? "Completed"
-                    : allQuestsDone
+                    : questsCompleted
                       ? "Claim Rewards"
                       : "Complete Quests"
                 }
@@ -244,7 +237,7 @@ export default function CampaignEnvironment() {
 
         {/* Quest List */}
         <div className="space-y-4 sm:space-y-6">
-          {quests.map((quest) => {
+          {quests.length > 0 ? quests.map((quest) => {
             const visited = visitedQuests.includes(quest._id);
             const claimed = quest.done || claimedQuests.includes(quest._id);
 
@@ -283,7 +276,7 @@ export default function CampaignEnvironment() {
                 </button>
               </div>
             );
-          })}
+          }) : "No quests available"}
         </div>
       </div>
     </div>
