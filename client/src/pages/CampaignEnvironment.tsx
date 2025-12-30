@@ -15,7 +15,7 @@ type Quest = {
   _id: string;
   quest: string;
   reward: number;
-  tag: "like" | "follow" | "join" | "retweet";
+  tag: "like" | "follow" | "join" | "repost";
   link: string;
   done: boolean;
 };
@@ -124,6 +124,10 @@ export default function CampaignEnvironment() {
 
       try {
         if (["like", "follow", "comment", "repost"].includes(quest.tag)) {
+          if (!user?.socialProfiles.x.connected) {
+            toast({ title: "Error", description: "x not connected yet, go to profile to connect", variant: "destructive" });
+            return;
+          }
           const { success } = await apiRequestV2("POST", "/api/check-x", { id, tag: quest.tag });
           if (!success) {
             alert(`Kindly ${quest.tag !== "follow" ? quest.tag + " the post" : "follow the account"}`);
@@ -144,6 +148,7 @@ export default function CampaignEnvironment() {
       } catch (error: any) {
         console.error(error);
         toast({title: "Error", description: error.message, variant: "destructive" });
+        return;
       }
 
       const res = await apiRequest("POST", `/api/quest/perform-campaign-quest`, { id: quest._id, campaignId });
@@ -257,7 +262,17 @@ export default function CampaignEnvironment() {
                   <div className="w-6 h-6 sm:w-6 sm:h-6 rounded-full flex items-center justify-center bg-white/10 text-white">
                     {claimed ? <CheckCircle2 className="w-4 h-4 text-green-400" /> : <Play className="w-4 h-4" />}
                   </div>
-                  <span className="text-sm sm:text-base font-medium">{quest.quest}</span>
+                  <a
+                    href={quest.link}
+                    onClick={(e) => {
+                      e.preventDefault();
+                    }}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={`text-sm sm:text-base font-medium ${claimed ? "opacity-60 pointer-events-none" : "underline hover:opacity-90"}`}
+                  >
+                    {quest.quest}
+                  </a>
                 </div>
                 <button
                   disabled={claimed}
