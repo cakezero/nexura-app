@@ -96,7 +96,7 @@ export default function Discover() {
 
   const trendingDapps = [
     { name: "Intuition Portal", logo: intuitionPortal, category: "Portal" },
-    { name: "Intuition Bets", logo: intuitionBets, category: "Lending" },
+    { name: "Intuition Bets", logo: intuitionBets, category: "Prediction Market" },
     { name: "IntuRank", logo: intuRank, category: "DeFi" },
     { name: "Tribe Meme", logo: tribeMeme, category: "Gaming" },
     { name: "Trust Name Service", logo: tnsLogo, category: "Domain" },
