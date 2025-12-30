@@ -4,8 +4,9 @@ import { firstMessage } from "@/models/msg.model";
 import { referredUsers } from "@/models/referrer.model";
 import { user } from "@/models/user.model";
 import { performIntuitionOnchainAction } from "@/utils/account";
-import { BOT_TOKEN } from "@/utils/env.utils";
-import { INTERNAL_SERVER_ERROR, OK, CREATED, BAD_REQUEST, FORBIDDEN, NOT_FOUND } from "@/utils/status.utils";
+import { BOT_TOKEN, X_API_BEARER_TOKEN } from "@/utils/env.utils";
+import { INTERNAL_SERVER_ERROR, OK, CREATED, BAD_REQUEST, FORBIDDEN, NOT_FOUND, UNAUTHORIZED } from "@/utils/status.utils";
+import { Client, UserPaginator, type PaginatedResponse, type Schemas } from "@xdevplatform/xdk";
 import axios from "axios";
 
 export const home = async (req: GlobalRequest, res: GlobalResponse) => {
@@ -152,7 +153,105 @@ export const claimReferreralReward = async (req: GlobalRequest, res: GlobalRespo
 
 export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
-    const { tag, id, userId } = req.body;
+    const { tag, id: postId } = req.body; // get task id and store project x id,then remove hardcoded nexura id
+
+    const xClient = new Client({ bearerToken: X_API_BEARER_TOKEN });
+    const NEXURA_ID = "1983300499597393920";
+
+    const userToCheck = await user.findById(req.id);
+    if (!userToCheck) {
+      res.status(BAD_REQUEST).json({ error: "id associated with user is invalid" });
+      return;
+    }
+
+    const xId = userToCheck.socialProfiles?.x?.id;
+
+    switch (tag) {
+      case "follow":
+        const followers: UserPaginator = new UserPaginator(
+          async (token?: string): Promise<PaginatedResponse<Schemas.User>> => {
+            const res = await xClient.users.getFollowers(NEXURA_ID, {
+              maxResults: 100,
+              paginationToken: token,
+              userFields: ["id"],
+            });
+
+            return {
+              data: res.data ?? [],
+              meta: res.meta,
+              includes: res.includes,
+              errors: res.errors,
+            };
+          }
+        );
+
+        for (const follower of followers.users) {
+          if (follower.id === xId) {
+            res.status(OK).json({ message: "task verified" });
+            return;
+          }
+
+          if (!followers.done) {
+            await followers.fetchNext();
+          }
+        }
+
+        res.status(BAD_REQUEST).json({ error: "account not followed" });
+        return;
+      case "like":
+        if (!xId) {
+          res.status(BAD_REQUEST).json({ error: "user X account not connected" });
+          return;
+        }
+
+        const likedPosts: UserPaginator = new UserPaginator(
+          async (token?: string): Promise<PaginatedResponse<Schemas.Tweet>> => {
+            const res = await xClient.users.getLikedPosts(xId, {
+              maxResults: 100,
+              paginationToken: token,
+              userFields: ["id"],
+            });
+
+            return {
+              data: res.data ?? [],
+              meta: res.meta,
+              includes: res.includes,
+              errors: res.errors,
+            };
+          }
+        );
+
+        for (const likedPost of likedPosts.users) {
+          if (likedPost.id === postId) {
+            res.status(OK).json({ message: "task verified" });
+            return;
+          }
+
+          if (!likedPosts.done) {
+            await likedPosts.fetchNext();
+          }
+        }
+
+        res.status(BAD_REQUEST).json({ error: "tweet not liked" });
+      return
+      case "repost":
+        const reposts: UserPaginator = new UserPaginator(
+					async (token?: string): Promise<PaginatedResponse<Schemas.Tweet>> => {
+						const res = await xClient.users.getRepostsOfMe({
+							maxResults: 100,
+							paginationToken: token,
+							userFields: ["id"],
+						});
+						return {
+							data: res.data ?? [],
+							meta: res.meta,
+							includes: res.includes,
+							errors: res.errors,
+						};
+					}
+				);
+      return
+    }
 
     res.status(OK).json({ message: "user has sent message", success: true });
   } catch (error) {
@@ -238,7 +337,20 @@ export const saveCv = async (req: GlobalRequest, res: GlobalResponse) => {
 
 export const checkDiscordTask = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
-    const { guildId, tag, userId } = req.body;
+    const { guildId, tag } = req.body;
+
+    const userToCheck = await user.findById(req.id);
+    if (!userToCheck) {
+      res.status(BAD_REQUEST).json({ error: "id associated with user is invalid" });
+      return;
+    }
+
+    const discordId = userToCheck.socialProfiles?.discord?.id;
+
+    if (!discordId) {
+      res.status(UNAUTHORIZED).json({ error: "connect discord to proceed" });
+      return;
+    }
 
     switch (tag) {
       case "join":
@@ -246,7 +358,7 @@ export const checkDiscordTask = async (req: GlobalRequest, res: GlobalResponse) 
           status, 
           data: { roles }
           // remove hardcoded guild id
-        } = await axios.get(`https://discord.com/api/guilds/1419336727302111367/members/${userId}`,
+        } = await axios.get(`https://discord.com/api/guilds/1419336727302111367/members/${discordId}`,
           {
             headers: {
               Authorization: `Bot ${BOT_TOKEN}`,
@@ -270,7 +382,7 @@ export const checkDiscordTask = async (req: GlobalRequest, res: GlobalResponse) 
 
         return;
       case "message":
-        const sentMessage = await firstMessage.findOne({ user_id: userId });
+        const sentMessage = await firstMessage.findOne({ user_id: discordId });
         if (!sentMessage) {
           res.status(BAD_REQUEST).json({ error: "send a message to the server to continue" });
           return;
