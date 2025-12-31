@@ -35,7 +35,7 @@ export default function CampaignEnvironment() {
   const { campaignId } = useParams();
   const { toast } = useToast();
 
-  const [quests, setQuests] = useState<Quest[]>(campaignQuestsInitial);
+  const [quests, setQuests] = useState<Quest[]>([]);
   const [visitedQuests, setVisitedQuests] = useState<string[]>(() => {
     const stored = JSON.parse(localStorage.getItem("nexura:campaign:visited") || "{}");
     return stored[userId] || [];
@@ -44,14 +44,7 @@ export default function CampaignEnvironment() {
     const stored = JSON.parse(localStorage.getItem("nexura:campaign:claimed") || "{}");
     return stored[userId] || [];
   });
-  const [campaignCompleted, setCampaignCompleted] = useState<boolean>(() => {
-    const stored = JSON.parse(localStorage.getItem("nexura:campaign:completed") || "{}");
-    return stored[userId] || false;
-  });
-  const [discordJoined, setDiscordJoined] = useState<boolean>(() => {
-    const stored = JSON.parse(localStorage.getItem("nexura:campaign:discord-joined") || "{}");
-    return stored[userId] || false;
-  });
+  const [campaignCompleted, setCampaignCompleted] = useState<boolean>();
 
   const [description, setDescription] = useState("");
   const [title, setTitle] = useState("");
@@ -69,6 +62,7 @@ export default function CampaignEnvironment() {
       const res = await apiRequestV2("GET", `/api/campaign/quests?id=${campaignId}`);
 
       setQuests(res.campaignQuests || []);
+      setCampaignCompleted(res.campaignCompleted?.campaignCompleted || false);
       setCampaignAddress(res.address || "");
       setDescription(res.description || "");
       setTitle(res.title || "");
@@ -83,28 +77,23 @@ export default function CampaignEnvironment() {
 
   // Sync localStorage for visited, claimed, completed, discordJoined
   useEffect(() => {
-    const visited: Record<string, string[]> = JSON.parse(localStorage.getItem("nexura:campaign:visited") || "{}");
+    const visited: any = JSON.parse(localStorage.getItem("nexura:campaign:visited") || "{}");
     visited[userId] = visitedQuests;
     localStorage.setItem("nexura:campaign:visited", JSON.stringify(visited));
   }, [visitedQuests, userId]);
 
   useEffect(() => {
-    const claimed: Record<string, string[]> = JSON.parse(localStorage.getItem("nexura:campaign:claimed") || "{}");
+    const claimed: any = JSON.parse(localStorage.getItem("nexura:campaign:claimed") || "{}");
     claimed[userId] = claimedQuests;
     localStorage.setItem("nexura:campaign:claimed", JSON.stringify(claimed));
   }, [claimedQuests, userId]);
 
   useEffect(() => {
-    const completed: Record<string, boolean> = JSON.parse(localStorage.getItem("nexura:campaign:completed") || "{}");
+    const completed: any = JSON.parse(localStorage.getItem("nexura:campaign:completed") || "{}");
     completed[userId] = campaignCompleted;
     localStorage.setItem("nexura:campaign:completed", JSON.stringify(completed));
   }, [campaignCompleted, userId]);
 
-  useEffect(() => {
-    const joined: Record<string, boolean> = JSON.parse(localStorage.getItem("nexura:campaign:discord-joined") || "{}");
-    joined[userId] = discordJoined;
-    localStorage.setItem("nexura:campaign:discord-joined", JSON.stringify(joined));
-  }, [discordJoined, userId]);
 
   // Open quest links
   const markQuestAsVisited = (quest: Quest) => {
@@ -125,30 +114,29 @@ export default function CampaignEnvironment() {
       try {
         if (["like", "follow", "comment", "repost"].includes(quest.tag)) {
           if (!user?.socialProfiles.x.connected) {
-            toast({ title: "Error", description: "x not connected yet, go to profile to connect", variant: "destructive" });
-            return;
+            throw new Error("x not connected yet, go to profile to connect.");
           }
           const { success } = await apiRequestV2("POST", "/api/check-x", { id, tag: quest.tag });
           if (!success) {
-            alert(`Kindly ${quest.tag !== "follow" ? quest.tag + " the post" : "follow the account"}`);
-            return;
+            // alert(`Kindly ${quest.tag !== "follow" ? quest.tag + " the post" : "follow the account"}`);
+            throw new Error(`Kindly ${quest.tag !== "follow" ? quest.tag + " the post" : "follow the account"}`);
           }
         } else if (["join", "message"].includes(quest.tag)) {
           if (!user?.socialProfiles.discord.connected) {
-            toast({ title: "Error", description: "discord not connected yet, go to profile to connect", variant: "destructive" });
-            return;
+            // toast({ title: "Error", description: "discord not connected yet, go to profile to connect", variant: "destructive" });
+            throw new Error("discord not connected yet, go to profile to connect");
           }
 
           const { success } = await apiRequestV2("POST", "/api/check-discord", { channelId: id, tag: quest.tag });
           if (!success) {
-            toast({ title: "Error", description: `Kindly ${quest.tag} the discord channel`, variant: "destructive"});
-            return;
+            // toast({ title: "Error", description: `Kindly ${quest.tag} the discord channel`, variant: "destructive"});
+            throw new Error(`Kindly ${quest.tag} the discord channel`);
           }
         }
       } catch (error: any) {
         console.error(error);
         toast({title: "Error", description: error.message, variant: "destructive" });
-        return;
+        throw new Error(error.message);
       }
 
       const res = await apiRequest("POST", `/api/quest/perform-campaign-quest`, { id: quest._id, campaignId });
@@ -179,7 +167,6 @@ export default function CampaignEnvironment() {
 
   const completedQuestsCount = quests.filter((q) => q.done || claimedQuests.includes(q._id)).length;
   const progressPercentage = Math.round((completedQuestsCount / quests.length) * 100);
-  const allQuestsDone = completedQuestsCount === quests.length;
 
   return (
     <div className="min-h-screen bg-[#0a0615] text-white relative p-4 sm:p-6">
@@ -228,12 +215,12 @@ export default function CampaignEnvironment() {
 
               <Button
                 onClick={claimCampaignReward}
-                disabled={!allQuestsDone || campaignCompleted}
-                className={`w-full font-semibold rounded-xl py-3 mt-6 ${allQuestsDone && !campaignCompleted ? "bg-purple-600 hover:bg-purple-700 text-white" : "bg-gray-600 cursor-not-allowed text-gray-300"}`}
+                disabled={!questsCompleted || campaignCompleted}
+                className={`w-full font-semibold rounded-xl py-3 mt-6 ${!campaignCompleted ? "bg-purple-600 hover:bg-purple-700 text-white" : "bg-gray-600 cursor-not-allowed text-gray-300"}`}
               >
                 {campaignCompleted
                   ? "Completed"
-                    : allQuestsDone
+                    : questsCompleted
                       ? "Claim Rewards"
                       : "Complete Quests"
                 }
@@ -244,7 +231,7 @@ export default function CampaignEnvironment() {
 
         {/* Quest List */}
         <div className="space-y-4 sm:space-y-6">
-          {quests.map((quest) => {
+          {quests.length > 0 ? quests.map((quest) => {
             const visited = visitedQuests.includes(quest._id);
             const claimed = quest.done || claimedQuests.includes(quest._id);
 
@@ -283,7 +270,7 @@ export default function CampaignEnvironment() {
                 </button>
               </div>
             );
-          })}
+          }) : "No quests available"}
         </div>
       </div>
     </div>
