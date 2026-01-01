@@ -25,6 +25,12 @@ export const updateUsername = async (req: GlobalRequest, res: GlobalResponse) =>
 			return;
     }
 
+    const usernameExists = await user.findOne({ username });
+    if (usernameExists) {
+      res.status(BAD_REQUEST).json({ error: "username already taken" });
+      return;
+    }
+
     userToUpdate.username = username;
     await userToUpdate.save();
 
@@ -152,6 +158,10 @@ export const claimReferreralReward = async (req: GlobalRequest, res: GlobalRespo
   }
 };
 
+const getXClient = (token: string) => {
+  return new Client({ bearerToken: token });
+}
+
 export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
 
   const userToken = await token.findOne({ userId: req.id });
@@ -159,6 +169,8 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
     res.status(UNAUTHORIZED).json({ error: "connect X account to proceed" });
     return;
   }
+
+  let xClient: Client;
 
   try {
     const { tag, id: postId } = req.body; // get task id and store project x id, then remove hardcoded nexura id
@@ -171,12 +183,13 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
       return;
     }
 
-    const xClient = new Client({ bearerToken: userToken.accessToken });
-
+    
     const xId = userToCheck.socialProfiles?.x?.id;
-
+    
     switch (tag) {
       case "follow":
+        xClient = getXClient(X_API_BEARER_TOKEN);
+
         const followers: UserPaginator = new UserPaginator(
           async (token?: string): Promise<PaginatedResponse<Schemas.User>> => {
             const res = await xClient.users.getFollowers(NEXURA_ID, {
@@ -212,7 +225,7 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
             await followers.fetchNext();
           }
         }
-        console.log(followers.errors);
+        console.log("FO:", followers.errors);
 
         res.status(BAD_REQUEST).json({ error: "account not followed" });
         return;
@@ -221,6 +234,8 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
           res.status(BAD_REQUEST).json({ error: "user X account not connected" });
           return;
         }
+
+        xClient = getXClient(userToken.accessToken);
 
         const likedPosts: UserPaginator = new UserPaginator(
           async (token?: string): Promise<PaginatedResponse<Schemas.Tweet>> => {
@@ -239,7 +254,13 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
           }
         );
 
-        for (const likedPost of likedPosts.users) {
+        console.log({ t: 1, likedPosts: likedPosts.users });
+
+        await likedPosts.fetchNext();
+        console.log({ t: 2, likedPosts: likedPosts.users });
+
+        for await (const likedPost of likedPosts.users) {
+          console.log({likedPost})
           if (likedPost.id === postId) {
             res.status(OK).json({ message: "task verified" });
             return;
@@ -250,16 +271,21 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
           }
         }
 
+        console.log("LE:", likedPosts.errors);
+
         res.status(BAD_REQUEST).json({ error: "tweet not liked" });
       return
       case "repost":
+        xClient = getXClient(X_API_BEARER_TOKEN);
+
         const reposts: UserPaginator = new UserPaginator(
-					async (token?: string): Promise<PaginatedResponse<Schemas.Tweet>> => {
-						const res = await xClient.users.getRepostsOfMe({
+					async (token?: string): Promise<PaginatedResponse<Schemas.User>> => {
+						const res = await xClient.posts.getRepostedBy(postId, {
 							maxResults: 100,
 							paginationToken: token,
 							userFields: ["id"],
-						});
+            });
+
 						return {
 							data: res.data ?? [],
 							meta: res.meta,
@@ -267,11 +293,34 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
 							errors: res.errors,
 						};
 					}
-				);
-      return
-    }
+        );
+        
+        console.log({ t: 1, reposts: reposts.users });
 
-    res.status(OK).json({ message: "user has sent message", success: true });
+        await reposts.fetchNext();
+        console.log({ t: 2, reposts: reposts.users });
+
+        for await (const repost of reposts.users) {
+          console.log({ repost });
+          if (repost.id === postId) {
+            res.status(OK).json({ message: "task verified" });
+            return;
+          }
+
+          if (!reposts.done) {
+            await reposts.fetchNext();
+          }
+        }
+
+        console.log("RE:", reposts.errors);
+
+        res.status(BAD_REQUEST).json({ error: "tweet not reposted" });
+
+        return
+      default:
+        res.status(BAD_REQUEST).json({ error: "invalid task tag" });
+        return;
+    }
   } catch (error) {
     logger.error(error);
     // if (error.code === 401)
@@ -292,6 +341,12 @@ export const updateX = async (req: GlobalRequest, res: GlobalResponse) => {
     const userToUpdate = await user.findById(id);
     if (!userToUpdate) {
       res.status(BAD_REQUEST).json({ error: "invalid user id" });
+      return;
+    }
+
+    const xAlreadyUsed = await user.findOne({ "socialProfiles.x.id": x_id });
+    if (xAlreadyUsed && xAlreadyUsed._id !== userToUpdate._id) {
+      res.status(BAD_REQUEST).json({ error: "x account already connected to another user" });
       return;
     }
 
@@ -330,6 +385,12 @@ export const updateDiscord = async (req: GlobalRequest, res: GlobalResponse) => 
     const userToUpdate = await user.findById(id);
     if (!userToUpdate) {
       res.status(BAD_REQUEST).json({ error: "invalid user id" });
+      return;
+    }
+
+    const discordAlreadyUsed = await user.findOne({ "socialProfiles.discord.id": discord_id });
+    if (discordAlreadyUsed && discordAlreadyUsed._id !== userToUpdate._id) {
+      res.status(BAD_REQUEST).json({ error: "discord account already connected to another user" });
       return;
     }
 
@@ -399,7 +460,7 @@ export const checkDiscordTask = async (req: GlobalRequest, res: GlobalResponse) 
           return;
         }
 
-        if (!roles.includes("1439591151081492593")) {
+        if (!roles.includes("1439591151081492593")) { // verfied id
           res.status(BAD_REQUEST).json({ error: "you need to be verified to continue" });
           return;
         }

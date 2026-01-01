@@ -6,7 +6,8 @@ import AnimatedBackground from "@/components/AnimatedBackground";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { apiRequestV2 } from "@/lib/queryClient"; 
+import { apiRequestV2 } from "@/lib/queryClient";
+import { useAuth } from "@/lib/auth";
 import gold from "/nexura-gold.png";
 import silver from "/nexura-silver.png";
 import bronze from "/nexura-bronze.png";
@@ -50,18 +51,18 @@ export default function Leaderboard() {
   const [list, setList] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
   const [cardHeight, setCardHeight] = useState<number>(0);
   const currentUserRowRef = useRef<HTMLDivElement>(null);
   const placeholderRef = useRef<HTMLDivElement>(null);
   const topSentinelRef = useRef<HTMLDivElement>(null);
   const bottomSentinelRef = useRef<HTMLDivElement>(null);
 
-
   useEffect(() => {
     const timer = setTimeout(async () => {
       try {
         const { leaderboardInfo: { leaderboardByXp } } = await apiRequestV2("GET", "/api/leaderboard");
-        setList(leaderboardByXp ?? MOCK_LEADERBOARD);
+        setList(leaderboardByXp || MOCK_LEADERBOARD);
       } catch (err: any) {
         setError(err.message || "Failed to load leaderboard");
       } finally {
@@ -72,7 +73,7 @@ export default function Leaderboard() {
   }, []);
 
   /* ------------------- CURRENT USER FLOAT/STICK LOGIC ------------------- */
-  const currentUserId = "5"; // Logged-in user ID
+  const currentUserId = user?._id || "5"; // Logged-in user ID
   const [cardState, setCardState] = useState<"floatingBottom" | "normal" | "stickyTop">("normal");
 
   useEffect(() => {
@@ -165,7 +166,7 @@ export default function Leaderboard() {
 
             {/* <div className="flex justify-center items-end gap-6 relative"> */}
             <div className="flex justify-center items-end gap-3 sm:gap-5 relative">
-              {[1, 0, 2].map((userIndex, idx) => {
+              {list.length > 0 && [1, 0, 2].map((userIndex, idx) => {
                 const user = list[userIndex];
                 const name = user.display_name || user.username || "Anonymous";
                 const xp = user.xp;
@@ -326,7 +327,7 @@ export default function Leaderboard() {
         )}
 
         <div className="space-y-3 relative">
-          {list.map((entry, idx) => {
+          {list.length > 0 ? list.map((entry, idx) => {
             if (idx < 3) return null; // skip podium
 
             const name = entry.display_name || entry.username || "Anonymous";
@@ -448,7 +449,7 @@ export default function Leaderboard() {
                 </Card>
               </div>
             );
-          })}
+          }) : "No one on the leaderboard"}
         </div>
       </div>
     </div>
