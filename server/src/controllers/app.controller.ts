@@ -2,6 +2,7 @@ import logger from "@/config/logger";
 import { cvModel } from "@/models/cv.models";
 import { firstMessage } from "@/models/msg.model";
 import { referredUsers } from "@/models/referrer.model";
+import { token } from "@/models/tokens.models";
 import { user } from "@/models/user.model";
 import { performIntuitionOnchainAction } from "@/utils/account";
 import { BOT_TOKEN, X_API_BEARER_TOKEN } from "@/utils/env.utils";
@@ -152,10 +153,16 @@ export const claimReferreralReward = async (req: GlobalRequest, res: GlobalRespo
 };
 
 export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
-  try {
-    const { tag, id: postId } = req.body; // get task id and store project x id,then remove hardcoded nexura id
 
-    const xClient = new Client({ bearerToken: X_API_BEARER_TOKEN });
+  const userToken = await token.findOne({ userId: req.id });
+  if (!userToken) {
+    res.status(UNAUTHORIZED).json({ error: "connect X account to proceed" });
+    return;
+  }
+
+  try {
+    const { tag, id: postId } = req.body; // get task id and store project x id, then remove hardcoded nexura id
+
     const NEXURA_ID = "1983300499597393920";
 
     const userToCheck = await user.findById(req.id);
@@ -163,6 +170,8 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
       res.status(BAD_REQUEST).json({ error: "id associated with user is invalid" });
       return;
     }
+
+    const xClient = new Client({ bearerToken: userToken.accessToken });
 
     const xId = userToCheck.socialProfiles?.x?.id;
 
@@ -176,6 +185,8 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
               userFields: ["id"],
             });
 
+            console.log("ded:", res.data);
+
             return {
               data: res.data ?? [],
               meta: res.meta,
@@ -185,7 +196,13 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
           }
         );
 
-        for (const follower of followers.users) {
+        console.log({ t: 1, followers: followers.users });
+
+        await followers.fetchNext();
+        console.log({ t: 2, followers: followers.users });
+
+        for await (const follower of followers.users) {
+          console.log({follower})
           if (follower.id === xId) {
             res.status(OK).json({ message: "task verified" });
             return;
@@ -195,6 +212,7 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
             await followers.fetchNext();
           }
         }
+        console.log(followers.errors);
 
         res.status(BAD_REQUEST).json({ error: "account not followed" });
         return;
@@ -256,6 +274,7 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
     res.status(OK).json({ message: "user has sent message", success: true });
   } catch (error) {
     logger.error(error);
+    // if (error.code === 401)
     res.status(INTERNAL_SERVER_ERROR).json({ error: "error checking twitter task" });
   }
 }
@@ -276,11 +295,20 @@ export const updateX = async (req: GlobalRequest, res: GlobalResponse) => {
       return;
     }
 
+    const userToken = await token.findOne({ userId: x_id });
+    if (!userToken) {
+      res.status(BAD_REQUEST).json({ error: "no access token or refresh token found, please connect x again" });
+      return;
+    }
+
+    userToken.userId = req.id as string;
+
     userToUpdate.socialProfiles ??= {};
 
     userToUpdate.socialProfiles.x = { connected: true, id: x_id, username };
 
     await userToUpdate.save();
+    await userToken.save();
 
     res.status(OK).json({ messages: "connected!", user: userToUpdate });
   } catch (error) {
@@ -371,9 +399,7 @@ export const checkDiscordTask = async (req: GlobalRequest, res: GlobalResponse) 
           return;
         }
 
-        logger.info(roles);
-
-        if (!roles.includes("VERIFIED_ROLE_ID")) {
+        if (!roles.includes("1439591151081492593")) {
           res.status(BAD_REQUEST).json({ error: "you need to be verified to continue" });
           return;
         }
