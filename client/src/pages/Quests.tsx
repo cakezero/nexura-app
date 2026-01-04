@@ -227,7 +227,7 @@ export default function Quests() {
                       </div>
                     </div>
                   </div>
-
+                  
                   <button
                     disabled={claimed}
                     onClick={() => {

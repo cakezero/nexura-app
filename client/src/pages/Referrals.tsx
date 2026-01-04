@@ -18,7 +18,6 @@ type Referral = {
 };
 
 const refReward = 16.2;
-
 const rewardPerActiveUser = 1.62;
 
 const dummyReferralData: Referral[] = [
@@ -26,60 +25,123 @@ const dummyReferralData: Referral[] = [
   { username: "Shallipopi", dateJoined: "Nov 9, 2025", status: "Active" },
   { username: "Blacko", dateJoined: "Nov 15, 2025", status: "Active" },
   { username: "TFK", dateJoined: "Nov 25, 2025", status: "Active" },
-  { username: "Mardocee", dateJoined: "Nov 29, 2025", status: "Active" },
-  { username: "Ownyde", dateJoined: "Nov 29, 2025", status: "Active" },
-  { username: "Emperor", dateJoined: "Nov 29, 2025", status: "Inactive" }
+  // { username: "Mardocee", dateJoined: "Nov 29, 2025", status: "Active" },
+  // { username: "Ownyde", dateJoined: "Nov 29, 2025", status: "Active" },
+  // { username: "Emperor", dateJoined: "Nov 29, 2025", status: "Inactive" }
 ];
 
 export default function ReferralsPage() {
-  const [rewardClaimed, setRewardClaimed] = useState(false);
+  // const [rewardClaimed, setRewardClaimed] = useState(false);
+  const [stage1Claimed, setStage1Claimed] = useState(false);
+const [stage2Claimed, setStage2Claimed] = useState(false);
   const [copied, setCopied] = useState(false);
   const [totalReferrerls, setTotalReferrals] = useState(0);
   const [activeUsers, setActiveUsers] = useState(0);
   const [trustEarned, setTrustEarned] = useState<string | number>("0");
 
   const { user } = useAuth();
-
   const [referralData, setReferralData] = useState<Referral[]>(dummyReferralData);
 
   useEffect(() => {
     (async () => {
-      const { usersReferred, refRewardClaimed } = await apiRequestV2("GET", "/api/user/referral-info");
-
-      const ActiveUsers = usersReferred.filter((u: { status: string; }) => u.status === "Active").length;
+      const ActiveUsers = usersReferred.filter(
+        (u: { status: string }) => u.status === "Active"
+      ).length;
 
       setReferralData(usersReferred);
-      setRewardClaimed(refRewardClaimed);
-
-      setTrustEarned(ActiveUsers < 10 ? (rewardPerActiveUser * ActiveUsers).toFixed(2) : refReward);
+     setTrustEarned("0");
       setTotalReferrals(usersReferred.length);
       setActiveUsers(ActiveUsers);
-    })()
+    })();
   }, []);
 
   const referralLink = `${url}/ref/${user ? user.referral.code : "referral-noobmaster"}`;
 
-  const progressBar = Math.round((parseFloat(trustEarned.toString()) / refReward) * 100);
+  const progressBar = Math.round(
+    (parseFloat(trustEarned.toString()) / refReward) * 100
+  );
+
+  // ---------------- NEW MILESTONE LOGIC (ONLY CHANGE) ----------------
+const STAGE_SIZE = 5;
+
+const currentStage =
+  activeUsers < 5 ? 1 :
+  activeUsers < 10 ? 2 :
+  2;
+
+
+const stageProgress =
+  currentStage === 1
+    ? Math.min(activeUsers, 5)
+    : Math.min(activeUsers - 5, 5);
+
+const progressPercent = (stageProgress / 5) * 100;
+
+
+  const rewardAmount = currentStage === 1 ? 5.4 : 10.8;
+
+const canClaimStage1 =
+  activeUsers >= 5 && !stage1Claimed;
+
+const canClaimStage2 =
+  activeUsers >= 10 && stage1Claimed && !stage2Claimed;
+
+  // ------------------------------------------------------------------
 
   const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(referralLink);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error("Copy failed", err);
-    }
+    await navigator.clipboard.writeText(referralLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleClaim = async () => {
-    await apiRequestV2("POST", "/api/user/allow-ref-claim");
+  const MILESTONE_REWARD = 5.4;
 
-    await claimReferralReward(user._id);
+const milestonesReached = Math.floor(activeUsers / 5); // 0, 1, or 2
+const milestonesClaimed =
+  (stage1Claimed ? 1 : 0) + (stage2Claimed ? 1 : 0);
 
-    await apiRequestV2("POST", "/api/user/claim-referral-reward");
+const milestonesClaimable = milestonesReached - milestonesClaimed;
 
-    setRewardClaimed(true);
-  };
+// const claimableReward = milestonesClaimable * MILESTONE_REWARD;
+const claimableReward =
+  (!stage1Claimed && milestonesReached >= 1 ? 5.4 : 0) +
+  (!stage2Claimed && milestonesReached >= 2 ? 10.8 : 0);
+
+
+const canClaim = milestonesClaimable > 0;
+
+
+const handleClaim = async () => {
+  if (!canClaim) return;
+
+  // Claim both milestones at once
+  if (milestonesClaimable === 2) {
+    setStage1Claimed(true);
+    setStage2Claimed(true);
+    setTrustEarned(prev =>
+      (parseFloat(prev.toString()) + 16.2).toFixed(2)
+    );
+    return;
+  }
+
+  // Claim first milestone
+  if (milestonesClaimable === 1 && !stage1Claimed) {
+    setStage1Claimed(true);
+    setTrustEarned(prev =>
+      (parseFloat(prev.toString()) + 5.4).toFixed(2)
+    );
+    return;
+  }
+
+  // Claim second milestone only
+  if (milestonesClaimable === 1 && stage1Claimed && !stage2Claimed) {
+    setStage2Claimed(true);
+    setTrustEarned(prev =>
+      (parseFloat(prev.toString()) + 10.8).toFixed(2)
+    );
+  }
+};
+
 
   return (
     <div className="min-h-screen bg-black text-white px-4 sm:px-6 lg:px-8 py-8 space-y-12 max-w-[1200px] mx-auto">
@@ -100,57 +162,32 @@ export default function ReferralsPage() {
           { icon: EarnIcon, title: "Earn", desc: `You can earn up to ${refReward} TRUST referring your friends after they complete a Quest or Campaign` }
         ].map(({ icon: Icon, title, desc }) => (
           <div key={title} className="flex flex-col items-center text-center space-y-4">
-            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-purple-600/25 flex items-center justify-center shadow-[0_0_25px_rgba(168,85,247,0.35)]">
-              <Icon className="w-8 h-8 sm:w-9 sm:h-9 text-purple-300" />
+            <div className="w-14 h-14 rounded-full bg-purple-600/25 flex items-center justify-center">
+              <Icon className="w-8 h-8 text-purple-300" />
             </div>
-            <p className="text-sm sm:text-base font-medium">{title}</p>
-            <p className="text-xs sm:text-sm opacity-60 max-w-[240px]">{desc}</p>
+            <p className="text-sm font-medium">{title}</p>
+            <p className="text-xs opacity-60 max-w-[240px]">{desc}</p>
           </div>
         ))}
       </div>
 
-      {/* SHARE LINK */}
-      <div className="space-y-6">
-        <div>
-          <p className="text-base sm:text-lg font-medium">Share your referral link</p>
-          <p className="text-sm opacity-60 mt-1 max-w-[560px]">
-            Copy and share your referral link to start earning rewards.
-          </p>
-        </div>
-
-        <div className="flex flex-col sm:flex-row sm:items-center gap-2 bg-white/5 rounded-full px-4 sm:px-5 py-2 max-w-full sm:max-w-[520px]">
-          <span className="text-sm opacity-70 truncate">
-            {referralLink}
-          </span>
-          <Button
-            onClick={handleCopy}
-            className="sm:ml-auto h-8 px-4 rounded-full bg-purple-600 text-sm"
-          >
-            {copied ? "Copied" : "Copy Link"}
-          </Button>
-        </div>
-
-        {/* STATS */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[
-            { icon: UsersIcon, label: "Total Referrals", value: totalReferrerls },
-            { icon: ActiveIcon, label: "Active", value: activeUsers },
-            { icon: TrustIcon, label: "Trust Earned", value: trustEarned }
-          ].map(({ icon: Icon, label, value }) => (
-            <div
-              key={label}
-              className="flex items-center justify-between bg-white/5 rounded-2xl px-5 sm:px-6 py-5"
-            >
-              <div>
-                <p className="text-sm opacity-60">{label}</p>
-                <p className="text-xl sm:text-2xl font-semibold mt-1">{value}</p>
-              </div>
-              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-purple-600/25 flex items-center justify-center shadow-[0_0_25px_rgba(168,85,247,0.35)]">
-                <Icon className="w-8 h-8 sm:w-9 sm:h-9 text-purple-300" />
-              </div>
+      {/* STATS */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {[
+          { icon: UsersIcon, label: "Total Referrals", value: totalReferrerls },
+          { icon: ActiveIcon, label: "Active", value: activeUsers },
+          { icon: TrustIcon, label: "Trust Earned", value: trustEarned }
+        ].map(({ icon: Icon, label, value }) => (
+          <div key={label} className="flex items-center justify-between bg-white/5 rounded-2xl px-6 py-5">
+            <div>
+              <p className="text-sm opacity-60">{label}</p>
+              <p className="text-2xl font-semibold">{value}</p>
             </div>
-          ))}
-        </div>
+            <div className="w-14 h-14 rounded-full bg-purple-600/25 flex items-center justify-center">
+              <Icon className="w-8 h-8 text-purple-300" />
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* BOTTOM */}
@@ -158,16 +195,10 @@ export default function ReferralsPage() {
 
         {/* HISTORY */}
         <Card className="lg:col-span-2 bg-white/5 border border-white/10 rounded-2xl px-6 py-6">
-          <div className="flex justify-between mb-4">
-            <p className="text-sm font-medium">Referral History</p>
-            <span className="text-sm text-purple-400 cursor-pointer">
-              View all
-            </span>
-          </div>
-
+          <p className="text-sm font-medium mb-4">Referral History</p>
           <div className="space-y-4">
-            {referralData.length > 0 ? referralData.map(({ username, dateJoined, status }) => (
-              <div key={username} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm">
+            {referralData.map(({ username, dateJoined, status }) => (
+              <div key={username} className="flex justify-between text-sm">
                 <div className="flex items-center gap-3">
                   <Avatar className="w-7 h-7">
                     <AvatarFallback>{username[0]}</AvatarFallback>
@@ -175,62 +206,70 @@ export default function ReferralsPage() {
                   <span>{username}</span>
                 </div>
                 <span className="opacity-60">{dateJoined}</span>
-                {status === "Active" ? (
-                  <span className="px-3 py-1 text-xs font-medium rounded-full bg-green-500/15 text-green-400 border border-green-500/30">
-                    Active
-                  </span>
-                ) : (
-                  <span className="px-3 py-1 text-xs rounded-full opacity-40 border border-white/10">
-                    Inactive
-                  </span>
-                )}
-
+                <span className={`px-3 py-1 text-xs rounded-full ${
+                  status === "Active"
+                    ? "bg-green-500/15 text-green-400 border border-green-500/30"
+                    : "opacity-40 border border-white/10"
+                }`}>
+                  {status}
+                </span>
               </div>
-            )) : "No referrals yet"}
+            ))}
           </div>
         </Card>
 
-        {/* SIDE */}
-        <div className="space-y-6">
-          <Card className="bg-white/5 border border-white/10 rounded-2xl px-6 py-6 space-y-4">
-            <p className="text-sm font-medium">Milestone Progress</p>
-            <p className="text-sm text-purple-400">Reward: +{refReward} Trust</p>
-            <Progress value={progressBar} />
-            <Button
-              onClick={handleClaim}
-              disabled={activeUsers < 10 || rewardClaimed}
-              className="w-full rounded-full bg-purple-600 text-sm disabled:opacity-60"
-            >
-              {rewardClaimed ? "Claimed" : "Claim Reward"}
-            </Button>
-          </Card>
-        </div>
-<div className="space-y-6">
-  <Card className="bg-white/5 border border-white/10 rounded-2xl px-6 py-6 space-y-4">
-    <p className="text-sm font-medium">Milestone Progress</p>
+        {/* MILESTONE WITH TEST BUTTONS */}
+<Card className="bg-white/5 border border-white/10 rounded-2xl px-6 py-6 space-y-4">
+  <p className="text-sm font-medium">Milestone {currentStage}</p>
 
-    <p className="text-sm text-purple-400">
-      Next Reward: +10.8 Trust
-    </p>
+  <p className="text-sm text-purple-400">Reward: +{rewardAmount} TRUST</p>
 
-    <Progress value={50} />
-
-    <p className="text-xs text-white/60">
-      Refer 5 more friends who complete a quest or campaign to unlock remaining bonus.
-    </p>
-
+  {/* Test buttons to change active users */}
+  <div className="flex items-center gap-2 mb-2">
     <Button
-      onClick={handleClaim}
-      disabled={rewardClaimed}
-      className="w-full rounded-full bg-purple-600 text-sm disabled:opacity-60"
+      onClick={() => setActiveUsers(prev => Math.max(prev - 1, 0))}
+      className="px-2 py-1 text-xs"
     >
-      {rewardClaimed ? "Claimed" : "Claim Reward"}
+      -
     </Button>
-  </Card>
+    <span className="text-xs">
+      Active referrals: {activeUsers} / 10
+    </span>
+    <Button
+      onClick={() => setActiveUsers(prev => Math.min(prev + 1, 10))}
+      className="px-2 py-1 text-xs"
+    >
+      +
+    </Button>
+  </div>
 
-  {/* IMPORTANT RULE */}
-<div className="space-y-6">
-  <Card className="bg-white/5 border border-white/10 rounded-2xl px-6 py-6 space-y-3">
+  {/* Progress bar */}
+  <Progress value={progressPercent} />
+
+  <p className="text-xs text-white/60">
+    {currentStage === 1
+      ? `${stageProgress} / 5 active referrals`
+      : `${stageProgress} / 5 additional active referrals`}
+  </p>
+
+  <Button
+    onClick={handleClaim}
+// disabled={!(canClaimStage1 || canClaimStage2)}
+disabled={!canClaim}
+    className="w-full rounded-full bg-purple-600 text-sm disabled:opacity-60"
+  >
+
+    {canClaim
+  ? `Claim ${claimableReward.toFixed(1)} TRUST`
+  : stage2Claimed
+    ? "Claimed"
+    : "Locked"}
+
+  </Button>
+</Card>
+
+        {/* IMPORTANT RULE */}
+          <Card className="bg-white/5 border border-white/10 rounded-2xl px-6 py-6 space-y-3">
     <p className="text-sm font-medium">Important Rule</p>
 
     <p className="text-xs text-white/70">
@@ -243,9 +282,7 @@ export default function ReferralsPage() {
       <span className="text-white font-medium"> active referrals</span> qualify for rewards.
     </p>
   </Card>
-</div>
-</div>
-    </div>
+      </div>
     </div>
   );
-};
+}

@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "type": "module",
   "private": true,
-"scripts": {
-  "dev": "node --watch --loader ts-node/esm server.ts",
-  "start": "node server.ts"
-},
+  "scripts": {
+    "dev": "node --watch --loader ts-node/esm server.ts",
+    "start": "bun server.ts"
+  },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
     "@types/cors": "^2.8.19",
@@ -21,10 +21,13 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.929.0",
+    "@xdevplatform/xdk": "^0.3.0",
+    "axios": "^1.13.2",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
     "crypto-random-string": "^5.0.0",
     "date-fns": "^4.1.0",
+    "discord.js": "^14.25.1",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "helmet": "^8.1.0",

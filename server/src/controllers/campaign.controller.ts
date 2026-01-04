@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import logger from "@/config/logger";
 import { campaign, campaignCompleted } from "@/models/campaign.model";
 import { project } from "@/models/project.model";
@@ -149,6 +150,13 @@ export const addCampaignAddress = async (
 		const { id, contractAddress }: { id: string; contractAddress: string } =
 			req.body;
 
+			if (!mongoose.Types.ObjectId.isValid(id)) {
+  return res.status(BAD_REQUEST).json({
+    error: "Invalid campaign ID",
+  });
+}
+
+
 		const foundCampaign = await campaign.findById(id);
 		if (!foundCampaign) {
 			res
@@ -173,6 +181,12 @@ export const addCampaignAddress = async (
 export const joinCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
 	try {
 		const id = req.query.id;
+
+		  if (!id || !mongoose.Types.ObjectId.isValid(id as string)) {
+      return res.status(BAD_REQUEST).json({
+        error: "Invalid campaign ID",
+      });
+    }
 
 		const userId = req.id;
 		if (!userId) {
@@ -227,7 +241,18 @@ export const updateCampaign = async (
 		// todo: get logo and project cover image
 
 		const { id } = req.body;
+		if (!mongoose.Types.ObjectId.isValid(id)) {
+  return res.status(400).json({ error: "Invalid campaign ID" });
+}
+
 		const campaignUpdateData: Record<string, unknown> = {};
+
+		if (!mongoose.Types.ObjectId.isValid(id)) {
+  return res.status(BAD_REQUEST).json({
+    error: "Invalid campaign ID",
+  });
+}
+
 
 		for (const field of ["description", "title", "ends_at", "reward"]) {
 			const value = req.body[field];
@@ -264,6 +289,10 @@ export const closeCampaign = async (
 	try {
 		const id = req.query.id as string;
 
+		if (!mongoose.Types.ObjectId.isValid(id)) {
+  return res.status(400).json({ error: "Invalid campaign ID" });
+}
+
 		const foundCampaign = await campaign.findById(id);
 		if (!foundCampaign) {
 			res.status(NOT_FOUND).json({ error: "campaign id is invalid" });
@@ -293,6 +322,11 @@ export const claimCampaignRewards = async (
 ) => {
 	try {
 		const campaignId = req.query.id;
+
+		if (!mongoose.Types.ObjectId.isValid(id)) {
+  return res.status(400).json({ error: "Invalid campaign ID" });
+}
+
 
 		const userToReward = await user.findById(req.id);
 		if (!userToReward) {

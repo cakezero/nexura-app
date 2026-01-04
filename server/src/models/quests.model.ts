@@ -59,6 +59,11 @@ const campaignQuestSchema = new Schema({
 		enum: ["twitter", "discord", "reddit", "instagram", "facebook", "other"],
 		required: true,
 	},
+	tag: {
+		type: String,
+		enum: ["like", "follow", "repost", "join", "message", "other"],
+		required: true
+	},
 	link: {
 		type: String,
 	},
