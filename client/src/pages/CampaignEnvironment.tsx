@@ -202,7 +202,7 @@ export default function CampaignEnvironment() {
             </div>
             <div className="w-full bg-white/10 h-2 sm:h-3 rounded-full overflow-hidden mt-2 sm:mt-3">
               <div className="h-2 sm:h-3 bg-purple-600 transition-all duration-500" style={{ width: `${progressPercentage}%` }} />
-            </div>
+            </div > 
             <p className="text-[0.65rem] sm:text-sm opacity-60 mt-1">{progressPercentage}% completed</p>
           </div>
 
