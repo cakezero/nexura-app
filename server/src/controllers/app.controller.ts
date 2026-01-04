@@ -202,11 +202,13 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
     const { tag, id: postId, questId } = req.body; // get task id and store project x id, then remove hardcoded nexura id
 
     const NEXURA_ID = "1983300499597393920";
+    console.log({questId});
+
     const quest = await miniQuest.findById(questId);
-    if (!quest) {
-      res.status(NOT_FOUND).json({ error: "quest id is invalid" });
-      return;
-    }
+		if (!quest) {
+			res.status(NOT_FOUND).json({ error: "quest id is invalid" });
+			return;
+		}
 
     switch (tag) {
       case "follow":
@@ -294,7 +296,6 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
         );
 
         await likedPosts.fetchNext();
-        console.log({ t: 2, likedPosts: likedPosts.users });
 
         for await (const likedPost of likedPosts.users) {
 
@@ -331,8 +332,6 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
 						};
 					}
         );
-        
-        console.log({ t: 1, reposts: reposts.users });
 
         await reposts.fetchNext();
         console.log({ t: 2, reposts: reposts.users });
