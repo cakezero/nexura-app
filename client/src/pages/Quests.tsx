@@ -96,12 +96,9 @@ export default function Quests() {
     ...(quests?.featuredQuests ?? []),
   ];
 
-  const activeQuests = allQuests.filter((q) => {
-    if (!q.starts_at || !q.ends_at) return true;
-    const start = new Date(q.starts_at);
-    const end = new Date(q.ends_at);
-    return start <= now && now <= end;
-  });
+  const activeQuests = allQuests.filter((q) => q.status === "active");
+
+  const upcomingQuests = allQuests.filter((q) => q.status === "upcoming");
 
   // todo: add verifier for other one-time quests
 
@@ -136,9 +133,8 @@ export default function Quests() {
     await apiRequestV2("POST", `/api/quest/claim-quest?id=${quest._id}`);
   };
 
-  const renderQuestCard = (quest: Quest) => {
+  const renderQuestCard = (quest: Quest, isActive: boolean = true) => {
     const metadata = quest.category ? { category: quest.category } : {};
-    const isActive = true;
 
     return (
       <Card
@@ -220,70 +216,84 @@ export default function Quests() {
         <div>
           {isLoading ? (
             <div className="text-center py-12 text-muted-foreground">Loading quests...</div>
-          ) : quests?.weeklyQuests.length === 0 ? (
+          ) : activeQuests.length === 0 ? (
             <Card className="glass glass-hover rounded-3xl p-8 text-center">
               <p className="text-white/60">No active quests at the moment. Check back soon!</p>
             </Card>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {quests?.weeklyQuests.map((quest) => renderQuestCard(quest))}
+              {activeQuests.map((quest) => renderQuestCard(quest))}
             </div>
           )}
         </div>
 
+        {/* Upcoming Quests */}
+        {upcomingQuests.length > 0 && (
+          <div className="space-y-4 sm:space-y-6 mt-8 sm:mt-12">
+            <h2 className="text-lg sm:text-2xl font-semibold text-white">Upcoming Quest(s)</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              {upcomingQuests.map((quest) => renderQuestCard(quest, false))}
+            </div>
+          </div>
+        )}
+
         {/* ONE TIME QUESTS - Updated Design */}
         <div className="mt-10">
           <h2 className="text-white text-lg font-semibold">One-Time Quests</h2>
-          <p className="text-neutral-400 text-sm mt-1">
-            Complete these essential quests to unlock the full NEXURA experience
-          </p>
+          {quests?.oneTimeQuests?.length ?? 0 > 0 ? // nullish logic
+            <>
+              <p className="text-sm text-white/60 mt-1">
+                Complete these essential quests to unlock the full NEXURA experience
+              </p>
 
-          <div className="mt-4 space-y-3">
-            {quests?.oneTimeQuests.map((quest) => {
-              const visited = visitedTasks.includes(quest._id);
-              const claimed = claimedTasks.includes(quest._id) || quest.done;
+              <div className="mt-4 space-y-3">
+                {quests?.oneTimeQuests.map((quest) => {
+                  const visited = visitedTasks.includes(quest._id);
+                  const claimed = claimedTasks.includes(quest._id) || quest.done;
 
-              let buttonText = quest.actionLabel || "Start Task";
-              if (visited && !claimed) buttonText = `Claim ${quest.reward} XP`;
-              if (claimed) buttonText = "Completed";
+                  let buttonText = quest.actionLabel || "Start Task";
+                  if (visited && !claimed) buttonText = `Claim ${quest.reward} XP`;
+                  if (claimed) buttonText = "Completed";
 
-              return (
-                <div
-                  key={quest._id}
-                  className="bg-white/5 border border-white/10 rounded-xl p-3 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center">
-                      {claimed ? (
-                        <CheckCircle2 className="w-4 h-4 text-green-400" />
-                      ) : (
-                        <Play className="w-4 h-4" />
-                      )}
-                    </div>
+                  return (
+                    <div
+                      key={quest._id}
+                      className="bg-white/5 border border-white/10 rounded-xl p-3 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center">
+                          {claimed ? (
+                            <CheckCircle2 className="w-4 h-4 text-green-400" />
+                          ) : (
+                            <Play className="w-4 h-4" />
+                          )}
+                        </div>
 
-                    <div>
-                      <div className="text-sm font-medium">{quest.title}</div>
-                      <div className="text-xs text-white/50">
-                        {quest.reward} XP
+                        <div>
+                          <div className="text-sm font-medium">{quest.title}</div>
+                          <div className="text-xs text-white/50">
+                            {quest.reward} XP
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
 
-                  <button
-                    disabled={claimed}
-                    onClick={() => {
-                      if (!visited) visitTask(quest);
-                      else if (visited && !claimed) claimAndAwardXp(quest);
-                    }}
-                    className={`px-5 py-2.5 rounded-full text-sm font-semibold ${claimed ? "bg-gray-600 cursor-not-allowed" : "bg-purple-700 hover:bg-purple-800"
-                      }`}
-                  >
-                    {buttonText}
-                  </button>
-                </div>
-              );
-            })}
-          </div>
+                      <button
+                        disabled={claimed}
+                        onClick={() => {
+                          if (!visited) visitTask(quest);
+                          else if (visited && !claimed) claimAndAwardXp(quest);
+                        }}
+                        className={`px-5 py-2.5 rounded-full text-sm font-semibold ${claimed ? "bg-gray-600 cursor-not-allowed" : "bg-purple-700 hover:bg-purple-800"
+                          }`}
+                      >
+                        {buttonText}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </> : <p>No one time quest available</p>
+          }
         </div>
 
       </div>

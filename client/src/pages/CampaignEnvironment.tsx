@@ -116,7 +116,7 @@ export default function CampaignEnvironment() {
           if (!user?.socialProfiles.x.connected) {
             throw new Error("x not connected yet, go to profile to connect.");
           }
-          const { success } = await apiRequestV2("POST", "/api/check-x", { id, tag: quest.tag });
+          const { success } = await apiRequestV2("POST", "/api/check-x", { id, tag: quest.tag, questId: quest._id });
           if (!success) {
             // alert(`Kindly ${quest.tag !== "follow" ? quest.tag + " the post" : "follow the account"}`);
             throw new Error(`Kindly ${quest.tag !== "follow" ? quest.tag + " the post" : "follow the account"}`);
@@ -135,7 +135,7 @@ export default function CampaignEnvironment() {
         }
       } catch (error: any) {
         console.error(error);
-        toast({title: "Error", description: error.message, variant: "destructive" });
+        // toast({title: "Error", description: error.message, variant: "destructive" });
         throw new Error(error.message);
       }
 

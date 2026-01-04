@@ -29,7 +29,7 @@ import { uploadImg } from "@/utils/img.utils";
 import { referredUsers } from "@/models/referrer.model";
 import axios from "axios";
 import { cvModel } from "@/models/cv.models";
-import { token } from "@/models/tokens.models";
+import { token } from "@/models/tokens.model";
 
 export const discordCallback = async (req: GlobalRequest, res: GlobalResponse) => {
 	try {

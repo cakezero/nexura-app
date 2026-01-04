@@ -2,11 +2,20 @@ import logger from "@/config/logger";
 import { cvModel } from "@/models/cv.models";
 import { firstMessage } from "@/models/msg.model";
 import { referredUsers } from "@/models/referrer.model";
-import { token } from "@/models/tokens.models";
+import { token } from "@/models/tokens.model";
+import { miniQuest } from "@/models/quests.model";
 import { user } from "@/models/user.model";
 import { performIntuitionOnchainAction } from "@/utils/account";
 import { BOT_TOKEN, X_API_BEARER_TOKEN } from "@/utils/env.utils";
-import { INTERNAL_SERVER_ERROR, OK, CREATED, BAD_REQUEST, FORBIDDEN, NOT_FOUND, UNAUTHORIZED } from "@/utils/status.utils";
+import {
+  INTERNAL_SERVER_ERROR, 
+  OK,
+  CREATED, 
+  BAD_REQUEST,
+  FORBIDDEN, 
+  NOT_FOUND,
+  UNAUTHORIZED
+} from "@/utils/status.utils";
 import { Client, UserPaginator, type PaginatedResponse, type Schemas } from "@xdevplatform/xdk";
 import axios from "axios";
 
@@ -173,7 +182,6 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
     return;
   }
 
-  
   const xId = userToCheck.socialProfiles?.x?.id;
 
   const userToken = await token.findOne({ userId: xId });
@@ -185,49 +193,72 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
   let xClient: Client;
 
   try {
-    const { tag, id: postId } = req.body; // get task id and store project x id, then remove hardcoded nexura id
+    const { tag, id: postId, questId } = req.body; // get task id and store project x id, then remove hardcoded nexura id
 
     const NEXURA_ID = "1983300499597393920";
+    const quest = await miniQuest.findById(questId);
+    if (!quest) {
+      res.status(NOT_FOUND).json({ error: "quest id is invalid" });
+      return;
+    }
 
-    
     switch (tag) {
       case "follow":
-        xClient = getXClient({ token: userToken.accessToken, auth: "oauth2"});
+        // xClient = getXClient({ token: userToken.accessToken, auth: "oauth2"});
+        xClient = getXClient({ token: X_API_BEARER_TOKEN });
 
-        const followers: UserPaginator = new UserPaginator(
-          async (token?: string): Promise<PaginatedResponse<Schemas.User>> => {
-            const res = await xClient.users.getFollowers(NEXURA_ID, {
-              maxResults: 100,
-              paginationToken: token,
-              userFields: ["id"],
-            });
+        // const followers: UserPaginator = new UserPaginator(
+        //   async (token?: string): Promise<PaginatedResponse<Schemas.User>> => {
+        //     const res = await xClient.users.getFollowers(NEXURA_ID, {
+        //       maxResults: 100,
+        //       paginationToken: token,
+        //       userFields: ["id"],
+        //     });
 
-            return {
-              data: res.data ?? [],
-              meta: res.meta,
-              includes: res.includes,
-              errors: res.errors,
-            };
-          }
-        );
+        //     return {
+        //       data: res.data ?? [],
+        //       meta: res.meta,
+        //       includes: res.includes,
+        //       errors: res.errors,
+        //     };
+        //   }
+        // );
 
-        console.log({ t: 1, followers: followers.users });
+        // console.log({ t: 1, followers: followers.users });
 
-        await followers.fetchNext();
-        console.log({ t: 2, followers: followers.users });
+        // await followers.fetchNext();
+        // console.log({ t: 2, followers: followers.users });
 
-        for await (const follower of followers.users) {
-          console.log({follower})
-          if (follower.id === xId) {
-            res.status(OK).json({ message: "task verified" });
-            return;
-          }
+        // for await (const follower of followers.users) {
+        //   console.log({follower})
+        //   if (follower.id === xId) {
+        //     res.status(OK).json({ message: "task verified" });
+        //     return;
+        //   }
 
-          if (!followers.done) {
-            await followers.fetchNext();
-          }
+        //   if (!followers.done) {
+        //     await followers.fetchNext();
+        //   }
+        // }
+        // console.log("FO:", followers.errors);
+
+        // res.status(BAD_REQUEST).json({ error: "account not followed" });
+
+        const x_user_info = await xClient.users.getById(NEXURA_ID, { userFields: ["id", "publicMetrics", "verified"] });
+        console.log({ x_user_info });
+
+        const followersCount = x_user_info.data?.publicMetrics?.followers_count || 0;
+
+        const isFollowing = followersCount > (quest?.followers ?? 0);
+        console.log({ isFollowing });
+
+        if (isFollowing) {
+          quest.followers = followersCount;
+          await quest.save();
+
+          res.status(OK).json({ message: "task verified" });
+          return;
         }
-        console.log("FO:", followers.errors);
 
         res.status(BAD_REQUEST).json({ error: "account not followed" });
         return;
@@ -256,13 +287,11 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
           }
         );
 
-        console.log({ t: 1, likedPosts: likedPosts.users });
-
         await likedPosts.fetchNext();
         console.log({ t: 2, likedPosts: likedPosts.users });
 
         for await (const likedPost of likedPosts.users) {
-          console.log({likedPost})
+
           if (likedPost.id === postId) {
             res.status(OK).json({ message: "task verified" });
             return;
@@ -323,9 +352,13 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
         res.status(BAD_REQUEST).json({ error: "invalid task tag" });
         return;
     }
-  } catch (error) {
+  } catch (error: any) {
     logger.error(error);
-    // if (error.code === 401)
+    if (error.code === 429) {
+      res.status(429).json({ error: "rate limited by x api, try again 16 mins later" });
+      return;
+    }
+    console.error({ error });
     res.status(INTERNAL_SERVER_ERROR).json({ error: "error checking twitter task" });
   }
 }

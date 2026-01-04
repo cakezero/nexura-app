@@ -11,6 +11,7 @@ type Quest = {
   text: string;
   _id: string;
   done: boolean;
+  tag: string;
   reward: string;
   link: string;
 };
@@ -101,7 +102,11 @@ export default function QuestEnvironment() {
     }
   }
 
-  const claimReward = async (miniQuestId: string) => {
+  const getId = (url: string) => {
+    return url.split("/").pop(); // return the last item in the array
+  }
+
+  const claimReward = async (miniQuest: Quest) => {
     try {
       // const quest = quests[index];
 
@@ -120,14 +125,44 @@ export default function QuestEnvironment() {
         return;
       }
 
-      if (!claimedQuests.includes(miniQuestId)) {
-        setClaimedQuests([...claimedQuests, miniQuestId]);
+      if (!claimedQuests.includes(miniQuest._id)) {
+        setClaimedQuests([...claimedQuests, miniQuest._id]);
       } else {
         toast({ title: "Already Claimed", description: "Task already completed", variant: "destructive" });
         return;
       }
 
-      const res = await apiRequest("POST", `/api/quest/claim-mini-quest`, { id: miniQuestId, questId });
+      const id = getId(miniQuest.link);
+
+      try {
+        if (["like", "follow", "comment", "repost"].includes(miniQuest.tag)) {
+          if (!user?.socialProfiles.x.connected) {
+            throw new Error("x not connected yet, go to profile to connect.");
+          }
+          const { success } = await apiRequestV2("POST", "/api/check-x", { id, tag: miniQuest.tag, questId: miniQuest._id });
+          if (!success) {
+            // alert(`Kindly ${miniQuest.tag !== "follow" ? miniQuest.tag + " the post" : "follow the account"}`);
+            throw new Error(`Kindly ${miniQuest.tag !== "follow" ? miniQuest.tag + " the post" : "follow the account"}`);
+          }
+        } else if (["join", "message"].includes(miniQuest.tag)) {
+          if (!user?.socialProfiles.discord.connected) {
+            // toast({ title: "Error", description: "discord not connected yet, go to profile to connect", variant: "destructive" });
+            throw new Error("discord not connected yet, go to profile to connect");
+          }
+
+          const { success } = await apiRequestV2("POST", "/api/check-discord", { channelId: id, tag: miniQuest.tag });
+          if (!success) {
+            // toast({ title: "Error", description: `Kindly ${miniQuest.tag} the discord channel`, variant: "destructive"});
+            throw new Error(`Kindly ${miniQuest.tag} the discord channel`);
+          }
+        }
+      } catch (error: any) {
+        console.error(error);
+        // toast({title: "Error", description: error.message, variant: "destructive" });
+        throw new Error(error.message);
+      }
+
+      const res = await apiRequest("POST", `/api/quest/claim-mini-quest`, { id: miniQuest._id, questId });
       if (!res.ok) return;
 
       // window.location.reload();
@@ -158,7 +193,7 @@ export default function QuestEnvironment() {
         </p>
 
         <button
-          onClick={() => !visited ? visitQuest(quest) : claimReward(quest._id)}
+          onClick={() => !visited ? visitQuest(quest) : claimReward(quest)}
           className={`w-full md:w-auto px-5 py-2.5 rounded-full text-sm font-semibold ${quest.done || claimedQuests.includes(quest._id)
               ? "bg-gray-600 cursor-not-allowed"
               : "bg-purple-700 hover:bg-purple-800"

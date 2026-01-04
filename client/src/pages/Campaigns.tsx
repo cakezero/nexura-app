@@ -101,10 +101,7 @@ export default function Campaigns() {
     return false;
   });
 
-  const upcomingCampaigns = allCampaigns.filter((c) => {
-    const start = c.starts_at ? new Date(c.starts_at) : null;
-    return start && start > now;
-  });
+  const upcomingCampaigns = allCampaigns.filter((c) => c.status === "Upcoming");
 
   const renderCampaignCard = (campaign: Campaign, isActive: boolean) => {
     let metadata: any = {};
