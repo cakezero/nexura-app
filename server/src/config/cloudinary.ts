@@ -1,10 +1,10 @@
-import { v2 as cloudinary } from 'cloudinary';
-import { Clodinary_Cloud_Name, Clodinary_API_Key, Clodinary_API_Secret } from '../utils/env.utils.js';
+import { v2 as cloudinary } from "cloudinary";
+import { CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET } from "../utils/env.utils.js";
 
 cloudinary.config({
-    cloud_name: Clodinary_Cloud_Name,
-    api_key: Clodinary_API_Key,
-    api_secret: Clodinary_API_Secret,
+    cloud_name: CLOUDINARY_CLOUD_NAME,
+    api_key: CLOUDINARY_API_KEY,
+    api_secret: CLOUDINARY_API_SECRET,
 });
 
 export default cloudinary;
