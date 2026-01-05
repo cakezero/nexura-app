@@ -18,6 +18,7 @@ import {
 } from "@/utils/status.utils";
 import { Client, UserPaginator, type PaginatedResponse, type Schemas } from "@xdevplatform/xdk";
 import axios from "axios";
+import { uploadImg } from "@/utils/img.utils";
 
 export const home = async (req: GlobalRequest, res: GlobalResponse) => {
 	res.send("hi!");
@@ -25,27 +26,31 @@ export const home = async (req: GlobalRequest, res: GlobalResponse) => {
 
 export const updateUser = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
-    const profilePic = req.file ? req.file.path : undefined;
+    const profilePicBuffer = req.file?.buffer;
+
     const { username }: { username: string } = req.body;
 
     const userToUpdate = await user.findById(req.id);
-
     if (!userToUpdate) {
       res.status(BAD_REQUEST).json({ error: "invalid user id" });
 			return;
     }
 
-    const usernameExists = await user.findOne({ username });
-    if (usernameExists) {
-      res.status(BAD_REQUEST).json({ error: "username already taken" });
-      return;
+    if (profilePicBuffer) {
+      const profilePic = await uploadImg({ filename: req.file?.originalname, file: profilePicBuffer, folder: "profile-pictures" });
+  
+      userToUpdate.profilePic = profilePic;
+    }
+
+    if (userToUpdate.username !== username) {
+      const usernameExists = await user.findOne({ username });
+      if (usernameExists) {
+        res.status(BAD_REQUEST).json({ error: "username already taken" });
+        return;
+      }
     }
 
     userToUpdate.username = username;
-
-    if (profilePic) {
-      userToUpdate.profilePic = profilePic;
-    }
 
     await userToUpdate.save();
 
@@ -79,7 +84,7 @@ export const getLeaderboard = async (req: GlobalRequest, res: GlobalResponse) =>
     logger.error(error);
     res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching leaderboard data" })
   }
-}
+}  
 
 export const fetchUser = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
