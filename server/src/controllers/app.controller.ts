@@ -6,7 +6,7 @@ import { token } from "@/models/tokens.model";
 import { campaignQuest, miniQuest } from "@/models/quests.model";
 import { user } from "@/models/user.model";
 import { performIntuitionOnchainAction } from "@/utils/account";
-import { BOT_TOKEN, X_API_BEARER_TOKEN } from "@/utils/env.utils";
+import { BOT_TOKEN, THIRD_PARTY_API_KEY, X_API_BEARER_TOKEN } from "@/utils/env.utils";
 import {
   INTERNAL_SERVER_ERROR, 
   OK,
@@ -194,10 +194,14 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
   }
 
   const xId = userToCheck.socialProfiles?.x?.id;
+  if (!xId) {
+    res.status(BAD_REQUEST).json({ error: "user X account not connected" });
+    return;
+  }
 
   const userToken = await token.findOne({ userId: xId });
   if (!userToken) {
-    res.status(UNAUTHORIZED).json({ error: "connect X account to proceed" });
+    res.status(UNAUTHORIZED).json({ error: "auth tokens not found for user, kindly disconnect X account and login back" });
     return;
   }
 
@@ -222,73 +226,27 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
       }
     }
 
+    const API_URL = "https://api.twitterapi.io/twitter";
+
     switch (tag) {
       case "follow":
-        // xClient = getXClient({ token: userToken.accessToken, auth: "oauth2"});
-        xClient = getXClient({ token: X_API_BEARER_TOKEN });
 
-        // const followers: UserPaginator = new UserPaginator(
-        //   async (token?: string): Promise<PaginatedResponse<Schemas.User>> => {
-        //     const res = await xClient.users.getFollowers(NEXURA_ID, {
-        //       maxResults: 100,
-        //       paginationToken: token,
-        //       userFields: ["id"],
-        //     });
-
-        //     return {
-        //       data: res.data ?? [],
-        //       meta: res.meta,
-        //       includes: res.includes,
-        //       errors: res.errors,
-        //     };
-        //   }
-        // );
-
-        // console.log({ t: 1, followers: followers.users });
-
-        // await followers.fetchNext();
-        // console.log({ t: 2, followers: followers.users });
-
-        // for await (const follower of followers.users) {
-        //   console.log({follower})
-        //   if (follower.id === xId) {
-        //     res.status(OK).json({ message: "task verified", success: true });
-        //     return;
-        //   }
-
-        //   if (!followers.done) {
-        //     await followers.fetchNext();
-        //   }
-        // }
-        // console.log("FO:", followers.errors);
-
-        // res.status(BAD_REQUEST).json({ error: "account not followed" });
-
-        const { data: { data } } = await axios.get(`https://api.x.com/2/users/${NEXURA_ID}?user.fields=public_metrics`, {
+        const { data: { followers } } = await axios.get(`${API_URL}/user/followers?userName=${"nexuraXYZ"}&pageSize=200`, {
           headers: {
-            Authorization: `Bearer ${X_API_BEARER_TOKEN}`,
+            "X-API-Key": `Bearer ${THIRD_PARTY_API_KEY}`,
           }
-        })
+        });
 
-        const followersCount = data?.public_metrics?.followers_count || 0;
+        const isFollowing = followers.some((f: { id: string }) => f.id === xId);
 
-        const isFollowing = followersCount > (quest?.followers ?? 0);
-
-        if (isFollowing) {
-          quest.followers = followersCount;
-          await quest.save();
-
-          res.status(OK).json({ message: "task verified", success: true });
+        if (!isFollowing) {
+          res.status(BAD_REQUEST).json({ error: "account not followed" });
           return;
         }
 
-        res.status(BAD_REQUEST).json({ error: "account not followed" });
+        res.status(OK).json({ message: "task verified", success: true });
         return;
       case "like":
-        if (!xId) {
-          res.status(BAD_REQUEST).json({ error: "user X account not connected" });
-          return;
-        }
 
         xClient = getXClient({ token: userToken.accessToken, auth: "oauth2"});
 
@@ -328,44 +286,38 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
         res.status(BAD_REQUEST).json({ error: "tweet not liked" });
       return
       case "repost":
-        xClient = getXClient({ token: X_API_BEARER_TOKEN });
 
-        const reposts: UserPaginator = new UserPaginator(
-					async (token?: string): Promise<PaginatedResponse<Schemas.User>> => {
-						const res = await xClient.posts.getRepostedBy(postId, {
-							maxResults: 100,
-							paginationToken: token,
-							userFields: ["id"],
-            });
-
-						return {
-							data: res.data ?? [],
-							meta: res.meta,
-							includes: res.includes,
-							errors: res.errors,
-						};
-					}
-        );
-
-        await reposts.fetchNext();
-        console.log({ t: 2, reposts: reposts.users });
-
-        for await (const repost of reposts.users) {
-
-          if (repost.id === postId) {
-            res.status(OK).json({ message: "task verified", success: true });
-            return;
+        const { data: { users } } = await axios.get(`${API_URL}/tweet/retweeters?tweetId=${postId}`, {
+          headers : {
+            "X-API-Key": `Bearer ${THIRD_PARTY_API_KEY}`,
           }
+        });
 
-          if (!reposts.done) {
-            await reposts.fetchNext();
-          }
+        const hasReposted = users.some((user: { id: string }) => user.id === xId);
+
+        if (!hasReposted) {
+          res.status(BAD_REQUEST).json({ error: "tweet not reposted" });
+          return;
         }
 
-        console.log("RE:", reposts.errors);
+        res.status(OK).json({ message: "task verified", success: true });
 
-        res.status(BAD_REQUEST).json({ error: "tweet not reposted" });
+        return
+      case "comment":
+        const { data: { replies } } = await axios.get(`${API_URL}/tweet/replies?tweetId=${postId}`, {
+          headers: {
+            "X-API-Key": `Bearer ${THIRD_PARTY_API_KEY}`,
+          }
+        });
 
+        const hasReplied = replies.some((reply: { author: { id: string } }) => reply.author.id === xId);
+
+        if (!hasReplied) {
+          res.status(BAD_REQUEST).json({ error: "tweet not commented on" });
+          return;
+        }
+
+        res.status(OK).json({ message: "task verified", success: true });
         return
       default:
         res.status(BAD_REQUEST).json({ error: "invalid task tag" });
