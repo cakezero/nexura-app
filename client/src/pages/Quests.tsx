@@ -249,7 +249,7 @@ export default function Quests() {
               <div className="mt-4 space-y-3">
                 {quests?.oneTimeQuests.map((quest) => {
                   const visited = visitedTasks.includes(quest._id);
-                  const claimed = claimedTasks.includes(quest._id) || quest.done;
+                  const claimed = quest.done || claimedTasks.includes(quest._id);
 
                   let buttonText = quest.actionLabel || "Start Task";
                   if (visited && !claimed) buttonText = `Claim ${quest.reward} XP`;
@@ -280,8 +280,7 @@ export default function Quests() {
                       <button
                         disabled={claimed}
                         onClick={() => {
-                          if (!visited) visitTask(quest);
-                          else if (visited && !claimed) claimAndAwardXp(quest);
+                          !visited ? visitTask(quest) : claimAndAwardXp(quest);
                         }}
                         className={`px-5 py-2.5 rounded-full text-sm font-semibold ${claimed ? "bg-gray-600 cursor-not-allowed" : "bg-purple-700 hover:bg-purple-800"
                           }`}

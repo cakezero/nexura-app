@@ -8,6 +8,7 @@ import {
 	questCompleted,
 } from "@/models/questsCompleted.models";
 import { user } from "@/models/user.model";
+import { submission } from "@/models/submission.model";
 import { referredUsers } from "@/models/referrer.model";
 import { performIntuitionOnchainAction } from "@/utils/account";
 import {
@@ -18,7 +19,12 @@ import {
 	NOT_FOUND,
 	CREATED,
 } from "@/utils/status.utils";
-import { validateCampaignQuestData, padNumber, validateEcosystemQuestData, validateMiniQuestData } from "@/utils/utils";
+import {
+	validateCampaignQuestData,
+	padNumber,
+	validateEcosystemQuestData,
+	validateMiniQuestData
+} from "@/utils/utils";
 import mongoose from "mongoose";
 
 // todo: add ecosystem completed to eco quests
@@ -565,6 +571,20 @@ export const setTimer = async (req: GlobalRequest, res: GlobalResponse) => {
 // for quests requiring input submission for validation before quest completion
 export const submitQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 	try {
+		const { submissionLink } = req.body;
+		if (!submissionLink) {
+			res.status(BAD_REQUEST).json({ error: "" });
+			return;
+		}
+
+		const userExists = await user.findById(req.id);
+		if (!userExists) {
+			res.status(NOT_FOUND).json({ error: "id is invalid or does not exists" });
+			return;
+		}
+
+		await submission.create({ submissionLink, user: req.id });
+
 		res.status(OK).json({ message: "quest submitted" });
 	} catch (error) {
 		logger.error(error);
