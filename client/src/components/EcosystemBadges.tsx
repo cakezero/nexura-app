@@ -1,4 +1,4 @@
-const intuitionLogo = require("../../attached_assets/image_1758369448125.png");
+import intuitionLogo from "../../attached_assets/image_1758369448125.png";
 
 interface Ecosystem {
   name: string;

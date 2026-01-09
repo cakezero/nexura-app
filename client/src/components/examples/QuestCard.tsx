@@ -1,6 +1,6 @@
 import QuestCard from '../QuestCard';
-const questHero = require("../../../attached_assets/generated_images/Web3_quest_hero_image_9eff8349.png");
-const siteLogo = require("../../../attached_assets/logo.png");
+import questHero from "../../../attached_assets/generated_images/Web3_quest_hero_image_9eff8349.png";
+import siteLogo from "../../../attached_assets/logo.png";
 
 export default function QuestCardExample() {
   return (
