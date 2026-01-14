@@ -19,6 +19,8 @@ import {
 import { Client, UserPaginator, type PaginatedResponse, type Schemas } from "@xdevplatform/xdk";
 import axios from "axios";
 import { uploadImg } from "@/utils/img.utils";
+import { timer } from "@/models/twitterTimer.model";
+import { REDIS } from "@/utils/redis.utils";
 
 export const home = async (req: GlobalRequest, res: GlobalResponse) => {
 	res.send("hi!");
@@ -205,6 +207,9 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
     return;
   }
 
+  const timers = await timer.find();
+  const timeToWait = timers[0];
+
   let xClient: Client;
   let quest: any | undefined = undefined;
 
@@ -212,6 +217,7 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
     const { tag, id: postId, questId, page } = req.body; // get task id and store project x id, then remove hardcoded nexura id
 
     const NEXURA_ID = "1983300499597393920";
+    const NEXURA_USERNAME = "NexuraXYZ";
     if (page === "quest") {
       quest = await miniQuest.findById(questId);
       if (!quest) {
@@ -231,13 +237,60 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
     switch (tag) {
       case "follow":
 
-        const { data: { followers } } = await axios.get(`${API_URL}/user/followers?userName=${"nexuraXYZ"}&pageSize=200`, {
-          headers: {
-            "X-API-Key": `${THIRD_PARTY_API_KEY}`,
-          }
-        });
+        const followersArr = [];
+        let followDone = false;
+        let followCursor = "";
 
-        const isFollowing = followers.some((f: { id: string }) => f.id === xId);
+        const followKey = `${NEXURA_USERNAME}:follow`;
+
+        const followersInCache = await REDIS.get(followKey);
+
+        const followFound = followersInCache.some((follower: { id: string }) => follower.id === xId);
+        if (followFound) {
+          res.status(OK).json({ message: "task verified", success: true });
+          return;
+        }
+
+        if (followersInCache.length < 500) {
+          const now = new Date();
+
+          if (timeToWait?.time != null && timeToWait.time > now) {
+            res.status(UNAUTHORIZED).json({ error: "task has not been validated, check back after 1 hr" });
+            return;
+          }
+
+          while (!followDone) {
+            const { data: { followers, has_next_page, next_cursor } } = await axios.get(`${API_URL}/user/followers?userName=${NEXURA_USERNAME}&pageSize=200&cursor=${followCursor}`, {
+              headers: {
+                "X-API-Key": `${THIRD_PARTY_API_KEY}`,
+              }
+            });
+
+            if (followersArr.length === 500 || followers.length === 0) {
+              followDone = true;
+              await REDIS.set({ key: followKey, data: followersArr });
+            } else {
+              followersArr.push(...followers);
+              followCursor = next_cursor;
+              if (!has_next_page) {
+                followDone = true;
+                await REDIS.set({ key: followKey, data: followersArr });
+              }
+            }
+          }
+
+          if (!timeToWait) { 
+            await timer.create({ time: new Date(now.getTime() + 1 * 60 * 60 * 1000) }); 
+          } else {
+            timeToWait.time = new Date(now.getTime() + 1 * 60 * 60 * 1000);
+            await timeToWait.save();
+          }
+        }
+
+        followDone = false;
+        followCursor = "";
+
+        const isFollowing = followersArr.some((follower: { id: string }) => follower.id === xId);
 
         if (!isFollowing) {
           res.status(BAD_REQUEST).json({ error: "account not followed" });
@@ -284,16 +337,63 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
         console.log("LE:", likedPosts.errors);
 
         res.status(BAD_REQUEST).json({ error: "tweet not liked" });
-      return
+        return;
       case "repost":
 
-        const { data: { users } } = await axios.get(`${API_URL}/tweet/retweeters?tweetId=${postId}`, {
-          headers : {
-            "X-API-Key": `${THIRD_PARTY_API_KEY}`,
-          }
-        });
+        const repostersArr = [];
+        let repostDone = false;
+        let repostCursor = "";
 
-        const hasReposted = users.some((user: { id: string }) => user.id === xId);
+        const repostKey = `${postId}:repost`;
+
+        const repostInCache = await REDIS.get(repostKey);
+
+        const repostFound = repostInCache.some((reposter: { id: string }) => reposter.id === xId);
+        if (repostFound) {
+          res.status(OK).json({ message: "task verified", success: true });
+          return;
+        }
+
+        if (repostInCache.length < 500) {
+          const now = new Date();
+
+          if (timeToWait?.time != null && timeToWait.time > now) {
+            res.status(UNAUTHORIZED).json({ error: "task has not been validated, check back after 1 hr" });
+            return;
+          }
+
+          while (!repostDone) {
+            const { data: { users, has_next_page, next_cursor } } = await axios.get(`${API_URL}/tweet/retweeters?tweetId=${postId}&cursor=${repostCursor}`, {
+              headers: {
+                "X-API-Key": `${THIRD_PARTY_API_KEY}`,
+              }
+            });
+
+            if (repostersArr.length >= 500 || users.length === 0) {
+              repostDone = true;
+              await REDIS.set({ key: repostKey, data: repostersArr });
+            } else {
+              repostersArr.push(...users);
+              repostCursor = next_cursor;
+              if (!has_next_page) {
+                repostDone = true;
+                await REDIS.set({ key: repostKey, data: repostersArr });
+              }
+            }
+          }
+
+          if (!timeToWait) { 
+            await timer.create({ time: "" }); 
+          } else {
+            timeToWait.time = new Date(now.getTime() + 1 * 60 * 60 * 1000);
+            await timeToWait.save();
+          }
+        }
+
+        repostDone = false;
+        repostCursor = "";
+
+        const hasReposted = repostersArr.some((reposter: { id: string }) => reposter.id === xId);
 
         if (!hasReposted) {
           res.status(BAD_REQUEST).json({ error: "tweet not reposted" });
@@ -304,16 +404,63 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
 
         return
       case "comment":
-        const { data: { tweets } } = await axios.get(`${API_URL}/tweet/replies?tweetId=${postId}`, {
-          headers: {
-            "X-API-Key": `${THIRD_PARTY_API_KEY}`,
-          }
-        });
+        const commentsArr = [];
+        let commentDone = false;
+        let commentCursor = "";
 
-        const hasReplied = tweets.some((reply: { author: { id: string } }) => reply.author.id === xId);
+        const commentKey = `${postId}:comments`;
+
+        const commentsInCache = await REDIS.get(commentKey);
+
+        const commentFound = commentsInCache.some((reply: { author: { id: string } }) => reply.author.id === xId);
+        if (commentFound) {
+          res.status(OK).json({ message: "task verified", success: true });
+          return;
+        }
+
+        if (commentsInCache.length < 500) {
+          const now = new Date();
+
+          if (timeToWait?.time != null && timeToWait.time > now) {
+            res.status(UNAUTHORIZED).json({ error: "task has not been validated, check back after 1 hr" });
+            return;
+          }
+
+          while (!commentDone) {
+            const { data: { tweets, has_next_page, next_cursor } } = await axios.get(`${API_URL}/tweet/replies?tweetId=${postId}&cursor=${commentCursor}`, {
+              headers: {
+                "X-API-Key": `${THIRD_PARTY_API_KEY}`,
+              }
+            });
+
+            if (commentsArr.length >= 500 || tweets.length === 0) {
+              commentDone = true;
+              await REDIS.set({ key: commentKey, data: commentsArr });
+            } else {
+              commentsArr.push(...tweets);
+              commentCursor = next_cursor;
+              if (!has_next_page) {
+                commentDone = true;
+                await REDIS.set({ key: commentKey, data: commentsArr });
+              }
+            }
+          }
+
+          if (!timeToWait) { 
+            await timer.create({ time: "" }); 
+          } else {
+            timeToWait.time = new Date(now.getTime() + 1 * 60 * 60 * 1000);
+            await timeToWait.save();
+          }
+        }
+
+        commentDone = false;
+        commentCursor = "";
+
+        const hasReplied = commentsArr.some((reply: { author: { id: string } }) => reply.author.id === xId);
 
         if (!hasReplied) {
-          res.status(BAD_REQUEST).json({ error: "tweet not commented on" });
+          res.status(BAD_REQUEST).json({ error: "tweet not commented on/task retry again" });
           return;
         }
 
