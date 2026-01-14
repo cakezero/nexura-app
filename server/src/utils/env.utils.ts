@@ -8,12 +8,21 @@ export const environment = process.env.ENVIRONMENT as "development" | "productio
 export const network = process.env.NETWORK as "testnet" | "mainnet" | undefined;
 export const JWT_SECRET = process.env.JWT_SECRET as string;
 export const REFRESH_SECRET = process.env.REFRESH_SECRET as string;
-export const DISCORD_JWT_SECRET = process.env.DISCORD_JWT_SECRET as string;
+
+export const COOLIFY_REDIS = process.env.COOLIFY_REDIS as string;
+export const REDIS_URI = process.env.REDIS_URI as string;
+export const REDIS_PASSWORD = process.env.REDIS_PASSWORD as string;
+export const REDIS_PORT = process.env.REDIS_PORT as string;
+export const REDIS_USERNAME = process.env.REDIS_USERNAME as string;
+
 export const PRIVATE_KEY = process.env.PRIVATE_KEY as `0x${string}`;
 export const AWS_REGION = process.env.AWS_REGION as string;
 export const AWS_SECRET_ACCESS_KEY = process.env.AWS_SECRET_ACCESS_KEY as string;
 export const AWS_ACCESS_KEY_ID = process.env.AWS_ACCESS_KEY_ID as string;
 export const AWS_S3_BUCKET = process.env.AWS_S3_BUCKET as string;
+
+export const EMAIL_USER = process.env.EMAIL_USER as string;
+export const EMAIL_PASSWORD = process.env.EMAIL_PASSWORD as string;
 
 export const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID as string;
 export const MAIN_DISCORD_REDIRECT_URI = process.env.MAIN_DISCORD_REDIRECT_URI as string;
