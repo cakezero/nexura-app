@@ -33,7 +33,12 @@ export const questCompleted = mongoose.model(
 const miniQuestCompletedSchema = new Schema({
 	done: {
 		type: Boolean,
-		required: true,
+		default: false,
+	},
+	status: {
+		type: String,
+		enum: ["pending", "retry", "done"],
+		default: "pending"
 	},
 	miniQuest: {
 		type: mongoose.Schema.Types.ObjectId,
@@ -57,7 +62,12 @@ export const miniQuestCompleted = mongoose.model(
 const campaignQuestCompletedSchema = new Schema({
 	done: {
 		type: Boolean,
-		required: true,
+		default: false,
+	},
+	status: {
+		type: String,
+		enum: ["pending", "retry", "done"],
+		default: "pending"
 	},
 	campaign: {
 		type: mongoose.Schema.Types.ObjectId,

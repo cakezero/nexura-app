@@ -139,6 +139,7 @@ export const fetchMiniQuests = async (req: GlobalRequest, res: GlobalResponse) =
 			const mergedQuest: Record<any, unknown> = miniquest.toJSON();
 
 			mergedQuest.done = miniquestCompleted ? miniquestCompleted.done : false;
+			mergedQuest.status = miniquestCompleted ? miniquestCompleted.status : "";
 
 			miniQuests.push(mergedQuest);
 		}
@@ -193,17 +194,19 @@ export const fetchCampaignQuests = async (
 			const mergedCampaignQuest: Record<any, unknown> = quest.toJSON();
 
 			mergedCampaignQuest.done = questCompleted ? questCompleted.done : false;
+			mergedCampaignQuest.status = questCompleted ? questCompleted.status : "";
 
 			campaignQuests.push(mergedCampaignQuest);
 		}
 
 		if (currentCampaign.noOfQuests === campaignQuestsCompleted.length && !completedCampaign?.questsCompleted) {
-
-			await performIntuitionOnchainAction({
-				action: "allow-claim",
-				userId,
-				contractAddress: currentCampaign.contractAddress!,
-			});
+			if (currentCampaign.trustClaimed < 4000) {
+				await performIntuitionOnchainAction({
+					action: "allow-claim",
+					userId,
+					contractAddress: currentCampaign.contractAddress!,
+				});
+			}
 
 			completedCampaign!.questsCompleted = true;
 			await completedCampaign!.save();
@@ -218,6 +221,7 @@ export const fetchCampaignQuests = async (
 			description: currentCampaign.description,
 			address: currentCampaign?.contractAddress,
 			title: currentCampaign.title,
+			trustClaimed: currentCampaign.trustClaimed,
 			reward: currentCampaign.reward,
 			sub_title: currentCampaign.sub_title,
 			project_name: currentCampaign.project_name,
@@ -343,6 +347,30 @@ export const performCampaignQuest = async (
 		res
 			.status(FORBIDDEN)
 			.json({ error: "already performed this campaign quest" });
+
+		// if (!campaignDone) {
+		// 	res.status(FORBIDDEN).json({ message: "submit campaign task to proceed" });
+		// 	return;
+		// }
+
+		// if (campaignDone.status !== "done") {
+		// 	res
+		// 		.status(FORBIDDEN)
+		// 		.json({ error: "task not performed" });
+		// 	return;
+		// }
+
+		// if (campaignDone.done) {
+		// 	res
+		// 		.status(FORBIDDEN)
+		// 		.json({ error: "already performed campaign task" });
+		// 	return;
+		// }
+
+		// campaignDone.done = true;
+		// await campaignDone.save();
+
+		// res.status(OK).json({ message: "campaign task done" });
 	} catch (error) {
 		logger.error(error);
 		res
@@ -571,9 +599,9 @@ export const setTimer = async (req: GlobalRequest, res: GlobalResponse) => {
 // for quests requiring input submission for validation before quest completion
 export const submitQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 	try {
-		const { submissionLink } = req.body;
-		if (!submissionLink) {
-			res.status(BAD_REQUEST).json({ error: "" });
+		const { submissionLink, questId, page, id } = req.body;
+		if (!submissionLink || !questId || !page || !id) {
+			res.status(BAD_REQUEST).json({ error: "send required details" });
 			return;
 		}
 
@@ -583,7 +611,15 @@ export const submitQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 			return;
 		}
 
-		await submission.create({ submissionLink, user: req.id });
+		let notComplete;
+
+		if (page !== "campaign") {
+			notComplete = await miniQuestCompleted.create({ miniQuest: id, quest: questId });
+		} else {
+			notComplete = await campaignQuestCompleted.create({ campaign: questId, campaignQuest: id });
+		}
+
+		await submission.create({ submissionLink, questId, user: req.id, page, questCompleted: notComplete._id });
 
 		res.status(OK).json({ message: "quest submitted" });
 	} catch (error) {
