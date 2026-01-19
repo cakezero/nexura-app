@@ -132,7 +132,7 @@ export default function QuestEnvironment() {
       const id = getId(miniQuest.link);
 
       try {
-        if (["like", "follow", "comment", "repost"].includes(miniQuest.tag)) {
+        if (["follow", "comment", "repost"].includes(miniQuest.tag)) {
           if (!user?.socialProfiles.x.connected) {
             throw new Error("x not connected yet, go to profile to connect.");
           }
