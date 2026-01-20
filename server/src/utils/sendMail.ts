@@ -5,7 +5,7 @@ import hbs, {
 import path, { dirname } from "path";
 import { fileURLToPath } from "url";
 import logger from "@/config/logger";
-import { EMAIL_USER, EMAIL_PASSWORD } from "./env.utils";
+import { EMAIL_USER, EMAIL_PASSWORD, ADMIN_URL } from "./env.utils";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -36,7 +36,7 @@ export const sendEmailToAdmin = async (email: string, code: string) => {
       subject: "Complete Nexura Admin Setup",
       template: "admin",
       context: {
-        code,
+        url: `${ADMIN_URL}/register?code=${code}`,
       },
     } as MailOptions);
   } catch (error: any) {
