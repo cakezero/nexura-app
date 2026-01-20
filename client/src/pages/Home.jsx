@@ -13,15 +13,17 @@ export default function Home() {
   {/* Mobile Gradient / Desktop Video wrapper */}
   <div className="relative w-full">
 
-{/* Desktop + Mobile Video */}
-<video
-  src="/nexura-logo-mov.mp4"
-  autoPlay
-  loop
-  muted
-  playsInline
-  className="w-full h-screen object-cover opacity-20 object-center"
-/>
+<div className="relative w-full h-screen overflow-hidden">
+  <video
+    src="/nexura-logo-mov.mp4"
+    autoPlay
+    loop
+    muted
+    playsInline
+    className="absolute top-0 left-0 w-full h-full object-cover opacity-20"
+  />
+</div>
+
 
 
     {/* Top-left Logo */}
@@ -195,76 +197,25 @@ export default function Home() {
 >
 <section className="flex flex-col sm:flex-row text-white items-center justify-center px-4 sm:px-0 py-12 sm:py-20">
 
-  {/* Left half: Purple Circle with icons */}
+  {/* Left half image */}
   <div className="flex-1 flex items-center justify-center relative mb-6 sm:mb-0 order-1 sm:order-0">
-    {/* Outer circle */}
-    <div
-      className="rounded-full relative flex items-center justify-center"
-      style={{
-        width: "250px",
-        height: "250px",
-        border: "2px solid #7C3AED",
-      }}
-    >
-      {/* Center coordinates */}
-      {[
-        { src: "/earn-icon.png", angle: 225, label: "Earn" },       // bottom-left
-        { src: "/quest-icon.png", angle: 315, label: "Quest" },     // bottom-right
-        { src: "/level-up.png", angle: 135, label: "Level Up" },   // top-left
-        { src: "/explore-icon.png", angle: 45, label: "Explore" }, // top-right
-      ].map((icon, index) => {
-        const radius = 125;
-        const x = radius + radius * Math.cos((icon.angle * Math.PI) / 180);
-        const y = radius - radius * Math.sin((icon.angle * Math.PI) / 180);
-        const isLeftSide = icon.angle === 225 || icon.angle === 135;
-        const labelOffset = isLeftSide ? -85 : 30;
+    {/* Mobile Image */}
+    <img
+      src="/discover-mobile.png"
+      alt="Discover Mobile"
+      className="w-full max-w-xs sm:hidden object-contain"
+    />
 
-        return (
-          <React.Fragment key={index}>
-            <img
-              src={icon.src}
-              alt=""
-              className="absolute w-12 h-12 sm:w-16 sm:h-16"
-              style={{
-                left: `${x}px`,
-                top: `${y}px`,
-                transform: "translate(-50%, -50%)",
-              }}
-            />
-            <span
-              className="absolute text-white font-bold text-sm sm:text-base"
-              style={{
-                left: `${x + labelOffset}px`,
-                top: `${y}px`,
-                transform: "translateY(-50%)",
-              }}
-            >
-              {icon.label}
-            </span>
-          </React.Fragment>
-        );
-      })}
-
-      {/* Inner circle */}
-      <div
-        className="rounded-full flex items-center justify-center relative"
-        style={{
-          width: "200px",
-          height: "200px",
-          border: "1px solid rgba(124, 58, 237, 0.4)",
-        }}
-      >
-        <img
-          src="/nexura-icon.png"
-          alt="Nexura Icon"
-          className="w-16 h-16 sm:w-24 sm:h-24"
-        />
-      </div>
-    </div>
+    {/* Desktop Image */}
+    <img
+      src="/discover-left.png"
+      alt="Discover Desktop"
+      className="w-full max-w-md hidden sm:block object-contain"
+    />
   </div>
 
-  {/* Right half: Text */}
-  <div className="flex-1 flex items-center justify-center px-4 sm:px-6 relative order-0 sm:order-1 mb-8 sm:mb-0">
+  {/* Right half: Text (desktop only) */}
+  <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-center sm:px-6 relative order-0 sm:order-1 mb-8 sm:mb-0">
     <div className="relative z-10">
       <h3 className="font-geist text-4xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-white text-center sm:text-right leading-tight">
         <span className="block mb-2">The Engagement</span>
@@ -283,6 +234,7 @@ export default function Home() {
       ></div>
     </div>
   </div>
+
 </section>
 </motion.section>
 
@@ -325,7 +277,12 @@ export default function Home() {
     transition={{ type: "spring", stiffness: 200, damping: 20 }}
   >
     <div className="w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 rounded-full border border-purple-500 flex items-center justify-center mb-6">
-      <img src="/notebook.png" alt="Clear Guidance" className="w-full h-full object-contain -mb-3" />
+      <img
+  src="/notebook.png"
+  alt="Real Engagement"
+  className="w-full h-full object-contain -mb-3 sm:-mb-5"
+/>
+
     </div>
 
     <h3 className="text-lg sm:text-xl font-bold mb-2">Clear Guidance</h3>
@@ -341,7 +298,12 @@ export default function Home() {
     transition={{ type: "spring", stiffness: 200, damping: 20 }}
   >
     <div className="w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 rounded-full border border-purple-500 flex items-center justify-center mb-6">
-      <img src="/engager.png" alt="Real Engagement" className="w-full h-full object-contain -mb-3" />
+      <img
+  src="/engager.png"
+  alt="Real Engagement"
+  className="w-full h-full object-contain -mb-3 sm:-mb-5"
+/>
+
     </div>
 
     <h3 className="text-lg sm:text-xl font-bold mb-2">Real Engagement</h3>
@@ -376,135 +338,23 @@ export default function Home() {
   viewport={{ once: true, amount: 0.2 }} // 20% of the section must be visible
   transition={{ duration: 1.5 }}
 >
-{/* BUILT FOR SECTION */}
 <section className="text-white py-20 lg:py-28 px-4 lg:px-6 relative overflow-hidden">
   <div className="relative z-10 max-w-7xl mx-auto">
 
-    <div className="flex flex-col lg:flex-row gap-12">
+    {/* Mobile image: shown only on <lg */}
+    <img
+      src="/built-for-section.png"
+      alt="Built For Mobile"
+      className="block lg:hidden w-full h-auto object-contain"
+    />
 
-      {/* Left column */}
-      <div className="lg:flex-[30%] flex items-start">
-        <div className="hidden lg:block bg-purple-500 rounded-full mr-4 mt-2"
-          style={{ width: "4px", height: "40px" }}
-        />
-        <h2 className="font-geist text-2xl sm:text-3xl md:text-4xl font-extrabold">
-          Built For <span className="opacity-60">.....</span>
-        </h2>
-      </div>
+    {/* Desktop image: shown only on lg+ */}
+    <img
+      src="/built-for-desktop.png"
+      alt="Built For Desktop"
+      className="hidden lg:block w-full h-auto object-contain"
+    />
 
-      {/* Right column */}
-      <div className="lg:flex-[70%] grid grid-cols-1 grid-rows-2 border border-white/10 divide-y divide-white/10">
-
-        {/* PROJECTS */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 p-6 lg:p-8">
-          <div className="max-w-md">
-            <h3 className="text-xl lg:text-2xl font-bold mb-2">Projects</h3>
-            <p className="text-gray-400 text-sm">
-              Launch quests, measure user engagement, reward testers and grow adoption.
-            </p>
-          </div>
-
-          {/* Icon cluster */}
-          <div className="relative w-40 h-24 mx-auto lg:mx-0">
-            <div className="flex justify-between items-center w-full relative">
-              <img src="/quest-icon.png" className="w-16 h-16 -ml-16" />
-              <img src="/members.png" className="w-14 h-14" />
-
-              {/* SVG curve */}
-              <svg
-                className="hidden lg:block absolute top-1/2 -left-4 -translate-y-1/2"
-                width="150"
-                height="70"
-                viewBox="0 0 240 90"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path d="M204.744 29.8065C204.786 30.0796..." fill="#893EFB" />
-              </svg>
-            </div>
-
-            <div className="mt-2 w-full relative">
-              <img
-                src="/engagement.png"
-                className="w-12 h-12 absolute"
-                style={{ left: "calc(50% - 3.5rem)" }}
-              />
-
-              <svg
-                className="hidden lg:block absolute -left-8 -top-2"
-                width="65"
-                height="29"
-                viewBox="0 0 65 29"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path d="M0.805788 0.104407..." fill="#893EFB" />
-              </svg>
-
-              <svg
-                className="hidden lg:block absolute left-16 top-14"
-                width="64"
-                height="29"
-                viewBox="0 0 64 29"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path d="M0.441463 27.9341..." fill="#893EFB" />
-              </svg>
-            </div>
-          </div>
-        </div>
-
-        {/* EXPLORERS */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 p-6 lg:p-8">
-          <div className="max-w-md">
-            <h3 className="text-xl lg:text-2xl font-bold mb-2">Explorers</h3>
-            <p className="text-gray-400 text-sm">
-              Discover new tools, complete missions, earn XP, TRUST and badges while building a reputation.
-            </p>
-          </div>
-
-          <div className="relative w-40 h-24 mx-auto lg:mx-0">
-            <div className="flex justify-between items-center w-full relative">
-              <img src="/earn-icon.png" className="w-12 h-12 -ml-12" />
-
-              <svg
-                className="hidden lg:block absolute left-[-1.2rem] top-6"
-                width="65"
-                height="66"
-                viewBox="0 0 65 66"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path d="M1.41348 0.5..." stroke="#893EFB" strokeLinecap="round" />
-              </svg>
-
-              <img src="/level-up.png" className="w-12 h-12" />
-            </div>
-
-            <div className="mt-2 w-full relative">
-              <img
-                src="/explore-icon.png"
-                className="w-12 h-12 absolute"
-                style={{ left: "calc(50% - 3.5rem)" }}
-              />
-
-              <svg
-                className="hidden lg:block absolute left-14 -top-11"
-                width="65"
-                height="66"
-                viewBox="0 0 65 66"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path d="M1.41348 64.6602..." stroke="#893EFB" strokeLinecap="round" />
-              </svg>
-            </div>
-          </div>
-        </div>
-
-      </div>
-    </div>
   </div>
 </section>
 </motion.section>
