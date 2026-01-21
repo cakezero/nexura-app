@@ -332,46 +332,46 @@ export const performCampaignQuest = async (
 			user: req.id,
 			campaignQuest: id,
 		});
-		// if (!campaignDone) {
-		// 	// todo: validate quest to be sure user performed it
-		// 	await campaignQuestCompleted.create({
-		// 		done: true,
-		// 		user: req.id,
-		// 		campaignQuest: id,
-		// 		campaign: campaignId
-		// 	});
+		if (!campaignDone) {
+			// todo: validate quest to be sure user performed it
+			await campaignQuestCompleted.create({
+				done: true,
+				user: req.id,
+				campaignQuest: id,
+				campaign: campaignId
+			});
 
-		// 	res.status(OK).json({ message: "campaign quest done!" });
+			res.status(OK).json({ message: "campaign quest done!" });
+			return;
+		}
+
+		res
+			.status(FORBIDDEN)
+			.json({ error: "already performed this campaign quest" });
+
+		// if (!campaignDone) {
+		// 	res.status(FORBIDDEN).json({ message: "submit campaign task to proceed" });
 		// 	return;
 		// }
 
-		// res
-		// 	.status(FORBIDDEN)
-		// 	.json({ error: "already performed this campaign quest" });
+		// if (campaignDone.status !== "done") {
+		// 	res
+		// 		.status(FORBIDDEN)
+		// 		.json({ error: "task not performed" });
+		// 	return;
+		// }
 
-		if (!campaignDone) {
-			res.status(FORBIDDEN).json({ message: "submit campaign task to proceed" });
-			return;
-		}
+		// if (campaignDone.done) {
+		// 	res
+		// 		.status(FORBIDDEN)
+		// 		.json({ error: "already performed campaign task" });
+		// 	return;
+		// }
 
-		if (campaignDone.status !== "done") {
-			res
-				.status(FORBIDDEN)
-				.json({ error: "task not performed" });
-			return;
-		}
+		// campaignDone.done = true;
+		// await campaignDone.save();
 
-		if (campaignDone.done) {
-			res
-				.status(FORBIDDEN)
-				.json({ error: "already performed campaign task" });
-			return;
-		}
-
-		campaignDone.done = true;
-		await campaignDone.save();
-
-		res.status(OK).json({ message: "campaign task done" });
+		// res.status(OK).json({ message: "campaign task done" });
 	} catch (error) {
 		logger.error(error);
 		res

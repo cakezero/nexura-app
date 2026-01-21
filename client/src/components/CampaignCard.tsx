@@ -95,14 +95,14 @@ export default function CampaignCard({
       {/* Content */}
       <div className="p-6">
         {/* Project Info */}
-        <div className="flex items-center space-x-2 mb-3">
+        {/* <div className="flex items-center space-x-2 mb-3">
           <img
             src={projectLogo}
             alt={project_name}
             className="w-6 h-6 rounded-full"
           />
           <span className="text-sm text-muted-foreground">{project_name}</span>
-        </div>
+        </div> */}
 
         <h3 className="text-lg font-bold text-card-foreground mb-4">{title}</h3>
 

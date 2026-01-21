@@ -17,16 +17,17 @@ type Quest = {
   reward: number;
   tag: "like" | "follow" | "join" | "repost" | "comment";
   link: string;
+  status: string;
   done: boolean;
 };
 
 const campaignQuestsInitial: Quest[] = [
-  { _id: "quest-id", tag: "like", done: false, quest: "Follow Nexura on X", reward: 100, link: "https://x.com/NexuraXYZ" },
-  { _id: "quest-id", tag: "like", done: false, quest: "Join Nexura Discord", reward: 100, link: "https://discord.gg/caK9kATBya" },
-  { _id: "quest-id", tag: "like", done: false, quest: "Drop a message on Discord", reward: 100, link: "https://discord.gg/caK9kATBya" },
-  { _id: "quest-id", tag: "like", done: false, quest: "Support or Oppose the #Intuitionbilly Claim on Intuition Portal", reward: 100, link: "#" },
-  { _id: "quest-id", tag: "like", done: false, quest: "Support or oppose the Nexura claim on Intuition Portal", reward: 100, link: "#" },
-  { _id: "quest-id", tag: "like", done: false, quest: "Like and Comment on Nexura Pinned post", reward: 100, link: "#" },
+  { _id: "quest-id", status: " ", tag: "like", done: false, quest: "Follow Nexura on X", reward: 100, link: "https://x.com/NexuraXYZ" },
+  { _id: "quest-id", status: " ", tag: "like", done: false, quest: "Join Nexura Discord", reward: 100, link: "https://discord.gg/caK9kATBya" },
+  { _id: "quest-id", status: " ", tag: "like", done: false, quest: "Drop a message on Discord", reward: 100, link: "https://discord.gg/caK9kATBya" },
+  { _id: "quest-id", status: " ", tag: "like", done: false, quest: "Support or Oppose the #Intuitionbilly Claim on Intuition Portal", reward: 100, link: "#" },
+  { _id: "quest-id", status: " ", tag: "like", done: false, quest: "Support or oppose the Nexura claim on Intuition Portal", reward: 100, link: "#" },
+  { _id: "quest-id", status: " ", tag: "like", done: false, quest: "Like and Comment on Nexura Pinned post", reward: 100, link: "#" },
 ];
 
 export default function CampaignEnvironment() {
@@ -42,6 +43,10 @@ export default function CampaignEnvironment() {
   });
   const [claimedQuests, setClaimedQuests] = useState<string[]>(() => {
     const stored = JSON.parse(localStorage.getItem("nexura:campaign:claimed") || "{}");
+    return stored[userId] || [];
+  });
+  const [pendingQuests, setPendingQuests] = useState<string[]>(() => {
+    const stored = JSON.parse(localStorage.getItem("nexura:campaign:pending") || "{}");
     return stored[userId] || [];
   });
   const [failedQuests, setFailedQuests] = useState<string[]>([]);
@@ -104,6 +109,12 @@ export default function CampaignEnvironment() {
   }, [claimedQuests, userId]);
 
   useEffect(() => {
+    const pending: any = JSON.parse(localStorage.getItem("nexura:campaign:pending") || "{}");
+    pending[userId] = pendingQuests;
+    localStorage.setItem("nexura:campaign:pending", JSON.stringify(pending));
+  }, [pendingQuests, userId]);
+
+  useEffect(() => {
     const completed: any = JSON.parse(localStorage.getItem("nexura:campaign:completed") || "{}");
     completed[userId] = campaignCompleted;
     localStorage.setItem("nexura:campaign:completed", JSON.stringify(completed));
@@ -149,9 +160,9 @@ export default function CampaignEnvironment() {
         description: "Your proof has been submitted for review.",
       });
 
-      // Mark as claimed
-      setClaimedQuests([...claimedQuests, quest._id]);
       setExpandedQuestId(null);
+      // mark quest as pending
+      setPendingQuests([...pendingQuests, quest._id]);
     } catch (err: any) {
       toast({
         title: "Error",
@@ -236,10 +247,10 @@ export default function CampaignEnvironment() {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     }
   };
+
   const progressPercentage = quests.length
     ? Math.round((quests.filter(q => q.done).length / quests.length) * 100)
     : 0;
-
 
   return (
 
@@ -257,9 +268,9 @@ export default function CampaignEnvironment() {
             </div>
 
             <div className="flex items-center gap-2 sm:gap-3">
-              <p className="text-[0.65rem] sm:text-sm opacity-70 uppercase">Total XP</p>
+              <p className="text-[0.65rem] sm:text-sm opacity-70 uppercase">Total Rewards</p>
               <div className="bg-purple-600/30 border border-purple-500/40 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full flex items-center gap-1 sm:gap-2">
-                <span className="font-bold text-xs sm:text-sm">{reward.xp} XP</span>
+                <span className="font-bold text-xs sm:text-sm">{reward.xp} XP + {reward.trustTokens} Trust</span>
               </div>
             </div>
           </div>
@@ -305,7 +316,7 @@ export default function CampaignEnvironment() {
 
               <Button
                 onClick={claimCampaignReward}
-                disabled={campaignCompleted}
+                disabled={!questsCompleted || campaignCompleted}
                 className={`w-full font-semibold rounded-xl py-3 mt-6 ${!campaignCompleted
                     ? "bg-purple-600 hover:bg-purple-700 text-white"
                     : "bg-gray-600 cursor-not-allowed text-gray-300"
@@ -323,12 +334,14 @@ export default function CampaignEnvironment() {
               const isCommentQuest = quest.tag === "comment";
               const visited = visitedQuests.includes(quest._id);
               const claimed = quest.done || claimedQuests.includes(quest._id);
+              const pending = quest.status === "pending" || pendingQuests.includes(quest._id);
               const failed = failedQuests.includes(quest._id);
               const isExpanded = expandedQuestId === quest._id;
 
               let buttonText = "Start Quest";
 
               if (visited) buttonText = "Claim";
+              if (pending) buttonText = "Pending";
               if (claimed) buttonText = "Completed";
 
               return (
@@ -367,6 +380,7 @@ export default function CampaignEnvironment() {
                         </button>
                       )}
                       {claimed && <span className="text-sm text-green-400 font-semibold">Completed</span>}
+                      {pending && <button disabled={true} className="text-sm text-white bg-white/10 font-semibold">Pending</button>}
                     </div>
 
                   </div>

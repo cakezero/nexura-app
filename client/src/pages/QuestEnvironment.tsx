@@ -15,15 +15,16 @@ type Quest = {
   tag: string;
   reward: string;
   link: string;
+  status: string;
 };
 
 const questsInitial: Quest[] = [
-  { done: false, tag: "", _id: "id-like", text: "Like this Nexura tweet", reward: "40 XP", link: "https://x.com/i.status/1997778439366115502" },
-  { done: false, tag: "comment", _id: "id-comment", text: "Comment on this Nexura tweet", reward: "40 XP", link: "https://x.com/i.status/1997778439366115502" },
-  { done: false, tag: "", _id: "id-repost", text: "Repost this Nexura tweet", reward: "40 XP", link: "https://x.com/i.status/1997778439366115502" },
-  { done: false, tag: "", _id: "id-tribe", text: "Support or Oppose the #Tribe Claim on Intuition Portal", reward: "100 XP", link: "https://portal.intuition.systems/explore/triple/0xdce8ebb5bdb2668732d43cce5eca85d6a5119fd1bc92f36dd85998ab48ce7a63?tab=positions" },
-  { done: false, tag: "", _id: "id-tns", text: "Support or Oppose the TNS Claim on Intuition Portal", reward: "140 XP", link: "https://portal.intuition.systems/explore/triple/0xd9c06c57fced2eafcc71a6b46ad9acd58e6b035e7ccc2dc6eebc00f8ba71172f?tab=positions" },
-  { done: false, tag: "", _id: "id-sofia", text: "Support or Oppose the Sofia Claim on Intuition Portal", reward: "140 XP", link: "https://portal.intuition.systems/explore/triple/0x98ba47f4d18ceb7550c6c593ef92835864f0c0e09d6e56108feac8a8a6012038?tab=positions" },
+  { done: false, tag: "", status: "", _id: "id-like", text: "Like this Nexura tweet", reward: "40 XP", link: "https://x.com/i.status/1997778439366115502" },
+  { done: false, tag: "comment", status: "", _id: "id-comment", text: "Comment on this Nexura tweet", reward: "40 XP", link: "https://x.com/i.status/1997778439366115502" },
+  { done: false, tag: "", status: "", _id: "id-repost", text: "Repost this Nexura tweet", reward: "40 XP", link: "https://x.com/i.status/1997778439366115502" },
+  { done: false, tag: "", status: "", _id: "id-tribe", text: "Support or Oppose the #Tribe Claim on Intuition Portal", reward: "100 XP", link: "https://portal.intuition.systems/explore/triple/0xdce8ebb5bdb2668732d43cce5eca85d6a5119fd1bc92f36dd85998ab48ce7a63?tab=positions" },
+  { done: false, tag: "", status: "", _id: "id-tns", text: "Support or Oppose the TNS Claim on Intuition Portal", reward: "140 XP", link: "https://portal.intuition.systems/explore/triple/0xd9c06c57fced2eafcc71a6b46ad9acd58e6b035e7ccc2dc6eebc00f8ba71172f?tab=positions" },
+  { done: false, tag: "", status: "", _id: "id-sofia", text: "Support or Oppose the Sofia Claim on Intuition Portal", reward: "140 XP", link: "https://portal.intuition.systems/explore/triple/0x98ba47f4d18ceb7550c6c593ef92835864f0c0e09d6e56108feac8a8a6012038?tab=positions" },
 ];
 
 export default function QuestEnvironment() {
@@ -46,6 +47,10 @@ export default function QuestEnvironment() {
   });
   const [claimedQuests, setClaimedQuests] = useState<string[]>(() => {
     return JSON.parse(localStorage.getItem('nexura:quest:claimed') || '[]')[userId] || [];
+  });
+  const [pendingQuests, setPendingQuests] = useState<string[]>(() => {
+    const stored = JSON.parse(localStorage.getItem("nexura:campaign:pending") || "{}");
+    return stored[userId] || [];
   });
   const [questCompleted, setQuestCompleted] = useState<boolean>(() => {
     try { return Boolean(JSON.parse(localStorage.getItem('nexura:quest:completed') || "")[userId]); } catch (error) { return false }
@@ -102,6 +107,12 @@ export default function QuestEnvironment() {
 
     localStorage.setItem('nexura:quest:completed', JSON.stringify(value))
   }, [questCompleted]);
+
+  useEffect(() => {
+    const pending: any = JSON.parse(localStorage.getItem("nexura:campaign:pending") || "{}");
+    pending[userId] = pendingQuests;
+    localStorage.setItem("nexura:campaign:pending", JSON.stringify(pending));
+  }, [pendingQuests, userId]);
 
   const miniQuestsCompleted = miniQuests.filter((m) => m.done === true).length === miniQuests.length;
 
@@ -235,6 +246,7 @@ export default function QuestEnvironment() {
       });
 
       setExpandedQuestId(null);
+      setPendingQuests([...pendingQuests, quest._id]);
     } catch (err: any) {
       toast({
         title: "Error",
@@ -247,9 +259,16 @@ export default function QuestEnvironment() {
 
   const renderQuestRow = (quest: Quest, index: number) => {
     const visited = visitedQuests.includes(quest._id);
-    const claimed = claimedQuests.includes(quest._id);
+    const claimed = quest.done || claimedQuests.includes(quest._id);
+    const pending = quest.status === "pending" || pendingQuests.includes(quest._id);
     const isCommentQuest = quest.tag === "comment";
     const isExpanded = expandedQuestId === quest._id;
+
+    let buttonText = "Start Quest";
+
+    if (visited) buttonText = "Claim";
+    if (pending) buttonText = "Pending";
+    if (claimed) buttonText = "Completed";
 
     return (
       <div
@@ -264,7 +283,7 @@ export default function QuestEnvironment() {
               onClick={() => visitQuest(quest)}
               className="px-5 py-2 rounded-full bg-purple-700 hover:bg-purple-800 text-sm font-semibold"
             >
-              Start Quest
+              {buttonText}
             </button>
           )}
 
@@ -273,7 +292,7 @@ export default function QuestEnvironment() {
               onClick={() => claimReward(quest)}
               className="px-5 py-2 rounded-full bg-purple-700 hover:bg-purple-800 text-sm font-semibold"
             >
-              Claim
+              {buttonText}
             </button>
           )}
 
@@ -293,13 +312,15 @@ export default function QuestEnvironment() {
               Completed
             </span>
           )}
+
+          {pending && <button disabled={true} className="text-sm text-white bg-white/10 font-semibold">Pending</button>}
         </div>
 
         {/* DROPDOWN PROOF INPUT */}
         {isExpanded && (
           <div className="mt-3 bg-black/30 border border-white/10 rounded-xl p-4 space-y-2">
             <p className="text-xs text-white/70">
-              ⚠️ It may take 10 minutes up to 24 hours to validate your submission.
+              ⚠️ It may take 10 minutes to 24 hours to validate your submission.
             </p>
             <input
               type="url"
