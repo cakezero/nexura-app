@@ -19,7 +19,7 @@ type Quest = {
 
 const questsInitial: Quest[] = [
   { done: false, tag: "", _id: "id-like", text: "Like this Nexura tweet", reward: "40 XP", link: "#" },
-  { done: false, tag: "", _id: "id-comment", text: "Comment on this Nexura tweet", reward: "40 XP", link: "#" },
+  { done: false, tag: "comment", _id: "id-comment", text: "Comment on this Nexura tweet", reward: "40 XP", link: "#" },
   { done: false, tag: "", _id: "id-repost", text: "Repost this Nexura tweet", reward: "40 XP", link: "#" },
   { done: false, tag: "", _id: "id-tribe", text: "Support or Oppose the #Tribe Claim on Intuition Portal", reward: "100 XP", link: "#" },
   { done: false, tag: "", _id: "id-tns", text: "Support or Oppose the TNS Claim on Intuition Portal", reward: "140 XP", link: "#" },
@@ -31,6 +31,9 @@ export default function QuestEnvironment() {
   const [miniQuests, setMiniQuests] = useState<Quest[]>(questsInitial);
   const [totalXP, setTotalXP] = useState(0);
   const { user } = useAuth();
+  const [expandedQuestId, setExpandedQuestId] = useState<string | null>(null);
+  const [proofLinks, setProofLinks] = useState<Record<string, string>>({});
+
 
   const userId = user?._id || "";
 
@@ -49,11 +52,14 @@ export default function QuestEnvironment() {
     try { return Boolean(JSON.parse(localStorage.getItem('nexura:quest:completed') || "")[userId]); } catch (error) { return false }
   });
   const [failedQuests, setFailedQuests] = useState<string[]>([]);
-  const completedQuestsCount = miniQuests.filter((q) => q.done || claimedQuests.includes(q._id)).length;
+  const completedQuestsCount = miniQuests.filter(
+    (q) => q.done || claimedQuests.includes(q._id)
+  ).length;
 
   const progressPercentage = miniQuests.length
     ? Math.round((completedQuestsCount / miniQuests.length) * 100)
     : 0;
+
 
   const { questId } = useParams();
   const { toast } = useToast();
@@ -129,19 +135,31 @@ export default function QuestEnvironment() {
         return;
       }
 
+      if (miniQuest.tag === "comment") {
+        toast({
+          title: "Manual verification required",
+          description: "Submit proof instead.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+
       const id = getId(miniQuest.link);
+      // const isCommentQuest = quest.tag === "comment";
 
       try {
-        if (["follow", "comment", "repost"].includes(miniQuest.tag)) {
-          if (!user?.socialProfiles.x.connected) {
-            throw new Error("x not connected yet, go to profile to connect.");
-          }
-          const { success } = await apiRequestV2("POST", "/api/check-x", { id, tag: miniQuest.tag, questId: miniQuest._id, page: "quest" });
-          if (!success) {
-            // alert(`Kindly ${miniQuest.tag !== "follow" ? miniQuest.tag + " the post" : "follow the account"}`);
-            throw new Error(`Kindly ${miniQuest.tag !== "follow" ? miniQuest.tag + " the post" : "follow the account"}`);
-          }
-        } else if (["join", "message"].includes(miniQuest.tag)) {
+        // if (["follow", "repost"].includes(miniQuest.tag)) {
+        //   if (!user?.socialProfiles.x.connected) {
+        //     throw new Error("x not connected yet, go to profile to connect.");
+        //   }
+        //   const { success } = await apiRequestV2("POST", "/api/check-x", { id, tag: miniQuest.tag, questId: miniQuest._id, page: "quest" });
+        //   if (!success) {
+        //     // alert(`Kindly ${miniQuest.tag !== "follow" ? miniQuest.tag + " the post" : "follow the account"}`);
+        //     throw new Error(`Kindly ${miniQuest.tag !== "follow" ? miniQuest.tag + " the post" : "follow the account"}`);
+        //   }
+        // } else 
+        if (["join", "message"].includes(miniQuest.tag)) {
           if (!user?.socialProfiles.discord.connected) {
             // toast({ title: "Error", description: "discord not connected yet, go to profile to connect", variant: "destructive" });
             throw new Error("discord not connected yet, go to profile to connect");
@@ -162,6 +180,15 @@ export default function QuestEnvironment() {
       const res = await apiRequest("POST", `/api/quest/claim-mini-quest`, { id: miniQuest._id, questId });
       if (!res.ok) return;
 
+      setClaimedQuests((prev) => [...prev, miniQuest._id]);
+
+      setMiniQuests((prev) =>
+        prev.map((q) =>
+          q._id === miniQuest._id ? { ...q, done: true } : q
+        )
+      );
+
+
       // window.location.reload();
     } catch (error: any) {
       console.error(error);
@@ -169,41 +196,135 @@ export default function QuestEnvironment() {
     }
   };
 
+  const retryQuest = async (quest: Quest) => {
+    window.open(quest.link, "_blank");
+
+    if (!visitedQuests.includes(quest._id)) setVisitedQuests([...visitedQuests, quest._id]);
+
+    await apiRequestV2("POST", "/api/quest/update-submission?questId=" + quest._id);
+  };
+
   const visitQuest = (quest: Quest) => {
     if (!visitedQuests.includes(quest._id)) setVisitedQuests([...visitedQuests, quest._id]);
     if (quest.link) window.open(quest.link, "_blank");
   };
 
+  const submitCommentProof = async (quest: Quest) => {
+    const link = proofLinks[quest._id];
+
+    if (!link) {
+      toast({
+        title: "Missing link",
+        description: "Please paste your comment link.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await apiRequestV2("POST", "/api/quest/submit-quest", {
+        questId,
+        id: quest._id,
+        submissionLink: link,
+        page: "quest",
+        tag: quest.tag,
+      });
+
+      toast({
+        title: "Submitted",
+        description: "Your proof has been submitted for review.",
+      });
+
+      setExpandedQuestId(null);
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+
   const renderQuestRow = (quest: Quest, index: number) => {
     const visited = visitedQuests.includes(quest._id);
     const claimed = claimedQuests.includes(quest._id);
-    const failed = failedQuests.includes(quest._id);
-
-    let buttonText = "Start Quest";
-    if (visited) buttonText = "Claim";
-    if (claimed) buttonText = "Completed";
+    const isCommentQuest = quest.tag === "comment";
+    const isExpanded = expandedQuestId === quest._id;
 
     return (
       <div
         key={index}
-        className="w-full flex flex-col md:flex-row md:items-center md:justify-between gap-3 bg-white/5 border border-white/10 rounded-xl p-4 md:p-5 hover:bg-white/10 transition">
-        <p className="font-medium text-sm md:text-base leading-snug">
-          {quest.text}
-        </p>
+        className="w-full flex flex-col gap-3 bg-white/5 border border-white/10 rounded-xl p-4 transition"
+      >
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <p className="font-medium text-sm md:text-base">{quest.text}</p>
 
-        <button
-          onClick={() => !visited ? visitQuest(quest) : claimReward(quest)}
-          className={`w-full md:w-auto px-5 py-2.5 rounded-full text-sm font-semibold ${quest.done || claimedQuests.includes(quest._id)
-            ? "bg-gray-600 cursor-not-allowed"
-            : "bg-purple-700 hover:bg-purple-800"
-            }`}
-        >
-          {buttonText}
-        </button>
+          {!visited && (
+            <button
+              onClick={() => visitQuest(quest)}
+              className="px-5 py-2 rounded-full bg-purple-700 hover:bg-purple-800 text-sm font-semibold"
+            >
+              Start Quest
+            </button>
+          )}
+
+          {visited && !claimed && !isCommentQuest && (
+            <button
+              onClick={() => claimReward(quest)}
+              className="px-5 py-2 rounded-full bg-purple-700 hover:bg-purple-800 text-sm font-semibold"
+            >
+              Claim
+            </button>
+          )}
+
+          {visited && isCommentQuest && (
+            <button
+              onClick={() =>
+                setExpandedQuestId(isExpanded ? null : quest._id)
+              }
+              className="px-5 py-2 rounded-full bg-purple-700 hover:bg-purple-800 text-sm font-semibold"
+            >
+              Submit Proof
+            </button>
+          )}
+
+          {claimed && (
+            <span className="text-sm text-green-400 font-semibold">
+              Completed
+            </span>
+          )}
+        </div>
+
+        {/* DROPDOWN PROOF INPUT */}
+        {isExpanded && (
+          <div className="mt-3 bg-black/30 border border-white/10 rounded-xl p-4 space-y-3">
+            <input
+              type="url"
+              placeholder="Paste your comment link here"
+              value={proofLinks[quest._id] || ""}
+              onChange={(e) =>
+                setProofLinks({
+                  ...proofLinks,
+                  [quest._id]: e.target.value,
+                })
+              }
+              className="w-full bg-black/40 border border-white/20 rounded-lg px-4 py-2 text-sm text-white outline-none focus:border-purple-500"
+            />
+
+            <button
+              onClick={() => submitCommentProof(quest)}
+              className="w-full bg-gradient-to-r from-purple-700 via-purple-800 to-indigo-900 
+                hover:from-purple-600 hover:via-purple-700 hover:to-indigo-800
+                text-white font-semibold py-2.5 rounded-lg transition"
+            >
+              Submit For Review.
+            </button>
+          </div>
+        )}
       </div>
     );
   };
-
 
   return (
     <div className="min-h-screen bg-[#0a0615] text-white relative p-6">
@@ -268,7 +389,7 @@ export default function QuestEnvironment() {
 
               <Button
                 onClick={() => claimQuestReward()}
-                disabled={!miniQuestsCompleted || completed || !(claimedQuests.length === miniQuests.length) || questCompleted}
+                disabled={!miniQuestsCompleted || questCompleted}
                 className={`w-full font-semibold rounded-xl py-3 mt-6 
                   ${miniQuestsCompleted || !completed || claimedQuests.length === miniQuests.length || !questCompleted
                     ? "bg-purple-600 hover:bg-purple-700 text-white"

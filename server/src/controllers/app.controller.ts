@@ -21,6 +21,7 @@ import axios from "axios";
 import { uploadImg } from "@/utils/img.utils";
 import { timer } from "@/models/twitterTimer.model";
 import { REDIS } from "@/utils/redis.utils";
+import { submission } from "@/models/submission.model";
 
 export const home = async (req: GlobalRequest, res: GlobalResponse) => {
 	res.send("hi!");
@@ -66,6 +67,35 @@ export const updateUser = async (req: GlobalRequest, res: GlobalResponse) => {
   } catch (error) {
     logger.error(error);
     res.status(INTERNAL_SERVER_ERROR).json({ error: "error updating user" });
+  }
+}
+
+export const updateSubmission = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const userId = req.id;
+    const { questId } = req.query as { questId: string };
+    const task = await submission.findOne({ user: userId, questId });
+    if (!task) {
+      res.status(BAD_REQUEST).json({ error: "user does not have any submission" });
+      return;
+    }
+
+    if (task.status === "pending") {
+      res.status(FORBIDDEN).json({ error: "submission is still pending review" });
+      return;
+    } else if (task.status === "done") { 
+      res.status(FORBIDDEN).json({ error: "quest has been marked as done" });
+      return;
+    }
+
+    task.status = "pending";
+
+    await task.save();
+
+    res.status(OK).json({ message: "submission updated!" });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error updating submission" });
   }
 }
 

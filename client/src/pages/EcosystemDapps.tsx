@@ -226,6 +226,17 @@ const markVisited = (dapp: Dapp) => {
           ))}
         </div>
 
+        {/* Disclaimer */}
+        <div className="max-w-7xl mx-auto px-6 sm:px-4 md:px-6 mt-12 text-xs sm:text-sm text-white/60">
+          <p>
+            <strong>Disclaimer:</strong> All dapps listed on Nexura, except the Intuition Portal, are community-built. 
+            We only display them for discovery and visibility purposes. This does not mean we endorse, control, audit, 
+            or take responsibility for these projects. We do not have control over how these dapps function, how they manage 
+            user data, funds, or any issues you may encounter while using them. Users are advised to do their own research 
+            and exercise caution when interacting with any third-party dapps.
+          </p>
+        </div>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
           {filteredDapps.map((dapp, index) => (
             <motion.div
@@ -318,17 +329,6 @@ const markVisited = (dapp: Dapp) => {
             </p>
           </div>
         )}
-
-        {/* Disclaimer */}
-        <div className="max-w-7xl mx-auto px-6 sm:px-4 md:px-6 mt-12 text-xs sm:text-sm text-white/60">
-          <p>
-            <strong>Disclaimer:</strong> All dapps listed on Nexura, except the Intuition Portal, are community-built. 
-            We only display them for discovery and visibility purposes. This does not mean we endorse, control, audit, 
-            or take responsibility for these projects. We do not have control over how these dapps function, how they manage 
-            user data, funds, or any issues you may encounter while using them. Users are advised to do their own research 
-            and exercise caution when interacting with any third-party dapps.
-          </p>
-        </div>
       </div>
     </div>
   );

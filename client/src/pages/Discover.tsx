@@ -114,24 +114,22 @@ export default function Discover() {
     ? campaignsData.campaigns
     : DEV_CAMPAIGNS;
 
-const trendingCampaigns = campaigns
-  .filter((c: any) => c.status?.toLowerCase() === "active")
-  .slice(0, 3);
-  
-const allQuests =
-  questsData
-    ? [
-        ...(questsData.oneTimeQuests ?? []),
-        ...(questsData.weeklyQuests ?? []),
-        ...(questsData.featuredQuests ?? []),
-      ]
-    : DUMMY_QUESTS;
+  const trendingCampaigns = campaigns
+    .filter((c: any) => c.status?.toLowerCase() === "active")
+    .slice(0, 3);
+    
+  const allQuests =
+    questsData
+      ? [
+          ...(questsData.oneTimeQuests ?? []),
+          ...(questsData.weeklyQuests ?? []),
+          ...(questsData.featuredQuests ?? []),
+        ]
+      : DUMMY_QUESTS;
 
-const trendingQuests = allQuests
-  .filter((q: any) => q.status === "active")
-  .slice(0, 3);
-
-
+  const trendingQuests = allQuests
+    .filter((q: any) => q.status === "active")
+    .slice(0, 3);
 
   const trendingDapps = [
     { name: "Intuition Portal", logo: intuitionPortal, category: "Portal" },
@@ -141,6 +139,7 @@ const trendingQuests = allQuests
     { name: "Trust Name Service", logo: tnsLogo, category: "Domain" },
     // { name: "TrustSwap", logo: trustSwapLogo, category: "DeFi" },
   ];
+
   return (
     <div className="min-h-screen bg-black text-white relative" data-testid="discover-page">
       <AnimatedBackground />
@@ -164,21 +163,20 @@ const trendingQuests = allQuests
       </div>
 
       {/* Main Content */}
-<div className="relative z-10 space-y-8 px-3 sm:px-4 md:px-6">
-  <div className="mx-auto w-full max-w-[1100px]">
-
+      <div className="relative z-10 space-y-8 px-3 sm:px-4 md:px-6">
+        <div className="mx-auto w-full max-w-[1100px]">
 
         {/* Hero Campaign Section */}
-<div className="animate-slide-up delay-100 w-full overflow-hidden rounded-3xl">
-  <HeroCampaign campaigns={campaigns} />
-</div>
+        <div className="animate-slide-up delay-100 w-full overflow-hidden rounded-3xl">
+          <HeroCampaign campaigns={campaigns} />
+        </div>
 
         {/* Tab Navigation */}
         <Tabs
-  value={activeTab}
-  onValueChange={setActiveTab}
-  className="mb-6 w-full"
->
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="mb-6 w-full"
+        >
           <TabsList className="flex w-full max-w-xs sm:max-w-sm bg-muted/50 overflow-x-auto rounded-lg">
             <TabsTrigger value="all">All</TabsTrigger>
           </TabsList>
@@ -201,49 +199,49 @@ const trendingQuests = allQuests
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 px-8 sm:px-0">
                 {trendingCampaigns.map((campaign: any, index: number) => (
-  <div
-    key={campaign._id ?? index}
-    className={`animate-slide-up delay-${(index + 1) * 100}`}
-  >
-    <CampaignCard {...campaign} from="explore" />
-  </div>
-))}
+                  <div
+                    key={campaign._id ?? index}
+                    className={`animate-slide-up delay-${(index + 1) * 100}`}
+                  >
+                    <CampaignCard {...campaign} from="explore" />
+                  </div>
+                ))}
               </div>
             </section>
 
             {/* Trending Quests */}
-<section>
-  <div className="flex items-center justify-between mb-6">
-    <h2 className="text-lg sm:text-2xl md:text-4xl font-bold animate-slide-up delay-200">
-      Trending Quests
-    </h2>
-    <Button
-      variant="ghost"
-      size="sm"
-      className="animate-slide-up delay-300"
-      onClick={() => setLocation("/quests")}
-    >
-      Show all
-    </Button>
-  </div>
+            <section>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-lg sm:text-2xl md:text-4xl font-bold animate-slide-up delay-200">
+                  Trending Quests
+                </h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="animate-slide-up delay-300"
+                  onClick={() => setLocation("/quests")}
+                >
+                  Show all
+                </Button>
+              </div>
 
-<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 px-8 sm:px-0">
-    {trendingQuests.length > 0 ? (
-      trendingQuests.map((quest: any, index: number) => (
-        <div
-          key={`quest-${quest._id}`}
-          className={`animate-slide-up delay-${(index + 1) * 100}`}
-        >
-          <QuestCard {...quest} />
-        </div>
-      ))
-    ) : (
-      <div className="text-white/50 animate-slide-up delay-100">
-        No quests available.
-      </div>
-    )}
-  </div>
-</section>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 px-8 sm:px-0">
+                {trendingQuests.length > 0 ? (
+                  trendingQuests.map((quest: any, index: number) => (
+                    <div
+                      key={`quest-${quest._id}`}
+                      className={`animate-slide-up delay-${(index + 1) * 100}`}
+                    >
+                      <QuestCard {...quest} />
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-white/50 animate-slide-up delay-100">
+                    No quests available.
+                  </div>
+                )}
+              </div>
+            </section>
 
             {/* Trending Dapps */}
             <section>
