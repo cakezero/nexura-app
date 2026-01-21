@@ -83,7 +83,6 @@ export async function apiRequestV2(
   });
 
   console.log({res});
-
   await throwIfResNotOk(res);
   return res.json();
 }

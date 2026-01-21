@@ -54,6 +54,10 @@ const [proofLinks, setProofLinks] = useState<Record<string, string>>({});
   const completedQuestsCount = miniQuests.filter(
   (q) => q.done || claimedQuests.includes(q._id)
 ).length;
+const [proofStatus, setProofStatus] = useState<
+  Record<string, "idle" | "pending" | "approved">
+>({});
+
 
   const progressPercentage = miniQuests.length
     ? Math.round((completedQuestsCount / miniQuests.length) * 100)
@@ -83,6 +87,17 @@ const [proofLinks, setProofLinks] = useState<Record<string, string>>({});
       setSubTitle(st);
     })();
   }, []);
+
+  useEffect(() => {
+  setProofStatus(prev => {
+    const next = { ...prev };
+    miniQuests.forEach(q => {
+      if (!next[q._id]) next[q._id] = "idle";
+    });
+    return next;
+  });
+}, [miniQuests]);
+
 
   useEffect(() => {
     const value: Record<string, string[]> = {};
@@ -134,14 +149,18 @@ const [proofLinks, setProofLinks] = useState<Record<string, string>>({});
         return;
       }
 
-      if (miniQuest.tag === "comment") {
+if (
+  miniQuest.tag === "comment" &&
+  proofStatus[miniQuest._id] !== "approved"
+) {
   toast({
-    title: "Manual verification required",
-    description: "Submit proof instead.",
+    title: "Pending verification",
+    description: "Wait for admin approval.",
     variant: "destructive",
   });
   return;
 }
+
 
       
       const id = getId(miniQuest.link);
@@ -212,7 +231,7 @@ setMiniQuests((prev) =>
   }
 
   try {
-    await apiRequestV2("POST", "/api/quest/submit-proof", {
+    await apiRequestV2("POST", "/api/quest/submit-quest", {
       questId,
       miniQuestId: quest._id,
       proof: link,
@@ -224,7 +243,17 @@ setMiniQuests((prev) =>
       description: "Your proof has been submitted for review.",
     });
 
+    setProofStatus(prev => ({
+      ...prev,
+      [quest._id]: "pending",
+    }));
+
     setExpandedQuestId(null);
+
+    toast({
+      title: "Submitted",
+      description: "Your proof has been submitted for review.",
+    });
   } catch (err: any) {
     toast({
       title: "Error",
@@ -233,6 +262,25 @@ setMiniQuests((prev) =>
     });
   }
 };
+
+useEffect(() => {
+  if (!questId) return;
+
+  (async () => {
+    try {
+      const res = await apiRequestV2(
+        "GET",
+        `/api/quest/proof-status?questId=${questId}`
+      );
+
+      // expected shape:
+      // { statusMap: { [miniQuestId]: "idle" | "pending" | "approved" } }
+      setProofStatus(res.statusMap);
+    } catch (err) {
+      console.error(err);
+    }
+  })();
+}, [questId]);
 
 
   const renderQuestRow = (quest: Quest, index: number) => {
@@ -267,16 +315,30 @@ setMiniQuests((prev) =>
           </button>
         )}
 
-        {visited && isCommentQuest && (
-          <button
-            onClick={() =>
-              setExpandedQuestId(isExpanded ? null : quest._id)
-            }
-            className="px-5 py-2 rounded-full bg-purple-700 hover:bg-purple-800 text-sm font-semibold"
-          >
-            Submit Proof
-          </button>
-        )}
+        {visited && isCommentQuest && proofStatus[quest._id] === "idle" && (
+  <button
+    onClick={() => setExpandedQuestId(isExpanded ? null : quest._id)}
+    className="px-5 py-2 rounded-full bg-purple-700 hover:bg-purple-800 text-sm font-semibold"
+  >
+    Submit Proof
+  </button>
+)}
+
+{visited && isCommentQuest && proofStatus[quest._id] === "pending" && (
+  <span className="px-5 py-2 rounded-full bg-yellow-600/20 text-yellow-400 text-sm font-semibold">
+    Pending
+  </span>
+)}
+
+{visited && isCommentQuest && proofStatus[quest._id] === "approved" && (
+  <button
+    onClick={() => claimReward(quest)}
+    className="px-5 py-2 rounded-full bg-green-600 hover:bg-green-700 text-sm font-semibold"
+  >
+    Claim
+  </button>
+)}
+
 
         {claimed && (
           <span className="text-sm text-green-400 font-semibold">
