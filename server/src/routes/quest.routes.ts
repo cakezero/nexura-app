@@ -9,6 +9,7 @@ import {
 	createMiniQuest,
 	fetchMiniQuests,
 } from "@/controllers/quest.controller";
+import { updateSubmission } from "@/controllers/app.controller";
 import {
 	authenticateUser,
 	authenticateUser2,
@@ -23,6 +24,7 @@ router
 	.post("/create-mini-quest", authenticateUser, createMiniQuest)
 	.get("/fetch-mini-quests", authenticateUser2, fetchMiniQuests)
 	.post("/claim-mini-quest", authenticateUser, claimMiniQuest)
+	.post("/update-submission", authenticateUser, updateSubmission)
 	.post("/claim-quest", authenticateUser, claimQuest)
 	.post("/perform-campaign-quest", authenticateUser, performCampaignQuest)
 	.post("/submit-quest", authenticateUser, submitQuest);
