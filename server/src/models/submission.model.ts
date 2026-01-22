@@ -25,7 +25,7 @@ const submissionSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  questId: {
+  miniQuestId: {
     type: String,
     required: true
   },
