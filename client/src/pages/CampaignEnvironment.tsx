@@ -331,7 +331,7 @@ export default function CampaignEnvironment() {
         <div className="space-y-4 sm:space-y-6">
           {quests.length > 0 ? (
             quests.map((quest) => {
-              const isCommentQuest = quest.tag === "comment";
+              const requiresProof = ["comment", "follow"].includes(quest.tag);
               const visited = visitedQuests.includes(quest._id);
               const claimed = quest.done || claimedQuests.includes(quest._id);
               const pending = quest.status === "pending" || pendingQuests.includes(quest._id);
@@ -363,7 +363,7 @@ export default function CampaignEnvironment() {
                           Start Quest
                         </button>
                       )}
-                      {visited && !claimed && !isCommentQuest && (
+                      {visited && !claimed && !requiresProof && (
                         <button
                           onClick={() => claimQuest(quest)}
                           className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-sm sm:text-base font-semibold bg-purple-700 hover:bg-purple-800"
@@ -371,14 +371,16 @@ export default function CampaignEnvironment() {
                           Claim
                         </button>
                       )}
-                      {visited && !claimed && isCommentQuest && !pending && (
-                        <button
-                          onClick={() => setExpandedQuestId(isExpanded ? null : quest._id)}
-                          className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-sm sm:text-base font-semibold bg-purple-700 hover:bg-purple-800"
-                        >
-                          Submit Proof
-                        </button>
-                      )}
+{visited && !claimed && requiresProof && !pending && (
+  <button
+    onClick={() => setExpandedQuestId(isExpanded ? null : quest._id)}
+    className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-sm sm:text-base font-semibold bg-purple-700 hover:bg-purple-800"
+  >
+    Submit Proof
+  </button>
+)}
+
+
                       {claimed && !pending && (
   <span className="text-sm text-green-400 font-semibold">Completed</span>
 )}
@@ -398,7 +400,7 @@ export default function CampaignEnvironment() {
                     </div>
                   </div>
 
-                  {isExpanded && isCommentQuest && (
+                  {isExpanded && requiresProof && (
                     <div className="mt-2 sm:mt-3 bg-black/30 border border-white/10 rounded-xl p-3 sm:p-4 space-y-2">
                       <p className="text-xs text-white/70">
                         ⚠️ It may take 10 minutes up to 24 hours to validate your submission.
