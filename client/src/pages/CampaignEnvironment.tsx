@@ -50,7 +50,7 @@ export default function CampaignEnvironment() {
     return stored[userId] || [];
   });
   const [failedQuests, setFailedQuests] = useState<string[]>([]);
-  const [campaignCompleted, setCampaignCompleted] = useState<boolean>();
+  const [campaignCompleted, setCampaignCompleted] = useState<boolean>(false);
 
   const [description, setDescription] = useState("");
   const [title, setTitle] = useState("");
@@ -95,30 +95,27 @@ export default function CampaignEnvironment() {
     })();
   }, [claimedQuests, userId]);
 
-  // Sync localStorage for visited, claimed, completed, discordJoined
+  // Sync localStorage for visited, claimed, and pending
   useEffect(() => {
-    const visited: any = JSON.parse(localStorage.getItem("nexura:campaign:visited") || "{}");
-    visited[userId] = visitedQuests;
-    localStorage.setItem("nexura:campaign:visited", JSON.stringify(visited));
-  }, [visitedQuests, userId]);
+    const value: Record<string, string[]> = {};
+    value[userId] = visitedQuests;
+
+    localStorage.setItem('nexura:campaign:visited', JSON.stringify(value))
+  }, [visitedQuests]);
 
   useEffect(() => {
-    const claimed: any = JSON.parse(localStorage.getItem("nexura:campaign:claimed") || "{}");
-    claimed[userId] = claimedQuests;
-    localStorage.setItem("nexura:campaign:claimed", JSON.stringify(claimed));
-  }, [claimedQuests, userId]);
+    const value: Record<string, string[]> = {};
+    value[userId] = claimedQuests;
+
+    localStorage.setItem('nexura:campaign:claimed', JSON.stringify(value))
+  }, [claimedQuests]);
 
   useEffect(() => {
-    const pending: any = JSON.parse(localStorage.getItem("nexura:campaign:pending") || "{}");
-    pending[userId] = pendingQuests;
-    localStorage.setItem("nexura:campaign:pending", JSON.stringify(pending));
-  }, [pendingQuests, userId]);
+    const value: Record<string, string[]> = {};
+    value[userId] = pendingQuests;
 
-  useEffect(() => {
-    const completed: any = JSON.parse(localStorage.getItem("nexura:campaign:completed") || "{}");
-    completed[userId] = campaignCompleted;
-    localStorage.setItem("nexura:campaign:completed", JSON.stringify(completed));
-  }, [campaignCompleted, userId]);
+    localStorage.setItem("nexura:campaign:pending", JSON.stringify(value));
+  }, [pendingQuests]);
 
   // Open quest links
   const markQuestAsVisited = (quest: Quest) => {
@@ -379,20 +376,20 @@ export default function CampaignEnvironment() {
                           Submit Proof
                         </button>
                       )}
-                      {claimed && !pending && (
-  <span className="text-sm text-green-400 font-semibold">Completed</span>
-)}
-{!claimed && pending && (
-  <span className="text-sm text-white font-semibold">Pending</span>
-)}
-{!claimed && quest.status === "retry" && (
-  <button
-    onClick={() => retryQuest(quest)}
-    className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-sm sm:text-base font-semibold bg-orange-600 hover:bg-orange-700"
-  >
-    Retry
-  </button>
-)}
+                      {claimed && (
+                        <span className="text-sm text-green-400 font-semibold">Completed</span>
+                      )}
+                      {!claimed && pending && (
+                        <span className="text-sm text-white font-semibold">Pending</span>
+                      )}
+                      {!claimed && quest.status === "retry" && (
+                        <button
+                          onClick={() => retryQuest(quest)}
+                          className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-sm sm:text-base font-semibold bg-orange-600 hover:bg-orange-700"
+                        >
+                          Retry
+                        </button>
+                      )}
 
                       {/* {pending && <button disabled={true} className="text-sm text-white bg-white/10 font-semibold">Pending</button>} */}
                     </div>
