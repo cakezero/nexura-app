@@ -628,7 +628,7 @@ export const submitQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 			return;
 		}
 
-		let questExist;
+		let questExists;
 
 		if (page !== "campaign") {
 			questExists = await miniQuest.findById(id);
