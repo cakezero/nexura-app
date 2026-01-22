@@ -380,11 +380,20 @@ export default function CampaignEnvironment() {
                         </button>
                       )}
                       {claimed && !pending && (
-                        <span className="text-sm text-green-400 font-semibold">Completed</span>
-                      )}
-                      {!claimed && pending && (
-                        <span className="text-sm text-white font-semibold">Pending</span>
-                      )}
+  <span className="text-sm text-green-400 font-semibold">Completed</span>
+)}
+{!claimed && pending && (
+  <span className="text-sm text-white font-semibold">Pending</span>
+)}
+{!claimed && quest.status === "retry" && (
+  <button
+    onClick={() => retryQuest(quest)}
+    className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-sm sm:text-base font-semibold bg-orange-600 hover:bg-orange-700"
+  >
+    Retry
+  </button>
+)}
+
                       {/* {pending && <button disabled={true} className="text-sm text-white bg-white/10 font-semibold">Pending</button>} */}
                     </div>
                   </div>

@@ -89,6 +89,7 @@ export default function QuestEnvironment() {
     })();
   }, []);
 
+
   useEffect(() => {
     const value: Record<string, string[]> = {};
     value[userId] = visitedQuests;
@@ -260,6 +261,7 @@ export default function QuestEnvironment() {
     const visited = visitedQuests.includes(quest._id);
     const claimed = quest.done || claimedQuests.includes(quest._id);
     const pending = quest.status === "pending" || pendingQuests.includes(quest._id);
+    const isRetry = quest.status === "retry";
     const isCommentQuest = quest.tag === "comment";
     const isExpanded = expandedQuestId === quest._id;
 
@@ -306,6 +308,15 @@ export default function QuestEnvironment() {
           {!claimed && pending && (
             <span className="text-sm text-white font-semibold">Pending</span>
           )}
+
+          {isRetry && !claimed && (
+  <button
+    onClick={() => retryQuest(quest)}
+    className="px-5 py-2 rounded-full bg-orange-600 hover:bg-orange-700 text-sm font-semibold"
+  >
+    Retry
+  </button>
+)}
 
           {/* {pending && <button disabled={true} className="text-sm text-white bg-white/10 font-semibold">Pending</button>} */}
         </div>
