@@ -628,9 +628,21 @@ export const submitQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 			return;
 		}
 
+		let questExist;
+
 		if (page !== "campaign") {
+			questExists = await miniQuest.findById(id);
+			if (!questExists) {
+				res.status(BAD_REQUEST).json({ error: "mini quest id is invalid" });
+				return;
+			}
 			notComplete = await miniQuestCompleted.create({ miniQuest: id, quest: questId });
 		} else {
+			questExists = await campaignQuest.findById(id);
+			if (!questExists) {
+				res.status(BAD_REQUEST).json({ error: "campaign quest id is invalid" });
+				return;
+			}
 			notComplete = await campaignQuestCompleted.create({ campaign: questId, campaignQuest: id });
 		}
 
