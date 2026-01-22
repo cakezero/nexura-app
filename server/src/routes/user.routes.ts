@@ -3,7 +3,6 @@ import {
 	fetchUser,
 	referralInfo,
 	updateUser,
-	allowRefRewardClaim,
 	claimReferreralReward,
 	updateBadge
 } from "@/controllers/app.controller";
@@ -17,7 +16,6 @@ router
 	.get("/profile", authenticateUser, fetchUser)
 	.post("/claim-referral-reward", authenticateUser, claimReferreralReward)
 	.patch("/update-badge", authenticateUser, updateBadge)
-	.post("/allow-ref-claim", authenticateUser, allowRefRewardClaim)
 	.get("/referral-info", authenticateUser, referralInfo)
 	// .post("/sign-up", signUp)
 	.post("/sign-in", signIn)
