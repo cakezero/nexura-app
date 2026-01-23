@@ -222,34 +222,23 @@ export const markTask = async (req: GlobalRequest, res: GlobalResponse) => {
 				return
 			}
 
-			if (action !== "accept") {
-				submissionToBeVerified.status = "retry";
-				submissionToBeVerified.validatedBy = validatedBy;
-				model.status = "retry";
-			} else {
-				submissionToBeVerified.status = "done";
-				submissionToBeVerified.validatedBy = validatedBy;
-				model.status = "done";
-				model.done = true
-			}
-
 		} else {
 			model = await campaignQuestCompleted.findOne({ _id: submissionToBeVerified.questCompleted, status: { $in: ["pending", "retry"] } });
 			if (!model) {
 				res.status(NOT_FOUND).json({ error: "campaign quest already completed or is invalid" });
 				return
 			}
+		}
 
-			if (action !== "accept") {
-				submissionToBeVerified.status = "retry";
-				submissionToBeVerified.validatedBy = validatedBy;
-				model.status = "retry";
-			} else {
-				submissionToBeVerified.status = "done";
-				submissionToBeVerified.validatedBy = validatedBy;
-				model.status = "done";
-				model.done = true;
-			}
+		if (action !== "accept") {
+			submissionToBeVerified.status = "retry";
+			submissionToBeVerified.validatedBy = validatedBy;
+			model.status = "retry";
+		} else {
+			submissionToBeVerified.status = "done";
+			submissionToBeVerified.validatedBy = validatedBy;
+			model.status = "done";
+			model.done = true;
 		}
 
 		await submissionToBeVerified.save();

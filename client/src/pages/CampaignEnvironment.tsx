@@ -43,14 +43,9 @@ export default function CampaignEnvironment() {
     const stored = JSON.parse(localStorage.getItem("nexura:campaign:visited") || "{}");
     return stored[userId] || [];
   });
-  const [claimedQuests, setClaimedQuests] = useState<string[]>(() => {
-    const stored = JSON.parse(localStorage.getItem("nexura:campaign:claimed") || "{}");
-    return stored[userId] || [];
-  });
-  const [pendingQuests, setPendingQuests] = useState<string[]>(() => {
-    const stored = JSON.parse(localStorage.getItem("nexura:campaign:pending") || "{}");
-    return stored[userId] || [];
-  });
+  const [claimedQuests, setClaimedQuests] = useState<string[]>([]);
+  const [retryQuests, setRetryQuests] = useState<string[]>([]);
+  const [pendingQuests, setPendingQuests] = useState<string[]>([]);
   const [failedQuests, setFailedQuests] = useState<string[]>([]);
   const [campaignCompleted, setCampaignCompleted] = useState<boolean>(false);
 
@@ -105,15 +100,7 @@ export default function CampaignEnvironment() {
     const visited =
       JSON.parse(localStorage.getItem("nexura:campaign:visited") || "{}")[userId] || [];
 
-    const claimed =
-      JSON.parse(localStorage.getItem("nexura:campaign:claimed") || "{}")[userId] || [];
-
-    const pending =
-      JSON.parse(localStorage.getItem("nexura:campaign:pending") || "{}")[userId] || [];
-
     setVisitedQuests(visited);
-    setClaimedQuests(claimed);
-    setPendingQuests(pending);
   }, [userId]);
 
   // Sync localStorage for visited, claimed, and pending
@@ -127,47 +114,53 @@ export default function CampaignEnvironment() {
 
   }, [visitedQuests, userId]);
 
-  useEffect(() => {
-    const value: Record<string, string[]> = {};
-    value[userId] = claimedQuests;
-
-    if (userId) {
-      localStorage.setItem('nexura:campaign:claimed', JSON.stringify(value))
-    }
-
-  }, [claimedQuests, userId]);
-
-  useEffect(() => {
-    const value: Record<string, string[]> = {};
-    value[userId] = pendingQuests;
-
-    if (userId) {
-      localStorage.setItem('nexura:campaign:pending', JSON.stringify(value))
-    }
-
-  }, [pendingQuests, userId]);
-
   // Open quest links
   const markQuestAsVisited = (quest: Quest) => {
     window.open(quest.link, "_blank");
 
     if (!visitedQuests.includes(quest._id)) setVisitedQuests([...visitedQuests, quest._id]);
+    if (quest.status === "retry") {
+      setRetryQuests([...retryQuests, quest._id]);
+      setQuests(prev => prev.map(q => q._id === quest._id ? { ...q, status: "" } : q));
+    }
   };
 
   const retryQuest = async (quest: Quest) => {
-    window.open(quest.link, "_blank");
+    try {
+      const link = proofLinks[quest._id];
+      if (!link) {
+        toast({
+          title: "Missing link or username",
+          description: "Please paste your comment link or twitter username.",
+          variant: "destructive",
+        });
+        return;
+      }
 
-    if (!visitedQuests.includes(quest._id)) setVisitedQuests([...visitedQuests, quest._id]);
+      await apiRequestV2("POST", "/api/quest/update-submission", { submissionLink: link, questId: quest._id });
 
-    await apiRequestV2("POST", "/api/quest/update-submission?questId=" + quest._id);
+      setExpandedQuestId(null);
+      setPendingQuests([...pendingQuests, quest._id]);
+
+      toast({
+        title: "Submitted",
+        description: "Your proof has been submitted for review.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
   const submitCommentProof = async (quest: Quest) => {
     const link = proofLinks[quest._id];
     if (!link) {
       toast({
-        title: "Missing link",
-        description: "Please paste your comment link.",
+        title: "Missing link or username",
+        description: "Please paste your comment link or twitter username.",
         variant: "destructive",
       });
       return;
@@ -363,6 +356,7 @@ export default function CampaignEnvironment() {
               const claimed = quest.done || claimedQuests.includes(quest._id);
               const pending = quest.status === "pending" || pendingQuests.includes(quest._id);
               const failed = failedQuests.includes(quest._id);
+              const retry = quest.status === "retry";
               const isExpanded = expandedQuestId === quest._id;
 
               let buttonText = "Start Quest";
@@ -410,12 +404,12 @@ export default function CampaignEnvironment() {
                       {claimed && (
                         <span className="text-sm text-green-400 font-semibold">Completed</span>
                       )}
-                      {!claimed && pending && (
+                      {!claimed && pending && !retry && (
                         <span className="text-sm text-white font-semibold">Pending</span>
                       )}
-                      {!claimed && quest.status === "retry" && (
+                      {!claimed && retry && (
                         <button
-                          onClick={() => retryQuest(quest)}
+                          onClick={() => markQuestAsVisited(quest)}
                           className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-sm sm:text-base font-semibold bg-orange-600 hover:bg-orange-700"
                         >
                           Retry
@@ -439,7 +433,7 @@ export default function CampaignEnvironment() {
                         className="w-full bg-black/40 border border-white/20 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-purple-500"
                       />
                       <button
-                        onClick={() => submitCommentProof(quest)}
+                        onClick={() => retryQuests.includes(quest._id) ? retryQuest(quest) : submitCommentProof(quest)}
                         className="w-full bg-gradient-to-r from-purple-700 via-purple-800 to-indigo-900 hover:from-purple-600 hover:via-purple-700 hover:to-indigo-800 text-white font-semibold py-2.5 rounded-lg transition"
                       >
                         Submit for Review

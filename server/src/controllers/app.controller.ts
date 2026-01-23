@@ -22,6 +22,10 @@ import { uploadImg } from "@/utils/img.utils";
 import { timer } from "@/models/twitterTimer.model";
 import { REDIS } from "@/utils/redis.utils";
 import { submission } from "@/models/submission.model";
+import {
+	campaignQuestCompleted,
+	miniQuestCompleted,
+} from "@/models/questsCompleted.models";
 
 export const home = async (req: GlobalRequest, res: GlobalResponse) => {
 	res.send("hi!");
@@ -73,7 +77,7 @@ export const updateUser = async (req: GlobalRequest, res: GlobalResponse) => {
 export const updateSubmission = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
     const userId = req.id;
-    const { questId } = req.query as { questId: string };
+    const { questId, submissionLink }: { questId: string; submissionLink: string; } = req.body;
     const task = await submission.findOne({ user: userId, questId });
     if (!task) {
       res.status(BAD_REQUEST).json({ error: "user does not have any submission" });
@@ -88,9 +92,28 @@ export const updateSubmission = async (req: GlobalRequest, res: GlobalResponse) 
       return;
     }
 
+    let completed;
+
+    if (task.page === "quest") {
+      completed = await miniQuestCompleted.findById(task.questCompleted);
+      if (!completed) {
+        res.status(BAD_REQUEST).json({ error: "mini quest completed id is invalid" });
+        return
+      }
+    } else {
+      completed = await campaignQuestCompleted.findById(task.questCompleted);
+      if (!completed) {
+        res.status(BAD_REQUEST).json({ error: "campaign quest completed id is invalid" });
+        return
+      }
+    }
+
+    completed.status = "pending";
     task.status = "pending";
+    task.submissionLink = submissionLink;
 
     await task.save();
+    await completed.save();
 
     res.status(OK).json({ message: "submission updated!" });
   } catch (error) {
