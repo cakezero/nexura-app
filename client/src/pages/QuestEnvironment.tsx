@@ -44,16 +44,10 @@ export default function QuestEnvironment() {
   const [visitedQuests, setVisitedQuests] = useState<string[]>(() => {
     return JSON.parse(localStorage.getItem('nexura:quest:visited') || '{}')[userId] || [];
   });
-  const [claimedQuests, setClaimedQuests] = useState<string[]>(() => {
-    return JSON.parse(localStorage.getItem('nexura:quest:claimed') || '{}')[userId] || [];
-  });
-  const [pendingQuests, setPendingQuests] = useState<string[]>(() => {
-    const stored = JSON.parse(localStorage.getItem("nexura:quest:pending") || "{}");
-    return stored[userId] || [];
-  });
-  const [questCompleted, setQuestCompleted] = useState<boolean>(() => {
-    try { return Boolean(JSON.parse(localStorage.getItem('nexura:quest:completed') || "{}")[userId]); } catch (error) { return false }
-  });
+  const [claimedQuests, setClaimedQuests] = useState<string[]>([]);
+  const [retryQuests, setRetryQuests] = useState<string[]>([]);
+  const [pendingQuests, setPendingQuests] = useState<string[]>([]);
+  const [questCompleted, setQuestCompleted] = useState<boolean>(false);
   const [failedQuests, setFailedQuests] = useState<string[]>([]);
   const completedQuestsCount = miniQuests.filter(
     (q) => q.done || claimedQuests.includes(q._id)
@@ -94,15 +88,7 @@ export default function QuestEnvironment() {
     const visited =
       JSON.parse(localStorage.getItem("nexura:quest:visited") || "{}")[userId] || [];
 
-    const claimed =
-      JSON.parse(localStorage.getItem("nexura:quest:claimed") || "{}")[userId] || [];
-
-    const pending =
-      JSON.parse(localStorage.getItem("nexura:quest:pending") || "{}")[userId] || [];
-
     setVisitedQuests(visited);
-    setClaimedQuests(claimed);
-    setPendingQuests(pending);
   }, [userId]);
 
   useEffect(() => {
@@ -114,36 +100,6 @@ export default function QuestEnvironment() {
     }
 
   }, [visitedQuests, userId]);
-
-  useEffect(() => {
-    const value: Record<string, string[]> = {};
-    value[userId] = claimedQuests;
-
-    if (userId) {
-      localStorage.setItem('nexura:quest:claimed', JSON.stringify(value))
-    }
-
-  }, [claimedQuests, userId]);
-
-  useEffect(() => {
-    const value: Record<string, boolean> = {};
-    value[userId] = questCompleted;
-
-    if (userId) {
-      localStorage.setItem('nexura:quest:completed', JSON.stringify(value))
-    }
-
-  }, [questCompleted, userId]);
-
-  useEffect(() => {
-    const value: Record<string, string[]> = {};
-    value[userId] = pendingQuests;
-
-    if (userId) {
-      localStorage.setItem('nexura:quest:pending', JSON.stringify(value))
-    }
-
-  }, [pendingQuests]);
 
   const miniQuestsCompleted = miniQuests.filter((m) => m.done === true).length === miniQuests.length;
 
@@ -187,7 +143,7 @@ export default function QuestEnvironment() {
 
 
       const id = getId(miniQuest.link);
-      // const isCommentQuest = quest.tag === "comment";
+      // const isSubmitProof = quest.tag === "comment";
 
       try {
         // if (["follow", "repost"].includes(miniQuest.tag)) {
@@ -237,16 +193,43 @@ export default function QuestEnvironment() {
   };
 
   const retryQuest = async (quest: Quest) => {
-    window.open(quest.link, "_blank");
+    try {
+      const link = proofLinks[quest._id];
+      if (!link) {
+        toast({
+          title: "Missing link or username",
+          description: "Please paste your comment link or twitter username.",
+          variant: "destructive",
+        });
+        return;
+      }
 
-    if (!visitedQuests.includes(quest._id)) setVisitedQuests([...visitedQuests, quest._id]);
+      await apiRequestV2("POST", "/api/quest/update-submission", { submissionLink: link, questId: quest._id });
 
-    await apiRequestV2("POST", "/api/quest/update-submission?questId=" + quest._id);
+      setExpandedQuestId(null);
+      setPendingQuests([...pendingQuests, quest._id]);
+
+      toast({
+        title: "Submitted",
+        description: "Your proof has been submitted for review.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
   const visitQuest = (quest: Quest) => {
     if (!visitedQuests.includes(quest._id)) setVisitedQuests([...visitedQuests, quest._id]);
     if (quest.link) window.open(quest.link, "_blank");
+
+    if (quest.status === "retry") {
+      setRetryQuests([...retryQuests, quest._id]);
+      setMiniQuests(prev => prev.map(q => q._id === quest._id ? { ...q, status: "" } : q));
+    }
   };
 
   const submitCommentProof = async (quest: Quest) => {
@@ -254,8 +237,8 @@ export default function QuestEnvironment() {
 
     if (!link) {
       toast({
-        title: "Missing link",
-        description: "Please paste your comment link.",
+        title: "Missing link or username",
+        description: "Please paste your comment link or twitter username.",
         variant: "destructive",
       });
       return;
@@ -292,7 +275,7 @@ export default function QuestEnvironment() {
     const claimed = quest.done || claimedQuests.includes(quest._id);
     const pending = quest.status === "pending" || pendingQuests.includes(quest._id);
     const isRetry = quest.status === "retry";
-    const isCommentQuest = quest.tag === "comment";
+    const isSubmitProof = ["comment", "follow"].includes(quest.tag);
     const isExpanded = expandedQuestId === quest._id;
 
     return (
@@ -312,7 +295,7 @@ export default function QuestEnvironment() {
             </button>
           )}
 
-          {visited && !claimed && !isCommentQuest && (
+          {visited && !claimed && !isSubmitProof && (
             <button
               onClick={() => claimReward(quest)}
               className="px-5 py-2 rounded-full bg-purple-700 hover:bg-purple-800 text-sm font-semibold"
@@ -321,7 +304,7 @@ export default function QuestEnvironment() {
             </button>
           )}
 
-          {visited && isCommentQuest && !claimed && !pending && (
+          {visited && isSubmitProof && !claimed && !pending && (
             <button
               onClick={() =>
                 setExpandedQuestId(isExpanded ? null : quest._id)
@@ -341,7 +324,7 @@ export default function QuestEnvironment() {
 
           {isRetry && !claimed && (
             <button
-              onClick={() => retryQuest(quest)}
+              onClick={() => visitQuest(quest)}
               className="px-5 py-2 rounded-full bg-orange-600 hover:bg-orange-700 text-sm font-semibold"
             >
               Retry
@@ -359,7 +342,7 @@ export default function QuestEnvironment() {
             </p>
             <input
               type="url"
-              placeholder="Paste your comment link here"
+              placeholder="Paste your comment link or twitter username here"
               value={proofLinks[quest._id] || ""}
               onChange={(e) =>
                 setProofLinks({
@@ -371,7 +354,7 @@ export default function QuestEnvironment() {
             />
 
             <button
-              onClick={() => submitCommentProof(quest)}
+              onClick={() => retryQuests.includes(quest._id) ? retryQuest(quest) : submitCommentProof(quest)}
               className="w-full bg-gradient-to-r from-purple-700 via-purple-800 to-indigo-900 
                  hover:from-purple-600 hover:via-purple-700 hover:to-indigo-800
                  text-white font-semibold py-2.5 rounded-lg transition"
