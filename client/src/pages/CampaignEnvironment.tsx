@@ -137,7 +137,7 @@ export default function CampaignEnvironment() {
         return;
       }
 
-      await apiRequestV2("POST", "/api/quest/update-submission", { submissionLink: link, questId: quest._id });
+      await apiRequestV2("POST", "/api/quest/update-submission", { submissionLink: link, miniQuestId: quest._id });
 
       setExpandedQuestId(null);
       setPendingQuests([...pendingQuests, quest._id]);
