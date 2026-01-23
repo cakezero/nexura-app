@@ -137,7 +137,7 @@ export default function CampaignEnvironment() {
         return;
       }
 
-      await apiRequestV2("POST", "/api/quest/update-submission", { submissionLink: link, questId: quest._id });
+      await apiRequestV2("POST", "/api/quest/update-submission", { submissionLink: link, miniQuestId: quest._id });
 
       setExpandedQuestId(null);
       setPendingQuests([...pendingQuests, quest._id]);
@@ -404,8 +404,8 @@ export default function CampaignEnvironment() {
                       {claimed && (
                         <span className="text-sm text-green-400 font-semibold">Completed</span>
                       )}
-                      {!claimed && pending && !retry && (
-                        <span className="text-sm text-white font-semibold">Pending</span>
+                      {!claimed && pending && (
+                        <span className="text-sm text-white font-semibold">Pending Verification</span>
                       )}
                       {!claimed && retry && (
                         <button

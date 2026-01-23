@@ -77,8 +77,14 @@ export const updateUser = async (req: GlobalRequest, res: GlobalResponse) => {
 export const updateSubmission = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
     const userId = req.id;
-    const { questId, submissionLink }: { questId: string; submissionLink: string; } = req.body;
-    const task = await submission.findOne({ user: userId, questId });
+    const { miniQuestId, submissionLink }: { miniQuestId: string; submissionLink: string; } = req.body;
+
+    if (!submissionLink || !miniQuestId) {
+      res.status(BAD_REQUEST).json({ error: "send the required details" });
+      return;
+    }
+
+    const task = await submission.findOne({ user: userId, miniQuestId });
     if (!task) {
       res.status(BAD_REQUEST).json({ error: "user does not have any submission" });
       return;

@@ -143,9 +143,9 @@ export default function Quests() {
             <div className="absolute top-2 right-2">
               <Badge className="text-xs">{isActive ? "Active" : "Soon"}</Badge>
             </div>
-            <div className="absolute top-3 left-3 text-xs text-white/80 font-medium">
+            {/* <div className="absolute top-3 left-3 text-xs text-white/80 font-medium">
               {quest.category}
-            </div>
+            </div> */}
           </div>
 
           {/* Content */}

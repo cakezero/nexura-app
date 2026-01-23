@@ -204,7 +204,7 @@ export default function QuestEnvironment() {
         return;
       }
 
-      await apiRequestV2("POST", "/api/quest/update-submission", { submissionLink: link, questId: quest._id });
+      await apiRequestV2("POST", "/api/quest/update-submission", { submissionLink: link, miniQuestId: quest._id });
 
       setExpandedQuestId(null);
       setPendingQuests([...pendingQuests, quest._id]);
@@ -286,7 +286,7 @@ export default function QuestEnvironment() {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <p className="font-medium text-sm md:text-base">{quest.text}</p>
 
-          {!visited && (
+          {!visited && !claimed && (
             <button
               onClick={() => visitQuest(quest)}
               className="px-5 py-2 rounded-full bg-purple-700 hover:bg-purple-800 text-sm font-semibold"
@@ -319,7 +319,7 @@ export default function QuestEnvironment() {
             <span className="text-sm text-green-400 font-semibold">Completed</span>
           )}
           {!claimed && pending && (
-            <span className="text-sm text-white font-semibold">Pending</span>
+            <span className="text-sm text-white font-semibold">Pending Verification</span>
           )}
 
           {isRetry && !claimed && (
