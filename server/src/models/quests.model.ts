@@ -33,6 +33,7 @@ const ecosystemQuestSchema = new Schema({
 			"identity",
 			"reputation",
 			"quests",
+			"browser extension",
 			"ai",
 			"social",
 			"gaming",
