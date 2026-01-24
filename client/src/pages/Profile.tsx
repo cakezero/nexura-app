@@ -227,7 +227,7 @@ export default function Profile() {
         return;
       } // can't mint future level
 
-      if (mintedLevels.includes(levelIndex)) {
+      if (mintedLevels.includes(levelIndex) || userData.badges.includes(levelIndex)) {
         toast({ title: "Error", description: "Cannot mint Nexon twice", variant: "destructive" });
         return;
       }
@@ -248,7 +248,7 @@ export default function Profile() {
     }
   };
 
-  const totalMinted = mintedLevels.length;
+  const totalMinted = userData.badges.length || mintedLevels.length;
 
   return (
     <div className="bg-black text-white relative">
