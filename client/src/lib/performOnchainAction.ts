@@ -49,7 +49,7 @@ export const claimReferralReward = async (userId: string) => {
     const account = await walletClient.getAddresses();
 
     await walletClient.writeContract({
-      address: (mainnet ? "0xReferralsMainnetAddr" : "0x1b18236aa21212ae375ab72F4c4226987c7d8D59") as Address,
+      address: (mainnet ? "0xReferralsMainnetAddr" : "0x55F8DbC90946976A234103ed7B7E6e3CeC1A9Af3") as Address,
       abi: parseAbi(["function claimReferralReward(string memory userId)"]),
       functionName: "claimReferralReward",
       args: [userId],
