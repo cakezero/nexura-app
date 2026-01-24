@@ -246,6 +246,8 @@ export const claimReferreralReward = async (req: GlobalRequest, res: GlobalRespo
     }
 
     referrer.trustEarned += 16.2;
+    referrer.refRewardClaimed = true;
+
     await referrer.save();
 
     res.status(OK).json({ message: "referral reward claimed!" });
