@@ -68,10 +68,10 @@ export default function QuestEnvironment() {
         title: t,
         questNumber: quest_no,
         sub_title: st,
-        questCompleted
+        questCompleted: comp
       } = await apiRequestV2("GET", `/api/quest/fetch-mini-quests?id=${questId}`);
 
-      setCompleted(questCompleted);
+      setCompleted(comp);
       // setMiniQuestsCompleted();
       setMiniQuests(quests);
       setTotalXP(totalXp);
