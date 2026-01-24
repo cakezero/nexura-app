@@ -157,7 +157,7 @@ export default function Campaigns() {
     return false;
   });
 
-  const upcomingCampaigns = allCampaigns.filter((c) => c.status === "Upcoming");
+  const upcomingCampaigns = allCampaigns.filter((c) => c.status === "Scheduled");
 
   const renderCampaignCard = (campaign: Campaign, isActive: boolean) => {
     let metadata: any = {};
