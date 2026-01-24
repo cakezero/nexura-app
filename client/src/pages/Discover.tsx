@@ -85,29 +85,28 @@ export default function Discover() {
     retry: false,
   });
 
+  //   const allQuests =
+  //   questsData
+  //     ? [
+  //         ...(questsData.oneTimeQuests ?? []),
+  //         ...(questsData.weeklyQuests ?? []),
+  //         ...(questsData.featuredQuests ?? []),
+  //       ]
+  //     : [];
 
-//   const allQuests =
-//   questsData
-//     ? [
-//         ...(questsData.oneTimeQuests ?? []),
-//         ...(questsData.weeklyQuests ?? []),
-//         ...(questsData.featuredQuests ?? []),
-//       ]
-//     : [];
-
-// const trendingQuests = allQuests
-//   .filter((q: any) => q.status === "active")
-//   .slice(0, 3);
+  // const trendingQuests = allQuests
+  //   .filter((q: any) => q.status === "active")
+  //   .slice(0, 3);
 
   const campaigns =
-  Array.isArray(campaignsData?.campaigns) && campaignsData.campaigns.length > 0
-    ? campaignsData.campaigns
-    : DEV_CAMPAIGNS;
+    Array.isArray(campaignsData?.campaigns) && campaignsData.campaigns.length > 0
+      ? campaignsData.campaigns
+      : DEV_CAMPAIGNS;
 
   const trendingCampaigns = campaigns
     .filter((c: any) => c.status?.toLowerCase() === "active")
     .slice(0, 3);
-    
+
 
   const trendingDapps = [
     { name: "Intuition Portal", logo: intuitionPortal, category: "Portal" },
@@ -144,92 +143,96 @@ export default function Discover() {
       <div className="relative z-10 space-y-8 px-3 sm:px-4 md:px-6">
         <div className="mx-auto w-full max-w-[1100px]">
 
-        {/* Hero Campaign Section */}
-        <div className="animate-slide-up delay-100 w-full overflow-hidden rounded-3xl">
-          <HeroCampaign campaigns={campaigns} />
-        </div>
+          {/* Hero Campaign Section */}
+          <div className="animate-slide-up delay-100 w-full overflow-hidden rounded-3xl">
+            <HeroCampaign campaigns={campaigns} />
+          </div>
 
-        {/* Tab Navigation */}
-        <Tabs
-          value={activeTab}
-          onValueChange={setActiveTab}
-          className="mb-6 w-full"
-        >
-          <TabsList className="flex w-full max-w-xs sm:max-w-sm bg-muted/50 overflow-x-auto rounded-lg">
-            <TabsTrigger value="all">All</TabsTrigger>
-          </TabsList>
+          {/* Tab Navigation */}
+          <Tabs
+            value={activeTab}
+            onValueChange={setActiveTab}
+            className="mb-6 w-full"
+          >
+            <TabsList className="flex w-full max-w-xs sm:max-w-sm bg-muted/50 overflow-x-auto rounded-lg">
+              <TabsTrigger value="all">All</TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="all" className="space-y-8 sm:space-y-12">
+            <TabsContent value="all" className="space-y-8 sm:space-y-12">
 
-            {/* Trending Campaigns */}
-            <section>
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg sm:text-2xl md:text-4xl font-bold animate-slide-up delay-200">
-                  Trending Campaigns
-                </h2>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setLocation("/campaigns")}
-                >
-                  Show all
-                </Button>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 px-8 sm:px-0">
-                {trendingCampaigns.map((campaign: any, index: number) => (
-                  <div
-                    key={campaign._id ?? index}
-                    className={`animate-slide-up delay-${(index + 1) * 100}`}
-                  >
-                    <CampaignCard {...campaign} from="explore" />
-                  </div>
-                ))}
-              </div>
-            </section>
+              {/* Trending Campaigns */}
+              <section>
+                <div className="flex items-center justify-between mb-6">
+                  {trendingCampaigns.length > 0 && (
+                    <div>
+                      <h2 className="text-lg sm:text-2xl md:text-4xl font-bold animate-slide-up delay-200">
+                        Trending Campaigns
+                      </h2>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setLocation("/campaigns")}
+                      >
+                        Show all
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 px-8 sm:px-0">
+                  {trendingCampaigns.map((campaign: any, index: number) => (
+                    <div
+                      key={campaign._id ?? index}
+                      className={`animate-slide-up delay-${(index + 1) * 100}`}
+                    >
+                      <CampaignCard {...campaign} from="explore" />
+                    </div>
+                  ))}
+                </div>
+              </section>
 
 
-            {/* Trending Dapps */}
-            <section>
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg sm:text-2xl md:text-4xl font-bold animate-slide-up delay-200">
-                  Trending Dapps
-                </h2>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setLocation("/ecosystem-dapps")}
-                >
-                  Show all
-                </Button>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 px-8 sm:px-0">
-                {trendingDapps.map((dapp, index) => (
-                  <div
-                    key={`dapp-${index}`}
-                    className="group flex flex-col items-center p-4 rounded-2xl glass glass-hover transition-all cursor-pointer"
+              {/* Trending Dapps */}
+              <section>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-lg sm:text-2xl md:text-4xl font-bold animate-slide-up delay-200">
+                    Trending Dapps
+                  </h2>
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => setLocation("/ecosystem-dapps")}
                   >
-                    <div className="w-12 h-12 mb-3 rounded-full overflow-hidden bg-white/5 flex items-center justify-center">
-                      <img
-                        src={dapp.logo}
-                        alt={dapp.name}
-                        className="w-full h-full object-cover"
-                      />
+                    Show all
+                  </Button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 px-8 sm:px-0">
+                  {trendingDapps.map((dapp, index) => (
+                    <div
+                      key={`dapp-${index}`}
+                      className="group flex flex-col items-center p-4 rounded-2xl glass glass-hover transition-all cursor-pointer"
+                      onClick={() => setLocation("/ecosystem-dapps")}
+                    >
+                      <div className="w-12 h-12 mb-3 rounded-full overflow-hidden bg-white/5 flex items-center justify-center">
+                        <img
+                          src={dapp.logo}
+                          alt={dapp.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <span className="text-sm font-medium text-white group-hover:text-blue-400 text-center">
+                        {dapp.name}
+                      </span>
+                      <div className="text-xs text-white/50 mt-1">
+                        {dapp.category}
+                      </div>
                     </div>
-                    <span className="text-sm font-medium text-white group-hover:text-blue-400 text-center">
-                      {dapp.name}
-                    </span>
-                    <div className="text-xs text-white/50 mt-1">
-                      {dapp.category}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-          </TabsContent>
-        </Tabs>
-          </div>
+                  ))}
+                </div>
+              </section>
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
     </div>
   );
