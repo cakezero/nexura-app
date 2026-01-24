@@ -12,7 +12,7 @@ interface Campaign {
   participants: number;
   starts_at: string;
   ends_at: string;
-  isLive: boolean;
+  status: string;
   reward?: {
     xp: string;
     trustTokens: string;
@@ -30,7 +30,7 @@ export default function HeroCampaign({ campaigns }: HeroCampaignProps) {
   const currentCampaign = campaigns[currentIndex];
 
   const handleCampaignClick = () => {
-    if (currentCampaign) {
+    if (currentCampaign && currentCampaign.status === "Active") {
       setLocation(`/campaign/${currentCampaign._id}`);
     }
   };
@@ -137,7 +137,7 @@ export default function HeroCampaign({ campaigns }: HeroCampaignProps) {
               </div>
             </div>
 
-            {currentCampaign.isLive && (
+            {currentCampaign.status === "Active" && (
               <Badge className="bg-green-500 text-white">
                 <div className="w-2 h-2 bg-white rounded-full mr-2"></div>
                 Live
