@@ -52,9 +52,15 @@ export default function ReferralsPage() {
   };
 
   const handleClaim = async () => {
-    await claimReferralReward(user?._id || "");
-    await apiRequestV2("POST", "/api/user/claim-referral-reward");
-    setRewardClaimed(true);
+    try {
+      await claimReferralReward(user?._id || "");
+      await apiRequestV2("POST", "/api/user/claim-referral-reward");
+      setRewardClaimed(true);
+
+      toast({ title: "Success", description: "Referral Reward Claimed" });
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
   };
 
   return (
