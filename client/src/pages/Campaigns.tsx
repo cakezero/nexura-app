@@ -145,17 +145,7 @@ export default function Campaigns() {
   const now = new Date();
   const allCampaigns = [...campaigns];
 
-  const activeCampaigns = allCampaigns.filter((c) => {
-    const start = c.starts_at ? new Date(c.starts_at) : null;
-    const end = c.ends_at ? new Date(c.ends_at) : null;
-
-    if (c.status?.toLowerCase() === "active") return true;
-    if (start && now >= start) {
-      if (end) return now <= end;
-      return true;
-    }
-    return false;
-  });
+  const activeCampaigns = allCampaigns.filter((c) => c.status === "Active");
 
   const upcomingCampaigns = allCampaigns.filter((c) => c.status === "Scheduled");
 
