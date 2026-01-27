@@ -3,7 +3,7 @@ import type { Request, Response } from "express";
 
 export const signInLimiter = rateLimit({
   windowMs: 3 * 60 * 60 * 1000, // 3 hours
-  limit: 3, // limit each IP to 3 requests per windowMs
+  limit: 4, // limit each IP to 3 requests per windowMs
   message: {
     error: 'Too many requests from this IP, please try again later.',
     retryAfter: '3 hours'
