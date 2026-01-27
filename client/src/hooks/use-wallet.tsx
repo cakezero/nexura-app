@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { setSessionToken, emitSessionChange } from "../lib/session";
 import { buildUrl } from "../lib/queryClient";
 import { apiRequestV2 } from "../lib/queryClient";
+import { useToast } from "../hooks/use-toast";
 
 type WalletState = {
   isConnected: boolean;
@@ -15,6 +16,7 @@ const STORAGE_KEY = "nexura:wallet";
 export function useWallet() {
   const [state, setState] = useState<WalletState>({ isConnected: false, isConnecting: false, address: null, chainId: null });
 
+  const { toast } = useToast();
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -101,7 +103,7 @@ export function useWallet() {
           const referrer = localStorage.getItem("ref");
 
           const checkedData = await apiRequestV2("POST", "/api/user/sign-in", { address, referrer });
-          // console.log("hehe", checkedData);
+          console.log("hehe", checkedData);
           if (checkedData.user) {
             localStorage.setItem("user_profile", JSON.stringify(checkedData.user));
             localStorage.setItem("nexura:token", checkedData.accessToken);
@@ -109,12 +111,16 @@ export function useWallet() {
             console.log("✅ Backend authentication successful");
           } else {
             // Backend auth failed but wallet is still connected locally
+            toast({ title: "Error", description: "error signing in", variant: "destructive" });
             console.warn("⚠️ Backend auth failed, wallet connected locally only");
+            return null;
           }
         }
-      } catch (e) {
+      } catch (e: any) {
         // Backend not available - this is OK on Netlify frontend-only deployment
+        toast({ title: "Error", description: e.message, variant: "destructive" });
         console.warn("⚠️ Backend verification not available (frontend-only mode)");
+        return null;
       }
 
       // Reload page to update UI with connected wallet state
@@ -166,7 +172,12 @@ export function useWallet() {
 
   const disconnect = useCallback(async () => {
     try { await fetch(buildUrl('/auth/logout'), { method: "POST" }); } catch (e) { /* ignore */ }
-    try { localStorage.removeItem(STORAGE_KEY); } catch (e) { /* ignore */ }
+    try { 
+      localStorage.removeItem(STORAGE_KEY);
+      
+      localStorage.removeItem("nexura:token");
+      localStorage.removeItem("user_profile");
+    } catch (e) { /* ignore */ }
     try { emitSessionChange(); } catch (e) { /* ignore */ }
     setState({ isConnected: false, isConnecting: false, address: null, chainId: null });
     try { window.location.reload(); } catch (e) { window.location.href = "/"; }

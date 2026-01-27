@@ -19,7 +19,7 @@ router
 	.patch("/update-badge", authenticateUser, updateBadge)
 	.get("/referral-info", authenticateUser, referralInfo)
 	// .post("/sign-up", signUp)
-	.post("/sign-in", signInLimiter, signIn)
+	.post("/sign-in", signIn)
 	.patch("/update", authenticateUser, upload.single("profilePic"), updateUser);
 
 export default router;

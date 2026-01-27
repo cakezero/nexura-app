@@ -210,7 +210,7 @@ export const signIn = async (req: GlobalRequest, res: GlobalResponse) => {
 		const { address, referrer }: { address: string; referrer?: string } =
 			req.body;
 
-		const ipAddress = req.ip?.replace("::ffff:", "");
+		// const ipAddress = req.ip?.replace("::ffff:", "");
 
 		if (!address) {
 			res
@@ -231,11 +231,11 @@ export const signIn = async (req: GlobalRequest, res: GlobalResponse) => {
 		const userExists = await user.findOne({ address });
 		if (!userExists) {
 
-			const ipAddressExists = await REDIS.get(`ip:${ipAddress}`);
-			if (ipAddressExists) {
-				res.status(UNAUTHORIZED).json({ error: "account already exists with ip address" });
-				return;
-			}
+			// const ipAddressExists = await REDIS.get(`ip:${ipAddress}`);
+			// if (ipAddressExists) {
+			// 	res.status(UNAUTHORIZED).json({ error: "account already exists with ip address" });
+			// 	return;
+			// }
 
 			const referrerCode = cryptoRandomString({
 				length: 8,
@@ -273,7 +273,7 @@ export const signIn = async (req: GlobalRequest, res: GlobalResponse) => {
 				maxAge: 30 * 24 * 60 * 60,
 			});
 
-			await REDIS.set({ key: `ip:${ipAddress}`, data: { ipAddress } });
+			// await REDIS.set({ key: `ip:${ipAddress}`, data: { ipAddress } });
 
 			res.status(CREATED).json({ message: "user created!", accessToken, user: newUser });
 			return;
