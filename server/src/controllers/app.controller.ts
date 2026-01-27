@@ -290,7 +290,7 @@ export const validatePortalTask =  async (req: GlobalRequest, res: GlobalRespons
 
     const response = await client.request(query, { id: termId });
 
-    const { triple } = response.data;
+    const { triple } = response;
 
     if (!triple) {
       res.status(NOT_FOUND).json({ error: "term id is invaid" });
