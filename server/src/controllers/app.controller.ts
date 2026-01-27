@@ -189,11 +189,15 @@ export const referralInfo = async (req: GlobalRequest, res: GlobalResponse) => {
     const usersReferred = await referredUsers.find({ user: id });
     const activeUsers = usersReferred.filter((user: { status: string }) => user.status === "Active");
     if (activeUsers.length >= 10) {
-      if (!userFetched.refRewardClaimed) {
+      if (!userFetched.refRewardClaimed && !userFetched.referralAllowed) {
         await performIntuitionOnchainAction({
           action: "allow-ref-reward",
           userId: id,
         });
+
+        userFetched.referralAllowed = true;
+
+        await userFetched.save();
       }
     }
 

@@ -47,6 +47,9 @@ const userSchema = new Schema({
 			}
 		},
 	},
+	referralAllowed: {
+		type: Boolean
+	},
 	email: {
 		type: String,
 		// required: true
