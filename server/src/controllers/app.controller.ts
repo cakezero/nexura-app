@@ -27,6 +27,8 @@ import {
 	miniQuestCompleted,
 } from "@/models/questsCompleted.models";
 import { bannedUser } from "@/models/bannedUser.model";
+import { GRAPHQL_API_URL } from "@/utils/constants";
+import { GraphQLClient } from "graphql-request";
 
 export const home = async (req: GlobalRequest, res: GlobalResponse) => {
 	res.send("hi!");
@@ -242,6 +244,77 @@ export const updateBadge = async (req: GlobalRequest, res: GlobalResponse) => {
   } catch (error) {
     logger.error(error);
     res.status(INTERNAL_SERVER_ERROR).json({ error: "error updating badge" });
+  }
+}
+
+export const validatePortalTask =  async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const { termId }: { termId: string } = req.body;
+
+    const userBanned = await bannedUser.findOne({ userId: req.id });
+    if (userBanned) {
+      res.status(BAD_REQUEST).json({ error: "user is banned" });
+      return;
+    }
+
+    const userToCheck = await user.findById(req.id);
+    if (!userToCheck) {
+      res.status(BAD_REQUEST).json({ error: "id associated with user is invalid" });
+      return;
+    }
+
+    // set shares to be from 0.02
+    const query = `
+      query GetTriple($id: String!, $address: String!) {
+        triple(term_id: $id) {
+          positions (where:  {
+            shares:  {
+              _gte: 2000000000000000000
+            }
+            account_id:  {
+              _eq: $address
+            }
+          }) {
+            account_id
+            shares
+          }
+
+          counter_positions (where:  {
+            shares:  {
+              _gte: 2000000000000000000
+            }
+            account_id:  {
+              _eq: $address
+            }
+          }) {
+            account_id
+          }
+        }
+      }
+    `; // user needs to atleast support or oppose with 1 trust;
+
+    const client = new GraphQLClient(GRAPHQL_API_URL);
+
+    const response = await client.request(query, { id: termId, address: userToCheck.address });
+
+    const { triple } = response;
+
+    if (!triple) {
+      res.status(NOT_FOUND).json({ error: "term id is invaid" });
+      return
+    }
+
+    const supportClaims = triple.positions;
+    const opposeClaims = triple.counter_positions;
+
+    if (supportClaims.length === 0 && opposeClaims.length === 0) {
+      res.status(BAD_REQUEST).json({ error: "user has not supported or opposed a claim" });
+      return;
+    }
+
+    res.status(OK).json({ message: "task validated", success: true });
+  } catch (error) {
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error validating portal task" });
   }
 }
 
