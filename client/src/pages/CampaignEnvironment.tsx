@@ -244,12 +244,15 @@ export default function CampaignEnvironment() {
         throw new Error(error.message);
       }
 
-      const res = await apiRequest(
-        "POST",
-        `/api/quest/perform-campaign-quest`,
-        { id: quest._id, campaignId }
-      );
-      if (!res.ok) return;
+      if (quest.tag !== "portal") {
+        const res = await apiRequest(
+          "POST",
+          `/api/quest/perform-campaign-quest`,
+          { id: quest._id, campaignId }
+        );
+
+        if (!res.ok) return;
+      }
 
       setClaimedQuests([...claimedQuests, quest._id]);
       setFailedQuests((prev) => prev.filter((id) => id !== quest._id));
@@ -419,7 +422,7 @@ export default function CampaignEnvironment() {
                       {claimed && (
                         <span className="text-sm text-green-400 font-semibold">Completed</span>
                       )}
-                      {!claimed && pending && (
+                      {!claimed && pending && requiresProof && (
                         <span className="text-sm text-white font-semibold">Pending Verification</span>
                       )}
                       {!claimed && retry && (

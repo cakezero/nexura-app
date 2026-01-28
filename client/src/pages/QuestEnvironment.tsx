@@ -175,8 +175,11 @@ export default function QuestEnvironment() {
         throw new Error(error.message);
       }
 
-      const res = await apiRequest("POST", `/api/quest/claim-mini-quest`, { id: miniQuest._id, questId });
-      if (!res.ok) return;
+      if (miniQuest.tag !== "portal") {
+        const res = await apiRequest("POST", `/api/quest/claim-mini-quest`, { id: miniQuest._id, questId });
+
+        if (!res.ok) return;
+      }
 
       setClaimedQuests((prev) => [...prev, miniQuest._id]);
 
@@ -324,7 +327,7 @@ export default function QuestEnvironment() {
           {claimed && (
             <span className="text-sm text-green-400 font-semibold">Completed</span>
           )}
-          {!claimed && pending && (
+          {!claimed && pending && isSubmitProof && (
             <span className="text-sm text-white font-semibold">Pending Verification</span>
           )}
 
