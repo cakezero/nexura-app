@@ -40,12 +40,6 @@ export const updateUser = async (req: GlobalRequest, res: GlobalResponse) => {
 
     const { username }: { username: string } = req.body;
 
-    const userBanned = await bannedUser.findOne({ userId: req.id });
-    if (userBanned) {
-      res.status(BAD_REQUEST).json({ error: "user is banned" });
-      return;
-    }
-
     const userToUpdate = await user.findById(req.id);
     if (!userToUpdate) {
       res.status(BAD_REQUEST).json({ error: "invalid user id" });
@@ -87,12 +81,6 @@ export const updateSubmission = async (req: GlobalRequest, res: GlobalResponse) 
   try {
     const userId = req.id;
     const { miniQuestId, submissionLink }: { miniQuestId: string; submissionLink: string; } = req.body;
-
-    const userBanned = await bannedUser.findOne({ userId });
-    if (userBanned) {
-      res.status(BAD_REQUEST).json({ error: "user is banned" });
-      return;
-    }
 
     if (!submissionLink || !miniQuestId) {
       res.status(BAD_REQUEST).json({ error: "send the required details" });
@@ -215,12 +203,6 @@ export const updateBadge = async (req: GlobalRequest, res: GlobalResponse) => {
     const { level }: { level: number } = req.body
     const userToUpdate = await user.findById(req.id);
 
-    const userBanned = await bannedUser.findOne({ userId: req.id });
-    if (userBanned) {
-      res.status(BAD_REQUEST).json({ error: "user is banned" });
-      return;
-    }
-
     if (isNaN(level)) {
       res.status(BAD_REQUEST).json({ error: "send level as a number" });
       return;
@@ -250,12 +232,6 @@ export const updateBadge = async (req: GlobalRequest, res: GlobalResponse) => {
 export const validatePortalTask =  async (req: GlobalRequest, res: GlobalResponse) => {
   try {
     const { termId, id, questId, page }: { page: string; termId: string; id: string; questId: string } = req.body;
-
-    const userBanned = await bannedUser.findOne({ userId: req.id });
-    if (userBanned) {
-      res.status(BAD_REQUEST).json({ error: "user is banned" });
-      return;
-    }
 
     const userToCheck = await user.findById(req.id);
     if (!userToCheck) {
@@ -332,7 +308,7 @@ export const validatePortalTask =  async (req: GlobalRequest, res: GlobalRespons
         await miniQuestExists!.save();
       }
 
-      res.status(BAD_REQUEST).json({ error: "user has not supported or opposed a claim" });
+      res.status(BAD_REQUEST).json({ error: "User has not supported or opposed a claim or shares is less than 0.01" });
       return;
     } else {
       const campaignQuestExists = await campaignQuestCompleted.findOne({ campaignQuest: id, campaign: questId, user: userToCheck._id });
@@ -363,7 +339,7 @@ export const validatePortalTask =  async (req: GlobalRequest, res: GlobalRespons
         await campaignQuestExists!.save();
       }
 
-      res.status(BAD_REQUEST).json({ error: "user has not supported or opposed a claim" });
+      res.status(BAD_REQUEST).json({ error: "User has not supported or opposed a claim or shares is less than 0.01" });
     }
   } catch (error) {
     res.status(INTERNAL_SERVER_ERROR).json({ error: "error validating portal task" });
@@ -373,12 +349,6 @@ export const validatePortalTask =  async (req: GlobalRequest, res: GlobalRespons
 export const claimReferreralReward = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
     const userId = req.id!;
-    
-    const userBanned = await bannedUser.findOne({ userId });
-    if (userBanned) {
-      res.status(BAD_REQUEST).json({ error: "user is banned" });
-      return;
-    }
 
     const referrer = await user.findById(userId);
     if (!referrer) {
@@ -722,12 +692,6 @@ export const updateX = async (req: GlobalRequest, res: GlobalResponse) => {
       return
     }
 
-    const userBanned = await bannedUser.findOne({ userId: id });
-    if (userBanned) {
-      res.status(BAD_REQUEST).json({ error: "user is banned" });
-      return;
-    }
-
     const userToUpdate = await user.findById(id);
     if (!userToUpdate) {
       res.status(BAD_REQUEST).json({ error: "invalid user id" });
@@ -791,12 +755,6 @@ export const updateDiscord = async (req: GlobalRequest, res: GlobalResponse) => 
   try {
     const { id } = req;
     const { discord_id, username } = req.query as { discord_id: string; username: string };
-
-    const userBanned = await bannedUser.findOne({ userId: id });
-    if (userBanned) {
-      res.status(BAD_REQUEST).json({ error: "user is banned" });
-      return;
-    }
 
     if (!discord_id || !username) {
       res.status(BAD_REQUEST).json({ error: "authorization was not successful" });
@@ -870,13 +828,7 @@ export const saveCv = async (req: GlobalRequest, res: GlobalResponse) => {
 
 export const checkDiscordTask = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
-    const { guildId, tag } = req.body;
-
-    const userBanned = await bannedUser.findOne({ userId: req.id });
-    if (userBanned) {
-      res.status(BAD_REQUEST).json({ error: "user is banned" });
-      return;
-    }
+    const { guildId, tag, campaignId, id } = req.body;
 
     const userToCheck = await user.findById(req.id);
     if (!userToCheck) {
@@ -889,6 +841,12 @@ export const checkDiscordTask = async (req: GlobalRequest, res: GlobalResponse) 
     if (!discordId) {
       res.status(UNAUTHORIZED).json({ error: "connect discord to proceed" });
       return;
+    }
+
+    const completed = await campaignQuestCompleted.findOne({ user: req.id, campaignQuest: id, campaign: campaignId });
+    if (completed?.done) {
+      res.status(BAD_REQUEST).json({ error: "user has already completed the task" });
+      return
     }
 
     switch (tag) {
@@ -906,13 +864,37 @@ export const checkDiscordTask = async (req: GlobalRequest, res: GlobalResponse) 
         );
 
         if (status !== OK) {
+          if (!completed) {
+            await campaignQuestCompleted.create({ user: req.id, status: "retry", campaign: campaignId, campaignQuest: id });
+          } else {
+            completed.status = "retry";
+
+            await completed.save();
+          }
+
           res.status(BAD_REQUEST).json({ error: "join the discord server and get verified" });
           return;
         }
 
         if (!roles.includes("1439591151081492593")) { // verfied id
+          if (!completed) {
+            await campaignQuestCompleted.create({ user: req.id, status: "retry", campaign: campaignId, campaignQuest: id });
+          } else {
+            completed.status = "retry";
+
+            await completed.save();
+          }
+
           res.status(BAD_REQUEST).json({ error: "you need to be verified to continue" });
           return;
+        }
+
+        if (!completed) {
+          await campaignQuestCompleted.create({ user: req.id, campaign: campaignId, campaignQuest: id });
+        } else {
+          completed.status = "pending";
+
+          await completed.save();
         }
 
         res.status(OK).json({ message: "validated", success: true });
@@ -921,8 +903,24 @@ export const checkDiscordTask = async (req: GlobalRequest, res: GlobalResponse) 
       case "message":
         const sentMessage = await firstMessage.findOne({ user_id: discordId });
         if (!sentMessage) {
+          if (!completed) {
+            await campaignQuestCompleted.create({ user: req.id, status: "retry", campaign: campaignId, campaignQuest: id });
+          } else {
+            completed.status = "retry";
+
+            await completed.save();
+          }
+
           res.status(BAD_REQUEST).json({ error: "send a message to the server to continue" });
           return;
+        }
+
+        if (!completed) {
+          await campaignQuestCompleted.create({ user: req.id, campaign: campaignId, campaignQuest: id });
+        } else {
+          completed.status = "pending";
+
+          await completed.save();
         }
 
         res.status(OK).json({ message: "user has sent message", success: true });
