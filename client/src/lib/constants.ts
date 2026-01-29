@@ -7,52 +7,49 @@ export const url = (import.meta as any).env?.VITE_CLIENT_URL || "https://nexura-
 
 export const projectId = (import.meta as any).env?.VITE_REOWN_PROJECT_ID;
 
-export const discordAuthUrl =
-	(import.meta as any).env?.VITE_ENV === "development"
-		? "https://discord.com/oauth2/authorize" + "?client_id=" + (import.meta as any).env?.VITE_DISCORD_CLIENT_ID + "&redirect_uri=" + encodeURIComponent("http://localhost:5600/api/auth/discord/callback") + "&response_type=code" + "&scope=identify"
-		: "https://discord.com/oauth2/authorize" + "?client_id=" + (import.meta as any).env?.VITE_DISCORD_CLIENT_ID + "&redirect_uri=" + encodeURIComponent("https://api-nexura.intuition.box/api/auth/discord/callback") + "&response_type=code" + "&scope=identify";
+export const discordAuthUrl = "https://discord.com/oauth2/authorize" + "?client_id=" + (import.meta as any).env?.VITE_DISCORD_CLIENT_ID + "&redirect_uri=" + encodeURIComponent(BACKEND_URL + "/api/auth/discord/callback") + "&response_type=code" + "&scope=identify";
 
 export const VITE_X_CLIENT_ID = (import.meta as any).env?.VITE_X_CLIENT_ID;
 
 export const NEXONS: Record<number, { address: `0x${string}`, metadata: string }> = {
 	1: {
-		address: "0x2ed45F846c812cCFdD2DfEcBA342fC717E3Fe093",
+		address: "0x28D5405dA0E2e2476e8EddA08775c61b3B4FeB7d",
 		metadata: "ipfs://QmZ1pPLF9m6yGVQMETScwfAKm2ibpt4aZThuv1Dh8NaCCJ"
 	},
 	2: {
-		address: "0xA762b1a7D236191E9656EE8d121171f501bA1CdC",
+		address: "0xcB5cF742a846AcABba0BE1a85676358C7D4b23De",
 		metadata: "ipfs://QmcPL2Wvcwn4qWpKgkyyywnYnDATUSa41cnGDsKkLTuBHW"
 	},
 	3: {
-		address: "0xDB2f9756577ECfBcdf55C50Ac5BD71Cdb8c0B086",
+		address: "0x92C2C9139D1289BAD52161219f1BD9CDA7c1B337",
 		metadata: "ipfs://QmPU499cvPM7SSvE6QY73sJxfRpog9NrsBd14yW11C5Tm9"
 	},
 	4: {
-		address: "0xe1f25b80272BBed9E96E0E2e4Bd21a4cc0EbdBc0",
+		address: "0x515532aaEE89628f2De00431191819Da69b98a9C",
 		metadata: "ipfs://QmRedJkCoFPkcdYdoNJvDc1ydHRVZRJNrc4FKXkUqekm67"
 	},
 	5: {
-		address: "0x75343f041d3ac489a6E8757afD439d9D795b9dED",
+		address: "0xd1ecD4085dc2B6596a51a1CF6e614Aac2aBc46Ec",
 		metadata: "ipfs://QmScYrEhTjNzcERwUSXmX66cDCfD3yna8fdiUnLTk8DHEa"
 	},
 	6: {
-		address: "0x9AcF51aE75387A81E18F3174b9eA7f21C3634B61",
+		address: "0x4C20686b60F3373f9BCbfD382805039bC6855308",
 		metadata: "ipfs://QmdBrFHCsyxnwEFSuCVTe7tb1dAxxSk9bjNBEodBAs6Cnm"
 	},
 	7: {
-		address: "0x63AF87fE89348A0133c29BaEbD71055e0ee05c17",
+		address: "0x0BDdE2208A1e2b52219C7847A3170331A9274390",
 		metadata: "ipfs://QmbmiT1e4Sxf6AJhe3nEBqW6wSqA1UqQRn4Pg92ymiiGNS"
 	},
 	8: {
-		address: "0x583548cD0b65595079Fa00CBe113b1230e48a92c",
+		address: "0x1506C3eb545444A738Fd1cC28e747163c1107D34",
 		metadata: "ipfs://Qma7hUkq8JmHLPhL12XAzMyYGovnsa34qoag9iXRtuCKnG"
 	},
 	9: {
-		address: "0x7b0913C391fbc21cA7995535B00b69060fc590BE",
+		address: "0xf38D1CB60CcA8554603572662bffd6589594a6A0",
 		metadata: "ipfs://QmNrEQ53aobVuo9nRFJ1CBzzFdkC1QuUXkv7gSAP2RQbGr"
 	},
 	10: {
-		address: "0xF42ebE5136bCBD244c664c5A1eEC3012A293917F",
+		address: "0x9e46710ff92Dd65806140df7F4247D07d3e2d58D",
 		metadata: "ipfs://QmUdsL5f2v6E5iJRupdJBC7qzxHyvdV7qmMkCeTdg7k3As"
 	}
 };
@@ -246,6 +243,17 @@ export const NEXONS_ABI = [
 		"type": "error"
 	},
 	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "minter",
+				"type": "address"
+			}
+		],
+		"name": "WalletAlreadyHasNexon",
+		"type": "error"
+	},
+	{
 		"anonymous": false,
 		"inputs": [
 			{
@@ -420,18 +428,18 @@ export const NEXONS_ABI = [
 		"inputs": [
 			{
 				"internalType": "address",
-				"name": "",
+				"name": "to",
 				"type": "address"
 			},
 			{
 				"internalType": "uint256",
-				"name": "",
+				"name": "tokenId",
 				"type": "uint256"
 			}
 		],
 		"name": "approve",
 		"outputs": [],
-		"stateMutability": "pure",
+		"stateMutability": "nonpayable",
 		"type": "function"
 	},
 	{
@@ -530,17 +538,17 @@ export const NEXONS_ABI = [
 	{
 		"inputs": [
 			{
-				"internalType": "string",
+				"internalType": "address",
 				"name": "",
-				"type": "string"
+				"type": "address"
 			}
 		],
 		"name": "mintedUsers",
 		"outputs": [
 			{
-				"internalType": "uint256",
+				"internalType": "bool",
 				"name": "",
-				"type": "uint256"
+				"type": "bool"
 			}
 		],
 		"stateMutability": "view",
@@ -625,46 +633,46 @@ export const NEXONS_ABI = [
 		"inputs": [
 			{
 				"internalType": "address",
-				"name": "",
+				"name": "from",
 				"type": "address"
 			},
 			{
 				"internalType": "address",
-				"name": "",
+				"name": "to",
 				"type": "address"
 			},
 			{
 				"internalType": "uint256",
-				"name": "",
+				"name": "tokenId",
 				"type": "uint256"
 			},
 			{
 				"internalType": "bytes",
-				"name": "",
+				"name": "data",
 				"type": "bytes"
 			}
 		],
 		"name": "safeTransferFrom",
 		"outputs": [],
-		"stateMutability": "pure",
+		"stateMutability": "nonpayable",
 		"type": "function"
 	},
 	{
 		"inputs": [
 			{
 				"internalType": "address",
-				"name": "",
+				"name": "operator",
 				"type": "address"
 			},
 			{
 				"internalType": "bool",
-				"name": "",
+				"name": "approved",
 				"type": "bool"
 			}
 		],
 		"name": "setApprovalForAll",
 		"outputs": [],
-		"stateMutability": "pure",
+		"stateMutability": "nonpayable",
 		"type": "function"
 	},
 	{
@@ -722,23 +730,23 @@ export const NEXONS_ABI = [
 		"inputs": [
 			{
 				"internalType": "address",
-				"name": "",
+				"name": "from",
 				"type": "address"
 			},
 			{
 				"internalType": "address",
-				"name": "",
+				"name": "to",
 				"type": "address"
 			},
 			{
 				"internalType": "uint256",
-				"name": "",
+				"name": "tokenId",
 				"type": "uint256"
 			}
 		],
 		"name": "transferFrom",
 		"outputs": [],
-		"stateMutability": "pure",
+		"stateMutability": "nonpayable",
 		"type": "function"
 	},
 	{
