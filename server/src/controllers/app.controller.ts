@@ -295,6 +295,8 @@ export const validatePortalTask =  async (req: GlobalRequest, res: GlobalRespons
         if (!supportFound && !opposeFound) {
           miniQuestExists.done = false;
           miniQuestExists.status = "retry";
+
+          await miniQuestExists!.save();
         } else {
           miniQuestExists!.done = true;
           miniQuestExists!.status = "done";
@@ -304,8 +306,6 @@ export const validatePortalTask =  async (req: GlobalRequest, res: GlobalRespons
           res.status(OK).json({ message: "task completed" });
           return;
         }
-
-        await miniQuestExists!.save();
       }
 
       res.status(BAD_REQUEST).json({ error: "User has not supported or opposed a claim or shares is less than 0.01" });
@@ -326,6 +326,8 @@ export const validatePortalTask =  async (req: GlobalRequest, res: GlobalRespons
         if (!supportFound && !opposeFound) {
           campaignQuestExists.done = false;
           campaignQuestExists.status = "retry";
+
+          await campaignQuestExists!.save();
         } else {
           campaignQuestExists!.done = true;
           campaignQuestExists!.status = "done";
@@ -335,8 +337,6 @@ export const validatePortalTask =  async (req: GlobalRequest, res: GlobalRespons
           res.status(OK).json({ message: "task completed" });
           return;
         }
-
-        await campaignQuestExists!.save();
       }
 
       res.status(BAD_REQUEST).json({ error: "User has not supported or opposed a claim or shares is less than 0.01" });
