@@ -195,7 +195,7 @@ export const referralInfo = async (req: GlobalRequest, res: GlobalResponse) => {
       return;
     }
 
-    const usersReferred = await referredUsers.find({ user: id });
+    const usersReferred = await referredUsers.find({ user: id }).lean();
     const activeUsers = usersReferred.filter((user: { status: string }) => user.status === "Active");
     if (activeUsers.length >= 10) {
       if (!userFetched.refRewardClaimed && !userFetched.referralAllowed) {
@@ -378,13 +378,11 @@ export const getAnalytics = async (req: GlobalRequest, res: GlobalResponse) => {
     const totalCampaigns = await campaign.countDocuments();
     const totalQuests = await quest.countDocuments({ category: "weekly" });
 
-    const start = new Date(Date.UTC(2026, 0, 28, 0, 0, 0)); // Jan = 0
     const totalQuestsCompleted = await questCompleted.countDocuments({
       done: true,
-      updatedAt: { $gte: start },
     });
 
-    const totalCampaignsCompletedFound = await campaignCompleted.find().select("campaignCompleted").lean();
+    const totalCampaignsCompletedFound = await campaignCompleted.find().select("campaignCompleted questsCompleted").lean();
 
     const totalCampaignsCompleted = totalCampaignsCompletedFound.filter(c => c.campaignCompleted === true).length;
 
