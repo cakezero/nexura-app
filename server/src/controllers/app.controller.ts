@@ -136,17 +136,33 @@ export const updateSubmission = async (req: GlobalRequest, res: GlobalResponse) 
 
 export const getLeaderboard = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
-    const userData = await user.find();
+    const top200 = await user
+      .find()
+      .sort({ xp: -1, trustClaimed: -1 })
+      .limit(200)
+      .select("username xp profilePic _id level questsCompleted campaignsCompleted")
+      .lean();
 
-    const leaderboardByXp = userData.sort((a, b) => b.xp - a.xp).slice(0, 20);
-    const leaderboardByTrustTokens = userData.sort((a, b) => b.trustEarned - a.trustEarned).slice(0, 20);
+    let rank: number | null = null;
 
-    const leaderboardInfo = {
-      leaderboardByXp,
-      leaderboardByTrustTokens
+    const me = await user.findById(req.id).lean();
+
+    if (!me) {
+      rank = null;
+    } else {
+      rank =
+        (await user.countDocuments({
+          $or: [
+            { xp: { $gt: me.xp } },
+            {
+              xp: me.xp,
+              updatedAt: { $lt: me.updatedAt },
+            },
+          ],
+        })) + 1;
     }
 
-    res.status(OK).json({ message: "leaderboard info fetched", leaderboardInfo });
+    res.status(OK).json({ message: "leaderboard info fetched", leaderboardInfo: top200, rank });
   } catch(error) {
     logger.error(error);
     res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching leaderboard data" })
@@ -356,7 +372,7 @@ export const validatePortalTask =  async (req: GlobalRequest, res: GlobalRespons
 
 export const getAnalytics = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
-    const userFound = await user.find();
+    const userFound = await user.find().select("updatedAt createdAt refRewardClaimed badges status").lean();
     const totalReferrals = await referredUsers.countDocuments();
 
     const totalCampaigns = await campaign.countDocuments();
@@ -368,13 +384,11 @@ export const getAnalytics = async (req: GlobalRequest, res: GlobalResponse) => {
       updatedAt: { $gte: start },
     });
 
-    const totalCampaignsCompletedFound = await campaignCompleted.find();
+    const totalCampaignsCompletedFound = await campaignCompleted.find().select("campaignCompleted").lean();
 
     const totalCampaignsCompleted = totalCampaignsCompletedFound.filter(c => c.campaignCompleted === true).length;
 
     const joinRatio = (totalCampaignsCompleted / totalCampaignsCompletedFound.length) * 100;
-
-    const totalTrustDistributed = totalCampaignsCompleted * 16; // fix this later
 
     const totalUsers = userFound.length;
 
@@ -394,6 +408,8 @@ export const getAnalytics = async (req: GlobalRequest, res: GlobalResponse) => {
     const nexonsMinted = userFound.filter((u: { badges: number[] }) => {
       return u.badges.length > 0;
     }).length;
+
+    const totalTrustDistributed = (totalCampaignsCompleted * 16) + (referralRewardsClaimed * 16.2); // fix this later
 
     const totalQuestClaims = totalQuestsCompleted * 3;
 
