@@ -206,7 +206,7 @@ export const fetchCampaignQuests = async (
 		const campaignQuestsMarkedAsDone = campaignQuestsCompleted.filter((c_q: { done: boolean }) => c_q.done === true);
 
 		if (currentCampaign.noOfQuests === campaignQuestsMarkedAsDone.length && !completedCampaign?.questsCompleted) {
-			if (currentCampaign.trustClaimed < 4000) {
+			if (currentCampaign.trustClaimed < currentCampaign.totalTrustAvailable) {
 				await performIntuitionOnchainAction({
 					action: "allow-claim",
 					userId,

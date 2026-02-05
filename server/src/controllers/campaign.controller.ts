@@ -210,11 +210,13 @@ export const joinCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
 
 			campaignToJoin.participants += 1;
 
-			await performIntuitionOnchainAction({
-				action: "join",
-				userId,
-				contractAddress: campaignToJoin.contractAddress!,
-			});
+			if (campaignToJoin.trustClaimed < campaignToJoin.totalTrustAvailable) {
+				await performIntuitionOnchainAction({
+					action: "join",
+					userId,
+					contractAddress: campaignToJoin.contractAddress!,
+				});
+			}
 
 			await campaignToJoin.save();
 			await joined.save();
