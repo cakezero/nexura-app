@@ -111,7 +111,7 @@ export default function CampaignEnvironment() {
     setVisitedQuests(visited);
   }, [userId]);
 
-  // Sync localStorage for visited, claimed, and pending
+  // Sync localStorage for visited
   useEffect(() => {
     const value: Record<string, string[]> = {};
     value[userId] = visitedQuests;
@@ -215,7 +215,7 @@ export default function CampaignEnvironment() {
 
       try {
         const id = getId(quest.link);
-        if (trustClaimed < 4000) {
+        // if (trustClaimed < 4000) {
           // if (["follow", "comment", "repost"].includes(quest.tag)) {
           //   if (!user?.socialProfiles.x.connected) {
           //     throw new Error("x not connected yet, go to profile to connect.");
@@ -238,7 +238,7 @@ export default function CampaignEnvironment() {
           } else if (quest.tag === "portal") {
             await apiRequestV2("POST", "/api/quest/check-portal-task", { termId: id, id: quest._id, questId: campaignId, page: "campaign" });
           }
-        }
+        // }
       } catch (error: any) {
         console.error(error);
         throw new Error(error.message);

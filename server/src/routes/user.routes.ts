@@ -4,7 +4,8 @@ import {
 	referralInfo,
 	updateUser,
 	claimReferreralReward,
-	updateBadge
+	updateBadge,
+	performDailySignIn
 } from "@/controllers/app.controller";
 import { signIn } from "@/controllers/auth.controller";
 import { authenticateUser } from "@/middlewares/auth.middleware";
@@ -20,6 +21,7 @@ router
 	.get("/referral-info", authenticateUser, referralInfo)
 	// .post("/sign-up", signUp)
 	.post("/sign-in", signIn)
+	.post("/perform-daily-sign-in", authenticateUser, performDailySignIn)
 	.patch("/update", authenticateUser, upload.single("profilePic"), updateUser);
 
 export default router;
