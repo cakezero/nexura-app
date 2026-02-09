@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import {
@@ -13,6 +13,7 @@ import { Link, useLocation } from "wouter";
 import { useToast } from "../hooks/use-toast";
 import { useAuth } from "../lib/auth";
 import { useWallet } from "../hooks/use-wallet";
+import { apiRequest } from "../lib/queryClient";
 import SignUpPopup from "./SignUpPopup";
 import { getIntuitionNetworkParams } from "../lib/utils";
 import { network } from "../lib/constants";
@@ -42,6 +43,58 @@ function getLevelByXp(currentXp: number) {
   }
   return { ...LEVELS[0], index: 1 };
 }
+
+const DailySignInBadge = () => {
+  const [isClaimed, setIsClaimed] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [justClaimed, setJustClaimed] = useState(false);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (justClaimed) {
+      const timer = setTimeout(() => setJustClaimed(false), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [justClaimed]);
+
+  const handleSignIn = async () => {
+    if (isClaimed || isLoading) return;
+    setIsLoading(true);
+    try {
+      await apiRequest("POST", "/api/user/perform-daily-sign-in");
+      setIsClaimed(true);
+      setJustClaimed(true);
+      toast({ title: "Success", description: "Daily sign in completed!" });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to sign in",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <button
+      onClick={handleSignIn}
+      disabled={isClaimed || isLoading}
+      className={`flex items-center gap-2 glass glass-hover px-3 py-1.5 sm:px-4 sm:py-2 rounded-full transition-all cursor-pointer ${isClaimed ? "opacity-50 cursor-default" : ""
+        } ${justClaimed ? "animate-bounce" : ""}`}
+      title={isClaimed ? "Already claimed today" : "Click to sign in daily"}
+    >
+      <img
+        src="/daily.png"
+        alt="Daily Sign In"
+        className={`w-4 h-4 ${isClaimed ? "grayscale" : ""}`}
+      />
+      <span className="text-xs sm:text-sm font-medium text-white hidden sm:inline">
+        {isLoading ? "Signing in..." : isClaimed ? "Claimed" : "Daily Sign In"}
+      </span>
+    </button>
+  );
+};
 
 export default function ProfileBar({ userId = "user-123" }: ProfileBarProps) {
   const { address, isConnected: walletConnected, connectWallet, disconnect } = useWallet();
@@ -142,6 +195,7 @@ export default function ProfileBar({ userId = "user-123" }: ProfileBarProps) {
   return (
     <div className="flex items-center gap-4">
       {walletConnected && <NetworkBadge />}
+      {hasServerProfile && <DailySignInBadge />}
       {showLevelInHeader && <LevelBadge />}
 
       {hasServerProfile ? (
