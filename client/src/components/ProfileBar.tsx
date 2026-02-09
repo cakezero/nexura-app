@@ -48,7 +48,26 @@ const DailySignInBadge = () => {
   const [isClaimed, setIsClaimed] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [justClaimed, setJustClaimed] = useState(false);
+  const [countdown, setCountdown] = useState<string>("");
   const { toast } = useToast();
+
+  useEffect(() => {
+    // Check if user has already checked in today on component mount
+    const checkDailyStatus = async () => {
+      try {
+        const response = await apiRequest("GET", "/api/user/profile");
+        const data = await response.json();
+        const today = new Date().toISOString().split("T")[0];
+        const lastSignIn = data.user?.lastSignInDate;
+        setIsClaimed(today === lastSignIn);
+      } catch (error) {
+        // If we can't fetch profile, assume not claimed
+        setIsClaimed(false);
+      }
+    };
+    
+    checkDailyStatus();
+  }, []);
 
   useEffect(() => {
     if (justClaimed) {
@@ -57,6 +76,35 @@ const DailySignInBadge = () => {
     }
   }, [justClaimed]);
 
+  useEffect(() => {
+    if (isClaimed) {
+      const updateCountdown = () => {
+        const now = new Date();
+        const tomorrow = new Date(now);
+        tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+        tomorrow.setUTCHours(0, 0, 0, 0);
+        
+        const timeLeft = tomorrow.getTime() - now.getTime();
+        
+        if (timeLeft <= 0) {
+          setIsClaimed(false);
+          setCountdown("");
+          return;
+        }
+        
+        const hours = Math.floor(timeLeft / (1000 * 60 * 60));
+        const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+        
+        setCountdown(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+      };
+      
+      updateCountdown();
+      const interval = setInterval(updateCountdown, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [isClaimed]);
+
   const handleSignIn = async () => {
     if (isClaimed || isLoading) return;
     setIsLoading(true);
@@ -64,11 +112,11 @@ const DailySignInBadge = () => {
       await apiRequest("POST", "/api/user/perform-daily-sign-in");
       setIsClaimed(true);
       setJustClaimed(true);
-      toast({ title: "Success", description: "Daily sign in completed!" });
+      toast({ title: "Success", description: "Daily check in completed!" });
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Failed to sign in",
+        description: error.message || "Failed to check in",
         variant: "destructive"
       });
     } finally {
@@ -82,15 +130,15 @@ const DailySignInBadge = () => {
       disabled={isClaimed || isLoading}
       className={`flex items-center gap-2 glass glass-hover px-3 py-1.5 sm:px-4 sm:py-2 rounded-full transition-all cursor-pointer ${isClaimed ? "opacity-50 cursor-default" : ""
         } ${justClaimed ? "animate-bounce" : ""}`}
-      title={isClaimed ? "Already claimed today" : "Click to sign in daily"}
+      title={isClaimed ? `Next check-in available in ${countdown}` : "Click to check in daily"}
     >
       <img
         src="/daily.png"
-        alt="Daily Sign In"
+        alt="Daily Check In"
         className={`w-4 h-4 ${isClaimed ? "grayscale" : ""}`}
       />
       <span className="text-xs sm:text-sm font-medium text-white hidden sm:inline">
-        {isLoading ? "Signing in..." : isClaimed ? "Claimed" : "Daily Sign In"}
+        {isLoading ? "Checking in..." : isClaimed ? (countdown ? countdown : "Claimed") : "Daily Check In"}
       </span>
     </button>
   );
