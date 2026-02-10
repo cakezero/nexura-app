@@ -165,6 +165,8 @@ export default function Profile() {
         x: user.socialProfiles?.x ?? "",
         discord: user.socialProfiles?.discord ?? "",
       },
+      streak: user.streak ?? 0,
+      longestStreak: user.longestStreak ?? 0,
     };
   }, [user, address]);
 
