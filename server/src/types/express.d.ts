@@ -4,7 +4,8 @@ import nodemailer from "nodemailer";
 
 declare global {
 	interface GlobalRequest extends Request {
-		id?: string;
+    id?: string;
+		status?: string;
 	}
 
 	type GlobalResponse = Response;

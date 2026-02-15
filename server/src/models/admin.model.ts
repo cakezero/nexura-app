@@ -9,6 +9,11 @@ const adminschema = new mongoose.Schema({
   username: {
     type: String
   },
+  status: {
+    type: String,
+    default: "admin",
+    enum: ["superadmin", "admin"]
+  },
   password: {
     type: String
   },
