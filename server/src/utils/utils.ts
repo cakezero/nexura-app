@@ -4,9 +4,16 @@ import { JWT_SECRET, REFRESH_SECRET } from "./env.utils";
 import { performIntuitionOnchainAction } from "./account";
 import { NexonsAddress } from "./constants";
 import { ethers } from "ethers";
+import bcrypt from "bcrypt";
+import crypto from "crypto";
 
 export const padNumber = (numberToBePadded: number) => {
 	return numberToBePadded.toString().padStart(3, "0");
+}
+
+export const hashPassword = async (password: string) => {
+	const salt = await bcrypt.genSalt(12);
+	return await bcrypt.hash(password, salt);
 }
 
 export const startOfDayUTC = (date = new Date()): Date => {
@@ -192,11 +199,34 @@ export const validateProjectData = (reqData: any) => {
 	const projectSchema = z.object({
 		name: z.string().trim(),
 		email: z.email().trim(),
-		description: z.string().trim(),
-		// password: z.string().trim(),
+    description: z.string().trim(),
+		address: z.string().trim(),
+		password: z.string().trim().length(8),
 	});
 
 	const parseData = projectSchema.safeParse(reqData);
+
+	return parseData;
+};
+
+export const generateOTP = () => {
+	const code = crypto
+		.randomInt(0, 1000000000)
+		.toString()
+		.padStart(6, "0")
+    .slice(0, 6);
+
+	return code;
+};
+
+export const validateProjectAdminData = (reqData: any) => {
+	const projectAdminSchema = z.object({
+		email: z.email().trim(),
+    password: z.string().trim(),
+		code: z.string().trim().length(6),
+	});
+
+	const parseData = projectAdminSchema.safeParse(reqData);
 
 	return parseData;
 };
@@ -213,9 +243,16 @@ export const validateUserSignUpData = (reqData: any) => {
 	return parseData;
 };
 
+export const getMissingFields = (error: z.ZodError<Record<any, any>>) => {
+  const emptyFieldsArray = Object.keys(z.treeifyError(error).properties!);
+  const emptyFields = emptyFieldsArray.join(", ");
+  return emptyFields;
+};
+
 export const JWT = {
-	sign: (data: any) => {
-		return jwt.sign(data, JWT_SECRET, { expiresIn: "7d" });
+  sign: (id: any, expiresInParam?: StringValue) => {
+    const expiresIn = expiresInParam ?? "7d";
+		return jwt.sign({ id }, "JWT_SECRET", { expiresIn });
 	},
 
 	verify: (jwtToken: string) => {
@@ -250,18 +287,14 @@ export const checkPayment = async (txHash: string) => {
 
 	let totalCampaigns: number = 0;
 
-	// 🔎 Check logs
+	// Check logs
 	for (const log of receipt.logs) {
 		if (log.address.toLowerCase() !== FEE_CONTRACT.toLowerCase()) continue;
 
-		try {
-			const parsed = feeInterface.parseLog(log);
+    const parsed = feeInterface.parseLog(log);
 
-			if (parsed?.name === "FeePaid") {
-				totalCampaigns = parsed.args.totalCampaigns ?? 0;
-			}
-		} catch {
-			// Ignore unrelated logs
+		if (parsed?.name === "FeePaid") {
+			totalCampaigns = parsed.args.totalCampaigns ?? 0;
 		}
 	}
 
