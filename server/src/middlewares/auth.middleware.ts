@@ -1,13 +1,13 @@
 import logger from "@/config/logger";
 import { admin } from "@/models/admin.model";
 import { bannedUser } from "@/models/bannedUser.model";
+import { project, projectAdmin } from "@/models/project.model";
 import { user } from "@/models/user.model";
-import { BAD_REQUEST, UNAUTHORIZED } from "@/utils/status.utils";
+import { BAD_REQUEST, INTERNAL_SERVER_ERROR, UNAUTHORIZED } from "@/utils/status.utils";
 import { JWT } from "@/utils/utils";
 import multer from "multer";
 
 type decodedDataType = {
-	status: "project" | "user" | "admin";
 	id: string;
 };
 
@@ -28,23 +28,66 @@ export const authenticateProject = async (req: GlobalRequest, res: GlobalRespons
 			return;
 		}
 
-		const { id, status } = await JWT.verify(authHeader.split(" ")[1]!) as decodedDataType;
-		if (status != "project") {
-			res.status(UNAUTHORIZED).json({ error: "only authenticated projects can use this route" });
-			return;
-		}
+		const { id } = await JWT.verify(authHeader.split(" ")[1]!) as decodedDataType;
+		
+    const projectExists = await project.findById(id).lean();
+    if (!projectExists) {
+      res.status(UNAUTHORIZED).json({ error: "route is available only to projects" });
+      return;
+    }
 
-		req.id = id as string;
+    req.id = id as string;
+    req.adminName = projectExists.name;
 
 		next();
 	} catch (error: any) {
 		logger.error(error);
-		if (error.trim() === "jwt expired") {
-			res.status(400).json({ error: "Token has expired, kindly re-login" });
+		if (error?.trim() === "jwt expired") {
+			res.status(BAD_REQUEST).json({ error: "Token has expired, kindly re-login" });
 			return
 		}
 
-		res.status(500).json({ error: "Invalid authentication token, kindly re-login." });
+		res.status(INTERNAL_SERVER_ERROR).json({ error: "Invalid authentication token, kindly re-login." });
+	}
+}
+
+export const authenticateProject2 = async (req: GlobalRequest, res: GlobalResponse, next: GlobalNextFunction) => {
+	try {
+		const authHeader = req.headers.authorization;
+		if (!authHeader?.startsWith("Bearer ")) {
+			res.status(401).json({
+				error: "authorization token is missing or invalid",
+			});
+			return;
+		}
+
+    const { id } = await JWT.verify(authHeader.split(" ")[1]!) as decodedDataType;
+
+    let exists;
+
+    exists = await projectAdmin.findById(id).lean();
+    if (!exists) {
+      const projectExists = await project.findById(id).lean();
+      if (!projectExists) {
+        res.status(UNAUTHORIZED).json({ error: "route is available only to projects and project admins" });
+        return;
+      }
+
+      exists = { name: projectExists.name };
+    }
+
+    req.id = id as string;
+    req.adminName = exists.name;
+
+		next();
+	} catch (error: any) {
+		logger.error(error);
+		if (error?.trim() === "jwt expired") {
+			res.status(BAD_REQUEST).json({ error: "Token has expired, kindly re-login" });
+			return
+		}
+
+		res.status(INTERNAL_SERVER_ERROR).json({ error: "Invalid authentication token, kindly re-login." });
 	}
 }
 
@@ -77,12 +120,12 @@ export const authenticateUser = async (req: GlobalRequest, res: GlobalResponse, 
 		next();
 	} catch (error: any) {
 		logger.error(error);
-		if (error.trim() === "jwt expired") {
-			res.status(400).json({ error: "Token has expired, kindly re-login, kindly login again" });
+		if (error?.trim() === "jwt expired") {
+			res.status(BAD_REQUEST).json({ error: "Token has expired, kindly re-login, kindly login again" });
 			return
 		}
 
-		res.status(500).json({ error: "Invalid authentication token, kindly re-login." });
+		res.status(INTERNAL_SERVER_ERROR).json({ error: "Invalid authentication token, kindly re-login." });
 	}
 }
 
@@ -131,11 +174,11 @@ export const authenticateAdmin = async (req: GlobalRequest, res: GlobalResponse,
 		next();
 	} catch (error: any) {
 		logger.error(error);
-		if (error.trim() === "jwt expired") {
-			res.status(400).json({ error: "Token has expired, kindly re-login, kindly login again" });
+		if (error?.trim() === "jwt expired") {
+			res.status(BAD_REQUEST).json({ error: "Token has expired, kindly re-login, kindly login again" });
 			return
 		}
 
-		res.status(500).json({ error: "Invalid authentication token, kindly re-login." });
+		res.status(INTERNAL_SERVER_ERROR).json({ error: "Invalid authentication token, kindly re-login." });
 	}
 }
