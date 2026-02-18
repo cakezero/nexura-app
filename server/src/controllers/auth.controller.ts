@@ -262,7 +262,8 @@ export const signIn = async (req: GlobalRequest, res: GlobalResponse) => {
 
 			await newUser.save();
 
-			const accessToken = JWT.sign({ id, status: "user" });
+      const accessToken = JWT.sign(id);
+			console.log({accessToken});
 			const refreshToken = getRefreshToken(id);
 
 			req.id = id as unknown as string;
@@ -279,7 +280,7 @@ export const signIn = async (req: GlobalRequest, res: GlobalResponse) => {
 			return;
 		}
 
-		const accessToken = JWT.sign({ id: userExists._id, status: "user" });
+		const accessToken = JWT.sign(userExists._id);
 		const refreshToken = getRefreshToken(userExists._id);
 
 		req.id = userExists._id as unknown as string;

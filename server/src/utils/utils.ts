@@ -243,7 +243,28 @@ export const validateUserSignUpData = (reqData: any) => {
 	return parseData;
 };
 
-export const getMissingFields = (error: z.ZodError<Record<any, any>>) => {
+export const validateSaveCampaignData = (reqData: any) => {
+  const campaignSchema = z.object({
+		title: z.string().trim(),
+		description: z.string().trim(),
+		nameOfProject: z.string().trim(),
+    starts_at: z.string().trim(),
+		projectCoverImage: z.string().optional(),
+		ends_at: z.string().trim(),
+		reward: z.object({
+			xp: z.number(),
+			trust: z.number().optional().default(0),
+			pool: z.number()
+		}),
+		totalTrustAvailable: z.number().optional(),
+	});
+
+	const parseData = campaignSchema.safeParse(reqData);
+
+	return parseData;
+}; 
+
+export const getMissingFields = (error: z.ZodError<Record<any, unknown>>) => {
   const emptyFieldsArray = Object.keys(z.treeifyError(error).properties!);
   const emptyFields = emptyFieldsArray.join(", ");
   return emptyFields;
@@ -252,14 +273,14 @@ export const getMissingFields = (error: z.ZodError<Record<any, any>>) => {
 export const JWT = {
   sign: (id: any, expiresInParam?: StringValue) => {
     const expiresIn = expiresInParam ?? "7d";
-		return jwt.sign({ id }, "JWT_SECRET", { expiresIn });
+		return jwt.sign({ id }, JWT_SECRET, { expiresIn });
 	},
 
 	verify: (jwtToken: string) => {
 		return new Promise((resolve, reject) => {
 			jwt.verify(jwtToken, JWT_SECRET, (error, decodedText) => {
 				if (error) reject(error.message);
-				else if (typeof decodedText === "object") {
+        else if (typeof decodedText === "object") {
 					resolve(decodedText);
 				} else {
 					reject("Invalid JWT payload");
