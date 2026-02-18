@@ -297,3 +297,19 @@ export const signIn = async (req: GlobalRequest, res: GlobalResponse) => {
 		res.status(INTERNAL_SERVER_ERROR).json({ error: "Error signing user in" });
 	}
 };
+
+export const logout = async (req: GlobalRequest, res: GlobalResponse) => {
+	try {
+		const { id, token } = req;
+
+    res.clearCookie("refreshToken");
+
+    // await REDIS.del(`user:${id}`);
+    await REDIS.set({ key: `access-token:${token}`, data: { token }, ttl: 7 * 24 * 60 * 60});
+
+		res.status(200).json({ message: "logged out" });
+	} catch (error) {
+		logger.error(error);
+		res.status(INTERNAL_SERVER_ERROR).json({ error: "Error logging out" });
+	}
+};
