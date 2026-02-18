@@ -16,6 +16,8 @@ import {
   Calendar,
   Target,
   Orbit,
+  BarChart2,
+  Layers,
 } from "lucide-react";
 import React from "react";
 import { Link, useLocation } from "wouter";
@@ -29,7 +31,12 @@ const mainNavItems = [
   { title: "Campaigns", icon: Calendar, href: "/campaigns", activeClass: "nav-campaigns-active" },
   { title: "Ecosystem Dapps", icon: Target, href: "/ecosystem-dapps", activeClass: "nav-ecosystem-dapps-active" },
   { title: "Leaderboard", icon: Trophy, href: "/leaderboard", activeClass: "nav-leaderboard-active" },
-  { title: "Portal Claims", icon: Orbit, href: "/portal-claims", activeClass: "nav-portal-claims-active" }
+  { title: "Portal Claims", icon: Orbit, href: "/portal-claims", activeClass: "nav-portal-claims-active" },
+  { title: "Analytics", icon: BarChart2, href: "/analytics", activeClass: "nav-analytics-active" },
+  { 
+  title: "Nexura Studio", icon: Layers, href: "/studio", activeClass: "nav-studio-active",
+},
+
 ];
 
 export default function NexuraSidebar() {
@@ -55,7 +62,7 @@ export default function NexuraSidebar() {
       <AnimatedBackground />
       <SidebarContent className="bg-black/55 backdrop-blur-sm relative z-10">
         {/* Logo */}
-        <div className="p-6 border-b border-border/40">
+        <div className="p-4 border-b border-border/40">
           <div className="flex items-center">
             <img src="/nexura-logo.png" alt="Nexura" className="w-40 h-auto" />
           </div>
