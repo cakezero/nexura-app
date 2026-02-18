@@ -1,14 +1,14 @@
 import React, { useState } from "react";
-import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
-import { Textarea } from "../components/ui/textarea";
-import { useWallet } from "../hooks/use-wallet";
-import { createProject } from "../lib/remoteDb";
-import { ProjectSchema } from "../schemas/project.schema";
-import SignUpPopup from "../components/SignUpPopup";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import { Textarea } from "../../components/ui/textarea";
+import { useWallet } from "../../hooks/use-wallet";
+import { createProject } from "../../lib/remoteDb";
+import { ProjectSchema } from "../../schemas/project.schema";
+import SignUpPopup from "../../components/SignUpPopup";
 import { useLocation } from "wouter";
-import AnimatedBackground from "../components/AnimatedBackground";
-import { buildUrl } from "../lib/queryClient";
+import AnimatedBackground from "../../components/AnimatedBackground";
+import { buildUrl } from "../../lib/queryClient";
 
 export default function Projects() {
   const { isConnected, connectWallet, address } = useWallet();
