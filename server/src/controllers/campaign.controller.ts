@@ -145,9 +145,9 @@ export const createCampaign = async (
 
 		const newCampaign = new campaign(requestData);
 
-    newCampaign.totalXpAvailable = xpAllocated;
+		newCampaign.totalXpAvailable = xpAllocated;
 
-    newCampaign.status = "Active";
+		newCampaign.status = "Active";
 
 		campaignCreator.campaignsCreated += 1;
 		campaignCreator.xpAllocated = 0;
@@ -456,6 +456,27 @@ export const publishCampaign = async (req: GlobalRequest, res: GlobalResponse) =
 	try {
 		const { id } = req.query as { id: string };
 
+		const { campaignCreator } = req;
+
+		const { txHash } = req.body;
+		if (!txHash) {
+			res.status(BAD_REQUEST).json({ error: "transaction hash is required" });
+			return;
+		}
+
+		const campaignNo = await checkPayment(txHash);
+		if (!campaignNo) {
+			res
+				.status(FORBIDDEN)
+				.json({ error: "kindly pay the require amount (1000 TRUST) to proceed" });
+			return;
+		}
+
+		if (campaignCreator.campaignsCreated >= Number(campaignNo)) {
+			res.status(FORBIDDEN).json({ error: "kindly pay the required amount (1000 TRUST) to proceed" });
+			return;
+		}
+
 		const campaignExists = await campaign.findById(id);
 
 		if (!campaignExists) {
@@ -464,11 +485,13 @@ export const publishCampaign = async (req: GlobalRequest, res: GlobalResponse) =
 
 		if (campaignExists.status !== "Save") {
 			return res.status(BAD_REQUEST).json({ error: "campaign is not in save status" });
-    }
+		}
 
-    campaignExists.status = "Active";
+		campaignExists.status = "Active";
+		campaignCreator.campaignCreated += 1;
 
 		await campaignExists.save();
+		await campaignCreator.save();
 
 		res.status(OK).json({ message: "campaign published" });
 	} catch (error) {
