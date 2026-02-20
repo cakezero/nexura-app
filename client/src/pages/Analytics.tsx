@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import AnimatedBackground from "../components/AnimatedBackground";
 import { useState, useEffect } from "react";
 import { ResponsiveLine } from "@nivo/line";
+import { AreaChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area } from "recharts";
 import DesktopCards from "../components/DesktopCard.tsx";
 import MobileCards from "../components/MobileCards.tsx";
 
@@ -297,84 +298,77 @@ useEffect(() => {
     </div>
   </CardHeader>
 
-  <CardContent className="p-0">
-    <div className="w-full h-64 sm:h-96 relative">
-      <ResponsiveLine
-        data={[{ id: "Users", data: graphDataWithZero }]}
-        margin={isDesktop ? { top: 20, right: 40, bottom: 50, left: 60 } : { top: 20, right: 20, bottom: 50, left: 50 }}
-        xScale={{ type: "point" }}
-        yScale={{ type: "linear", min: 0, max: "auto" }}
-        curve={graphRange === "24h" ? "linear" : "monotoneX"}
-        axisTop={null}
-        axisRight={null}
-        axisBottom={{
-          tickSize: 5,
-          tickPadding: 5,
-          tickRotation: graphRange === "24h" ? -45 : 0,
-          legend: "Time",
-          legendOffset: 36,
-          legendPosition: "middle",
-          tickColor: "#FFFFFF",
-          legendTextColor: "#FFFFFF"
-        }}
-        axisLeft={{
-          tickSize: 5,
-          tickPadding: 5,
-          tickRotation: 0,
-          legend: "Users",
-          legendOffset: -50,
-          legendPosition: "middle",
-          tickColor: "#FFFFFF",
-          legendTextColor: "#FFFFFF"
-        }}
-        enableGridX={false}
-        enableGridY={true}
-        enablePoints={true}
-        pointSize={8}
-        pointColor="#FFFFFF"
-        pointBorderWidth={2}
-        pointBorderColor="#1f1f1f"
-        enableArea={true}
-        areaOpacity={0.3}
-        colors={["rgba(212, 11, 239, 0.97)"]}
-        lineWidth={3}
-        useMesh={true}
-        animate={true}
-        motionConfig="gentle"
-        tooltip={({ point }) => (
-          <div className="bg-white text-black px-2 py-1 rounded shadow">
-            {point.data.x}: {point.data.y} users
-          </div>
-        )}
-        colors={['#FFFFFF']}     // line is white
-  lineWidth={2}            // optional, thicker line
-  useMesh={true}
+{/* New User Growth Trend Graph */}
+<CardContent className="p-0">
+  <div className="w-full h-64 sm:h-96 relative">
+    <ResponsiveContainer width="100%" height="100%">
+      <AreaChart data={graphDataWithZero}>
+        {/* Grid */}
+        <CartesianGrid
+          stroke="#7B5CFF44"
+          strokeDasharray="3 3"
+          vertical={false}
+        />
 
-  tooltip={({ point }) => (
-    <div className="bg-black/90 text-white px-2 py-1 rounded-md text-xs">
-      {point.data.x}: {point.data.y}
-    </div>
-  )}
+        {/* Y-Axis */}
+        <YAxis
+          orientation="left"
+          ticks={[100, 125, 150, 175, 200]} 
+          tick={{ fill: "#BDAFFF", fontSize: 12 }}
+          axisLine={false}
+          tickLine={false}
+        />
 
-  animate={true}
-  motionConfig="gentle"
+        {/* X-Axis */}
+        <XAxis
+          dataKey="x"
+          tick={{ fill: "#BDAFFF", fontSize: 12 }}
+          axisLine={false}
+          tickLine={false}
+          padding={{ left: 10, right: 10 }}
+        />
 
-  theme={{
-    axis: {
-      ticks: { text: { fill: '#FFFFFF' } },
-      legend: { text: { fill: '#FFFFFF' } },
-    },
-    tooltip: {
-      container: {
-        background: '#000000',
-        color: '#FFFFFF',
-        fontSize: '12px',
-      },
-    },
-  }}
-      />
-    </div>
-  </CardContent>
+        {/* Gradient Area */}
+        <Area
+          type={graphRange === "24h" ? "linear" : "monotone"}
+          dataKey="y"
+          stroke="#AD77FF"
+          strokeWidth={3}
+          fill="url(#purpleGradient)"
+          dot={false}
+          animationDuration={1500}
+        />
+
+        {/* Baseline line */}
+        <Line
+          type="monotone"
+          dataKey={() => 0} // baseline at 0
+          stroke="#FFD166"
+          strokeWidth={1.5}
+          dot={false}
+          activeDot={false}
+        />
+
+        <defs>
+          <linearGradient id="purpleGradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#AD77FF" stopOpacity={0.4} />
+            <stop offset="100%" stopColor="#AD77FF" stopOpacity={0} />
+          </linearGradient>
+        </defs>
+
+        {/* Tooltip */}
+        <Tooltip
+          contentStyle={{
+            backgroundColor: "#000000",
+            color: "#FFFFFF",
+            borderRadius: 6,
+            padding: "6px 10px",
+          }}
+        />
+      </AreaChart>
+    </ResponsiveContainer>
+  </div>
+</CardContent>
 </Card>
 
 
