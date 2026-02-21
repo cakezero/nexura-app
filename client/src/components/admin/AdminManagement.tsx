@@ -55,7 +55,7 @@ export default function AdminManagement() {
       />
 
       {/* Main content */}
-<div className="flex-1 p-6 space-y-6">
+<div className="flex-1 p-4 md:p-6 space-y-6 pt-16 md:pt-6 pb-24 md:pb-6">
   {/* Header: Title + Add Admin button */}
   <div className="flex items-center justify-between">
     <h2 className="text-2xl font-bold text-white">Admin Management</h2>

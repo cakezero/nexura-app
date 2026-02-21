@@ -13,8 +13,9 @@ const projectSchema = new Schema({
   },
   xUsername: {
     type: String,
-    required: true,
-    unique: true
+    required: false,
+    unique: true,
+    sparse: true
   },
   email: {
     type: String,

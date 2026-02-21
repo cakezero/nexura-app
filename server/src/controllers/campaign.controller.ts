@@ -41,7 +41,10 @@ export const fetchCampaigns = async (
 	res: GlobalResponse
 ) => {
 	try {
-		const campaigns = await campaign.find().lean();
+		// Hide only studio drafts (status: "Save"). All other campaigns
+		// (Active, Scheduled, Ended, or legacy campaigns with no status field)
+		// remain visible so non-studio campaigns are unaffected.
+		const campaigns = await campaign.find({ status: { $ne: "Save" } }).lean();
 
 		const joinedCampaigns = await campaignCompleted.find({ user: req.id }).lean();
 
@@ -81,12 +84,9 @@ export const createCampaign = async (
 			res.status(BAD_REQUEST).json({ error: "transaction hash is required" });
 			return;
 		}
-
 		const campaignNo = await checkPayment(txHash);
 		if (!campaignNo) {
-			res
-				.status(FORBIDDEN)
-				.json({ error: "kindly pay the require amount (1000 TRUST) to proceed" });
+			res.status(FORBIDDEN).json({ error: "kindly pay the require amount (1000 TRUST) to proceed" });
 			return;
 		}
 
@@ -443,7 +443,7 @@ export const claimCampaignRewards = async (
 
 export const fetchProjectCampaigns = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
-    const projectCampaigns = await campaign.find({ project: req.id }).lean();
+    const projectCampaigns = await campaign.find({ creator: req.id }).lean();
 
     res.status(OK).json({ projectCampaigns });
   } catch (error) {
@@ -463,15 +463,11 @@ export const publishCampaign = async (req: GlobalRequest, res: GlobalResponse) =
 			res.status(BAD_REQUEST).json({ error: "transaction hash is required" });
 			return;
 		}
-
 		const campaignNo = await checkPayment(txHash);
 		if (!campaignNo) {
-			res
-				.status(FORBIDDEN)
-				.json({ error: "kindly pay the require amount (1000 TRUST) to proceed" });
+			res.status(FORBIDDEN).json({ error: "kindly pay the require amount (1000 TRUST) to proceed" });
 			return;
 		}
-
 		if (campaignCreator.campaignsCreated >= Number(campaignNo)) {
 			res.status(FORBIDDEN).json({ error: "kindly pay the required amount (1000 TRUST) to proceed" });
 			return;

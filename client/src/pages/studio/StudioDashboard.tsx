@@ -13,6 +13,7 @@ import StudioSidebar from "./StudioSidebar";
 import { AddAdminModal } from "../../components/AddAdminModal";
 import { ManageAdminModal } from "../../components/ManageAdminModal";
 import { apiRequest } from "../../lib/config.ts";
+import { projectApiRequest } from "../../lib/projectApi";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../../components/ui/collapsible";
 import { getStoredAdminInfo } from "../../lib/config.ts";
 import {
@@ -60,7 +61,7 @@ const [campaignTasks, setCampaignTasks] = useState<TASKS[]>([]);
   const fetchTasks = async () => {
     try {
       setLoading(true);
-      const res = await apiRequest<{ message?: string; pendingTasks?: TASKS[] }>({ endpoint: "/api/admin/get-quests", method: "GET" });
+      const res = await projectApiRequest<{ message?: string; pendingTasks?: TASKS[] }>({ endpoint: "/project/campaign-submissions", method: "GET" });
       const pendingTasks = res?.pendingTasks ?? [];
 
       const pendingcampaignTasks = pendingTasks.filter((task) => task.page === "campaign");
@@ -108,14 +109,10 @@ const [campaignTasks, setCampaignTasks] = useState<TASKS[]>([]);
   const handleAction = async (id: string, action: "accept" | "reject") => {
     try {
       setLoading(true);
-      await apiRequest<{ message?: string }>({
+      await projectApiRequest<{ message?: string }>({
         method: "POST",
-        endpoint: "/api/admin/validate-task",
-        data: {
-          id,
-          action,
-          validatedBy: "current-admin"
-        }
+        endpoint: "/project/validate-campaign-submissions",
+        data: { submissionId: id, action }
       });
 
       // Refresh tasks after action

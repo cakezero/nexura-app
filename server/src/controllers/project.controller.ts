@@ -20,7 +20,7 @@ export const addProjectAdmin = async (req: GlobalRequest, res: GlobalResponse) =
 
     const code = generateOTP();
 
-    await OTP.create({ email, code, project: req.id });
+    await OTP.create({ email, code, projectId: req.id });
 
     await addProjectAdminEmail(email, code);
 
@@ -136,6 +136,17 @@ export const validateCampaignSubmissions = async (req: GlobalRequest, res: Globa
   }
 };
 
+export const getCampaignSubmissions = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    // Return all submissions tied to this project (studio campaigns only)
+    const pendingTasks = await submission.find({ project: req.id }).lean().sort({ createdAt: 1 });
+    res.status(OK).json({ message: "submissions fetched", pendingTasks });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "Failed to fetch campaign submissions" });
+  }
+};
+
 export const getCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
     const { id } = req.query as { id: string };
@@ -161,6 +172,11 @@ export const getCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
 
 export const saveCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
+    // FormData sends JSON fields as strings — parse them before validation
+    if (typeof req.body.reward === "string") {
+      try { req.body.reward = JSON.parse(req.body.reward); } catch { /* leave as-is */ }
+    }
+
     const { error } = validateSaveCampaignData(req.body);
     if (error) {
       const emptyFields = getMissingFields(error);
@@ -190,7 +206,29 @@ export const saveCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
 
     const { id } = req.query as { id: string };
     if (!id) {
-      const savedCampaign = await campaign.create(req.body);
+      // Fill in defaults for required model fields not yet provided in a draft
+      const [campaignCount, projectDoc] = await Promise.all([
+        campaign.countDocuments({ creator: req.id }),
+        project.findById(req.id).lean(),
+      ]);
+      const reward = req.body.reward ?? {};
+      const body = {
+        ...req.body,
+        project_image:       projectDoc?.logo               ?? "pending",
+        project_name:        projectDoc?.name               ?? req.body.nameOfProject ?? "",
+        sub_title:           req.body.description           ?? "",
+        totalXpAvailable:    reward.xp                      ?? 0,
+        totalTrustAvailable: reward.trust                   ?? 0,
+        campaignNumber:      campaignCount + 1,
+        projectCoverImage:   req.body.coverImage            ?? "pending",
+        creator:             req.id,
+        reward: {
+          xp:          reward.xp    ?? 0,
+          pool:        reward.pool  ?? 0,
+          trustTokens: reward.trust ?? 0,
+        },
+      };
+      const savedCampaign = await campaign.create(body);
 
       res.status(CREATED).json({ message: 'Campaign saved successfully', campaignId: savedCampaign._id });
       return;

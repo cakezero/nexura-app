@@ -50,6 +50,7 @@ import { clearProjectSession, getStoredProjectToken, projectApiRequest } from '.
 import CreateNewCampaigns from "./components/admin/CreateNewCampaign.tsx";
 import MyCampaign from "./components/admin/MyCampaign.tsx"
 import AdminManagement from "./components/admin/AdminManagement.tsx";
+import AdminSignUp from "./pages/studio/AdminSignUp.tsx";
 
 function Router() {
    const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -110,8 +111,8 @@ function Router() {
 <Route path="/studio-dashboard/my-campaign" component={MyCampaign} />
 
 
-      {/* <Route path="/studio" component={StudioIndex} />
-      <Route path="/studio/register" component={ProjectRegistration} /> */}
+      <Route path="/studio/register" component={AdminSignUp} />
+      {/* <Route path="/studio" component={StudioIndex} /> */}
       <Route path="/project/:projectId/*" component={ProjectDashboard} />
       <Route path="/project/:projectId/:rest*" component={ProjectDashboard} />
       {/* Referral */}

@@ -12,6 +12,6 @@ export const REDIS = {
   get: async (key: string): Promise<Record<string, any> | string[]> => {
     const redisData = await redis.get(key);
 
-    return redisData ? JSON.parse(redisData) : {};
+    return redisData ? JSON.parse(redisData) : null;
   }
 }

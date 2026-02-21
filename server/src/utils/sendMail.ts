@@ -69,7 +69,7 @@ export const addProjectAdminEmail = async (email: string, code: string) => {
       subject: "Project admin setup",
       template: "admin-setup",
       context: {
-        url: `${CLIENT_URL}/studio/register`,
+        url: `${CLIENT_URL}/studio/register?email=${encodeURIComponent(email)}`,
         code
       },
     } as MailOptions);

@@ -3,7 +3,7 @@ import { BACKEND_URL } from "./constants";
 const PROJECT_API_URL = (BACKEND_URL ?? "") as string;
 
 function getApiUrl(path: string) {
-  return `${PROJECT_API_URL}${path}`;
+  return `${PROJECT_API_URL}/api${path}`;
 }
 
 export function getStoredProjectToken(): string | null {

@@ -3,13 +3,14 @@ import { upload } from "@/middlewares/auth.middleware";
 import { projectAndAdminSignIn, projectSignUp, projectAdminSignUp, forgotPassword, resetPasswordProject, resetPasswordProjectAdmin, logoutProjectOrAdmin } from "@/controllers/project.auth.controller";
 import { authenticateProject, authenticateProject2 } from "@/middlewares/auth.middleware";
 import { fetchProjectCampaigns } from "@/controllers/campaign.controller";
-import { validateCampaignSubmissions } from "@/controllers/project.controller";
+import { validateCampaignSubmissions, getCampaignSubmissions } from "@/controllers/project.controller";
 import projectAppRoutes from "./project.app.routes";
 
 const router = Router();
 
 router
   .get("/get-campaigns", authenticateProject2, fetchProjectCampaigns)
+  .get("/campaign-submissions", authenticateProject2, getCampaignSubmissions)
   .post("/validate-campaign-submissions", authenticateProject2, validateCampaignSubmissions)
   .post("/sign-up", upload.single("logo"), projectSignUp)
   .post("/sign-in", projectAndAdminSignIn)

@@ -48,7 +48,9 @@ export default function CreateNewCampaigns() {
   const [showModal, setShowModal] = useState(false);
   const [validationType, setValidationType] = useState("manual");
   const { toast } = useToast();
-  const [tasks, setTasks] = useState([]); 
+  type Task = { type: string; platform: string; handleOrUrl: string; description: string; evidence: string; validation: string; };
+
+const [tasks, setTasks] = useState<Task[]>([]); 
   const [newTask, setNewTask] = useState({
   type: "",
   platform: "",
@@ -79,7 +81,43 @@ const [participants, setParticipants] = useState("");
 const [xpRewards, setXpRewards] = useState("");
 const [publishedCampaign, setPublishedCampaign] = useState<any | null>(null);
 const [txHash, setTxHash] = useState("");
+const [isEditMode, setIsEditMode] = useState(false);
 
+// Pre-fill from existing draft when ?edit=<id> is in the URL
+const parseDateTime = (isoStr: string) => {
+  if (!isoStr) return { date: "", time: "" };
+  const idx = isoStr.indexOf("T");
+  if (idx === -1) return { date: isoStr, time: "" };
+  return { date: isoStr.slice(0, idx), time: isoStr.slice(idx + 1, idx + 6) };
+};
+
+useEffect(() => {
+  const editId = new URLSearchParams(window.location.search).get("edit");
+  if (!editId) return;
+  (async () => {
+    try {
+      const res = await projectApiRequest<{ projectCampaigns?: any[] }>({
+        method: "GET",
+        endpoint: "/project/get-campaigns",
+      });
+      const found = (res.projectCampaigns ?? []).find((c: any) => c._id === editId);
+      if (!found) return;
+      setCampaignId(editId);
+      setIsEditMode(true);
+      setCampaignTitle(found.title ?? "");
+      setCampaignName(found.description ?? found.nameOfProject ?? "");
+      const s = parseDateTime(found.starts_at ?? "");
+      const e = parseDateTime(found.ends_at ?? "");
+      setStartDate(s.date);
+      setStartTime(s.time);
+      setEndDate(e.date);
+      setEndTime(e.time);
+      setRewardPool(String(found.reward?.pool ?? ""));
+      setXpRewards(String(found.reward?.xp ?? ""));
+      if (found.projectCoverImage) setCoverImagePreview(found.projectCoverImage);
+    } catch { /* ignore – user will fill in manually */ }
+  })();
+}, []);
 const formatDate = (dateStr: string) => {
   if (!dateStr) return "";
   const date = new Date(dateStr);
@@ -214,14 +252,16 @@ const isActive =
 
 
         <div className="flex-1 flex flex-col overflow-hidden backdrop-blur-xl">
-          <main className="flex-1 overflow-y-auto p-8 text-white">
+          <main className="flex-1 overflow-y-auto p-4 md:p-8 pt-16 md:pt-8 pb-24 md:pb-8 text-white">
             <div className="max-w-5xl mx-auto space-y-8">
 
               {/* Title */}
               <div>
-                <h1 className="text-3xl font-bold">Create New Campaign</h1>
+                <h1 className="text-3xl font-bold">{isEditMode ? "Edit Campaign" : "Create New Campaign"}</h1>
                 <p className="text-white/60 mt-2">
-                  Launch your next campaign and grow your community with tailored rewards.
+                  {isEditMode
+                    ? "Update your draft campaign details, tasks, and duration."
+                    : "Launch your next campaign and grow your community with tailored rewards."}
                 </p>
               </div>
 
@@ -392,10 +432,11 @@ const isActive =
                       </label>
 <div
   className="w-full border-2 border-dashed border-purple-500 rounded-2xl p-8 bg-gray-900 hover:border-purple-400 transition cursor-pointer"
-  onClick={() => document.getElementById("coverInput").click()}
+  onClick={() => document.getElementById("coverInput")!.click()}
 >
 <label className="w-full border-2 border-dashed border-purple-500 rounded-2xl p-8 bg-gray-800 hover:border-purple-400 transition cursor-pointer block">
   <input
+  id="coverInput"
   type="file"
   accept="image/*"
   onChange={handleCoverImage}
@@ -724,6 +765,7 @@ const isActive =
               }
             >
               <option value="">Select option</option>
+              <option value="submit_link">Submit Link</option>
             </select>
           </div>
 
@@ -932,7 +974,6 @@ const isActive =
   
     )}
 
-<>
   {/* ========================= */}
   {/* PUBLISH MODAL */}
   {/* ========================= */}
@@ -968,21 +1009,22 @@ const isActive =
         </div>
 
         {/* Subscription Card */}
-        <div className="bg-gray-800 p-5 rounded-xl border border-gray-700 mb-6">
-          <h3 className="text-lg font-semibold text-white">Yearly Subscription</h3>
-          <p className="text-white/70 mt-1">1000 TRUST / year</p>
-
-          {/* Transaction Hash */}
-          <div className="mt-4">
-            <label className="block text-sm text-white/70 mb-2">Transaction Hash (fee payment)</label>
-            <input
-              type="text"
-              placeholder="0x..."
-              value={txHash}
-              onChange={(e) => setTxHash(e.target.value)}
-              className="w-full p-2 rounded-lg bg-gray-900 text-white border border-gray-600 focus:outline-none focus:border-purple-500 text-sm"
-            />
+        <div className="bg-gray-800 border border-gray-700 rounded-xl p-4 mb-4">
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-white font-semibold text-sm">Studio Hub Activation</span>
+            <span className="text-purple-400 font-bold text-sm">1000 TRUST</span>
           </div>
+          <p className="text-white/60 text-xs mb-3">
+            Send 1000 TRUST to the fee contract, then paste the transaction hash below.
+          </p>
+          <input
+            type="text"
+            placeholder="Paste transaction hash (0x...)"
+            value={txHash}
+            onChange={(e) => setTxHash(e.target.value)}
+            className="w-full bg-gray-700 text-white text-xs rounded-lg px-3 py-2 border border-gray-600 focus:border-purple-500 focus:outline-none"
+          />
+        </div>
 
 <button
   className="mt-4 w-full px-4 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 transition"
@@ -1039,9 +1081,8 @@ const isActive =
   }}
   disabled={loading}
 >
-  {loading ? <><span className="inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin mr-2 align-middle" />Publishing...</> : "Confirm & Publish (1000 TRUST)"}
+  {loading ? <span className="flex items-center gap-2"><span className="inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />Publishing...</span> : "Confirm & Publish (1000 TRUST)"}
 </button>
-        </div>
 
         {/* Cancel Button */}
         <button
@@ -1181,8 +1222,6 @@ const isActive =
       </div>
     </div>
   )}
-</>
-
 
         </div>
         </main>

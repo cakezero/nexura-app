@@ -201,7 +201,7 @@ export const validateProjectData = (reqData: any) => {
 		email: z.email().trim(),
     description: z.string().trim(),
 		address: z.string().trim(),
-		password: z.string().trim().length(8),
+		password: z.string().trim().min(8),
 	});
 
 	const parseData = projectSchema.safeParse(reqData);
@@ -221,8 +221,9 @@ export const generateOTP = () => {
 
 export const validateProjectAdminData = (reqData: any) => {
 	const projectAdminSchema = z.object({
+		name: z.string().trim().min(1),
 		email: z.email().trim(),
-    password: z.string().trim(),
+		password: z.string().trim().min(1),
 		code: z.string().trim().length(6),
 	});
 
