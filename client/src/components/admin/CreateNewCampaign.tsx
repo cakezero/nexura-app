@@ -48,7 +48,7 @@ export default function CreateNewCampaigns() {
   const [showModal, setShowModal] = useState(false);
   const [validationType, setValidationType] = useState("manual");
   const { toast } = useToast();
-  type Task = { type: string; platform: string; handleOrUrl: string; description: string; evidence: string; validation: string; };
+  type Task = { type: string; platform: string; handleOrUrl: string; description: string; evidence: string; validation: string; verificationMode: string; };
 
 const [tasks, setTasks] = useState<Task[]>([]); 
   const [newTask, setNewTask] = useState({
@@ -58,6 +58,7 @@ const [tasks, setTasks] = useState<Task[]>([]);
   description: "",
   evidence: "",
   validation: "Manual Validation",
+  verificationMode: "",
 });
 const [editingIndex, setEditingIndex] = useState<number | null>(null);
 const [error, setError] = useState("");
@@ -115,6 +116,42 @@ useEffect(() => {
       setRewardPool(String(found.reward?.pool ?? ""));
       setXpRewards(String(found.reward?.xp ?? ""));
       if (found.projectCoverImage) setCoverImagePreview(found.projectCoverImage);
+      // Pre-fill tasks from saved quests
+      try {
+        const qRes = await projectApiRequest<{ campaignQuests?: any[] }>({
+          method: "GET",
+          endpoint: "/project/get-campaign",
+          params: { id: editId },
+        });
+        const tagToType = (tag: string) => {
+          if (tag === "comment") return "Comment on our X post";
+          if (tag === "follow") return "Follow us on X";
+          if (tag === "join") return "Join Us On Discord";
+          if (tag === "portal") return "Check Out the Portal Claims";
+          return "others";
+        };
+        const catToPlatform = (cat: string) => {
+          if (cat === "twitter") return "Twitter";
+          if (cat === "discord") return "Discord";
+          return "";
+        };
+        const tagToValidation = (tag: string) => {
+          if (tag === "join") return "Discord Auth";
+          if (tag === "portal") return "Auto Verified";
+          return "Manual Validation";
+        };
+        if (qRes.campaignQuests) {
+          setTasks(qRes.campaignQuests.map((q: any) => ({
+            type: tagToType(q.tag),
+            platform: catToPlatform(q.category),
+            handleOrUrl: q.link ?? "",
+            description: q.quest ?? "",
+            evidence: "",
+            validation: tagToValidation(q.tag),
+            verificationMode: q.verificationMode ?? "",
+          })));
+        }
+      } catch { /* ignore */ }
     } catch { /* ignore – user will fill in manually */ }
   })();
 }, []);
@@ -124,6 +161,19 @@ const formatDate = (dateStr: string) => {
   return date.toLocaleDateString("en-GB");
 };
 
+
+const typeToTag = (type: string) => {
+  if (type === "Comment on our X post") return "comment";
+  if (type === "Follow us on X") return "follow";
+  if (type === "Join Us On Discord") return "join";
+  if (type === "Check Out the Portal Claims") return "portal";
+  return "other";
+};
+const platformToCategory = (platform: string) => {
+  if (platform === "Twitter") return "twitter";
+  if (platform === "Discord") return "discord";
+  return "other";
+};
 
 const buildCampaignFormData = (isDraft: boolean): FormData => {
   const fd = new FormData();
@@ -135,6 +185,15 @@ const buildCampaignFormData = (isDraft: boolean): FormData => {
   fd.append("reward", JSON.stringify({ xp: Number(xpRewards) || 0, pool: Number(rewardPool) || 0 }));
   if (coverImage instanceof File) fd.append("coverImage", coverImage);
   if (isDraft) fd.append("isDraft", "true");
+  fd.append("campaignQuests", JSON.stringify(
+    tasks.map(t => ({
+      quest: t.description || t.type,
+      link: t.handleOrUrl || "https://nexura.io",
+      tag: typeToTag(t.type),
+      category: platformToCategory(t.platform),
+      verificationMode: t.verificationMode || "",
+    }))
+  ));
   return fd;
 };
 
@@ -192,7 +251,8 @@ const convertToBase64 = (file: File): Promise<string> => {
 
 
 const handleSaveTask = () => {
-  if (!newTask.type || !newTask.platform || !newTask.handleOrUrl || !newTask.description) {
+  const requiresPlatform = newTask.type !== "Check Out the Portal Claims" && newTask.type !== "others";
+  if (!newTask.type || (requiresPlatform && !newTask.platform) || !newTask.handleOrUrl || !newTask.description) {
     return setError("All fields are required.");
   }
 
@@ -205,7 +265,7 @@ const handleSaveTask = () => {
     setTasks([...tasks, newTask]);
   }
 
-  setNewTask({ type: "", platform: "", handleOrUrl: "", description: "", evidence: "", validation: "Manual Validation" });
+  setNewTask({ type: "", platform: "", handleOrUrl: "", description: "", evidence: "", validation: "Manual Validation", verificationMode: "" });
   setShowModal(false);
   setError("");
 };
@@ -430,40 +490,31 @@ const isActive =
                         <ImageIcon className="w-4 h-4" />
                         Cover Image
                       </label>
-<div
-  className="w-full border-2 border-dashed border-purple-500 rounded-2xl p-8 bg-gray-900 hover:border-purple-400 transition cursor-pointer"
-  onClick={() => document.getElementById("coverInput")!.click()}
->
 <label className="w-full border-2 border-dashed border-purple-500 rounded-2xl p-8 bg-gray-800 hover:border-purple-400 transition cursor-pointer block">
   <input
-  id="coverInput"
-  type="file"
-  accept="image/*"
-  onChange={handleCoverImage}
-  className="hidden"
-/>
-
-
+    id="coverInput"
+    type="file"
+    accept="image/*"
+    onChange={handleCoverImage}
+    className="hidden"
+  />
   {coverImagePreview ? (
-  <div className="flex flex-col items-center gap-3">
-    <img
-      src={coverImagePreview} // ✅ Base64 preview string
-      alt="Preview"
-      className="w-32 h-32 object-cover rounded-xl"
-    />
-    <p className="text-sm text-white/60">Click to change image</p>
-  </div>
-) : (
-  <div className="flex flex-col items-center justify-center text-center gap-2">
-    <img src="/upload-icon.png" alt="Upload icon" className="w-16 h-16" />
-    <p className="font-medium text-white">Click to upload or drag and drop</p>
-    <p className="text-sm text-white/50">SVG, PNG, JPG or GIF (max. 10MB)</p>
-  </div>
-)}
+    <div className="flex flex-col items-center gap-3">
+      <img
+        src={coverImagePreview}
+        alt="Preview"
+        className="w-32 h-32 object-cover rounded-xl"
+      />
+      <p className="text-sm text-white/60">Click to change image</p>
+    </div>
+  ) : (
+    <div className="flex flex-col items-center justify-center text-center gap-2">
+      <img src="/upload-icon.png" alt="Upload icon" className="w-16 h-16" />
+      <p className="font-medium text-white">Click to upload or drag and drop</p>
+      <p className="text-sm text-white/50">SVG, PNG, JPG or GIF (max. 10MB)</p>
+    </div>
+  )}
 </label>
-
-
-</div>
 
                     </div>
 
@@ -623,7 +674,7 @@ const isActive =
               {index + 1}
             </div>
 
-            <p className="flex-1 text-white">{task.type}</p>
+            <p className="flex-1 text-white">{task.type === "others" ? task.description : task.type}</p>
 
             <div className="flex items-center gap-2">
               <button
@@ -680,7 +731,21 @@ const isActive =
           <select
             className="w-full p-2 rounded-lg bg-purple-900 text-white border border-purple-800 focus:outline-none focus:border-purple-500"
             value={newTask.type}
-            onChange={(e) => setNewTask({ ...newTask, type: e.target.value })}
+            onChange={(e) => {
+              const type = e.target.value;
+              const isDiscord = type === "Join Us On Discord";
+              const isTwitter = type === "Comment on our X post" || type === "Follow us on X";
+              const isPortal = type === "Check Out the Portal Claims";
+              const isOther = type === "others";
+              setNewTask({
+                ...newTask,
+                type,
+                platform: isDiscord ? "Discord" : isTwitter ? "Twitter" : (isPortal || isOther) ? "" : newTask.platform,
+                evidence: isDiscord || isPortal ? "" : newTask.evidence,
+                validation: isDiscord ? "Discord Auth" : isPortal ? "Auto Verified" : (newTask.validation === "Discord Auth" || newTask.validation === "Auto Verified" ? "Manual Validation" : newTask.validation),
+                verificationMode: "",
+              });
+            }}
           >
             <option value="">Select task</option>
             <option value="Comment on our X post">Comment on X</option>
@@ -692,12 +757,13 @@ const isActive =
         </div>
 
         {/* Platform */}
+        {newTask.type !== "Check Out the Portal Claims" && newTask.type !== "others" && (
         <div>
           <label className="text-sm text-white/70 mb-2 block">Platform</label>
           <div className="flex gap-3">
             <button
               type="button"
-              onClick={() => setNewTask({ ...newTask, platform: "Twitter" })}
+              onClick={() => setNewTask({ ...newTask, platform: "Twitter", validation: newTask.validation === "Discord Auth" ? "Manual Validation" : newTask.validation })}
               className={`flex-1 border py-2 rounded-lg transition ${
                 newTask.platform === "Twitter"
                   ? "bg-purple-500 text-white border-purple-500"
@@ -708,7 +774,12 @@ const isActive =
             </button>
             <button
               type="button"
-              onClick={() => setNewTask({ ...newTask, platform: "Discord" })}
+              onClick={() => setNewTask({
+                ...newTask,
+                platform: "Discord",
+                evidence: "",
+                validation: "Discord Auth",
+              })}
               className={`flex-1 border py-2 rounded-lg transition ${
                 newTask.platform === "Discord"
                   ? "bg-purple-500 text-white border-purple-500"
@@ -719,6 +790,7 @@ const isActive =
             </button>
           </div>
         </div>
+        )}
       </div>
 
       {/* TASK DETAILS CARD */}
@@ -726,10 +798,12 @@ const isActive =
 
         {/* Handle or URL */}
         <div className="mb-4">
-          <label className="text-sm text-white/70 mb-2 block">Handle or URL</label>
+          <label className="text-sm text-white/70 mb-2 block">
+            {newTask.platform === "Discord" ? "Discord Invite Link" : newTask.type === "Follow us on X" ? "Twitter Username" : "Handle or URL"}
+          </label>
           <input
             type="text"
-            placeholder="..."
+            placeholder={newTask.platform === "Discord" ? "https://discord.gg/..." : newTask.type === "Follow us on X" ? "@username" : "..."}
             value={newTask.handleOrUrl}
             onChange={(e) =>
               setNewTask({ ...newTask, handleOrUrl: e.target.value })
@@ -753,40 +827,94 @@ const isActive =
         </div>
 
         {/* Evidence + Validation */}
-        <div className="grid grid-cols-2 gap-6">
-          {/* Evidence Upload */}
-          <div>
-            <label className="text-sm text-white/70 mb-2 block">Evidence Upload Management</label>
-            <select
-              className="w-full p-2 rounded-lg bg-purple-950 text-white border border-purple-800 focus:outline-none focus:border-purple-500"
-              value={newTask.evidence}
-              onChange={(e) =>
-                setNewTask({ ...newTask, evidence: e.target.value })
-              }
-            >
-              <option value="">Select option</option>
-              <option value="submit_link">Submit Link</option>
-            </select>
-          </div>
-
-          {/* Validation Type */}
-          <div>
-            <label className="text-sm text-white/70 mb-2 block">Validation Type</label>
-            <div className="relative">
-              <input
-                type="text"
-                value={newTask.validation}
-                readOnly
-                className="w-full p-2 rounded-lg bg-purple-950 text-white border border-purple-800 focus:outline-none focus:border-purple-500 pr-10"
-              />
-              <img
-                src="/purple-check.png"
-                alt="Verified"
-                className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5"
-              />
+        {newTask.platform === "Discord" || newTask.type === "Join Us On Discord" ? (
+          <div className="flex items-center gap-3 rounded-lg bg-indigo-900/50 border border-indigo-500/50 px-4 py-3">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-indigo-400 flex-shrink-0">
+              <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/>
+            </svg>
+            <div>
+              <p className="text-sm text-indigo-300 font-medium">Verified via Discord Auth</p>
+              <p className="text-xs text-white/50 mt-0.5">Users must connect their Discord account. Verification is automatic.</p>
             </div>
           </div>
-        </div>
+        ) : newTask.type === "Check Out the Portal Claims" ? (
+          <div className="flex items-center gap-3 rounded-lg bg-purple-900/50 border border-purple-500/50 px-4 py-3">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-purple-400 flex-shrink-0">
+              <path fillRule="evenodd" d="M8.603 3.799A4.49 4.49 0 0 1 12 2.25c1.357 0 2.573.6 3.397 1.549a4.49 4.49 0 0 1 3.498 1.307 4.491 4.491 0 0 1 1.307 3.497A4.49 4.49 0 0 1 21.75 12a4.49 4.49 0 0 1-1.549 3.397 4.491 4.491 0 0 1-1.307 3.497 4.491 4.491 0 0 1-3.497 1.307A4.49 4.49 0 0 1 12 21.75a4.49 4.49 0 0 1-3.397-1.549 4.49 4.49 0 0 1-3.498-1.306 4.491 4.491 0 0 1-1.307-3.498A4.49 4.49 0 0 1 2.25 12c0-1.357.6-2.573 1.549-3.397a4.49 4.49 0 0 1 1.307-3.497 4.49 4.49 0 0 1 3.497-1.307Zm7.007 6.387a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z" clipRule="evenodd" />
+            </svg>
+            <div>
+              <p className="text-sm text-purple-300 font-medium">Auto-verified via Portal</p>
+              <p className="text-xs text-white/50 mt-0.5">Completion is verified automatically after the user completes the task.</p>
+            </div>
+          </div>
+        ) : newTask.type === "others" ? (
+          <div>
+            <label className="text-sm text-white/70 mb-2 block">Verification Mode</label>
+            <div className="flex gap-3">
+              {([
+                { value: "image_upload", label: "📷 Image Upload", hint: "User uploads a screenshot" },
+                { value: "submit_link", label: "🔗 Submit Link", hint: "User submits a URL" },
+                { value: "auto", label: "⚡ Auto (link click)", hint: "Verified when link is clicked" },
+              ] as { value: string; label: string; hint: string }[]).map(({ value, label, hint }) => (
+                <button
+                  key={value}
+                  type="button"
+                  title={hint}
+                  onClick={() => setNewTask({ ...newTask, verificationMode: value, evidence: value !== "auto" ? value : "", validation: value === "auto" ? "Auto Verified" : "Manual Validation" })}
+                  className={`flex-1 border py-2 px-2 rounded-lg text-xs transition ${
+                    newTask.verificationMode === value
+                      ? "bg-purple-500 text-white border-purple-500"
+                      : "bg-purple-950 border-purple-800 text-white/70 hover:border-purple-500"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {newTask.verificationMode && (
+              <p className="text-xs text-white/40 mt-2">
+                {newTask.verificationMode === "image_upload" && "Users will upload a screenshot as proof."}
+                {newTask.verificationMode === "submit_link" && "Users will submit a link to prove completion."}
+                {newTask.verificationMode === "auto" && "Task is marked complete as soon as the user clicks the link."}
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-6">
+            {/* Evidence Upload */}
+            <div>
+              <label className="text-sm text-white/70 mb-2 block">Evidence Upload Management</label>
+              <select
+                className="w-full p-2 rounded-lg bg-purple-950 text-white border border-purple-800 focus:outline-none focus:border-purple-500"
+                value={newTask.evidence}
+                onChange={(e) =>
+                  setNewTask({ ...newTask, evidence: e.target.value })
+                }
+              >
+                <option value="">Select option</option>
+                <option value="submit_link">Submit Link</option>
+              </select>
+            </div>
+
+            {/* Validation Type */}
+            <div>
+              <label className="text-sm text-white/70 mb-2 block">Validation Type</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={newTask.validation}
+                  readOnly
+                  className="w-full p-2 rounded-lg bg-purple-950 text-white border border-purple-800 focus:outline-none focus:border-purple-500 pr-10"
+                />
+                <img
+                  src="/purple-check.png"
+                  alt="Verified"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5"
+                />
+              </div>
+            </div>
+          </div>
+        )}
 
       </div>
 
@@ -904,8 +1032,12 @@ const isActive =
               {index + 1}
             </div>
 
-            {/* Show task type as description */}
-            <p className="flex-1 text-white">{task.type}</p>
+            <div className="flex-1 min-w-0">
+              <p className="text-white">{task.type === "others" ? task.description : task.type}</p>
+              {task.type === "others" && task.description && (
+                <p className="text-xs text-white/50 truncate">{task.verificationMode === "image_upload" ? "📷 Image proof" : task.verificationMode === "submit_link" ? "🔗 Link submission" : task.verificationMode === "auto" ? "⚡ Auto" : ""}</p>
+              )}
+            </div>
 
             <div className="flex items-center gap-2">
               <button
@@ -934,6 +1066,13 @@ const isActive =
                 }}
               >
                 Edit
+              </button>
+
+              <button
+                className="px-3 py-1 bg-gray-800 rounded-lg text-white hover:bg-red-800 transition"
+                onClick={() => setTasks(tasks.filter((_, i) => i !== index))}
+              >
+                <img src="/delete.png" alt="Delete" className="w-4 h-4" />
               </button>
             </div>
           </div>

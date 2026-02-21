@@ -177,6 +177,16 @@ export const saveCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
       try { req.body.reward = JSON.parse(req.body.reward); } catch { /* leave as-is */ }
     }
 
+    // Parse campaignQuests if provided
+    let questsToSave: any[] | null = null;
+    if (req.body.campaignQuests !== undefined) {
+      try {
+        questsToSave = typeof req.body.campaignQuests === "string"
+          ? JSON.parse(req.body.campaignQuests)
+          : req.body.campaignQuests;
+      } catch { /* ignore */ }
+    }
+
     const { error } = validateSaveCampaignData(req.body);
     if (error) {
       const emptyFields = getMissingFields(error);
@@ -229,6 +239,18 @@ export const saveCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
         },
       };
       const savedCampaign = await campaign.create(body);
+      const savedCampaignId = savedCampaign._id;
+
+      // Save quests
+      if (questsToSave !== null) {
+        await campaignQuest.deleteMany({ campaign: savedCampaignId });
+        if (questsToSave.length > 0) {
+          await campaignQuest.insertMany(
+            questsToSave.map((q: any) => ({ ...q, campaign: savedCampaignId }))
+          );
+        }
+        await campaign.findByIdAndUpdate(savedCampaignId, { noOfQuests: questsToSave.length });
+      }
 
       res.status(CREATED).json({ message: 'Campaign saved successfully', campaignId: savedCampaign._id });
       return;
@@ -241,6 +263,17 @@ export const saveCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
     }
 
     await campaign.findByIdAndUpdate(id, req.body, { new: true }).lean();
+
+    // Update quests
+    if (questsToSave !== null) {
+      await campaignQuest.deleteMany({ campaign: id });
+      if (questsToSave.length > 0) {
+        await campaignQuest.insertMany(
+          questsToSave.map((q: any) => ({ ...q, campaign: id }))
+        );
+      }
+      await campaign.findByIdAndUpdate(id, { noOfQuests: questsToSave.length });
+    }
 
     res.status(OK).json({ campaignId: id });
   } catch (error) {
