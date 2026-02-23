@@ -32,7 +32,7 @@ export default function ConnectTwitter() {
 
         {/* Back button */}
         <div className="absolute top-4 left-4">
-          <Link href="/the-hub">
+          <Link href="/projects/create/the-hub">
             <Button className="flex items-center gap-2 bg-gray-800 border border-purple-500 hover:bg-gray-700 text-white px-3 py-1 rounded-xl">
               <ArrowLeft className="w-4 h-4" />
             </Button>

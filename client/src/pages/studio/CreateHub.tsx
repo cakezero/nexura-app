@@ -8,7 +8,6 @@ import { Button } from "../../components/ui/button";
 import { ArrowRight } from "lucide-react";
 import { Eye, EyeOff } from "lucide-react";
 import { useLocation } from "wouter";
-import { projectApiRequest, storeProjectSession, base64ToBlob } from "../../lib/projectApi";
 import { useToast } from "../../hooks/use-toast";
 import { useWallet } from "../../hooks/use-wallet";
 
@@ -17,7 +16,6 @@ export default function SharedAccessCredentials() {
   const [address, setAddress] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [loading, setLoading] = useState(false);
   const [hasUppercase, setHasUppercase] = useState(false);
   const [hasNumber, setHasNumber] = useState(false);
   const [hasSpecialChar, setHasSpecialChar] = useState(false);
@@ -43,7 +41,7 @@ export default function SharedAccessCredentials() {
     if (walletAddress) setAddress(walletAddress);
   }, [walletAddress]);
 
-  async function handleSignUp() {
+  function handleSignUp() {
     if (!isLongEnough || !hasUppercase || !hasNumber || !hasSpecialChar) {
       toast({ title: "Weak password", description: "Password does not meet all requirements.", variant: "destructive" });
       return;
@@ -61,57 +59,14 @@ export default function SharedAccessCredentials() {
       return;
     }
 
-    const hubDataRaw = localStorage.getItem("hubData");
-    if (!hubDataRaw) {
-      toast({ title: "Missing hub details", description: "Please complete the hub setup step first.", variant: "destructive" });
-      setLocation("/projects/create/the-hub");
-      return;
-    }
+    // Save credentials — API call happens on TheHub after hub details are filled in
+    localStorage.setItem(
+      "nexura:hub-credentials",
+      JSON.stringify({ email, address, password })
+    );
+    localStorage.setItem("nexura:studio-step", "/projects/create/the-hub");
 
-    const hubData: { hubName?: string; description?: string; imagePreview?: string } = JSON.parse(hubDataRaw);
-
-    if (!hubData.hubName) {
-      toast({ title: "Missing hub name", description: "Please go back and enter a hub name.", variant: "destructive" });
-      setLocation("/projects/create/the-hub");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const fd = new FormData();
-      fd.append("name", hubData.hubName);
-      fd.append("email", email);
-      fd.append("description", hubData.description ?? "");
-      fd.append("address", address);
-      fd.append("password", password);
-
-      if (hubData.imagePreview) {
-        const blob = base64ToBlob(hubData.imagePreview);
-        fd.append("logo", blob, "logo.png");
-      }
-
-      const res = await projectApiRequest<{ message?: string; accessToken?: string; token?: string; project?: Record<string, unknown> }>({
-        method: "POST",
-        endpoint: "/project/sign-up",
-        formData: fd,
-      });
-
-      const token = (res.token ?? res.accessToken) as string | undefined;
-      if (!token) throw new Error("No access token received");
-
-      storeProjectSession(token, { name: hubData.hubName, email, address, ...(res.project ?? {}) });
-
-      localStorage.removeItem("hubData");
-      localStorage.removeItem("nexura:studio-step");
-
-      toast({ title: "Hub created!", description: "Your project hub is live on Nexura Studio." });
-      setLocation("/studio-dashboard");
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Sign-up failed. Please try again.";
-      toast({ title: "Sign up failed", description: msg, variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
+    setLocation("/projects/create/the-hub");
   }
 
   return (
@@ -238,9 +193,8 @@ export default function SharedAccessCredentials() {
               <Button
                 onClick={handleSignUp}
                 className="w-full bg-purple-500 hover:bg-purple-600 flex items-center justify-center gap-2"
-                disabled={loading}
               >
-                {loading ? "Creating hub..." : "Create Hub"}
+                Next
                 <ArrowRight className="h-5 w-5" />
               </Button>
             </CardFooter>

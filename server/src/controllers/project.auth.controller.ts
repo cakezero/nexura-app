@@ -45,6 +45,12 @@ export const projectSignUp = async (req: GlobalRequest, res: GlobalResponse) => 
       return;
     }
 
+    const addressExists = await project.exists({ address: req.body.address });
+    if (addressExists) {
+      res.status(BAD_REQUEST).json({ error: "wallet address is already in use" });
+      return;
+    }
+
     const projectLogoAsFile = req.file?.buffer;
 
     let projectLogo: string;
@@ -75,8 +81,14 @@ export const projectSignUp = async (req: GlobalRequest, res: GlobalResponse) => 
 		});
 
 		res.status(CREATED).json({ message: "project created!", accessToken });
-	} catch (error) {
+	} catch (error: any) {
 		logger.error(error);
+    // MongoDB duplicate key
+    if (error?.code === 11000) {
+      const field = Object.keys(error.keyPattern ?? {})[0] ?? "field";
+      res.status(BAD_REQUEST).json({ error: `${field} is already in use` });
+      return;
+    }
 		res
 			.status(INTERNAL_SERVER_ERROR)
 			.json({ error: "Error signing project up" });

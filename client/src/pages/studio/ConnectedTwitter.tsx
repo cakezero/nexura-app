@@ -101,7 +101,7 @@ export default function ConnectedTwitter() {
 
         </Card>
 
-        <Link href="/projects/create/create-hub" className="w-full">
+        <Link href="/studio-dashboard" className="w-full">
           <Button className="w-full bg-purple-500 hover:bg-purple-600 flex items-center justify-center gap-2 mt-4">
             Save & Continue
             <ArrowRight className="h-5 w-5" />
