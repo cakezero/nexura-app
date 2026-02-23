@@ -3,7 +3,7 @@ import { home, getLeaderboard } from "@/controllers/app.controller";
 import { fetchCampaigns, fetchProjectCampaigns } from "@/controllers/campaign.controller";
 import adminRoutes from "./admin.routes.ts";
 import campaignRoutes from "./campaign.routes.ts";
-import projectRoutes from "./project.routes.ts";
+import projectRoutes from "./hub.routes.ts";
 import questRoutes from "./quest.routes.ts";
 import userRoutes from "./user.routes.ts";
 import appRoutes from "./app.routes.ts";
@@ -11,7 +11,7 @@ import {
 	fetchEcosystemDapps,
 	fetchQuests,
 } from "@/controllers/quest.controller.ts";
-import { authenticateUser2, authenticateProject, authenticateProject2 } from "@/middlewares/auth.middleware";
+import { authenticateUser2 } from "@/middlewares/auth.middleware";
 
 const router = Router();
 
@@ -20,7 +20,7 @@ router
 	.use("/admin", adminRoutes)
 	.get("/ecosystem-quests", authenticateUser2, fetchEcosystemDapps)
 	.get("/quests", authenticateUser2, fetchQuests)
-	.get("/campaigns", authenticateUser2, fetchCampaigns)
+  .get("/campaigns", authenticateUser2, fetchCampaigns)
 	.use("/campaign", campaignRoutes)
 	.get("/leaderboard", authenticateUser2, getLeaderboard)
   .use("/project", projectRoutes)

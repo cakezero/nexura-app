@@ -82,6 +82,190 @@ export const updateUser = async (req: GlobalRequest, res: GlobalResponse) => {
   }
 }
 
+export const getClaims = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    
+    const { offset, filter } = req.query as { offset?: number, filter?: string }
+    
+    const appUser = await user.findById(req.id);
+    
+    // 1️⃣ Fetch all vaults (slice for pagination)
+    const vaultQuery = `query GetExploreTriples($where: triple_term_bool_exp, $orderBy: [triple_term_order_by!], $limit: Int, $offset: Int, $userPositionAddress: String) {
+      triple_terms(where: $where, order_by: $orderBy, limit: $limit, offset: $offset) {
+        term_id
+        counter_term_id
+        total_assets
+        total_market_cap
+        total_position_count
+        term {
+          id
+          total_market_cap
+          total_assets
+          vaults(order_by: {curve_id: asc}) {
+            curve_id
+            current_share_price
+            total_shares
+            total_assets
+            position_count
+            market_cap
+            userPosition: positions(
+            limit: 1
+            where: {account_id: {_eq: $userPositionAddress}}
+            ) {
+              shares
+              account_id
+            }
+          }
+          positions_aggregate {
+            aggregate {
+              count
+            }
+          }
+          triple {
+            term_id
+            counter_term_id
+            created_at
+            subject_id
+            predicate_id
+            object_id
+            subject {
+              term_id
+              wallet_id
+              label
+              image
+              cached_image {
+                ...CachedImageFields
+              }
+              data
+              type
+              value {
+                ...AtomValueLight
+              }
+            }
+            predicate {
+              term_id
+              wallet_id
+              label
+              image
+              cached_image {
+                ...CachedImageFields
+              }
+              data
+              type
+              value {
+                ...AtomValueLight
+              }
+            }
+            object {
+              term_id
+              wallet_id
+              label
+              image
+              cached_image {
+                ...CachedImageFields
+              }
+              data
+              type
+              value {
+                ...AtomValue
+              }
+            }
+            creator {
+              id
+              label
+              image
+              cached_image {
+                ...CachedImageFields
+              }
+            }
+          }
+        }
+        counter_term {
+          id
+          total_market_cap
+          total_assets
+          vaults(order_by: {curve_id: asc}) {
+            curve_id
+            current_share_price
+            total_shares
+            total_assets
+            position_count
+            market_cap
+            userPosition: positions(
+            limit: 1
+            where: {account_id: {_eq: $userPositionAddress}}
+            ) {
+              shares
+              account_id
+            }
+          }
+          positions_aggregate {
+            aggregate {
+              count
+            }
+          }
+        }
+      }
+    }
+
+    fragment CachedImageFields on cached_images_cached_image {
+      url
+      safe
+    }
+
+    fragment AtomValueLight on atom_values {
+      person {
+        name
+        image
+        cached_image {
+          ...CachedImageFields
+        }
+        url
+      }
+      thing {
+        name
+        image
+        cached_image {
+          ...CachedImageFields
+        }
+        url
+      }
+      organization {
+        name
+        image
+        url
+      }
+      account {
+        id
+        label
+        image
+        cached_image {
+          ...CachedImageFields
+        }
+      }
+    }
+    
+    
+    fragment AtomValue on atom_values {
+      ...AtomValueLight
+      json_object {
+      description: data(path: \"description\")
+      }
+    }
+    `;
+
+    const client = new GraphQLClient(GRAPHQL_API_URL);
+
+    // default filter - { total_market_cap: "desc" }
+    const response = await client.request(vaultQuery, { where: {}, orderBy: [filter],limit: 50, offset, userPositionAddress: appUser?.address ?? "..." });
+
+    res.json({ message: "fetched", claims: response.triple_terms });
+  } catch (e) {
+    logger.error(e);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "Failed to fetch claims" });
+  }
+};
+
 export const updateSubmission = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
     const userId = req.id;
@@ -168,15 +352,6 @@ export const getLeaderboard = async (req: GlobalRequest, res: GlobalResponse) =>
   } catch(error) {
     logger.error(error);
     res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching leaderboard data" })
-  }
-}
-
-export const getClaims = async (req: GlobalRequest, res: GlobalResponse) => {
-  try {
-    
-  } catch (error) {
-    logger.error(error);
-    res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching claims" });
   }
 }
 
