@@ -63,7 +63,9 @@ export const projectSignUp = async (req: GlobalRequest, res: GlobalResponse) => 
 
     req.body.password = await hashPassword(req.body.password);
     req.body.logo = projectLogo;
-		req.body.name = name;
+    req.body.name = name;
+    // Auto-generate a unique mock xUsername until the user connects their real X account
+    req.body.xUsername = `@${name.replace(/\s+/g, "_")}_${Math.random().toString(36).slice(2, 8)}`;
 
 		const projectUser = await project.create(req.body);
 
