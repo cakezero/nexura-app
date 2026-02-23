@@ -185,6 +185,9 @@ export const projectAdminSignUp = async (req: GlobalRequest, res: GlobalResponse
 
     req.body.project = otp.projectId;
 
+    // Hash password before storing (was missing — caused bcrypt.compare to always fail at sign-in)
+    req.body.password = await hashPassword(req.body.password);
+
 		const admin = await projectAdmin.create(req.body);
 
 		const id = admin._id.toString();
