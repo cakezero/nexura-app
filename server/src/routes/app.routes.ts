@@ -11,7 +11,12 @@ import {
   updateDiscord,
 	getClaims
 } from "@/controllers/app.controller";
-import { discordCallback, xCallback, disconnectX, disconnectDiscord, } from "@/controllers/auth.controller";
+import {
+  discordCallback,
+  xCallback,
+  disconnectX,
+  disconnectDiscord,
+} from "@/controllers/auth.controller";
 
 const router = Router();
 

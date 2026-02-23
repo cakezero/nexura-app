@@ -3,7 +3,6 @@ import {
   validateHubAdminData,
   getMissingFields,
   validateSuperAdminData,
-  validateHubData,
   JWT,
   getRefreshToken,
   hashPassword
@@ -109,7 +108,7 @@ export const hubAdminSignUp = async (req: GlobalRequest, res: GlobalResponse) =>
 			return;
     }
 
-    req.body.hub = otp.projectId;
+    req.body.hub = otp.hubId;
     req.body.role = "admin";
 
 		const admin = await hubAdmin.create(req.body);
@@ -145,13 +144,13 @@ export const forgotPassword = async (req: GlobalRequest, res: GlobalResponse) =>
       return;
     }
 
-    const projectExists = await hubAdmin.findOne({ email }).lean();
-    if (!projectExists) {
+    const hubAdminExists = await hubAdmin.findOne({ email }).lean();
+    if (!hubAdminExists) {
       res.status(NOT_FOUND).json({ error: "email associated with admin is invalid or does not exist" });
       return;
     }
 
-    const id = projectExists._id.toString();
+    const id = hubAdminExists._id.toString();
     const clientLink = `${CLIENT_URL}/hub/reset-password?token=`;
 
 		const token = JWT.sign(id, "10m");

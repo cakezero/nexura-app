@@ -30,21 +30,21 @@ export const createHub = async (req: GlobalRequest, res: GlobalResponse) => {
       return;
     }
 
-    const projectLogoAsFile = req.file?.buffer;
-		if (!projectLogoAsFile) {
+    const hubLogoAsFile = req.file?.buffer;
+		if (!hubLogoAsFile) {
 			res.status(BAD_REQUEST).json({ error: "hub logo is required" });
 			return;
     }
 
-    const projectLogo = await uploadImg({ file: projectLogoAsFile, filename: req.file?.originalname, folder: "hub-logos" });
+    const hubLogo = await uploadImg({ file: hubLogoAsFile, filename: req.file?.originalname, folder: "hub-logos" });
 
-    req.body.logo = projectLogo;
+    req.body.logo = hubLogo;
     req.body.name = name;
     req.body.superAdmin = req.id;
 
-    const createdProject = await hub.create(req.body);
+    const createdHub = await hub.create(req.body);
 
-    req.admin.hub = createdProject._id;
+    req.admin.hub = createdHub._id;
 
     await req.admin.save();
 

@@ -145,7 +145,9 @@ export const createCampaign = async (
 
 		const newCampaign = new campaign(requestData);
 
-		newCampaign.totalXpAvailable = xpAllocated;
+    newCampaign.totalXpAvailable = xpAllocated;
+		
+    newCampaign.hub = createdHub._id;
 
 		newCampaign.status = "Active";
 
@@ -441,11 +443,11 @@ export const claimCampaignRewards = async (
 	}
 };
 
-export const fetchProjectCampaigns = async (req: GlobalRequest, res: GlobalResponse) => {
+export const fetchHubCampaigns = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
-    const projectCampaigns = await campaign.find({ creator: req.admin.hub }).lean();
+    const hubCampaigns = await campaign.find({ hub: req.admin.hub }).lean();
 
-    res.status(OK).json({ projectCampaigns });
+    res.status(OK).json({ hubCampaigns });
   } catch (error) {
     logger.error(error);
     res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching hub campaigns" });

@@ -83,9 +83,9 @@ const campaignSchema = new Schema({
 		type: String,
 		required: true,
 	},
-	creator: {
+	hub: {
 		type: mongoose.Schema.Types.ObjectId,
-    ref: "project",
+    ref: "hubs",
 		required: true
 	},
 }, { timestamps: true });

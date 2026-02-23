@@ -15,6 +15,14 @@ export default function ConnectedTwitter() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Track step so returning to /studio restores here — only during creation flow
+    const hasFullSession =
+      !!localStorage.getItem("nexura-project:token") ||
+      !!localStorage.getItem("nexura:proj-token");
+    if (!hasFullSession) {
+      localStorage.setItem("nexura:studio-step", "/connected-twitter");
+    }
+
     const stored = localStorage.getItem("twitterData");
     if (stored) {
       setTwitterData(JSON.parse(stored));

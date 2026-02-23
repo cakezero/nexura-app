@@ -141,7 +141,7 @@ export default function SignInToHub() {
           <CardFooter className="pt-4">
             <Button
               onClick={handleSignIn}
-              className="w-full bg-purple-500 hover:bg-purple-600 flex items-center justify-center gap-2"
+              className="w-full border border-white/80 text-white bg-transparent hover:bg-purple-600 hover:border-purple-600 transition-all flex items-center justify-center gap-2"
               disabled={loading}
             >
               {loading ? "Signing in..." : "Sign In"}
@@ -149,6 +149,13 @@ export default function SignInToHub() {
             </Button>
           </CardFooter>
         </Card>
+
+        <p className="text-center text-xs text-white/30 -mt-8">
+          Don't have an account?{" "}
+          <a href="/projects/create" className="text-purple-400 hover:underline">
+            Create a Hub
+          </a>
+        </p>
       </div>
 
       {/* Reset Password Modal */}

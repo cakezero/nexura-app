@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import AnimatedBackground from "../../components/AnimatedBackground";
 import { Card, CardTitle, CardDescription, CardFooter } from "../../components/ui/card";
 import { Input } from "../../components/ui/input";
@@ -8,15 +8,14 @@ import { Button } from "../../components/ui/button";
 import { ArrowRight } from "lucide-react";
 import { Eye, EyeOff } from "lucide-react";
 import { useLocation } from "wouter";
-import { projectApiRequest, storeProjectSession, base64ToBlob } from "../../lib/projectApi";
 import { useToast } from "../../hooks/use-toast";
+import { useWallet } from "../../hooks/use-wallet";
 
 export default function SharedAccessCredentials() {
   const [email, setEmail] = useState("");
   const [address, setAddress] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [loading, setLoading] = useState(false);
   const [hasUppercase, setHasUppercase] = useState(false);
   const [hasNumber, setHasNumber] = useState(false);
   const [hasSpecialChar, setHasSpecialChar] = useState(false);
@@ -25,8 +24,24 @@ export default function SharedAccessCredentials() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { address: walletAddress, isConnected } = useWallet();
 
-  async function handleSignUp() {
+  // Track step — only during creation flow (not if already signed in)
+  useEffect(() => {
+    const hasFullSession =
+      !!localStorage.getItem("nexura-project:token") ||
+      !!localStorage.getItem("nexura:proj-token");
+    if (!hasFullSession) {
+      localStorage.setItem("nexura:studio-step", "/projects/create/create-hub");
+    }
+  }, []);
+
+  // Autofill wallet address when wallet is connected
+  useEffect(() => {
+    if (walletAddress) setAddress(walletAddress);
+  }, [walletAddress]);
+
+  function handleSignUp() {
     if (!isLongEnough || !hasUppercase || !hasNumber || !hasSpecialChar) {
       toast({ title: "Weak password", description: "Password does not meet all requirements.", variant: "destructive" });
       return;
@@ -44,56 +59,14 @@ export default function SharedAccessCredentials() {
       return;
     }
 
-    const hubDataRaw = localStorage.getItem("hubData");
-    if (!hubDataRaw) {
-      toast({ title: "Missing hub details", description: "Please complete the hub setup step first.", variant: "destructive" });
-      setLocation("/projects/create/the-hub");
-      return;
-    }
+    // Save credentials — API call happens on TheHub after hub details are filled in
+    localStorage.setItem(
+      "nexura:hub-credentials",
+      JSON.stringify({ email, address, password })
+    );
+    localStorage.setItem("nexura:studio-step", "/projects/create/the-hub");
 
-    const hubData: { hubName?: string; description?: string; imagePreview?: string } = JSON.parse(hubDataRaw);
-
-    if (!hubData.hubName) {
-      toast({ title: "Missing hub name", description: "Please go back and enter a hub name.", variant: "destructive" });
-      setLocation("/projects/create/the-hub");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const fd = new FormData();
-      fd.append("name", hubData.hubName);
-      fd.append("email", email);
-      fd.append("description", hubData.description ?? "");
-      fd.append("address", address);
-      fd.append("password", password);
-
-      if (hubData.imagePreview) {
-        const blob = base64ToBlob(hubData.imagePreview);
-        fd.append("logo", blob, "logo.png");
-      }
-
-      const res = await projectApiRequest<{ message?: string; accessToken?: string; token?: string; project?: Record<string, unknown> }>({
-        method: "POST",
-        endpoint: "/project/sign-up",
-        formData: fd,
-      });
-
-      const token = (res.token ?? res.accessToken) as string | undefined;
-      if (!token) throw new Error("No access token received");
-
-      storeProjectSession(token, { name: hubData.hubName, email, address, ...(res.project ?? {}) });
-
-      localStorage.removeItem("hubData");
-
-      toast({ title: "Hub created!", description: "Your project hub is live on Nexura Studio." });
-      setLocation("/studio-dashboard");
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Sign-up failed. Please try again.";
-      toast({ title: "Sign up failed", description: msg, variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
+    setLocation("/projects/create/the-hub");
   }
 
   return (
@@ -136,9 +109,15 @@ export default function SharedAccessCredentials() {
                   type="text"
                   placeholder="0x..."
                   value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  className="mt-2 w-full bg-gray-800 text-white border-purple-500"
+                  onChange={(e) => !isConnected && setAddress(e.target.value)}
+                  readOnly={isConnected}
+                  className={`mt-2 w-full bg-gray-800 text-white border-purple-500 ${
+                    isConnected ? "opacity-70 cursor-not-allowed select-none font-mono text-sm" : ""
+                  }`}
                 />
+                {isConnected && (
+                  <p className="mt-1 ml-1 text-xs text-white/30">Auto-filled from connected wallet</p>
+                )}
               </div>
 
               {/* Password */}
@@ -169,10 +148,10 @@ export default function SharedAccessCredentials() {
                 </div>
 
                 <div className="mt-2 space-y-1 text-sm">
-                  <p className={isLongEnough ? "text-green-400" : "text-red-400"}>â€¢ At least 8 characters</p>
-                  <p className={hasUppercase ? "text-green-400" : "text-red-400"}>â€¢ 1 uppercase letter</p>
-                  <p className={hasNumber ? "text-green-400" : "text-red-400"}>â€¢ 1 number</p>
-                  <p className={hasSpecialChar ? "text-green-400" : "text-red-400"}>â€¢ 1 special character</p>
+                  <p className={isLongEnough ? "text-green-400" : "text-red-400"}>&#8226; At least 8 characters</p>
+                  <p className={hasUppercase ? "text-green-400" : "text-red-400"}>&#8226; 1 uppercase letter</p>
+                  <p className={hasNumber ? "text-green-400" : "text-red-400"}>&#8226; 1 number</p>
+                  <p className={hasSpecialChar ? "text-green-400" : "text-red-400"}>&#8226; 1 special character</p>
                 </div>
               </div>
 
@@ -214,9 +193,8 @@ export default function SharedAccessCredentials() {
               <Button
                 onClick={handleSignUp}
                 className="w-full bg-purple-500 hover:bg-purple-600 flex items-center justify-center gap-2"
-                disabled={loading}
               >
-                {loading ? "Creating hub..." : "Create Hub"}
+                Next
                 <ArrowRight className="h-5 w-5" />
               </Button>
             </CardFooter>

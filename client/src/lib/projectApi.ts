@@ -31,10 +31,22 @@ export function storeProjectSession(token: string, info: Record<string, unknown>
 export function clearProjectSession() {
   localStorage.removeItem("nexura-project:token");
   localStorage.removeItem("nexura-project:info");
+  localStorage.removeItem("nexura:proj-token");
+  localStorage.removeItem("nexura:studio-wallet");
+  localStorage.removeItem("nexura:studio-step");
+  localStorage.removeItem("hubData");
+  localStorage.removeItem("twitterData");
+  localStorage.removeItem("nexura:wallet");
 }
 
 export function isProjectSignedIn(): boolean {
-  return !!getStoredProjectToken();
+  // Email/password session
+  if (getStoredProjectToken()) return true;
+  // Wallet-based org session (set by use-wallet org-signin path)
+  try { if (localStorage.getItem("nexura:proj-token")) return true; } catch { /* ignore */ }
+  // Wallet-based studio session started via BuilderPopup (project mode)
+  try { if (localStorage.getItem("nexura:studio-wallet")) return true; } catch { /* ignore */ }
+  return false;
 }
 
 async function throwIfNotOk(res: Response): Promise<void> {

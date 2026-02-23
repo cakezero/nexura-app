@@ -6,11 +6,10 @@ import { token } from "@/models/tokens.model";
 import { campaignQuest, miniQuest, quest } from "@/models/quests.model";
 import { user } from "@/models/user.model";
 import { performIntuitionOnchainAction } from "@/utils/account";
-import { BOT_TOKEN, THIRD_PARTY_API_KEY, X_API_BEARER_TOKEN } from "@/utils/env.utils";
+import { BOT_TOKEN, THIRD_PARTY_API_KEY } from "@/utils/env.utils";
 import {
   INTERNAL_SERVER_ERROR, 
   OK,
-  CREATED, 
   BAD_REQUEST,
   FORBIDDEN, 
   NOT_FOUND,
@@ -27,7 +26,6 @@ import {
 	miniQuestCompleted,
   questCompleted
 } from "@/models/questsCompleted.models";
-import { bannedUser } from "@/models/bannedUser.model";
 import { GRAPHQL_API_URL } from "@/utils/constants";
 import { GraphQLClient } from "graphql-request";
 import { checksumAddress } from "viem";
@@ -637,21 +635,88 @@ export const getAnalytics = async (req: GlobalRequest, res: GlobalResponse) => {
       return u.status === "Active" && u.updatedAt >= last30Days;
     }).length;
 
-    // Per-day new user counts for the last 7 days (index 0 = oldest, index 6 = today)
     const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    const usersByDay = Array.from({ length: 7 }, (_, i) => {
+
+    // ── 30-day buckets (index 0 = 29 days ago, index 29 = today) ──────────────
+    const usersByDay = Array.from({ length: 30 }, (_, i) => {
       const dayStart = new Date(now);
       dayStart.setUTCHours(0, 0, 0, 0);
-      dayStart.setUTCDate(dayStart.getUTCDate() - (6 - i));
+      dayStart.setUTCDate(dayStart.getUTCDate() - (29 - i));
       const dayEnd = new Date(dayStart);
       dayEnd.setUTCDate(dayEnd.getUTCDate() + 1);
       const count = userFound.filter((u) => u.createdAt >= dayStart && u.createdAt < dayEnd).length;
       const dayName = DAY_NAMES[dayStart.getUTCDay()];
-      return { day: dayName, count };
+      const dateLabel = `${dayStart.getUTCMonth() + 1}/${dayStart.getUTCDate()}`;
+      return { day: dayName, date: dateLabel, count };
     });
+
+    // ── 24-hour buckets for the current day (index 0 = midnight, index 23 = current hour) ──
+    const todayMidnight = new Date(now);
+    todayMidnight.setUTCHours(0, 0, 0, 0);
+    const usersByHour = Array.from({ length: 24 }, (_, h) => {
+      const hourStart = new Date(todayMidnight.getTime() + h * 60 * 60 * 1000);
+      const hourEnd = new Date(hourStart.getTime() + 60 * 60 * 1000);
+      const count = userFound.filter((u) => u.createdAt >= hourStart && u.createdAt < hourEnd).length;
+      const label = `${String(h).padStart(2, "0")}:00`;
+      return { hour: h, label, count };
+    });
+
     const tomorrowName = DAY_NAMES[new Date(now.getTime() + 24 * 60 * 60 * 1000).getUTCDay()];
 
-    res.status(OK).json({ message: "analytics data fetched", analytics: { totalOnchainInteractions, totalOnchainClaims, totalCampaigns, user: { totalUsers, activeUsersWeekly, activeUsersMonthly, users24h, users7d, users30d }, totalReferrals, totalQuests, totalQuestsCompleted, totalCampaignsCompleted, joinRatio, totalTrustDistributed, usersByDay, tomorrowName } });
+    // ── Previous-period counts for % change badges ────────────────────────────
+    const prev24hStart = new Date(now.getTime() - 48 * 60 * 60 * 1000);
+    const prev24hEnd   = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const prev7dStart  = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+    const prev7dEnd    = new Date(now.getTime() -  7 * 24 * 60 * 60 * 1000);
+    const prev30dStart = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
+    const prev30dEnd   = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    const prevUsers24h = userFound.filter((u) => u.createdAt >= prev24hStart && u.createdAt < prev24hEnd).length;
+    const prevUsers7d  = userFound.filter((u) => u.createdAt >= prev7dStart  && u.createdAt < prev7dEnd).length;
+    const prevUsers30d = userFound.filter((u) => u.createdAt >= prev30dStart && u.createdAt < prev30dEnd).length;
+
+    const prevActiveWeekly  = userFound.filter((u: { updatedAt: Date; status: string }) => {
+      return u.status === "Active" && u.updatedAt >= prev7dStart && u.updatedAt < prev7dEnd;
+    }).length;
+    const prevActiveMonthly = userFound.filter((u: { updatedAt: Date; status: string }) => {
+      return u.status === "Active" && u.updatedAt >= prev30dStart && u.updatedAt < prev30dEnd;
+    }).length;
+
+    // Total users yesterday (for day-over-day % change)
+    const yesterdayMidnight = new Date(todayMidnight.getTime() - 24 * 60 * 60 * 1000);
+    const totalUsersYesterday = userFound.filter((u) => u.createdAt < yesterdayMidnight).length;
+
+    res.status(OK).json({
+      message: "analytics data fetched",
+      analytics: {
+        totalOnchainInteractions,
+        totalOnchainClaims,
+        totalCampaigns,
+        user: {
+          totalUsers,
+          activeUsersWeekly,
+          activeUsersMonthly,
+          users24h,
+          users7d,
+          users30d,
+          prevUsers24h,
+          prevUsers7d,
+          prevUsers30d,
+          prevActiveWeekly,
+          prevActiveMonthly,
+          totalUsersYesterday,
+        },
+        totalReferrals,
+        totalQuests,
+        totalQuestsCompleted,
+        totalCampaignsCompleted,
+        joinRatio,
+        totalTrustDistributed,
+        usersByDay,
+        usersByHour,
+        tomorrowName,
+      },
+    });
   } catch (error) {
     logger.error(error);
     res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching analytics data" });
@@ -802,7 +867,7 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
   let quest: any | undefined = undefined;
 
   try {
-    const { tag, id: postId, questId, page } = req.body; // get task id and store project x id, then remove hardcoded nexura id
+    const { tag, id: postId, questId, page } = req.body; // get task id and store hub x id, then remove hardcoded nexura id
 
     const NEXURA_ID = "1983300499597393920";
     const NEXURA_USERNAME = "NexuraXYZ";

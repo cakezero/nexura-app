@@ -4,15 +4,20 @@ import React, { useState } from "react";
 import AnimatedBackground from "../../components/AnimatedBackground";
 import { Card, CardTitle, CardDescription } from "../../components/ui/card";
 import { Input } from "../../components/ui/input";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Button } from "../../components/ui/button";
 import { Textarea } from "../../components/ui/textarea";
+import { projectApiRequest, storeProjectSession, base64ToBlob } from "../../lib/projectApi";
+import { useToast } from "../../hooks/use-toast";
 
 export default function TheHub() {
   const [hubName, setHubName] = useState("");
   const [description, setDescription] = useState("");
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
 
 const handleImageChange = async (e) => {
   const file = e.target.files[0];
@@ -27,26 +32,62 @@ const handleImageChange = async (e) => {
 };
 
 
-const handleSubmit = () => {
+const handleSubmit = async () => {
   if (!hubName.trim()) {
-    alert("Hub name is required");
+    toast({ title: "Missing Project Name", description: "Please enter a project name.", variant: "destructive" });
     return;
   }
 
   if (!imageFile) {
-    alert("Project logo is required");
+    toast({ title: "Missing Logo", description: "Please upload a project logo.", variant: "destructive" });
     return;
   }
 
-  const hubData = {
-    hubName,
-    description,
-    imagePreview,
-  };
+  const credsRaw = localStorage.getItem("nexura:hub-credentials");
+  if (!credsRaw) {
+    toast({ title: "Missing credentials", description: "Please complete the credentials step first.", variant: "destructive" });
+    setLocation("/projects/create/create-hub");
+    return;
+  }
 
-  localStorage.setItem("hubData", JSON.stringify(hubData));
+  const { email, address, password } = JSON.parse(credsRaw);
 
-  window.location.href = "/connect-twitter";
+  setLoading(true);
+  try {
+    const fd = new FormData();
+    fd.append("name", hubName.trim());
+    fd.append("email", email);
+    fd.append("description", description ?? "");
+    fd.append("address", address);
+    fd.append("password", password);
+
+    if (imagePreview) {
+      const blob = base64ToBlob(imagePreview);
+      fd.append("logo", blob, "logo.png");
+    }
+
+    const res = await projectApiRequest<{ message?: string; accessToken?: string; token?: string; project?: Record<string, unknown> }>({
+      method: "POST",
+      endpoint: "/project/sign-up",
+      formData: fd,
+    });
+
+    const token = (res.token ?? res.accessToken) as string | undefined;
+    if (!token) throw new Error("No access token received");
+
+    storeProjectSession(token, { name: hubName.trim(), email, address, ...(res.project ?? {}) });
+
+    localStorage.removeItem("nexura:hub-credentials");
+    localStorage.removeItem("nexura:studio-step");
+
+    toast({ title: "Hub created!", description: "Your project hub is live on Nexura Studio." });
+    setLocation("/connect-twitter");
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Sign-up failed. Please try again.";
+    toast({ title: "Sign up failed", description: msg, variant: "destructive" });
+  } finally {
+    setLoading(false);
+  }
 };
 
 
@@ -86,7 +127,7 @@ const handleSubmit = () => {
   />
 
   <CardTitle className="text-lg">
-    A project, app or ecosystem
+    a project or builder
   </CardTitle>
 
   <CardDescription className="text-white/60 max-w-xs">
@@ -125,11 +166,11 @@ const handleSubmit = () => {
 
           {/* Name */}
           <div className="space-y-2">
-            <CardTitle className="text-lg">Hub Name</CardTitle>
+            <CardTitle className="text-lg">Project Name</CardTitle>
             <Input
   value={hubName}
   onChange={(e) => setHubName(e.target.value)}
-  placeholder="Enter your hub name..."
+  placeholder="Enter your Project Name..."
   className="bg-gray-800 border-purple-500 text-white"
 />
           </div>
@@ -193,8 +234,9 @@ const handleSubmit = () => {
 <Button
   className="w-full bg-purple-500 hover:bg-purple-600"
   onClick={handleSubmit}
+  disabled={loading}
 >
-  Save & Continue
+  {loading ? "Creating hub..." : "Save & Continue"}
 </Button>
 </div>
         </Card>

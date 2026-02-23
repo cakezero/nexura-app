@@ -88,14 +88,14 @@ export default function DesktopCards({
 
       {/* TOTAL $TRUST DISTRIBUTED */}
       <div className="glass glass-hover shimmer-once rounded-2xl p-5 border border-purple-500/40 hover:border-purple-400/70 transition-all duration-300" style={{ minHeight: '110px' }}>
-        <div className="grid grid-cols-2 h-full">
-          <div className="flex flex-col justify-center">
-            <h2 className="text-white font-bold text-sm tracking-wide whitespace-nowrap">
+        <div className="grid grid-cols-2 h-full gap-2">
+          <div className="flex flex-col justify-center min-w-0">
+            <h2 className="text-white font-bold text-sm tracking-wide leading-tight">
               TOTAL $TRUST DISTRIBUTED
             </h2>
-            <div className="flex items-center mt-2 gap-3">
-              <p className="text-3xl font-semibold text-white">{totalTrustDistributed.toLocaleString()}</p>
-              <img src="/trust-icon.png" alt="Trust Icon" className="w-16 h-8 object-contain" />
+            <div className="flex items-center mt-2 gap-2">
+              <img src="/trust-icon.png" alt="Trust Icon" className="w-10 h-5 object-contain flex-shrink-0" />
+              <p className="text-3xl font-semibold text-white truncate">{totalTrustDistributed.toLocaleString()}</p>
             </div>
           </div>
           <div className="flex items-center justify-end">

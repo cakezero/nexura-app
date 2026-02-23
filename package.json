@@ -1,8 +1,19 @@
 {
+  "name": "nexura-app-root",
+  "private": true,
+  "workspaces": ["client", "server"],
+  "scripts": {
+    "dev": "concurrently --names \"client,server\" --prefix-colors \"cyan,magenta\" \"cd client && bun run dev\" \"cd server && bun run dev\"",
+    "dev:client": "cd client && bun run dev",
+    "dev:server": "cd server && bun run dev"
+  },
   "dependencies": {
     "@nivo/core": "^0.99.0",
     "@nivo/line": "^0.99.0",
     "@nivo/pie": "^0.99.0",
     "recharts": "^3.7.0"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
   }
 }

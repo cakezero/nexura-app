@@ -3,7 +3,7 @@ import AnimatedBackground from "../../components/AnimatedBackground";
 import { Card, CardTitle } from "../../components/ui/card";
 import { Input } from "../../components/ui/input";
 import { Button } from "../../components/ui/button";
-import { ArrowRight, Eye, EyeOff, ShieldCheck } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, ShieldCheck, Check, X } from "lucide-react";
 import { useLocation } from "wouter";
 import { projectApiRequest, storeProjectSession } from "../../lib/projectApi";
 import { useToast } from "../../hooks/use-toast";
@@ -21,6 +21,15 @@ export default function AdminSignUp() {
   const [showPassword, setShowPassword] = useState(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+
+  const pwdChecks = {
+    length:  password.length >= 8,
+    number:  /\d/.test(password),
+    special: /[^a-zA-Z0-9]/.test(password),
+    upper:   /[A-Z]/.test(password),
+  };
+  const allPwdValid = Object.values(pwdChecks).every(Boolean);
+  const canSubmit = allPwdValid && !!name && !!email && code.length === 6 && !loading;
 
   async function handleSignUp() {
     if (!name || !email || !password || !code) {
@@ -141,6 +150,22 @@ export default function AdminSignUp() {
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
+            {/* Password checklist */}
+            {password.length > 0 && (
+              <ul className="mt-2 space-y-1">
+                {([
+                  [pwdChecks.length,  "At least 8 characters"],
+                  [pwdChecks.upper,   "At least one uppercase letter"],
+                  [pwdChecks.number,  "At least one number"],
+                  [pwdChecks.special, "At least one special character"],
+                ] as [boolean, string][]).map(([ok, label]) => (
+                  <li key={label} className={`flex items-center gap-1.5 text-xs ${ok ? "text-emerald-400" : "text-white/40"}`}>
+                    {ok ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                    {label}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
 
           {/* OTP */}
@@ -159,8 +184,8 @@ export default function AdminSignUp() {
         {/* Submit */}
         <Button
           onClick={handleSignUp}
-          disabled={loading}
-          className="mt-6 w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2.5 rounded-xl transition-all flex items-center justify-center gap-2"
+          disabled={!canSubmit}
+          className="mt-6 w-full border border-white/80 text-white bg-transparent hover:bg-purple-600 hover:border-purple-600 transition-all py-2.5 rounded-xl flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:border-white/80"
         >
           {loading ? (
             <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
