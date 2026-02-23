@@ -1,8 +1,8 @@
 import chain from "./chain";
 import { getWalletClient } from "./viem";
-import { network, NEXONS, NEXONS_ABI, CAMPAIGN_ABI, TRUST_TOKEN_ADDRESS, STUDIO_FEE_CONTRACT } from "./constants";
+import { network, NEXONS, NEXONS_ABI, CAMPAIGN_ABI, STUDIO_FEE_CONTRACT } from "./constants";
 import { ethers } from "ethers";
-import { parseAbi, type Address } from "viem";
+import { parseAbi, type Address, parseEther } from "viem";
 import { getIntuitionNetworkParams } from "./utils";
 
 const ERC20_TRANSFER_ABI = [
@@ -10,14 +10,22 @@ const ERC20_TRANSFER_ABI = [
   "function decimals() view returns (uint8)",
 ];
 
-const MAINNET_CHAIN_ID = "0x483"; // Intuition Mainnet (1155)
+const STUDIO_FEE_ABI = [
+  "function payFee() external payable",
+  "error AlreadyCreatedSixCampaigns()",
+  "error SendTheRequiredFeeAmount(uint fee)",
+];
 
-const ensureMainnet = async () => {
+const mainnet = network === "mainnet";
+
+const chainId = mainnet ? "0x483" : "0x350b";
+
+const ensureSwitch = async () => {
   // Fast path: switch if chain is already in wallet
   try {
-    await (window as any).ethereum.request({
+    await window.ethereum.request({
       method: "wallet_switchEthereumChain",
-      params: [{ chainId: MAINNET_CHAIN_ID }],
+      params: [{ chainId }]
     });
     return;
   } catch (err: any) {
@@ -26,7 +34,7 @@ const ensureMainnet = async () => {
   }
 
   // Add (+ auto-switch) for wallets that don't know the chain yet
-  const params = getIntuitionNetworkParams(false, MAINNET_CHAIN_ID);
+  const params = getIntuitionNetworkParams(false, chainId);
   await (window as any).ethereum.request({ method: "wallet_addEthereumChain", params });
 };
 
@@ -34,21 +42,30 @@ export const payStudioHubFee = async (): Promise<string> => {
   try {
     if (!window.ethereum) throw new Error("No injected wallet found. Install MetaMask or another Ethereum wallet.");
 
-    await ensureMainnet();
+    await ensureSwitch();
 
     const provider = new ethers.BrowserProvider((window as any).ethereum);
     const signer = await provider.getSigner();
 
-    const tokenContract = new ethers.Contract(TRUST_TOKEN_ADDRESS, ERC20_TRANSFER_ABI, signer);
+    const contract = new ethers.Contract(
+      STUDIO_FEE_CONTRACT,
+      STUDIO_FEE_ABI,
+      signer
+    );
 
-    const decimals: number = await tokenContract.decimals();
-    const amount = ethers.parseUnits("1000", decimals);
+    const tx = await contract.payFee({ value: parseEther(mainnet ? "1000" : "2") });
 
-    const tx = await tokenContract.transfer(STUDIO_FEE_CONTRACT, amount);
     await tx.wait();
 
     return tx.hash as string;
   } catch (error: any) {
+    if (error.data) {
+      const iface = new ethers.Interface(STUDIO_FEE_ABI);
+      const decoded = iface.parseError(error.data);
+
+      throw new Error(decoded?.name); // e.g. AlreadyCreatedSixCampaigns, SendTheRequiredFeeAmount
+    }
+
     console.error(error);
     throw new Error(error.message ?? "Payment failed.");
   }
@@ -58,8 +75,8 @@ export const createCampaignOnchain = async () => {
   try {
 
   } catch (error: any) {
-  console.error(error);
-  throw new Error(error.message);
+    console.error(error);
+    throw new Error(error.message);
   }
 }
 
@@ -68,11 +85,9 @@ export const claimCampaignOnchainReward = async ({ campaignAddress, userId }: { 
     const walletClient = getWalletClient();
     if (!walletClient) throw new Error("No injected wallet found. Install MetaMask or another Ethereum wallet.");
 
-    const mainnet = network === "mainnet";
-
     await window.ethereum.request({
       method: "wallet_switchEthereumChain",
-      params: [{ chainId: mainnet ? "0x483" : "0x350b" }]
+      params: [{ chainId }]
     });
 
     const provider = new ethers.BrowserProvider((window as any).ethereum);
