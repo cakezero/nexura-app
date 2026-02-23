@@ -6,11 +6,10 @@ import { token } from "@/models/tokens.model";
 import { campaignQuest, miniQuest, quest } from "@/models/quests.model";
 import { user } from "@/models/user.model";
 import { performIntuitionOnchainAction } from "@/utils/account";
-import { BOT_TOKEN, THIRD_PARTY_API_KEY, X_API_BEARER_TOKEN } from "@/utils/env.utils";
+import { BOT_TOKEN, THIRD_PARTY_API_KEY } from "@/utils/env.utils";
 import {
   INTERNAL_SERVER_ERROR, 
   OK,
-  CREATED, 
   BAD_REQUEST,
   FORBIDDEN, 
   NOT_FOUND,
@@ -27,7 +26,6 @@ import {
 	miniQuestCompleted,
   questCompleted
 } from "@/models/questsCompleted.models";
-import { bannedUser } from "@/models/bannedUser.model";
 import { GRAPHQL_API_URL } from "@/utils/constants";
 import { GraphQLClient } from "graphql-request";
 import { checksumAddress } from "viem";
@@ -869,7 +867,7 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
   let quest: any | undefined = undefined;
 
   try {
-    const { tag, id: postId, questId, page } = req.body; // get task id and store project x id, then remove hardcoded nexura id
+    const { tag, id: postId, questId, page } = req.body; // get task id and store hub x id, then remove hardcoded nexura id
 
     const NEXURA_ID = "1983300499597393920";
     const NEXURA_USERNAME = "NexuraXYZ";

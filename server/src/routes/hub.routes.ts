@@ -8,14 +8,14 @@ import {
   superAdminSignUp
 } from "@/controllers/hub.auth.controller";
 import { authenticateHubAdmin, authenticateHubAdmin2 } from "@/middlewares/auth.middleware";
-import { fetchProjectCampaigns } from "@/controllers/campaign.controller";
+import { fetchHubCampaigns } from "@/controllers/campaign.controller";
 import { validateCampaignSubmissions, getCampaignSubmissions } from "@/controllers/hub.controller";
 import hubAppRoutes from "./hub.app.routes";
 
 const router = Router();
 
 router
-  .get("/get-campaigns", authenticateHubAdmin2, fetchProjectCampaigns)
+  .get("/get-campaigns", authenticateHubAdmin2, fetchHubCampaigns)
   .get("/campaign-submissions", authenticateHubAdmin2, getCampaignSubmissions)
   .post("/validate-campaign-submissions", authenticateHubAdmin2, validateCampaignSubmissions)
   .post("/sign-in", signIn)

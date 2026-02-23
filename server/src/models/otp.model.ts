@@ -5,7 +5,7 @@ const OTPSchema = new Schema({
     type: String,
     required: true
   },
-  projectId: {
+  hubId: {
     type: String,
     required: true
   },
