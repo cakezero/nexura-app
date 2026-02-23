@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import AnimatedBackground from "../../components/AnimatedBackground";
 import { Card, CardTitle, CardDescription, CardFooter } from "../../components/ui/card";
 import { Input } from "../../components/ui/input";
@@ -10,6 +10,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { useLocation } from "wouter";
 import { projectApiRequest, storeProjectSession, base64ToBlob } from "../../lib/projectApi";
 import { useToast } from "../../hooks/use-toast";
+import { useWallet } from "../../hooks/use-wallet";
 
 export default function SharedAccessCredentials() {
   const [email, setEmail] = useState("");
@@ -25,6 +26,22 @@ export default function SharedAccessCredentials() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { address: walletAddress, isConnected } = useWallet();
+
+  // Track step — only during creation flow (not if already signed in)
+  useEffect(() => {
+    const hasFullSession =
+      !!localStorage.getItem("nexura-project:token") ||
+      !!localStorage.getItem("nexura:proj-token");
+    if (!hasFullSession) {
+      localStorage.setItem("nexura:studio-step", "/projects/create/create-hub");
+    }
+  }, []);
+
+  // Autofill wallet address when wallet is connected
+  useEffect(() => {
+    if (walletAddress) setAddress(walletAddress);
+  }, [walletAddress]);
 
   async function handleSignUp() {
     if (!isLongEnough || !hasUppercase || !hasNumber || !hasSpecialChar) {
@@ -85,6 +102,7 @@ export default function SharedAccessCredentials() {
       storeProjectSession(token, { name: hubData.hubName, email, address, ...(res.project ?? {}) });
 
       localStorage.removeItem("hubData");
+      localStorage.removeItem("nexura:studio-step");
 
       toast({ title: "Hub created!", description: "Your project hub is live on Nexura Studio." });
       setLocation("/studio-dashboard");
@@ -136,9 +154,15 @@ export default function SharedAccessCredentials() {
                   type="text"
                   placeholder="0x..."
                   value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  className="mt-2 w-full bg-gray-800 text-white border-purple-500"
+                  onChange={(e) => !isConnected && setAddress(e.target.value)}
+                  readOnly={isConnected}
+                  className={`mt-2 w-full bg-gray-800 text-white border-purple-500 ${
+                    isConnected ? "opacity-70 cursor-not-allowed select-none font-mono text-sm" : ""
+                  }`}
                 />
+                {isConnected && (
+                  <p className="mt-1 ml-1 text-xs text-white/30">Auto-filled from connected wallet</p>
+                )}
               </div>
 
               {/* Password */}
@@ -169,10 +193,10 @@ export default function SharedAccessCredentials() {
                 </div>
 
                 <div className="mt-2 space-y-1 text-sm">
-                  <p className={isLongEnough ? "text-green-400" : "text-red-400"}>â€¢ At least 8 characters</p>
-                  <p className={hasUppercase ? "text-green-400" : "text-red-400"}>â€¢ 1 uppercase letter</p>
-                  <p className={hasNumber ? "text-green-400" : "text-red-400"}>â€¢ 1 number</p>
-                  <p className={hasSpecialChar ? "text-green-400" : "text-red-400"}>â€¢ 1 special character</p>
+                  <p className={isLongEnough ? "text-green-400" : "text-red-400"}>&#8226; At least 8 characters</p>
+                  <p className={hasUppercase ? "text-green-400" : "text-red-400"}>&#8226; 1 uppercase letter</p>
+                  <p className={hasNumber ? "text-green-400" : "text-red-400"}>&#8226; 1 number</p>
+                  <p className={hasSpecialChar ? "text-green-400" : "text-red-400"}>&#8226; 1 special character</p>
                 </div>
               </div>
 

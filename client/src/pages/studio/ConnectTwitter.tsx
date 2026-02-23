@@ -2,8 +2,19 @@ import { Card, CardTitle, CardDescription } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import { Link } from "wouter";
 import { ArrowLeft } from "lucide-react";
+import React from "react";
 
 export default function ConnectTwitter() {
+  // Track step so returning to /studio restores here — only during creation flow
+  React.useEffect(() => {
+    const hasFullSession =
+      !!localStorage.getItem("nexura-project:token") ||
+      !!localStorage.getItem("nexura:proj-token");
+    if (!hasFullSession) {
+      localStorage.setItem("nexura:studio-step", "/connect-twitter");
+    }
+  }, []);
+
   const handleFakeConnect = () => {
     const fakeTwitter = {
       handle: "@realproject_handle",

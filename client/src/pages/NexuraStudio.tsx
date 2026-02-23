@@ -1,6 +1,4 @@
-"use client";
-
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import AnimatedBackground from "../components/AnimatedBackground";
 import { Layers, Megaphone, BarChart3, Users, Zap, Shield } from "lucide-react";
@@ -18,12 +16,16 @@ const FEATURES = [
 
 export default function NexuraStudio() {
   const [, setLocation] = useLocation();
+  // Prevent flash: if already signed in, skip rendering and redirect immediately
+  const [redirecting] = useState(() => isProjectSignedIn());
 
   useEffect(() => {
     if (isProjectSignedIn()) {
       setLocation("/studio-dashboard");
     }
   }, []);
+
+  if (redirecting) return null;
 
   return (
     <div className="min-h-screen bg-black text-white overflow-auto relative">

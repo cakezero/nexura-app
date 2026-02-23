@@ -45,7 +45,7 @@ const handleSubmit = () => {
   };
 
   localStorage.setItem("hubData", JSON.stringify(hubData));
-
+  localStorage.setItem("nexura:studio-step", "/connect-twitter");
   window.location.href = "/connect-twitter";
 };
 

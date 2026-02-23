@@ -28,6 +28,9 @@ export const projectSignUp = async (req: GlobalRequest, res: GlobalResponse) => 
 			return;
     }
 
+    // Normalize email before any checks
+    req.body.email = req.body.email.toLowerCase().trim();
+
     const projectExists = await project.exists({ email: req.body.email });
     if (projectExists) {
       res.status(BAD_REQUEST).json({ error: "email is already in use" });
@@ -43,12 +46,14 @@ export const projectSignUp = async (req: GlobalRequest, res: GlobalResponse) => 
     }
 
     const projectLogoAsFile = req.file?.buffer;
-		if (!projectLogoAsFile) {
-			res.status(BAD_REQUEST).json({ error: "project logo is required" });
-			return;
-    }
 
-    const projectLogo = await uploadImg({ file: projectLogoAsFile, filename: req.file?.originalname, folder: "project-logos" });
+    let projectLogo: string;
+    if (projectLogoAsFile) {
+      projectLogo = await uploadImg({ file: projectLogoAsFile, filename: req.file?.originalname, folder: "project-logos" });
+    } else {
+      // No logo provided — use a placeholder (AWS may also not be configured)
+      projectLogo = `https://placehold.co/256x256/7c3aed/ffffff?text=${encodeURIComponent(req.body.name ?? "hub")}`;
+    }
 
     req.body.password = await hashPassword(req.body.password);
     req.body.logo = projectLogo;
@@ -87,30 +92,38 @@ export const projectAndAdminSignIn = async (req: GlobalRequest, res: GlobalRespo
 			return;
     }
 
+    // Normalize email
+    const normalizedEmail = email.toLowerCase().trim();
+
     let id: string = "";
 
     if (role !== "project") {
-      const projectAdminExists = await projectAdmin.findOne({ email }).lean();
+      const projectAdminExists = await projectAdmin.findOne({ email: { $regex: `^${normalizedEmail}$`, $options: "i" } }).lean();
       if (!projectAdminExists) {
+        logger.warn(`[sign-in] admin not found for email: ${normalizedEmail}`);
         res.status(BAD_REQUEST).json({ error: "invalid signin credentials" });
         return;
       }
 
       const comparePassword = await bcrypt.compare(password, projectAdminExists.password);
       if (!comparePassword) {
+        logger.warn(`[sign-in] admin password mismatch for email: ${normalizedEmail}`);
         res.status(BAD_REQUEST).json({ error: "invalid signin credentials" });
         return;
       }
 
       id = projectAdminExists._id.toString();
     } else if (role === "project") {
-      const projectExists = await project.findOne({ email }).lean();
+      const projectExists = await project.findOne({ email: { $regex: `^${normalizedEmail}$`, $options: "i" } }).lean();
       if (!projectExists) {
+        logger.warn(`[sign-in] project not found for email: ${normalizedEmail}`);
         res.status(BAD_REQUEST).json({ error: "invalid signin credentials" });
         return;
       }
 
+      logger.info(`[sign-in] found project for ${normalizedEmail}, comparing password...`);
       const comparePassword = await bcrypt.compare(password, projectExists.password);
+      logger.info(`[sign-in] password match: ${comparePassword}`);
       if (!comparePassword) {
         res.status(BAD_REQUEST).json({ error: "invalid signin credentials" });
         return;

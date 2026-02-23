@@ -1,5 +1,3 @@
-"use client";
-
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { Card } from "../../components/ui/card";
@@ -13,7 +11,7 @@ import StudioSidebar from "./StudioSidebar";
 import { AddAdminModal } from "../../components/AddAdminModal";
 import { ManageAdminModal } from "../../components/ManageAdminModal";
 import { apiRequest } from "../../lib/config.ts";
-import { projectApiRequest } from "../../lib/projectApi";
+import { projectApiRequest, isProjectSignedIn } from "../../lib/projectApi";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../../components/ui/collapsible";
 import { getStoredAdminInfo } from "../../lib/config.ts";
 import {
@@ -47,6 +45,13 @@ type TabType = "campaignSubmissions" | "adminManagement" | "campaignsTab";
 export default function StudioDashboard({ onLogout }: StudioDashboardProps) {
   const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<TabType>("campaignSubmissions");
+
+  // Auth guard — redirect to /studio if no valid session
+  useEffect(() => {
+    if (!isProjectSignedIn()) {
+      setLocation("/studio");
+    }
+  }, []);
   const [viewedSubmissions, setViewedSubmissions] = useState<Set<string>>(new Set());
 const [campaignTasks, setCampaignTasks] = useState<TASKS[]>([]);
   const [admins, setAdmins] = useState<Admin[]>([]);
