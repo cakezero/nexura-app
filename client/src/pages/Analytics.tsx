@@ -19,7 +19,7 @@ function PctBadge({ value, className = "" }: { value: number | null; className?:
   const up = value >= 0;
   return (
     <span
-      className={`inline-flex items-center gap-0.5 font-semibold text-3xl sm:text-4xl ${
+      className={`inline-flex items-center gap-0.5 font-semibold text-base sm:text-2xl ${
         up ? "text-emerald-400" : "text-red-400"
       } ${className}`}
     >
@@ -333,7 +333,7 @@ export default function Analytics() {
   }[chartScale];
 
   return (
-    <div className="min-h-screen bg-black text-white overflow-auto p-6 relative pb-28 sm:pb-6">
+    <div className="min-h-screen bg-black text-white overflow-x-hidden overflow-y-auto p-3 sm:p-6 relative pb-28 sm:pb-6">
       <AnimatedBackground />
       <div className="max-w-6xl mx-auto relative z-10 space-y-2">
         <div className="space-y-1">
@@ -358,15 +358,15 @@ export default function Analytics() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0 mt-auto pt-4">
-              <div className="flex items-end w-full">
-                <div className="flex flex-col">
-                  <div className="flex items-baseline gap-3">
-                    <p className="text-4xl sm:text-5xl font-semibold text-white group-hover:text-purple-300 transition-colors duration-300">{totalUsers}</p>
+                <div className="flex items-end w-full gap-2">
+                <div className="flex flex-col min-w-0">
+                  <div className="flex items-baseline gap-2 flex-wrap">
+                    <p className="text-3xl sm:text-5xl font-semibold text-white group-hover:text-purple-300 transition-colors duration-300">{totalUsers}</p>
                     <PctBadge value={totalUsersPct} />
                   </div>
                   <p className="mt-1 text-xs text-white/50">vs yesterday</p>
                 </div>
-                <img src="/ref-icon.png" alt="Ref Icon" className="w-10 h-10 ml-auto opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-all duration-300" />
+                <img src="/ref-icon.png" alt="Ref Icon" className="w-7 h-7 sm:w-10 sm:h-10 ml-auto shrink-0 opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-all duration-300" />
               </div>
               <div className="mt-3 h-0.5 w-full bg-gradient-to-r from-purple-500/60 via-indigo-400/40 to-transparent rounded-full" />
             </CardContent>
@@ -396,14 +396,14 @@ export default function Analytics() {
             </CardHeader>
             <CardContent className="p-0 flex-1 flex flex-col justify-end pt-2">
               <div className="flex items-end gap-2 w-full">
-                <div className="flex flex-col">
-                  <div className="flex items-baseline gap-3">
-                    <p className="text-4xl sm:text-5xl font-semibold group-hover:text-purple-300 transition-colors duration-300">{newUsers}</p>
+                <div className="flex flex-col min-w-0">
+                  <div className="flex items-baseline gap-2 flex-wrap">
+                    <p className="text-3xl sm:text-5xl font-semibold group-hover:text-purple-300 transition-colors duration-300">{newUsers}</p>
                     <PctBadge value={newUsersPctMap[graphRange] ?? null} />
                   </div>
                   <p className="mt-1 text-xs text-white/50">vs prev period</p>
                 </div>
-                <img src="/ref-icon.png" alt="Ref Icon" className="w-10 h-10 ml-auto opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-all duration-300" />
+                <img src="/ref-icon.png" alt="Ref Icon" className="w-7 h-7 sm:w-10 sm:h-10 ml-auto shrink-0 opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-all duration-300" />
               </div>
               <div className="mt-3 h-0.5 w-full bg-gradient-to-r from-indigo-500/60 via-purple-400/40 to-transparent rounded-full" />
             </CardContent>
@@ -432,15 +432,17 @@ export default function Analytics() {
               </div>
             </CardHeader>
             <CardContent className="p-0 mt-2">
-              <div className="flex items-end w-full">
-                <div className="flex flex-col flex-1">
-                  <div className="flex items-baseline gap-3">
-                    <p className="text-4xl sm:text-5xl font-semibold text-white group-hover:text-purple-300 transition-colors duration-300">{activeUsers}</p>
+              <div className="flex items-end w-full gap-2">
+                <div className="flex flex-col min-w-0">
+                  <div className="flex items-baseline gap-2 flex-wrap">
+                    <p className="text-3xl sm:text-5xl font-semibold text-white group-hover:text-purple-300 transition-colors duration-300">{activeUsers}</p>
                     <PctBadge value={activeUsersPct} />
                   </div>
                   <p className="mt-1 text-xs text-white/50">vs prev period</p>
                 </div>
-                <MiniBarChart bars={usersByDay} range={activeUsersRange as "Weekly" | "Monthly"} />
+                <div className="ml-auto shrink-0">
+                  <MiniBarChart bars={usersByDay} range={activeUsersRange as "Weekly" | "Monthly"} />
+                </div>
               </div>
               <div className="mt-3 h-0.5 w-full bg-gradient-to-r from-pink-500/60 via-purple-400/40 to-transparent rounded-full" />
             </CardContent>
@@ -448,9 +450,9 @@ export default function Analytics() {
         </div>
 
         {/* â”€â”€ Bar Chart â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-        <Card className="relative glass rounded-3xl p-6 sm:p-8 animate-slide-up delay-600 mt-8 mb-12">
+        <Card className="relative glass rounded-3xl p-4 sm:p-8 animate-slide-up delay-600 mt-8 mb-12 overflow-hidden">
           <CardHeader className="relative w-full mb-8 p-0">
-            <div className="flex items-start justify-between flex-wrap gap-3">
+            <div className="flex items-start justify-between flex-col sm:flex-row gap-3">
               <div className="flex flex-col gap-1">
                 <CardTitle className="text-xl sm:text-2xl font-bold text-white tracking-wide">
                   New User Signups
