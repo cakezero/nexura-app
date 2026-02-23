@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
 import { z } from "zod";
-import { JWT_SECRET, REFRESH_SECRET } from "./env.utils";
+import { JWT_SECRET, network, REFRESH_SECRET } from "./env.utils";
 import { performIntuitionOnchainAction } from "./account";
 import { NexonsAddress } from "./constants";
 import { ethers } from "ethers";
@@ -298,14 +298,14 @@ export const getRefreshToken = (id: any) => {
 export const checkPayment = async (txHash: string) => {
 	const provider = new ethers.JsonRpcProvider("https://rpc.intuition.systems");
 
-	const feeInterface = new ethers.Interface(["event FeePaid(uint256 totalCampaigns)"]); // Replace with your event interface
+	const feeInterface = new ethers.Interface(["event FeePaid(uint256 totalCampaigns)"]);
 
 	const receipt = await provider.getTransactionReceipt(txHash);
 	if (!receipt || receipt.status !== 1) {
 		throw new Error("Transaction failed");
 	}
 
-	const FEE_CONTRACT = "0xcontractAddress";
+	const FEE_CONTRACT = network === "testnet" ? "0x742ed23dD10686C22A5cD459Af96BC1F83e58C7a" : "";
 
 	let totalCampaigns: number = 0;
 
