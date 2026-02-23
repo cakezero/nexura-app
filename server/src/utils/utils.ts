@@ -195,16 +195,14 @@ export const validateEcosystemQuestData = (reqData: any) => {
 	return parseData;
 };
 
-export const validateProjectData = (reqData: any) => {
-	const projectSchema = z.object({
+export const validateHubData = (reqData: any) => {
+	const hubSchema = z.object({
 		name: z.string().trim(),
-		email: z.email().trim(),
     description: z.string().trim(),
 		address: z.string().trim(),
-		password: z.string().trim().min(8),
 	});
 
-	const parseData = projectSchema.safeParse(reqData);
+	const parseData = hubSchema.safeParse(reqData);
 
 	return parseData;
 };
@@ -219,15 +217,27 @@ export const generateOTP = () => {
 	return code;
 };
 
-export const validateProjectAdminData = (reqData: any) => {
-	const projectAdminSchema = z.object({
-		name: z.string().trim().min(1),
+export const validateSuperAdminData = (reqData: any) => {
+	const hubSuperAdminSchema = z.object({
+		name: z.string().trim().min(3),
 		email: z.email().trim(),
-		password: z.string().trim().min(1),
+    password: z.string().trim().min(8),
+	});
+
+	const parseData = hubSuperAdminSchema.safeParse(reqData);
+
+	return parseData;
+};
+
+export const validateHubAdminData = (reqData: any) => {
+	const hubAdminSchema = z.object({
+		name: z.string().trim().min(3),
+		email: z.email().trim(),
+    password: z.string().trim().min(8),
 		code: z.string().trim().length(6),
 	});
 
-	const parseData = projectAdminSchema.safeParse(reqData);
+	const parseData = hubAdminSchema.safeParse(reqData);
 
 	return parseData;
 };

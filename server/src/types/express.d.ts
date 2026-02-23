@@ -8,6 +8,7 @@ declare global {
     role?: string;
     adminName?: string;
     project?: string;
+    admin?: any;
     token?: string;
     campaignCreator?: any;
   }

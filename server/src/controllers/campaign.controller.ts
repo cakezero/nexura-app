@@ -1,6 +1,6 @@
 import logger from "@/config/logger";
 import { campaign, campaignCompleted } from "@/models/campaign.model";
-import { project } from "@/models/project.model";
+import { hub } from "@/models/hub.model";
 import { referredUsers } from "@/models/referrer.model";
 import { user } from "@/models/user.model";
 import { performIntuitionOnchainAction } from "@/utils/account";
@@ -77,7 +77,7 @@ export const createCampaign = async (
 		const requestData: ICreateCampaign = req.body;
 		const coverImageAsFile = req.file?.buffer;
 
-		const projectUserId = req.id;
+		const hubUserId = req.admin.hub;
 
 		const txHash = req.body.txHash;
 		if (!txHash) {
@@ -90,20 +90,20 @@ export const createCampaign = async (
 			return;
 		}
 
-		const campaignCreator = await project.findById(projectUserId);
-		if (!campaignCreator) {
+		const createdHub = await hub.findById(hubUserId);
+		if (!createdHub) {
 			res
 				.status(NOT_FOUND)
-				.json({ error: "id associated with user is invalid" });
+				.json({ error: "id associated with createdHub is invalid" });
 			return;
 		}
 
-		if (campaignCreator.campaignsCreated >= campaignNo) {
+		if (createdHub.campaignsCreated >= campaignNo) {
 			res.status(FORBIDDEN).json({ error: "kindly pay the required amount (1000 TRUST) to proceed" });
 			return;
 		}
 
-		const xpAllocated = campaignCreator.xpAllocated;
+		const xpAllocated = createdHub.xpAllocated;
 		if (xpAllocated === 0) {
 			res
 				.status(FORBIDDEN)
@@ -122,7 +122,7 @@ export const createCampaign = async (
 		if (!coverImageAsFile) {
 			res
 				.status(BAD_REQUEST)
-				.json({ error: "project cover image is required" });
+				.json({ error: "hub cover image is required" });
 			return;
 		}
 
@@ -137,11 +137,11 @@ export const createCampaign = async (
 
 		requestData.ends_at = ends_at;
 
-		requestData.creator = projectUserId as string;
+		requestData.creator = hubUserId as string;
 
 		requestData.projectCoverImage = projectCoverImageUrl;
 
-		requestData.project_image = campaignCreator.logo;
+		requestData.project_image = createdHub.logo;
 
 		const newCampaign = new campaign(requestData);
 
@@ -149,8 +149,8 @@ export const createCampaign = async (
 
 		newCampaign.status = "Active";
 
-		campaignCreator.campaignsCreated += 1;
-		campaignCreator.xpAllocated = 0;
+		createdHub.campaignsCreated += 1;
+		createdHub.xpAllocated = 0;
 
 		const campaignQuestsFromBody = req.body.campaignQuests as Record<string, any>[];
 
@@ -169,7 +169,7 @@ export const createCampaign = async (
 		newCampaign.noOfQuests = campaignQuestsFromBody.length;
 
 		await newCampaign.save();
-		await campaignCreator.save();
+		await createdHub.save();
 
 		res.status(CREATED).json({ message: "campaign created!" });
 	} catch (error) {
@@ -282,7 +282,7 @@ export const updateCampaign = async (
 		}
 
     const campaignUpdateData: Record<string, unknown> = {};
-		
+
     const coverImageBuffer = req.file?.buffer;
 
 		if (req.body.projectCoverImage && coverImageBuffer) {
@@ -443,12 +443,12 @@ export const claimCampaignRewards = async (
 
 export const fetchProjectCampaigns = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
-    const projectCampaigns = await campaign.find({ creator: req.id }).lean();
+    const projectCampaigns = await campaign.find({ creator: req.admin.hub }).lean();
 
     res.status(OK).json({ projectCampaigns });
   } catch (error) {
     logger.error(error);
-    res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching project campaigns" });
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching hub campaigns" });
   }
 }
 
@@ -456,7 +456,11 @@ export const publishCampaign = async (req: GlobalRequest, res: GlobalResponse) =
 	try {
 		const { id } = req.query as { id: string };
 
-		const { campaignCreator } = req;
+    const createdHub = await hub.findById(req.admin.hub);
+    if (!createdHub) {
+      res.status(NOT_FOUND).json({ error: "hub id attached to admin is invalid" });
+      return;
+    }
 
 		const { txHash } = req.body;
 		if (!txHash) {
@@ -467,8 +471,9 @@ export const publishCampaign = async (req: GlobalRequest, res: GlobalResponse) =
 		if (!campaignNo) {
 			res.status(FORBIDDEN).json({ error: "kindly pay the require amount (1000 TRUST) to proceed" });
 			return;
-		}
-		if (campaignCreator.campaignsCreated >= Number(campaignNo)) {
+    }
+
+		if (createdHub.campaignsCreated >= Number(campaignNo)) {
 			res.status(FORBIDDEN).json({ error: "kindly pay the required amount (1000 TRUST) to proceed" });
 			return;
 		}
@@ -484,10 +489,10 @@ export const publishCampaign = async (req: GlobalRequest, res: GlobalResponse) =
 		}
 
 		campaignExists.status = "Active";
-		campaignCreator.campaignCreated += 1;
+		createdHub.campaignsCreated += 1;
 
 		await campaignExists.save();
-		await campaignCreator.save();
+		await createdHub.save();
 
 		res.status(OK).json({ message: "campaign published" });
 	} catch (error) {

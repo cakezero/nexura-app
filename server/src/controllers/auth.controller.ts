@@ -24,8 +24,8 @@ import {
 } from "@/utils/env.utils";
 import { formatDate } from "date-fns";
 import { user } from "@/models/user.model";
-import { getRefreshToken, JWT, validateProjectData } from "@/utils/utils";
-import { project } from "@/models/project.model";
+import { getRefreshToken, JWT, validateHubData } from "@/utils/utils";
+import { hub } from "@/models/hub.model";
 import { uploadImg } from "@/utils/img.utils";
 import { referredUsers } from "@/models/referrer.model";
 import axios from "axios";
