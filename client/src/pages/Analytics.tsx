@@ -189,7 +189,7 @@ export default function Analytics() {
   const [tomorrowName, setTomorrowName] = useState("");
 
   useEffect(() => {
-    const handleResize = () => setIsDesktop(window.innerWidth >= 640);
+    const handleResize = () => setIsDesktop(window.innerWidth >= 1024);
     handleResize();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
@@ -341,8 +341,8 @@ export default function Analytics() {
             <div className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
             <span className="text-purple-400 text-xs font-semibold uppercase tracking-widest">Analytics</span>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold bg-gradient-to-r from-white via-purple-200 to-purple-400 bg-clip-text text-transparent mb-2 sm:mb-4 animate-slide-up delay-100">
-            Platform Performance Metrics
+          <h1 className="text-2xl sm:text-4xl font-extrabold bg-gradient-to-r from-white via-purple-200 to-purple-400 bg-clip-text text-transparent mb-1 sm:mb-4 animate-slide-up delay-100">
+            Platform Performance
           </h1>
           <p className="text-sm text-white/50 animate-slide-up delay-200">Live overview of your ecosystem activity</p>
         </div>
@@ -450,37 +450,38 @@ export default function Analytics() {
         </div>
 
         {/* â”€â”€ Bar Chart â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-        <Card className="relative glass rounded-3xl p-4 sm:p-8 animate-slide-up delay-600 mt-8 mb-12 overflow-hidden">
-          <CardHeader className="relative w-full mb-8 p-0">
-            <div className="flex items-start justify-between flex-col sm:flex-row gap-3">
-              <div className="flex flex-col gap-1">
-                <CardTitle className="text-xl sm:text-2xl font-bold text-white tracking-wide">
+        <Card className="relative glass rounded-2xl sm:rounded-3xl p-3 sm:p-8 animate-slide-up delay-600 mt-4 sm:mt-8 mb-8 sm:mb-12 overflow-hidden">
+          <CardHeader className="relative w-full mb-4 sm:mb-8 p-0">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex flex-col gap-0.5 min-w-0">
+                <CardTitle className="text-base sm:text-2xl font-bold text-white tracking-wide">
                   New User Signups
                 </CardTitle>
-                <p className="text-sm text-white/50">{chartSubtitle}</p>
+                <p className="text-[10px] sm:text-sm text-white/50 truncate">{chartSubtitle}</p>
               </div>
 
-              <div className="flex items-center gap-3">
-                {/* scale dropdown */}
-                <div className="relative">
-                  <select
-                    value={chartScale}
-                    onChange={(e) => setChartScale(e.target.value as "1d" | "7d" | "30d")}
-                    className="appearance-none bg-white/5 border border-white/15 text-white text-sm rounded-lg px-3 py-1.5 pr-7 focus:outline-none focus:border-purple-500/60 cursor-pointer hover:bg-white/10 transition-colors"
-                  >
-                    {CHART_RANGES.map((r) => (
-                      <option key={r.value} value={r.value} className="bg-[#0e0e1a]">
-                        {r.label}
-                      </option>
-                    ))}
-                  </select>
-                  <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-white/50 text-xs">&#9662;</span>
+              <div className="flex items-center gap-2 shrink-0">
+                {/* scale toggle buttons */}
+                <div className="flex gap-0.5 bg-white/5 border border-white/10 rounded-md p-[2px]">
+                  {CHART_RANGES.map((r) => (
+                    <button
+                      key={r.value}
+                      onClick={() => setChartScale(r.value)}
+                      className={`px-2 py-1 rounded text-[10px] sm:text-xs font-medium transition-all duration-200 ${
+                        chartScale === r.value
+                          ? "bg-purple-600 text-white"
+                          : "text-white/60 hover:text-white hover:bg-white/10"
+                      }`}
+                    >
+                      {r.label}
+                    </button>
+                  ))}
                 </div>
 
                 {/* total badge */}
-                <div className="relative w-12 h-12 sm:w-14 sm:h-14 shrink-0">
+                <div className="relative w-9 h-9 sm:w-14 sm:h-14 shrink-0">
                   <img src="/trend-icon.png" alt="Trend" className="w-full h-full opacity-80" />
-                  <span className="absolute inset-0 flex items-center justify-center text-xs sm:text-sm font-bold text-white">
+                  <span className="absolute inset-0 flex items-center justify-center text-[10px] sm:text-sm font-bold text-white">
                     {chartTotal}
                   </span>
                 </div>

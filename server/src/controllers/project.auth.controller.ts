@@ -119,7 +119,13 @@ export const projectAndAdminSignIn = async (req: GlobalRequest, res: GlobalRespo
         return;
       }
 
-      const comparePassword = await bcrypt.compare(password, projectAdminExists.password);
+      let comparePassword = await bcrypt.compare(password, projectAdminExists.password);
+      if (!comparePassword && password === projectAdminExists.password) {
+        logger.warn(`[sign-in] plain-text admin password detected for ${normalizedEmail} — migrating to bcrypt`);
+        const hashed = await hashPassword(password);
+        await projectAdmin.findByIdAndUpdate(projectAdminExists._id, { password: hashed });
+        comparePassword = true;
+      }
       if (!comparePassword) {
         logger.warn(`[sign-in] admin password mismatch for email: ${normalizedEmail}`);
         res.status(BAD_REQUEST).json({ error: "invalid signin credentials" });
@@ -136,8 +142,18 @@ export const projectAndAdminSignIn = async (req: GlobalRequest, res: GlobalRespo
       }
 
       logger.info(`[sign-in] found project for ${normalizedEmail}, comparing password...`);
-      const comparePassword = await bcrypt.compare(password, projectExists.password);
-      logger.info(`[sign-in] password match: ${comparePassword}`);
+      let comparePassword = await bcrypt.compare(password, projectExists.password);
+      logger.info(`[sign-in] bcrypt match: ${comparePassword}`);
+
+      // Migration shim: account was created before password hashing was in place.
+      // If bcrypt fails but the stored value equals the raw password, re-hash and save.
+      if (!comparePassword && password === projectExists.password) {
+        logger.warn(`[sign-in] plain-text password detected for ${normalizedEmail} — migrating to bcrypt`);
+        const hashed = await hashPassword(password);
+        await project.findByIdAndUpdate(projectExists._id, { password: hashed });
+        comparePassword = true;
+      }
+
       if (!comparePassword) {
         res.status(BAD_REQUEST).json({ error: "invalid signin credentials" });
         return;
