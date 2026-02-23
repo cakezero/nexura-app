@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import AnimatedBackground from "../components/AnimatedBackground";
-import { Layers, Megaphone, BarChart3, Users, Zap, Shield } from "lucide-react";
-import SignUpPopup from "../components/BuilderPopup";
+import { Layers, Megaphone, BarChart3, Users, Zap, Shield, ArrowRight } from "lucide-react";
 import { isProjectSignedIn } from "../lib/projectApi";
 
 const FEATURES = [
@@ -59,8 +58,14 @@ export default function NexuraStudio() {
           </p>
 
           {/* CTA */}
-          <div className="mb-3">
-            <SignUpPopup mode="project" action="signin" triggerLabel="Connect Wallet to Enter" />
+          <div className="flex flex-col items-center gap-3 mb-3">
+            <button
+              onClick={() => setLocation("/projects/create")}
+              className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl border border-white/80 text-white bg-transparent hover:bg-purple-600 hover:border-purple-600 font-semibold text-base transition-all duration-200 shadow-[0_0_20px_rgba(131,58,253,0)] hover:shadow-[0_0_24px_rgba(131,58,253,0.45)]"
+            >
+              Enter Studio
+              <ArrowRight className="w-4 h-4" />
+            </button>
           </div>
           <p className="text-white/30 text-xs">Reserved for project owners &amp; builders</p>
         </div>
@@ -89,7 +94,7 @@ export default function NexuraStudio() {
 
         {/* Footer band */}
         <div className="mt-auto border-t border-white/5 bg-white/[0.02] px-6 py-6 text-center">
-          <p className="text-white/30 text-sm">Already have a project account? Connect your wallet above to sign in automatically.</p>
+          <p className="text-white/30 text-sm">Already have a hub? <button onClick={() => setLocation("/projects/create/signin-to-hub")} className="text-purple-400 hover:underline">Sign in</button> — no wallet reconnect needed.</p>
         </div>
 
       </div>

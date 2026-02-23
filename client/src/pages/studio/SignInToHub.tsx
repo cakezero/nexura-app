@@ -149,6 +149,13 @@ export default function SignInToHub() {
             </Button>
           </CardFooter>
         </Card>
+
+        <p className="text-center text-xs text-white/30 -mt-8">
+          Don't have an account?{" "}
+          <a href="/projects/create" className="text-purple-400 hover:underline">
+            Create a Hub
+          </a>
+        </p>
       </div>
 
       {/* Reset Password Modal */}
