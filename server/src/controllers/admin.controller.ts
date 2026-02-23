@@ -102,6 +102,11 @@ export const removeAdmin = async (req: GlobalRequest, res: GlobalResponse) => {
 			return;
 		}
 
+		if (adminExists._id.toString() === req.id) {
+			res.status(BAD_REQUEST).json({ error: "you cannot remove your own account" });
+			return;
+		}
+
 		await admin.findOneAndDelete({ email });
 
 		res.status(OK).json({ message: "admin removed" });
@@ -275,6 +280,79 @@ export const unBanUser = async (req: GlobalRequest, res: GlobalResponse) => {
 		logger.error(error);
 		res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching tasks" });
 	}
+};
+
+export const manageAdmin = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    if (req.role !== "superadmin") {
+      res.status(UNAUTHORIZED).json({ error: "only superadmin can manage other admins" });
+      return;
+    }
+
+    const { action, adminId, adminName, newRole }: {
+      action: "update_role" | "demote" | "revoke";
+      adminId?: string;
+      adminName?: string;
+      newRole?: string;
+    } = req.body;
+
+    if (!action) {
+      res.status(BAD_REQUEST).json({ error: "action is required" });
+      return;
+    }
+
+    // Find target admin by ID or username
+    const targetAdmin = adminId
+      ? await admin.findById(adminId)
+      : adminName
+      ? await admin.findOne({ username: adminName })
+      : null;
+
+    if (!targetAdmin) {
+      res.status(NOT_FOUND).json({ error: "admin not found" });
+      return;
+    }
+
+    // Prevent acting on yourself regardless of how the target was identified
+    if (targetAdmin._id.toString() === req.id) {
+      res.status(BAD_REQUEST).json({ error: "you cannot manage your own account" });
+      return;
+    }
+
+    if (action === "update_role") {
+      const allowed = ["superadmin", "admin"];
+      if (!newRole || !allowed.includes(newRole)) {
+        res.status(BAD_REQUEST).json({ error: `newRole must be one of: ${allowed.join(", ")}` });
+        return;
+      }
+
+      targetAdmin.role = newRole as "superadmin" | "admin";
+      await targetAdmin.save();
+
+      res.status(OK).json({ message: `admin role updated to ${newRole}` });
+      return;
+    }
+
+    if (action === "demote") {
+      targetAdmin.role = "admin";
+      await targetAdmin.save();
+
+      res.status(OK).json({ message: "admin demoted to admin role" });
+      return;
+    }
+
+    if (action === "revoke") {
+      await admin.findByIdAndDelete(targetAdmin._id);
+
+      res.status(OK).json({ message: "admin access revoked" });
+      return;
+    }
+
+    res.status(BAD_REQUEST).json({ error: "unknown action" });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error managing admin" });
+  }
 };
 
 export const markTask = async (req: GlobalRequest, res: GlobalResponse) => {

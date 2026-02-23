@@ -7,8 +7,12 @@ import os from "os";
 const LOG_FILE = path.join(os.tmpdir(), "client-console.log");
 
 function devLoggerPlugin() {
+  let isDev = false;
   return {
     name: "dev-logger",
+    config(_: any, { command }: { command: string }) {
+      isDev = command === "serve";
+    },
     configureServer(server: any) {
       // Clear log file on server start
       fs.writeFileSync(LOG_FILE, `=== Vite client log started ${new Date().toISOString()} ===\n`);
@@ -27,6 +31,7 @@ function devLoggerPlugin() {
       });
     },
     transformIndexHtml() {
+      if (!isDev) return [];
       return [
         {
           tag: "script",
