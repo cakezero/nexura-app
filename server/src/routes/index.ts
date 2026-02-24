@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { home, getLeaderboard } from "@/controllers/app.controller";
+import { getLeaderboard } from "@/controllers/app.controller";
 import { fetchCampaigns } from "@/controllers/campaign.controller";
 import adminRoutes from "./admin.routes.ts";
 import campaignRoutes from "./campaign.routes.ts";

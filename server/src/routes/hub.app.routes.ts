@@ -11,12 +11,7 @@ import {
   deleteCampaignQuest,
   deleteHub,
   getCampaign,
-<<<<<<< HEAD:server/src/routes/project.app.routes.ts
-  getProjectProfile,
-  removeProjectAdmin,
-=======
   removeHubAdmin,
->>>>>>> connect:server/src/routes/hub.app.routes.ts
   saveCampaign,
   saveCampaignWithQuests,
   updateCamapaignQuest,
@@ -29,7 +24,7 @@ import { upload } from "@/config/multer";
 const router = Router();
 
 router
-  .get("/me", getProjectProfile)
+  // .get("/me", getProjectProfile)
   .patch("/save-campaign-quests", upload.single("coverImage"), saveCampaignWithQuests)
   .patch("/save-campaign", upload.single("coverImage"), saveCampaign)
   .get("/get-campaign", getCampaign)

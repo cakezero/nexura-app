@@ -1,7 +1,7 @@
 import logger from "@/config/logger";
 import { admin } from "@/models/admin.model";
 import { bannedUser } from "@/models/bannedUser.model";
-import { hub, hubAdmin } from "@/models/hub.model";
+import { hubAdmin } from "@/models/hub.model";
 import { user } from "@/models/user.model";
 import { BAD_REQUEST, INTERNAL_SERVER_ERROR, UNAUTHORIZED } from "@/utils/status.utils";
 import { JWT } from "@/utils/utils";
