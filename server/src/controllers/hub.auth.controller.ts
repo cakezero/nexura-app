@@ -68,9 +68,18 @@ export const superAdminSignUp = async (req: GlobalRequest, res: GlobalResponse) 
 
     req.body.role = "superadmin";
 
-    await hubAdmin.create(req.body);
+    const superAdmin = await hubAdmin.create(req.body);
 
-    res.status(CREATED).json({ message: "created" });
+	const accessToken = JWT.sign(superAdmin._id.toString());
+		const refreshToken = getRefreshToken(superAdmin._id.toString());
+
+		res.cookie("refreshToken", refreshToken, {
+			httpOnly: true,
+			secure: true,
+			maxAge: 30 * 24 * 60 * 60,
+    });
+
+    res.status(CREATED).json({ message: "super admin created", accessToken });
   } catch (error) {
     logger.error(error);
     res.status(INTERNAL_SERVER_ERROR).json({ error: "error creating super admin" });
