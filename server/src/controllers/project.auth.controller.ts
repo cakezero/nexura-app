@@ -82,7 +82,7 @@ export const projectSignUp = async (req: GlobalRequest, res: GlobalResponse) => 
 			maxAge: 30 * 24 * 60 * 60,
 		});
 
-		res.status(CREATED).json({ message: "project created!", accessToken });
+		res.status(CREATED).json({ message: "project created!", accessToken, project: { name: projectUser.name, logo: projectUser.logo } });
 	} catch (error: any) {
 		logger.error(error);
     // MongoDB duplicate key
@@ -142,19 +142,29 @@ export const projectAndAdminSignIn = async (req: GlobalRequest, res: GlobalRespo
       }
 
       logger.info(`[sign-in] found project for ${normalizedEmail}, comparing password...`);
-      let comparePassword = await bcrypt.compare(password, projectExists.password);
+      const trimmedPassword = password.trim();
+      // Try both trimmed and original password to handle whitespace edge cases
+      let comparePassword =
+        await bcrypt.compare(trimmedPassword, projectExists.password) ||
+        await bcrypt.compare(password, projectExists.password);
       logger.info(`[sign-in] bcrypt match: ${comparePassword}`);
 
       // Migration shim: account was created before password hashing was in place.
-      // If bcrypt fails but the stored value equals the raw password, re-hash and save.
-      if (!comparePassword && password === projectExists.password) {
-        logger.warn(`[sign-in] plain-text password detected for ${normalizedEmail} — migrating to bcrypt`);
-        const hashed = await hashPassword(password);
-        await project.findByIdAndUpdate(projectExists._id, { password: hashed });
-        comparePassword = true;
+      // Handles both exact match and trimmed match for plain-text stored passwords.
+      if (!comparePassword) {
+        const isPlainTextMatch =
+          trimmedPassword === projectExists.password ||
+          password === projectExists.password;
+        if (isPlainTextMatch) {
+          logger.warn(`[sign-in] plain-text password detected for ${normalizedEmail} — migrating to bcrypt`);
+          const hashed = await hashPassword(trimmedPassword);
+          await project.findByIdAndUpdate(projectExists._id, { password: hashed });
+          comparePassword = true;
+        }
       }
 
       if (!comparePassword) {
+        logger.warn(`[sign-in] password mismatch for ${normalizedEmail}`);
         res.status(BAD_REQUEST).json({ error: "invalid signin credentials" });
         return;
       }
@@ -214,6 +224,7 @@ export const projectAdminSignUp = async (req: GlobalRequest, res: GlobalResponse
     }
 
     req.body.project = otp.projectId;
+    req.body.role = (otp as any).role ?? "admin";
 
     // Hash password before storing (was missing — caused bcrypt.compare to always fail at sign-in)
     req.body.password = await hashPassword(req.body.password);

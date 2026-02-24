@@ -46,7 +46,7 @@ export default function CampaignsTab() {
     try {
       const res = await projectApiRequest<{ projectCampaigns?: Campaign[] }>({
         method: "GET",
-        endpoint: "/project/get-campaigns",
+        endpoint: "/hub/get-campaigns",
       });
       setCampaigns(res.projectCampaigns ?? []);
     } catch (err: unknown) {
@@ -64,7 +64,7 @@ export default function CampaignsTab() {
     setDeletingId(id);
     setPendingAction(null);
     try {
-      await projectApiRequest({ method: "DELETE", endpoint: "/project/delete-campaign", params: { id } });
+      await projectApiRequest({ method: "DELETE", endpoint: "/hub/delete-campaign", params: { id } });
       setCampaigns((prev) => prev.filter((c) => c._id !== id));
       toast({ title: "Campaign deleted", description: "The campaign has been removed." });
     } catch (err: unknown) {
@@ -79,7 +79,7 @@ export default function CampaignsTab() {
     setClosingId(id);
     setPendingAction(null);
     try {
-      await projectApiRequest({ method: "PATCH", endpoint: "/project/close-campaign", params: { id } });
+      await projectApiRequest({ method: "PATCH", endpoint: "/hub/close-campaign", params: { id } });
       toast({ title: "Campaign closed", description: "The campaign has been closed successfully." });
       fetchCampaigns();
     } catch (err: unknown) {

@@ -1,5 +1,5 @@
 import { Switch, Route, useLocation } from "wouter";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
 import { Toaster } from "./components/ui/toaster";
@@ -61,7 +61,7 @@ function Router() {
     localStorage.removeItem('nexura-admin:info');
     // Clear project session and call server logout if project is signed in
     if (getStoredProjectToken()) {
-      projectApiRequest({ method: 'POST', endpoint: '/project/logout' }).catch(() => {});
+      projectApiRequest({ method: 'POST', endpoint: '/hub/logout' }).catch(() => {});
     }
     clearProjectSession();
     setIsAuthenticated(false);
@@ -125,9 +125,15 @@ function Router() {
 
 function App() {
   const [location] = useLocation();
+  const mainRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    mainRef.current?.scrollTo({ top: 0 });
+  }, [location]);
+
   // NEXURA-style sidebar configuration
   const sidebarStyle = {
-    "--sidebar-width": "18rem",
+    "--sidebar-width": "12rem",
     "--sidebar-width-icon": "4rem",
   };
 
@@ -136,7 +142,7 @@ function App() {
       <WalletProvider>
         <AuthProvider>
           <TooltipProvider>
-            <SidebarProvider style={sidebarStyle as React.CSSProperties}>
+            <SidebarProvider defaultOpen={false} style={sidebarStyle as React.CSSProperties}>
               {(() => {
                 
 
@@ -155,12 +161,14 @@ function App() {
                     {/* Main content */}
                     <div className="flex-1 flex flex-col relative z-10">
                       {!isHome && !isStudio &&(
-                        <header className="flex items-center justify-between p-4 app-header">
-                          <SidebarTrigger data-testid="button-sidebar-toggle" />
-                          <ProfileBar />
+                        <header className="flex items-center p-4 app-header">
+                          <SidebarTrigger data-testid="button-sidebar-toggle" className="md:hidden" />
+                          <div className="ml-auto">
+                            <ProfileBar />
+                          </div>
                         </header>
                       )}
-                      <main className="flex-1 overflow-y-auto">
+                      <main ref={mainRef} className="flex-1 overflow-y-auto">
                         <Router />
                       </main>
                     </div>

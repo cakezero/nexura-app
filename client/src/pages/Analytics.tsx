@@ -19,7 +19,7 @@ function PctBadge({ value, className = "" }: { value: number | null; className?:
   const up = value >= 0;
   return (
     <span
-      className={`inline-flex items-center gap-0.5 font-semibold text-base sm:text-2xl ${
+      className={`inline-flex items-center gap-0.5 font-mono font-bold italic text-base sm:text-2xl tracking-tight ${
         up ? "text-emerald-400" : "text-red-400"
       } ${className}`}
     >
@@ -145,7 +145,7 @@ function MiniBarChart({ bars, range }: { bars: { count: number }[]; range?: "Wee
 }
 const CHART_RANGES = [
   { value: "1d" as const, label: "1D" },
-  { value: "7d" as const, label: "7D" },
+  { value: "7d" as const, label: "14D" },
   { value: "30d" as const, label: "30D" },
 ];
 
@@ -342,7 +342,7 @@ export default function Analytics() {
             <span className="text-purple-400 text-xs font-semibold uppercase tracking-widest">Analytics</span>
           </div>
           <h1 className="text-2xl sm:text-4xl font-extrabold bg-gradient-to-r from-white via-purple-200 to-purple-400 bg-clip-text text-transparent mb-1 sm:mb-4 animate-slide-up delay-100">
-            Platform Performance
+            Platform Performance Metrics
           </h1>
           <p className="text-sm text-white/50 animate-slide-up delay-200">Live overview of your ecosystem activity</p>
         </div>
@@ -452,16 +452,17 @@ export default function Analytics() {
         {/* â”€â”€ Bar Chart â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <Card className="relative glass rounded-2xl sm:rounded-3xl p-3 sm:p-8 animate-slide-up delay-600 mt-4 sm:mt-8 mb-8 sm:mb-12 overflow-hidden">
           <CardHeader className="relative w-full mb-4 sm:mb-8 p-0">
-            <div className="flex items-center justify-between gap-2">
+            <div className="grid grid-cols-3 items-center gap-2">
+              {/* Left: title + subtitle */}
               <div className="flex flex-col gap-0.5 min-w-0">
                 <CardTitle className="text-base sm:text-2xl font-bold text-white tracking-wide">
-                  New User Signups
+                  New User Growth Trend
                 </CardTitle>
                 <p className="text-[10px] sm:text-sm text-white/50 truncate">{chartSubtitle}</p>
               </div>
 
-              <div className="flex items-center gap-2 shrink-0">
-                {/* scale toggle buttons */}
+              {/* Center: scale toggle buttons */}
+              <div className="flex justify-center">
                 <div className="flex gap-0.5 bg-white/5 border border-white/10 rounded-md p-[2px]">
                   {CHART_RANGES.map((r) => (
                     <button
@@ -477,8 +478,10 @@ export default function Analytics() {
                     </button>
                   ))}
                 </div>
+              </div>
 
-                {/* total badge */}
+              {/* Right: total badge */}
+              <div className="flex justify-end">
                 <div className="relative w-9 h-9 sm:w-14 sm:h-14 shrink-0">
                   <img src="/trend-icon.png" alt="Trend" className="w-full h-full opacity-80" />
                   <span className="absolute inset-0 flex items-center justify-center text-[10px] sm:text-sm font-bold text-white">

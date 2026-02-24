@@ -58,7 +58,7 @@ export default function AdminSignUp() {
         token?: string;
       }>({
         method: "POST",
-        endpoint: "/project/admin/sign-up",
+        endpoint: "/hub/admin/sign-up",
         data: { name, email, password, code },
       });
 

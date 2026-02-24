@@ -10,17 +10,33 @@ import { campaign } from '@/models/campaign.model';
 import { campaignQuest, quest } from '@/models/quests.model';
 import { uploadImg } from "@/utils/img.utils";
 
+export const getProjectProfile = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const projectFound = await project.findById(req.id).select('name logo').lean();
+    if (!projectFound) {
+      res.status(NOT_FOUND).json({ error: 'Project not found' });
+      return;
+    }
+    res.status(OK).json({ name: projectFound.name, logo: projectFound.logo });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: 'Failed to fetch project profile' });
+  }
+};
+
 export const addProjectAdmin = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
-    const { email } = req.body;
+    const { email, role } = req.body;
 		if (!email) {
 			res.status(BAD_REQUEST).json({ error: "admin email is required" });
 			return;
     }
 
+    const validRole = role === "superadmin" ? "superadmin" : "admin";
+
     const code = generateOTP();
 
-    await OTP.create({ email, code, projectId: req.id });
+    await OTP.create({ email, code, projectId: req.id, role: validRole });
 
     await addProjectAdminEmail(email, code);
 

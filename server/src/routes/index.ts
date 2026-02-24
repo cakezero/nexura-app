@@ -23,7 +23,7 @@ router
 	.get("/campaigns", authenticateUser2, fetchCampaigns)
 	.use("/campaign", campaignRoutes)
 	.get("/leaderboard", authenticateUser2, getLeaderboard)
-  .use("/project", projectRoutes)
+  .use("/hub", projectRoutes)
 	.use("/quest", questRoutes)
 	.use("/user", userRoutes);
 

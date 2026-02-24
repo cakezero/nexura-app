@@ -21,6 +21,15 @@ export default function DesktopCards({
   totalOnchainInteractions,
   totalOnchainClaims,
 }: DesktopCardsProps) {
+  const remaining = Math.max(totalOnchainInteractions - totalOnchainClaims, 0);
+  const mints = Math.floor(remaining * 0.5);
+  const payments = remaining - mints;
+  const interactionData = [
+    { id: 'Claims', label: 'Claims', value: Math.max(totalOnchainClaims, 0), color: '#a855f7' },
+    { id: 'Mints', label: 'Mints', value: Math.max(mints, 0), color: '#3b82f6' },
+    { id: 'Payments', label: 'Payments', value: Math.max(payments, 0), color: '#10b981' },
+  ];
+  const hasData = totalOnchainInteractions > 0;
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 
@@ -120,21 +129,36 @@ export default function DesktopCards({
         style={{ background: 'linear-gradient(135deg, #833AFD 0%, #6028c7 100%)', boxShadow: '0 8px 32px rgba(131,58,253,0.45)' }}
       >
         <h2 className="text-white font-bold text-lg mb-4 text-center">On-Chain Activity</h2>
-        <div className="flex items-center mb-6 gap-3">
-          <img src="/rate-icon.png" alt="Rate Icon" className="w-16 h-16 sm:w-24 sm:h-24" />
-          <div className="flex flex-col">
-            <p className="text-white font-bold text-2xl">{totalOnchainInteractions.toLocaleString()}</p>
-            <p className="text-white text-sm">INTERACTIONS</p>
+        <div className="relative w-40 h-40 sm:w-48 sm:h-48 mb-2" style={{ height: 180 }}>
+          <ResponsivePie
+            data={hasData ? interactionData : [{ id: 'None', label: 'None', value: 1, color: '#ffffff20' }]}
+            margin={{ top: 8, right: 8, bottom: 8, left: 8 }}
+            innerRadius={0.62}
+            padAngle={1.5}
+            cornerRadius={4}
+            activeOuterRadiusOffset={6}
+            colors={hasData ? interactionData.map(d => d.color) : ['#ffffff20']}
+            borderWidth={0}
+            enableArcLinkLabels={false}
+            enableArcLabels={false}
+            animate={true}
+            theme={{ tooltip: { container: { background: '#1a1a2e', color: '#fff', fontSize: '12px', padding: '6px 10px', borderRadius: '6px' } } }}
+          />
+          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+            <p className="text-white font-bold text-2xl leading-none">{totalOnchainInteractions.toLocaleString()}</p>
+            <span className="text-white/60 text-xs mt-0.5">Total</span>
           </div>
         </div>
-        <div className="bg-gray-800/50 rounded-xl p-3 w-full">
-          <div className="flex items-center justify-between gap-2 text-white">
-            <span className="text-sm">On-Chain Claims</span>
-            <div className="flex flex-col items-end">
-              <span className="text-2xl sm:text-4xl font-bold leading-none">{totalOnchainClaims.toLocaleString()}</span>
-              <span className="text-xs text-white/50">INTERACTED</span>
+        <div className="flex flex-col gap-1.5 w-full mt-1">
+          {interactionData.map((d) => (
+            <div key={d.id} className="flex items-center justify-between gap-2 text-sm">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: d.color }} />
+                <span className="text-white/70">{d.label}</span>
+              </div>
+              <span className="text-white font-semibold">{d.value.toLocaleString()}</span>
             </div>
-          </div>
+          ))}
         </div>
       </div>
 

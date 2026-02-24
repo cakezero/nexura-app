@@ -11,6 +11,7 @@ import {
   deleteCampaignQuest,
   deleteProject,
   getCampaign,
+  getProjectProfile,
   removeProjectAdmin,
   saveCampaign,
   saveCampaignWithQuests,
@@ -24,6 +25,7 @@ import { upload } from "@/config/multer";
 const router = Router();
 
 router
+  .get("/me", getProjectProfile)
   .patch("/save-campaign-quests", upload.single("coverImage"), saveCampaignWithQuests)
   .patch("/save-campaign", upload.single("coverImage"), saveCampaign)
   .get("/get-campaign", getCampaign)

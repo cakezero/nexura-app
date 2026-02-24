@@ -61,6 +61,11 @@ const projectAdminSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  role: {
+    type: String,
+    enum: ["admin", "superadmin"],
+    default: "admin"
+  },
   project: {
     type: Schema.Types.ObjectId,
     ref: 'projects',
