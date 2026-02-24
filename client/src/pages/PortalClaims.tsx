@@ -1,341 +1,329 @@
-import { useEffect, useState, useCallback } from "react";
-import { buyShares, sellShares } from "../services/web3"; // your web3 functions
-import { buildUrl } from "../lib/queryClient";
+import { useState, useEffect, useRef } from "react";
+import { Address, formatEther } from "viem";
+import { buyShares, sellShares } from "../services/web3";
+import { apiRequestV2 } from "../lib/queryClient";
+import type { Term } from "../types/types";
+import { useToast } from "../hooks/use-toast";
+import { formatNumber } from "../lib/utils";
 
 interface Claim {
-  id: string;
-  titleLeft: string;
-  titleMiddle: string;
-  titleRight: string;
-  supportCount: number;
-  supportAmount: string;
-  againstCount: number;
-  againstAmount: string;
+  term_id: Address;
+  counter_term_id: Address;
+  total_market_cap: string;
+  total_position_count: string;
+  total_assets: string;
+  term: Term;
+  counter_term: Term;
 }
 
-const LIMIT = 9; // 3x3 grid per batch
-
 export default function PortalClaims() {
-  const [claims, setClaims] = useState<Claim[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [offset, setOffset] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [view, setView] = useState("grid");
+  const [sortOption, setSortOption] = useState('{"total_market_cap":"desc"}');
+  const [sortDirection, setSortDirection] = useState("desc");
 
-  const fetchClaims = useCallback(async () => {
+  const [visibleClaims, setVisibleClaims] = useState<Claim[]>([]);
+  const [offset, setOffset] = useState<number>(0);
+  const [loading, setLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+
+  const { toast } = useToast();
+
+  const LIMIT = 50;
+
+  const loadMore = async () => {
     if (loading || !hasMore) return;
-    setLoading(true);
 
     try {
-      const res = await fetch(
-        buildUrl(`/api/claims?limit=${LIMIT}&offset=${offset}`)
-      );
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || `HTTP error ${res.status}`);
-      }
+      setLoading(true);
+      const { claims } = await apiRequestV2("GET", `/api/get-claims?filter=${sortOption}&offset=${offset}`);
 
-      const data: Claim[] = await res.json();
-      if (data.length < LIMIT) setHasMore(false);
+      if (claims.length < LIMIT) setHasMore(false);
 
-      setClaims((prev) => [...prev, ...data]);
+      setVisibleClaims((prev) => [...prev, ...claims]);
       setOffset((prev) => prev + LIMIT);
     } catch (err: any) {
       console.error("Failed to fetch claims:", err);
-      setError(err.message || "Failed to fetch claims");
       setHasMore(false);
     } finally {
       setLoading(false);
     }
-  }, [offset, loading, hasMore]);
+  };
 
-  // Infinite scroll
+  const observerRef = useRef<HTMLDivElement | null>(null);
+
   useEffect(() => {
-    fetchClaims();
-    const handleScroll = () => {
-      if (
-        window.innerHeight + window.scrollY + 200 >=
-        document.documentElement.scrollHeight
-      )
-        fetchClaims();
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, [fetchClaims]);
+    if (!hasMore || loading) return;
 
-  const handleSupport = async (claimId: string) => {
+    const observer = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting) {
+        loadMore();
+      }
+    });
+
+    if (observerRef.current) {
+      observer.observe(observerRef.current);
+    }
+
+    return () => {
+      if (observerRef.current) {
+        observer.unobserve(observerRef.current);
+      }
+    };
+  }, [loading, hasMore, sortOption]);
+
+  useEffect(() => {
+    loadMore();
+  }, [sortOption]);
+
+  const toFixed = (num: string) => {
+    const localeString = parseFloat(num).toLocaleString();
+    return parseFloat(localeString).toFixed(1);
+  }
+
+  const handleClaimAction = async (claimId: Address, action = "support") => {
     try {
       await buyShares("0.01", claimId); // example amount
-      alert("Supported via Metamask!");
+      toast({ title: "Sucesss", description: `Successfully ${action ? "opposed" : "supported"} a claim!` });
     } catch (err: any) {
       console.error(err);
-      alert("Transaction failed or rejected");
+      toast({ title: "Error", description: err, variant: "destructive" });
     }
   };
-
-  const handleOppose = async (claimId: string) => {
-    try {
-      await sellShares("0.01", claimId); // example amount
-      alert("Opposed via Metamask!");
-    } catch (err: any) {
-      console.error(err);
-      alert("Transaction failed or rejected");
-    }
-  };
-
-  // if (error) return <p style={{ color: "red" }}>Error: {error}</p>;
-  // if (claims.length === 0 && loading) return <p>Loading claims...</p>;
 
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-        gap: "1rem",
-        padding: "1rem",
-      }}
-    >
-      {claims.map((c) => (
-        <div
-          key={c.id}
-          style={{
-            display: "grid",
-            gridTemplateRows: "auto 1fr auto",
-            borderRadius: "10px",
-            border: "1px solid rgba(255,255,255,0.1)",
-            backgroundColor: "rgba(255,255,255,0.05)",
-            backdropFilter: "blur(8px)",
-            padding: "1rem",
-            boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-          }}
-        >
-          {/* Triple Titles */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "2fr 1fr 2fr",
-              alignItems: "center",
-              gap: "0.5rem",
-              marginBottom: "0.75rem",
-            }}
-          >
-            <div
-              style={{
-                padding: "0.25rem 0.5rem",
-                backgroundColor: "rgba(255,255,255,0.1)",
-                borderRadius: "5px",
-                fontWeight: 500,
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-              }}
-            >
-              {c.titleLeft}
-            </div>
-            <div
-              style={{
-                textAlign: "center",
-                fontWeight: 500,
-                color: "#ccc",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-              }}
-            >
-              {c.titleMiddle}
-            </div>
-            <div
-              style={{
-                padding: "0.25rem 0.5rem",
-                backgroundColor: "rgba(255,255,255,0.1)",
-                borderRadius: "5px",
-                fontWeight: 500,
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-              }}
-            >
-              {c.titleRight}
-            </div>
-          </div>
+    <div className="p-6 text-white">
+      {/* Header */}
+      <h1 className="text-2xl font-bold">Claims</h1>
 
-          {/* Support/Oppose Section */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "0.5rem",
-              alignItems: "center",
-              marginBottom: "0.75rem",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                padding: "0.5rem",
-                borderRadius: "8px",
-                backgroundColor: "rgba(0,255,0,0.1)",
-              }}
-            >
-              <span style={{ fontWeight: 600 }}>
-                Support Count: {c.supportCount.toFixed(1)}
-              </span>
-              <span style={{ fontSize: "0.75rem" }}>
-                Amount: {parseFloat(c.supportAmount).toFixed(1)} ETH
-              </span>
-            </div>
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                padding: "0.5rem",
-                borderRadius: "8px",
-                backgroundColor: "rgba(255,0,0,0.1)",
-              }}
-            >
-              <span style={{ fontWeight: 600 }}>
-                Oppose Count: {c.againstCount.toFixed(1)}
-              </span>
-              <span style={{ fontSize: "0.75rem" }}>
-                Amount: {parseFloat(c.againstAmount).toFixed(1)} ETH
-              </span>
-            </div>
-          </div>
+      <p className="text-gray-400 mt-2 max-w-3xl">
+        Semantic statements, allowing anyone to claim anything about anything
+      </p>
 
-          {/* Buttons */}
-          <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center" }}>
-            <button
-              onClick={() => handleSupport(c.id)}
-              style={{
-                flex: 1,
-                padding: "0.5rem",
-                borderRadius: "9999px",
-                backgroundColor: "#0f7",
-                border: "none",
-                cursor: "pointer",
-                fontWeight: 500,
-              }}
-            >
-              Support
-            </button>
-            <button
-              onClick={() => handleOppose(c.id)}
-              style={{
-                flex: 1,
-                padding: "0.5rem",
-                borderRadius: "9999px",
-                backgroundColor: "#f07",
-                border: "none",
-                cursor: "pointer",
-                fontWeight: 500,
-                color: "#fff",
-              }}
-            >
-              Oppose
-            </button>
-          </div>
+      {/* Controls Section */}
+      <div className="mt-6 flex flex-wrap items-center gap-4">
+
+        {/* Search */}
+        <div className="flex-1 min-w-[280px]">
+          <input
+            type="text"
+            placeholder="Search claims by subject, predicate, or object.."
+            className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
         </div>
-      ))}
 
-      {loading && <p style={{ gridColumn: "1/-1", textAlign: "center" }}>Loading more...</p>}
-      {!hasMore && <p style={{ gridColumn: "1/-1", textAlign: "center" }}>Coming Soon</p>}
+        {/* Grid/List Toggle */}
+        <div className="flex items-center bg-gray-900 border border-gray-700 rounded-lg overflow-hidden">
+          <button
+            onClick={() => setView("grid")}
+            className={`px-3 py-2 ${
+              view === "grid" ? "bg-gray-800" : ""
+            }`}
+          >
+            <img src="/grid.png" alt="Grid View" className="w-5 h-5" />
+          </button>
+
+          <button
+            onClick={() => setView("list")}
+            className={`px-3 py-2 ${
+              view === "list" ? "bg-gray-800" : ""
+            }`}
+          >
+            <img src="/list.png" alt="List View" className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Market Cap Dropdown */}
+        <div className="relative">
+          <div className="relative">
+            <select
+              value={sortOption}
+              onChange={(e) => setSortOption(e.target.value)}
+              className="appearance-none bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 pr-10 focus:outline-none"
+            >
+              <option value='{"total_"market_cap":"desc"}'>Highest Total Market Cap</option>
+              <option value='{"total_market_cap:"asc"}'>Lowest Total Market Cap</option>
+
+              <option value='{"support_"market_cap":"desc"}'>Highest Support Market Cap</option>
+              <option value='{"support_market_cap:"asc"}'>Lowest Support Market Cap</option>
+
+              <option value='{"oppose_"market_cap":"desc"}'>Highest Oppose Market Cap</option>
+              <option value='{"oppose_market_cap:"asc"}'>Lowest Oppose Market Cap</option>
+
+              <option value='{"positions":"desc"}'>Most Positions</option>
+              <option value='{"positions:"asc"}'>Fewest Positions</option>
+
+              <option value='{"created_at":"desc"}'>Newest</option>
+              <option value='{"created_at:"asc"}'>Oldest</option>
+            </select>
+
+            <img
+              src="/up-down.png"
+              alt="Sort"
+              className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-70"
+            />
+          </div>
+          <img
+            src="/up-down.png"
+            alt="Sort"
+            className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-70"
+          />
+        </div>
+      </div>
+
+      {/* Claims Table */}
+      <div className="mt-8 overflow-x-auto">
+      <div className="mt-8">
+        {view === "list" ? (
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-left border-collapse border border-gray-700">
+            <thead>
+              <tr className="bg-gray-800 text-gray-300">
+                <th className="px-4 py-2 w-[50%] border border-gray-700">Claim</th>
+                <th className="px-4 py-2 w-[15%] border border-gray-700">Support</th>
+                <th className="px-4 py-2 w-[15%] border border-gray-700">Oppose</th>
+                <th className="px-4 py-2 w-[20%] border border-gray-700">Portal Claims</th>
+              </tr>
+            </thead>
+              <tbody>
+                {visibleClaims.map((claim) => (
+                  <tr key={claim.term_id} className="bg-[#2a0d3a]">
+                    {/* Claim */}
+                    <td className="px-4 py-2 border border-gray-700">
+                      <div className="flex flex-wrap items-center gap-1">
+                      {/* Subject with Icon */}
+                      <span className="bg-gray-700 px-1 rounded flex items-center gap-1">
+                        <img src={claim.term.triple.subject.image} alt="Subject Icon" className="w-5 h-5" />
+                        {claim.term.triple.subject.label}
+                      </span>
+
+                        {/* Verb */}
+                        <span>{claim.term.triple.predicate.label}</span>
+
+                        {/* Object/Predicate */}
+                        <span className="bg-gray-700 px-1 rounded">{claim.term.triple.object.label}</span>
+                      </div>
+                    </td>
+
+                    {/* Support */}
+                    <td className="px-4 py-2 border border-gray-700">
+                      <div className="flex items-center gap-2">
+                        <span className="text-blue-400 font-semibold">{claim.term.positions_aggregate.aggregate.count.toFixed(1)}</span>
+                        <img src="/user.png" alt="User Icon" className="w-4 h-4" />
+                        <div className="bg-[#41289E80] text-white text-xs font-semibold px-1 py-1 rounded-md ml-2">
+                          {toFixed(formatEther(BigInt(claim.counter_term.total_assets)))} TRUST
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* Oppose */}
+                    <td className="px-4 py-2 border border-gray-700">
+                      <div className="flex items-center gap-2">
+                        <span className="text-red-400 font-semibold">{claim.counter_term.positions_aggregate.aggregate.count.toFixed(1)}K</span>
+                        <img src="/user.png" alt="User Icon" className="w-4 h-4" />
+                        <div className="bg-[#41289E80] text-white text-xs font-semibold px-1 py-1 rounded-md ml-2">
+                          {toFixed(formatEther(BigInt(claim.counter_term.total_assets)))} TRUST
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* Portal Claims */}
+                    <td className="px-4 py-2 border border-gray-700 flex gap-2 justify-center items-center">
+                      <div className="p-1 rounded-md">
+                        <img src="/support.png" alt="Support" className="w-max h-7" />
+                      </div>
+                      <div className="p-1 rounded-md">
+                        <img src="/oppose.png" alt="Oppose" className="w-max h-7" />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {visibleClaims.map((claim) => (
+                <div
+                  key={claim.term_id}
+                  className="bg-[#2a0d3a] border border-gray-700 rounded-xl p-5 hover:bg-[#34104a] transition"
+                >
+                  {/* Statement */}
+                  <div className="text-gray-300 mb-4">
+                    <span className=" font-bold text-xl bg-gray-700 px-2 py-1 rounded mr-2">
+                      {claim.term.triple.subject.label}
+                    </span>
+                    {claim.term.triple.predicate.label}
+                    <span className="bg-gray-700 px-2 py-1 rounded ml-2">
+                      {claim.term.triple.object.label}
+                    </span>
+                  </div>
+                  {/* Stats Section */}
+                  <div className="flex overflow-hidden rounded-md">
+
+                  {/* Support */}
+                  <div className="flex-1 flex flex-col p-2 gap-1">
+                    <span className="text-blue-400 font-semibold">Support</span>
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold">{toFixed(formatEther(BigInt(claim.term.total_assets)))} TRUST</span>
+                      <div className="flex items-center gap-1 text-blue-400 font-semibold">
+                        <span>{formatNumber(claim.term.positions_aggregate.aggregate.count)}</span>
+                        <img src="/user.png" alt="User Icon" className="w-4 h-4" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Vertical Separator */}
+                  <div className="w-px bg-white"></div>
+
+                  {/* Oppose */}
+                  <div className="flex-1 flex flex-col p-2 gap-1">
+                    <span className="text-[#FI9C03] font-semibold">Oppose</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-[#FI9C03]">{toFixed(formatEther(BigInt(claim.counter_term.total_assets)))} TRUST</span>
+                      <div className="flex items-center gap-1 text-[#FI9C03] font-semibold">
+                        <span>{formatNumber(claim.counter_term.positions_aggregate.aggregate.count)}</span>
+                        <img
+                          src="/user.png"
+                          alt="User Icon"
+                          className="w-4 h-4"
+                          style={{ filter: "invert(51%) sepia(90%) saturate(4515%) hue-rotate(2deg) brightness(97%) contrast(96%)" }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex justify-between mt-5 pt-4 border-t border-gray-700">
+                  <button onClick={() => handleClaimAction(claim.term_id)} className="bg-blue-600 px-4 py-2 rounded-lg text-sm">
+                    Support
+                  </button>
+                  <button onClick={() => handleClaimAction(claim.term_id)} className="bg-red-600 px-4 py-2 rounded-lg text-sm">
+                    Oppose
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+          {loading && (
+            <div className="flex justify-center py-6">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+            </div>
+          )}
+
+          <div ref={observerRef} className="h-10"></div>
+        </div>
+
+        {loading && (
+          <div className="flex justify-center py-4">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+          </div>
+        )}
+
+        <div ref={observerRef} className="h-10"></div>
+      </div>
     </div>
   );
 }
-
-
-
-
-
-///// this is from the explore aka the discover tab. 
-
-// <section>
-//               <div className="flex items-center justify-between mb-6">
-//                 <h2 className="text-2xl md:text-4xl font-bold tracking-tight text-white">Trending Claims on Intuition Portal</h2>
-//                 <Button
-//                   variant="ghost"
-//                   size="sm"
-//                   onClick={() => setLocation('/ecosystem-dapps')}
-//                   data-testid="button-show-all-trending-dapps"
-//                 >
-//                   Show all
-//                 </Button>
-//               </div>
-//               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-//                 {trendingClaims.map((claim, index) => (
-//                   <a
-//                     key={`claim-${index}`}
-//                     href={claim.link}
-//                     target="_blank"
-//                     rel="noopener noreferrer"
-//                     className="group glass glass-hover rounded-3xl p-6 transition-all duration-300 relative overflow-hidden block"
-//                     data-testid={`trending-claim-${index}`}
-//                   >
-//                     {/* Background Pattern */}
-//                     <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-
-//                     {/* Content */}
-//                     <div className="relative z-10">
-
-//                       {/* Avatar */}
-//                       <div className="flex justify-center mb-12">
-//                         <div className="relative">
-//                           <div className="w-20 h-20 bg-gray-700 border-2 border-gray-600 transform rotate-45 rounded-lg flex items-center justify-center overflow-hidden">
-//                             <div className="w-14 h-14 transform -rotate-45 rounded-lg overflow-hidden">
-//                               <img
-//                                 src={claim.avatar}
-//                                 alt={`${claim.author} avatar`}
-//                                 className="w-full h-full object-cover"
-//                               />
-//                             </div>
-//                           </div>
-//                         </div>
-//                       </div>
-
-//                       {/* Header pills inside card */}
-//                       {index >= 0 ? (
-//                         <div className=" flex items-center gap-3">
-
-//                           {/* "The Ticker" pill */}
-//                           <span className="px-4 py-1.5 rounded-[20px] bg-[#0f1a22] text-white text-sm font-medium">
-//                             {claim.titleLeft}
-//                           </span>
-
-//                           {/* "is" */}
-//                           <span className="text-white/60 text-sm">is</span>
-
-//                           {/* "Trust" pill */}
-//                           <span className="px-4 py-1.5 rounded-[20px] bg-[#192732] text-white text-sm font-semibold">
-//                             {claim.titleRight}
-//                           </span>
-
-//                         </div>
-//                       ) : (
-//                         // default behavior for other cards
-//                         <div className="flex items-center gap-2 mb-3">
-//                           <div className="text-sm font-semibold text-white">{claim.author}</div>
-//                           <div className="text-xs text-gray-400">{claim.timeAgo}</div>
-//                         </div>
-//                       )}
-
-
-//                       {/* Content */}
-//                       <p className="text-sm text-white/70 leading-relaxed line-clamp-4 mb-4">
-//                         {claim.content}
-//                       </p>
-
-//                       {/* Metrics */}
-//                       <div className="flex justify-between items-center text-xs text-gray-400">
-//                         <span>{claim.attestations} attestations</span>
-//                       </div>
-
-//                     </div>
-//                   </a>
-//                 ))}
-//               </div>
-//             </section>

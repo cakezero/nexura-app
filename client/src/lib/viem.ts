@@ -18,7 +18,9 @@ export const getPublicClient = () => {
     publicClient = createPublicClient({
       chain,
       transport: custom(provider)
-    })
+    });
+    
+    return publicClient;
   }
 
   return publicClient;

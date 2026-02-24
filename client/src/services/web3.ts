@@ -1,110 +1,48 @@
-import {
-  createWalletClient,
-  custom,
-  parseEther,
-  pad,
-} from "viem";
-import chain from "../lib/chain";
+import { deposit, redeem } from "@0xintuition/sdk";
+import { Address, parseEther} from "viem";
+import { getWalletClient, getPublicClient } from "../lib/viem";
 
-export const CHAIN_ID = 1155;
-export const RPC_URL = "https://rpc.intuition.systems/http";
-export const WRAPPER_ADDRESS =
-  "0x26F6A4896F7e505a72B8Ba2e88aB89Dc3ECF3c80";
+// --- Deposit / Support or Oppose function ---
+export const buyShares = async (amountTrust: string, termId: Address, curveId = 1n) => {
+  const walletClient = getWalletClient();
+  const publicClient = getPublicClient();
 
-const WRAPPER_ABI = [
-  {
-    inputs: [
-      { internalType: "bytes32", name: "termId", type: "bytes32" },
-      { internalType: "uint256", name: "curveId", type: "uint256" },
-      { internalType: "uint256", name: "minShares", type: "uint256" },
-    ],
-    name: "deposit",
-    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-    stateMutability: "payable",
-    type: "function",
-  },
-  {
-    inputs: [
-      { internalType: "bytes32", name: "termId", type: "bytes32" },
-      { internalType: "uint256", name: "curveId", type: "uint256" },
-      { internalType: "uint256", name: "shares", type: "uint256" },
-      { internalType: "uint256", name: "minAssets", type: "uint256" },
-    ],
-    name: "redeem",
-    outputs: [{ internalType: "uint256", name: "", type: "uint256" }],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-] as const;
-
-// --- Create / get wallet client and force chain switch ---
-const getWalletClient = async () => {
-  if (!window.ethereum) {
-    throw new Error("No wallet found");
+  if (!walletClient || !walletClient?.account || !publicClient) {
+    throw new Error("wallet not installed or connected");
   }
 
-  const walletClient = createWalletClient({
-    chain: {
-      id: CHAIN_ID,
-      rpcUrls: { default: { http: [RPC_URL] } },
-    } as any,
-    transport: custom(window.ethereum),
-  });
+  const { transactionHash } = await deposit(
+    { walletClient, publicClient, address: walletClient.account?.address }, // address?
+    [
+      walletClient.account?.address, // receiver
+      termId,                       // termId (atom or triple ID)
+      curveId,                // curveId (use 1 for default curve - exponential, use 2 for linear)
+      parseEther(amountTrust),               // assets (amount to deposit)
+    ]
+  )
 
-  // Force MetaMask / wallet to switch to Intuition chain
-  await walletClient.switchChain({ id: CHAIN_ID });
-
-  return walletClient;
+  return transactionHash;
 };
 
-// --- Format termId as 32-byte hex ---
-const formatTermId = (agentId: string) => {
-  const hex = agentId.startsWith("0x") ? agentId : `0x${agentId}`;
-  return pad(hex as `0x${string}`, { size: 32 });
-};
+// --- Sell / Redeem ---
+export const sellShares = async (sharesAmount: string, termId: Address, curveId = 1n) => {
+  const walletClient = getWalletClient();
+  const publicClient = getPublicClient();
 
-// --- Deposit / Support function ---
-export const buyShares = async (amountETH: string, agentId: string) => {
-  const walletClient = await getWalletClient();
-  const [account] = await walletClient.requestAddresses();
+  if (!walletClient || !walletClient?.account || !publicClient) {
+    throw new Error("wallet not installed or connected");
+  }
 
-  const hash = await walletClient.writeContract({
-    address: WRAPPER_ADDRESS,
-    abi: WRAPPER_ABI,
-    functionName: "deposit",
-    account,
-    args: [
-      formatTermId(agentId),
-      1n, // Curve ID
-      0n, // Min shares (slippage)
-    ],
-    chain,
-    value: parseEther(amountETH),
-    gas: 400000n,
-  });
+  const { transactionHash } = await redeem(
+    { walletClient, publicClient, address: walletClient.account?.address },
+    [
+      walletClient.account?.address, // receiver
+      termId,                       // termId
+      curveId,                      // curveId (use 1 for default curve)
+      parseEther(sharesAmount),                // shares amount
+      0n,                          // minAssets (minimum assets to receive)
+    ]
+  );
 
-  return hash;
-};
-
-// --- Redeem / Oppose function ---
-export const sellShares = async (sharesAmount: string, agentId: string) => {
-  const walletClient = await getWalletClient();
-  const [account] = await walletClient.requestAddresses();
-
-  const hash = await walletClient.writeContract({
-    address: WRAPPER_ADDRESS,
-    abi: WRAPPER_ABI,
-    functionName: "redeem",
-    account,
-    args: [
-      formatTermId(agentId),
-      1n, // Curve ID
-      parseEther(sharesAmount),
-      0n, // Min assets (slippage)
-    ],
-    chain,
-    gas: 400000n,
-  });
-
-  return hash;
+  return transactionHash;
 };
