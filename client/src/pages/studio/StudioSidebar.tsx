@@ -17,8 +17,8 @@ export default function StudioSidebar({
   setActiveTab,
 }: StudioSidebarProps) {
   const sidebarItems = [
-    { title: "Dashboard", icon: Zap, id: "campaignSubmissions" as TabType },
     { title: "Campaigns", icon: Users, id: "campaignsTab" as TabType },
+    { title: "Dashboard", icon: Zap, id: "campaignSubmissions" as TabType },
     { title: "Admin Management", icon: Shield, id: "adminManagement" as TabType },
   ];
   const [, setLocation] = useLocation();
@@ -38,9 +38,7 @@ export default function StudioSidebar({
 
   const navigate = (id: TabType) => {
     setActiveTab(id);
-    if (id === "campaignsTab") setLocation("/studio-dashboard/campaigns-tab");
-    else if (id === "adminManagement") setLocation("/studio-dashboard/admin-management");
-    else setLocation("/studio-dashboard");
+    setLocation("/studio-dashboard");
   };
 
   return (

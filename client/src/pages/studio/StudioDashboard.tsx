@@ -8,8 +8,6 @@ import { Label } from "../../components/ui/label";
 import { cn } from "../../lib/utils";
 import AnimatedBackground from "../../components/AnimatedBackground.tsx";
 import StudioSidebar from "./StudioSidebar";
-import { AddAdminModal } from "../../components/AddAdminModal";
-import { ManageAdminModal } from "../../components/ManageAdminModal";
 import { apiRequest } from "../../lib/config.ts";
 import { projectApiRequest, isProjectSignedIn } from "../../lib/projectApi";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../../components/ui/collapsible";
@@ -21,7 +19,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "../../components/ui/dialog";
-import { Zap, Calendar, Shield, LayoutDashboard, Search, Bell, Plus, RefreshCw, Check, X, Eye, Clock, CheckCircle2, XCircle, ChevronDown, Users, FileText } from "lucide-react";
+import { Zap, Calendar, Shield, LayoutDashboard, Search, Bell, RefreshCw, Check, X, Eye, Clock, CheckCircle2, XCircle, ChevronDown, Users, FileText } from "lucide-react";
 import { StatsOverview } from "../../components/admin/StatsOverview";
 import CampaignSubmissions from "../../components/admin/CampaignSubmissions";
 import { TASKS } from "../../types/admin";
@@ -44,7 +42,7 @@ type TabType = "campaignSubmissions" | "adminManagement" | "campaignsTab";
 
 export default function StudioDashboard({ onLogout }: StudioDashboardProps) {
   const [, setLocation] = useLocation();
-  const [activeTab, setActiveTab] = useState<TabType>("campaignSubmissions");
+  const [activeTab, setActiveTab] = useState<TabType>("campaignsTab");
 
   // Auth guard — redirect to /studio if no valid session
   useEffect(() => {
@@ -209,33 +207,6 @@ const fetchBannedUsers = async () => {
     <Button variant="ghost" size="icon" className="text-white/70 hover:text-white hover:bg-white/5">
       <Bell className="w-5 h-5" />
     </Button>
-
-    {activeTab === "adminManagement" && (
-      <AddAdminModal onSuccess={fetchAdmins}>
-        <Button
-          variant="outline"
-          className="border-[#8a3ffc] text-[#8a3ffc] hover:bg-[#8a3ffc] hover:text-white gap-2"
-        >
-          <Plus className="w-4 h-4" />
-          Add Admin
-        </Button>
-      </AddAdminModal>
-    )}
-
-    {activeTab === "campaignsTab" && "create" && (
-      <Button
-        variant="outline"
-        className="border-[#8a3ffc] text-[#8a3ffc] hover:bg-[#8a3ffc] hover:text-white gap-2"
-        onClick={() => setLocation("/studio-dashboard/create-new-campaign")}
-      >
-        <img
-          src="/campaign-icon.png"
-          alt="Campaign Icon"
-          className="w-4 h-4"
-        />
-        Create Campaign
-      </Button>
-    )}
 
     <div className="h-6 w-px bg-white/10 mx-2" />
 

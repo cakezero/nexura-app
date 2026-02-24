@@ -32,81 +32,113 @@ function PctBadge({ value, className = "" }: { value: number | null; className?:
 
 type BarData = { label: string; count: number };
 
+function niceMax(val: number): number {
+  if (val <= 0) return 10;
+  const mag = Math.pow(10, Math.floor(Math.log10(val)));
+  const norm = val / mag;
+  const nice = norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 5 ? 5 : 10;
+  return nice * mag;
+}
+
 function BarChart({ bars, scale, currentBucket }: { bars: BarData[]; scale: "1d" | "7d" | "30d"; currentBucket: number }) {
   const [tooltip, setTooltip] = useState<{ x: number; y: number; label: string; count: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const BAR_AREA = 180;
+  const Y_TICKS = 4;
 
-  const maxVal = Math.max(...bars.map((b) => b.count), 1);
+  const rawMax = Math.max(...bars.map((b) => b.count), 1);
+  const maxVal = niceMax(rawMax);
+  const ticks = Array.from({ length: Y_TICKS + 1 }, (_, i) => Math.round((maxVal / Y_TICKS) * i));
 
   return (
-    <div ref={containerRef} className="relative select-none">
-      <div
-        className="flex items-end gap-[3px] sm:gap-1 w-full"
-        style={{ height: BAR_AREA + 40 }}
-      >
-        {bars.map((bar, i) => {
-          const pct = bar.count / maxVal;
-          const barH = Math.max(pct * BAR_AREA, bar.count > 0 ? 6 : 2);
-          const isCurrent = i === currentBucket;
-
-          return (
-            <div
-              key={bar.label + i}
-              className="relative flex flex-col items-center flex-1 cursor-pointer"
-              style={{ height: BAR_AREA + 40 }}
-              onMouseEnter={(e) => {
-                const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                const containerRect = containerRef.current!.getBoundingClientRect();
-                setTooltip({
-                  x: rect.left - containerRect.left + rect.width / 2,
-                  y: rect.top - containerRect.top - 8,
-                  label: bar.label,
-                  count: bar.count,
-                });
-              }}
-              onMouseLeave={() => setTooltip(null)}
-            >
-              {/* spacer */}
-              <div className="flex-1" />
-              {/* bar */}
-              <div
-                className="w-full rounded-t-md transition-all duration-500"
-                style={{
-                  height: barH,
-                  background: isCurrent
-                    ? "linear-gradient(180deg,#a855f7 0%,#7c3aed 100%)"
-                    : "linear-gradient(180deg,#c084fc 0%,#833AFD 100%)",
-                  opacity: isCurrent ? 1 : 0.55 + 0.04 * (i % 10),
-                  boxShadow: isCurrent ? "0 0 14px rgba(168,85,247,0.55)" : undefined,
-                }}
-              />
-              {/* x-axis label */}
-              <span
-                className={`text-[9px] sm:text-[10px] mt-1.5 font-medium truncate w-full text-center ${
-                  isCurrent ? "text-purple-300" : "text-white/40"
-                }`}
-              >
-                {bar.label}
-              </span>
-            </div>
-          );
-        })}
+    <div ref={containerRef} className="relative select-none flex gap-2">
+      {/* Y-axis labels */}
+      <div className="flex flex-col-reverse justify-between shrink-0 pb-[28px]" style={{ height: BAR_AREA + 40 }}>
+        {ticks.map((t) => (
+          <span key={t} className="text-[9px] sm:text-[10px] text-white/30 text-right leading-none w-7 sm:w-9 tabular-nums">
+            {t >= 1000 ? `${(t / 1000).toFixed(t % 1000 === 0 ? 0 : 1)}k` : t}
+          </span>
+        ))}
       </div>
 
-      {/* tooltip */}
-      {tooltip && (
-        <div
-          className="pointer-events-none absolute z-20 -translate-x-1/2 -translate-y-full"
-          style={{ left: tooltip.x, top: tooltip.y }}
-        >
-          <div className="bg-[#1a1a2e] border border-purple-500/40 rounded-lg px-3 py-1.5 text-xs text-white shadow-xl whitespace-nowrap">
-            <span className="text-white/60">{tooltip.label}: </span>
-            <span className="font-bold text-purple-300">{tooltip.count}</span>
-            <span className="text-white/50 ml-1">user{tooltip.count !== 1 ? "s" : ""}</span>
-          </div>
+      {/* Chart area */}
+      <div className="relative flex-1 min-w-0">
+        {/* Horizontal gridlines */}
+        <div className="absolute inset-x-0 pointer-events-none" style={{ top: 0, height: BAR_AREA }}>
+          {ticks.map((t, i) => (
+            <div
+              key={t}
+              className="absolute w-full border-t border-white/[0.06]"
+              style={{ bottom: (i / Y_TICKS) * BAR_AREA }}
+            />
+          ))}
         </div>
-      )}
+
+        {/* Bars */}
+        <div
+          className="flex items-end gap-[3px] sm:gap-1 w-full"
+          style={{ height: BAR_AREA + 40 }}
+        >
+          {bars.map((bar, i) => {
+            const pct = bar.count / maxVal;
+            const barH = Math.max(pct * BAR_AREA, bar.count > 0 ? 6 : 2);
+            const isCurrent = i === currentBucket;
+
+            return (
+              <div
+                key={bar.label + i}
+                className="relative flex flex-col items-center flex-1 cursor-pointer"
+                style={{ height: BAR_AREA + 40 }}
+                onMouseEnter={(e) => {
+                  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                  const containerRect = containerRef.current!.getBoundingClientRect();
+                  setTooltip({
+                    x: rect.left - containerRect.left + rect.width / 2,
+                    y: rect.top - containerRect.top - 8,
+                    label: bar.label,
+                    count: bar.count,
+                  });
+                }}
+                onMouseLeave={() => setTooltip(null)}
+              >
+                <div className="flex-1" />
+                <div
+                  className="w-full rounded-t-md transition-all duration-500"
+                  style={{
+                    height: barH,
+                    background: isCurrent
+                      ? "linear-gradient(180deg,#a855f7 0%,#7c3aed 100%)"
+                      : "linear-gradient(180deg,#c084fc 0%,#833AFD 100%)",
+                    opacity: isCurrent ? 1 : 0.55 + 0.04 * (i % 10),
+                    boxShadow: isCurrent ? "0 0 14px rgba(168,85,247,0.55)" : undefined,
+                  }}
+                />
+                <span
+                  className={`text-[9px] sm:text-[10px] mt-1.5 font-medium truncate w-full text-center ${
+                    isCurrent ? "text-purple-300" : "text-white/40"
+                  }`}
+                >
+                  {bar.label}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* tooltip */}
+        {tooltip && (
+          <div
+            className="pointer-events-none absolute z-20 -translate-x-1/2 -translate-y-full"
+            style={{ left: tooltip.x, top: tooltip.y }}
+          >
+            <div className="bg-[#1a1a2e] border border-purple-500/40 rounded-lg px-3 py-1.5 text-xs text-white shadow-xl whitespace-nowrap">
+              <span className="text-white/60">{tooltip.label}: </span>
+              <span className="font-bold text-purple-300">{tooltip.count}</span>
+              <span className="text-white/50 ml-1">user{tooltip.count !== 1 ? "s" : ""}</span>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -114,21 +146,24 @@ function BarChart({ bars, scale, currentBucket }: { bars: BarData[]; scale: "1d"
 // â”€â”€â”€ chart range config â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
-function MiniBarChart({ bars, range }: { bars: { count: number }[]; range?: "Weekly" | "Monthly" }) {
+function MiniBarChart({ bars, range }: { bars: { count: number; day?: string; date?: string }[]; range?: "Weekly" | "Monthly" }) {
   const displayBars = range === "Monthly" ? bars.slice(-30) : bars.slice(-7);
   const maxVal = Math.max(...displayBars.map((b) => b.count), 1);
   const H = 48;
+  const [tooltip, setTooltip] = useState<{ x: number; y: number; label: string; count: number } | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const isEmpty = displayBars.length === 0;
   if (isEmpty) return <div className="h-12 ml-auto w-24 flex items-end justify-center"><span className="text-white/20 text-xs">no data</span></div>;
   return (
-    <div className="flex items-end gap-[2px] h-12 ml-auto">
+    <div ref={containerRef} className="relative flex items-end gap-[2px] h-12 ml-auto">
       {displayBars.map((bar, i) => {
         const barH = Math.max((bar.count / maxVal) * H, 6);
         const isLast = i === displayBars.length - 1;
+        const label = bar.day && bar.date ? `${bar.day} ${bar.date}` : bar.date ?? `Day ${i + 1}`;
         return (
           <div
             key={i}
-            className="rounded-t-sm transition-all duration-500"
+            className="relative rounded-t-sm transition-all duration-500 cursor-pointer"
             style={{
               height: barH,
               width: range === "Monthly" ? 4 : 10,
@@ -137,9 +172,28 @@ function MiniBarChart({ bars, range }: { bars: { count: number }[]; range?: "Wee
                 : "linear-gradient(180deg,#c084fc 0%,#833AFD 100%)",
               opacity: isLast ? 1 : 0.35 + 0.022 * i,
             }}
+            onMouseEnter={(e) => {
+              if (!containerRef.current) return;
+              const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+              const cRect = containerRef.current.getBoundingClientRect();
+              setTooltip({ x: rect.left - cRect.left + rect.width / 2, y: rect.top - cRect.top - 6, label, count: bar.count });
+            }}
+            onMouseLeave={() => setTooltip(null)}
           />
         );
       })}
+      {tooltip && (
+        <div
+          className="pointer-events-none absolute z-30 -translate-x-1/2 -translate-y-full"
+          style={{ left: tooltip.x, top: tooltip.y }}
+        >
+          <div className="bg-[#1a1a2e] border border-purple-500/40 rounded-lg px-2.5 py-1 text-[10px] text-white shadow-xl whitespace-nowrap">
+            <span className="text-white/60">{tooltip.label}: </span>
+            <span className="font-bold text-purple-300">{tooltip.count}</span>
+            <span className="text-white/50 ml-0.5">user{tooltip.count !== 1 ? "s" : ""}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -321,9 +375,9 @@ export default function Analytics() {
   })();
 
   const chartSubtitle = {
-    "1d": "New signups per 2-hour block \u2014 today (UTC)",
-    "7d": "New signups per day \u2014 last 14 days",
-    "30d": "New signups per day \u2014 last 30 days",
+    "1d": "Daily Trajectory \u2014 today (UTC)",
+    "7d": "Daily Trajectory \u2014 last 14 days",
+    "30d": "Daily Trajectory \u2014 last 30 days",
   }[chartScale];
 
   const chartTotal = {
@@ -401,7 +455,7 @@ export default function Analytics() {
                     <p className="text-3xl sm:text-5xl font-semibold group-hover:text-purple-300 transition-colors duration-300">{newUsers}</p>
                     <PctBadge value={newUsersPctMap[graphRange] ?? null} />
                   </div>
-                  <p className="mt-1 text-xs text-white/50">vs prev period</p>
+                  <p className="mt-1 text-xs text-white/50"> </p>
                 </div>
                 <img src="/ref-icon.png" alt="Ref Icon" className="w-7 h-7 sm:w-10 sm:h-10 ml-auto shrink-0 opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-all duration-300" />
               </div>
@@ -438,7 +492,7 @@ export default function Analytics() {
                     <p className="text-3xl sm:text-5xl font-semibold text-white group-hover:text-purple-300 transition-colors duration-300">{activeUsers}</p>
                     <PctBadge value={activeUsersPct} />
                   </div>
-                  <p className="mt-1 text-xs text-white/50">vs prev period</p>
+                  <p className="mt-1 text-xs text-white/50"> </p>
                 </div>
                 <div className="ml-auto shrink-0">
                   <MiniBarChart bars={usersByDay} range={activeUsersRange as "Weekly" | "Monthly"} />
@@ -461,23 +515,20 @@ export default function Analytics() {
                 <p className="text-[10px] sm:text-sm text-white/50 truncate">{chartSubtitle}</p>
               </div>
 
-              {/* Center: scale toggle buttons */}
+              {/* Center: scale dropdown */}
               <div className="flex justify-center">
-                <div className="flex gap-0.5 bg-white/5 border border-white/10 rounded-md p-[2px]">
+                <select
+                  value={chartScale}
+                  onChange={(e) => setChartScale(e.target.value as "1d" | "7d" | "30d")}
+                  className="bg-white/5 border border-white/10 rounded-md px-3 py-1.5 text-xs sm:text-sm text-white/80 focus:outline-none focus:border-purple-500/60 cursor-pointer appearance-none"
+                  style={{ background: 'rgba(255,255,255,0.05)' }}
+                >
                   {CHART_RANGES.map((r) => (
-                    <button
-                      key={r.value}
-                      onClick={() => setChartScale(r.value)}
-                      className={`px-2 py-1 rounded text-[10px] sm:text-xs font-medium transition-all duration-200 ${
-                        chartScale === r.value
-                          ? "bg-purple-600 text-white"
-                          : "text-white/60 hover:text-white hover:bg-white/10"
-                      }`}
-                    >
+                    <option key={r.value} value={r.value} style={{ background: '#1a1a2e', color: '#fff' }}>
                       {r.label}
-                    </button>
+                    </option>
                   ))}
-                </div>
+                </select>
               </div>
 
               {/* Right: total badge */}

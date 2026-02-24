@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Card } from "../ui/card";
 import { Link, useLocation } from "wouter";
-import StudioSidebar from "../../pages/studio/StudioSidebar";
 import { projectApiRequest } from "../../lib/projectApi";
 import { useToast } from "../../hooks/use-toast";
 import { RefreshCw, Trash2, XCircle, Loader2 } from "lucide-react";
@@ -192,21 +191,8 @@ export default function CampaignsTab() {
   };
 
   return (
-    <div className="relative min-h-screen flex">
-      {/* Fixed Sidebar */}
-      <div className="fixed top-0 left-0 h-screen flex">
-        <StudioSidebar
-          activeTab="campaignsTab"
-          setActiveTab={(tab) => {
-            if (tab === "campaignSubmissions") setLocation("/studio-dashboard");
-            if (tab === "campaignsTab") setLocation("/studio-dashboard/create-new-campaign");
-            if (tab === "adminManagement") setLocation("/studio-dashboard");
-          }}
-        />
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-1 md:ml-[18rem] p-4 md:p-6 space-y-6 pt-16 md:pt-6 pb-24 md:pb-6">
+    <>
+    <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="space-y-1">
@@ -305,6 +291,6 @@ export default function CampaignsTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }

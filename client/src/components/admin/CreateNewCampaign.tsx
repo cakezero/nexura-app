@@ -14,7 +14,6 @@ import { payStudioHubFee } from "../../lib/performOnchainAction";
 import { useToast } from "../../hooks/use-toast";
 import {
   Calendar,
-  Clock,
   ImageIcon,
   FileText,
   ListChecks,
@@ -80,7 +79,7 @@ const [coverImagePreview, setCoverImagePreview] = useState<string | null>(null);
 
 const [rewardPool, setRewardPool] = useState("");
 const [participants, setParticipants] = useState("");
-const [xpRewards, setXpRewards] = useState("");
+const [xpRewards, setXpRewards] = useState("200");
 const [publishedCampaign, setPublishedCampaign] = useState<any | null>(null);
 const [paymentTxHash, setPaymentTxHash] = useState("");
 const [paymentLoading, setPaymentLoading] = useState(false);
@@ -307,7 +306,7 @@ const isActive =
   activeTab="campaignsTab"
   setActiveTab={(tab) => {
     if (tab === "campaignSubmissions") setLocation("/studio-dashboard");
-    if (tab === "campaignsTab") setLocation("/studio-dashboard/create-new-campaign");
+    if (tab === "campaignsTab") setLocation("/studio-dashboard");
     if (tab === "adminManagement") setLocation("/studio-dashboard");
   }}
 />
@@ -389,10 +388,10 @@ const isActive =
   </button>
           </div>
 
-              <h2 className="text-xl font-semibold">Campaign Details</h2>
-
               {/* DETAILS TAB */}
               {activeTab === "details" && (
+                <>
+                <h2 className="text-xl font-semibold">Campaign Details</h2>
                 <Card className="bg-purple/10 backdrop-blur-md p-8 space-y-8">
 
                   <form onSubmit={handleSubmit} className="space-y-8">
@@ -429,60 +428,42 @@ const isActive =
                     </div>
 
                     {/* Dates & Times */}
-                    <div className="grid grid-cols-4 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                       <div>
                         <label className="flex items-center gap-2 text-sm mb-2">
                           <Calendar className="w-4 h-4" />
-                          Start Date
+                          Start Date &amp; Time
                         </label>
-                        <Input
-  type="date"
-  className="bg-white/5 border-white/10"
-  value={startDate}
-  onChange={(e) => setStartDate(e.target.value)}
-/>
-                      </div>
-
-                      <div>
-                        <label className="flex items-center gap-2 text-sm mb-2">
-                          <Clock className="w-4 h-4" />
-                          Start Time
-                        </label>
-                        <Input
-  type="time"
-  className="bg-white/5 border-white/10"
-  value={startTime}
-  onChange={(e) => setStartTime(e.target.value)}
-/>
+                        <input
+                          type="datetime-local"
+                          className="w-full rounded-md bg-white/5 border border-white/10 text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 [color-scheme:dark]"
+                          value={startDate && startTime ? `${startDate}T${startTime}` : startDate ? `${startDate}T00:00` : ""}
+                          onChange={(e) => {
+                            const [d, t] = e.target.value.split("T");
+                            setStartDate(d ?? "");
+                            setStartTime(t ? t.slice(0, 5) : "");
+                          }}
+                        />
                       </div>
 
                       <div>
                         <label className="flex items-center gap-2 text-sm mb-2">
                           <Calendar className="w-4 h-4" />
-                          End Date
+                          End Date &amp; Time
                         </label>
-                        <Input
-  type="date"
-  className="bg-white/5 border-white/10"
-  value={endDate}
-  onChange={(e) => setEndDate(e.target.value)}
-/>
+                        <input
+                          type="datetime-local"
+                          className="w-full rounded-md bg-white/5 border border-white/10 text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 [color-scheme:dark]"
+                          value={endDate && endTime ? `${endDate}T${endTime}` : endDate ? `${endDate}T00:00` : ""}
+                          onChange={(e) => {
+                            const [d, t] = e.target.value.split("T");
+                            setEndDate(d ?? "");
+                            setEndTime(t ? t.slice(0, 5) : "");
+                          }}
+                        />
                       </div>
-
-                      <div>
-                        <label className="flex items-center gap-2 text-sm mb-2">
-                          <Clock className="w-4 h-4" />
-                          End Time
-                        </label>
-                        <Input
-  type="time"
-  className="bg-white/5 border-white/10"
-  value={endTime}
-  onChange={(e) => setEndTime(e.target.value)}
-/>
-                      </div>
-                      <p className="text-xs text-white/50 -mt-2">
-                        Set the duration of the campaign in UTC. 
+                      <p className="text-xs text-white/50 -mt-2 col-span-full">
+                        Set the start and end date &amp; time of the campaign.
                       </p>
                     </div>
 
@@ -606,29 +587,18 @@ const isActive =
                         </Button>
                       </Link>
 
-                      <div className="flex gap-4">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="border-white/20 text-white hover:bg-white/5"
-                          onClick={() => handleSaveDraft()}
-                          disabled={saveLoading}
-                        >
-                          {saveLoading ? "Saving..." : "Save"}
-                        </Button>
-
-                        <Button
-                          type="submit"
-                          className="bg-purple-600 hover:bg-purple-700"
-                          disabled={loading || saveLoading}
-                        >
-                          {loading || saveLoading ? "Saving..." : "Save & Next"}
-                        </Button>
-                      </div>
+                      <Button
+                        type="submit"
+                        className="bg-purple-600 hover:bg-purple-700"
+                        disabled={loading || saveLoading}
+                      >
+                        {loading || saveLoading ? "Saving..." : "Save & Next"}
+                      </Button>
                     </div>
 
                   </form>
                 </Card>
+                </>
               )}
 
 {/* TASKS TAB */}
@@ -974,70 +944,87 @@ const isActive =
 
 {activeTab === "review" && (
   <Card className="p-8 space-y-6 bg-white/10 backdrop-blur-md">
-    <h2 className="text-2xl font-bold mb-4">Final Campaign Review</h2>
+    <h2 className="text-2xl font-bold">Final Campaign Review</h2>
 
     {/* Campaign Board */}
-    <div className="flex gap-6 rounded-lg border-2 border-purple-500 p-6 bg-white/5">
-      {/* Left side: image */}
-      <div className="w-48 h-48 flex-shrink-0 rounded-lg overflow-hidden">
-        {coverImage ? (
-          <img
-  src={coverImagePreview || undefined}
-  alt="Campaign Cover"
-  className="w-full h-full object-cover"
-/>
+    <div className="rounded-xl border border-purple-500/60 bg-white/5 overflow-hidden">
 
-        ) : (
-          <div className="w-full h-full flex items-center justify-center bg-gray-700 text-white">
-            No Image
-          </div>
-        )}
-      </div>
-
-      {/* Right side: title and description */}
-      <div className="flex-1 flex flex-col justify-between">
-        <div>
-          <h3 className="text-xl font-semibold text-white">
-            {campaignTitle || campaignName || "Untitled Campaign"}
-          </h3>
-          <p className="text-white/70 mt-1">
-            {campaignName || "No description provided"}
-          </p>
-          {/* Optional: you can include a project/handle here if needed */}
+      {/* Top: image + title */}
+      <div className="flex gap-6 p-6">
+        {/* Cover image */}
+        <div className="w-36 h-36 flex-shrink-0 rounded-xl overflow-hidden border border-white/10">
+          {(coverImagePreview || imagePreview) ? (
+            <img
+              src={coverImagePreview || imagePreview || undefined}
+              alt="Campaign Cover"
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-white/10 text-white/40 text-sm">
+              No Image
+            </div>
+          )}
         </div>
 
-        {/* Bottom info as blocks */}
-        <div className="flex mt-4 text-white/80 border border-white/10 rounded-lg overflow-hidden">
-          {/* Duration */}
-          <div className="flex-1 flex flex-col items-center p-4 border-r border-white/10">
-            <div className="flex items-center gap-2">
-              <img src="/duration.png" alt="Duration Icon" className="w-5 h-5" />
-              <span className="font-semibold">Duration</span>
-            </div>
-            <span className="text-white mt-1">
-  {startDate && endDate
-    ? `${formatDate(startDate)} ${startTime} – ${formatDate(endDate)} ${endTime}`
-    : "Not set"}
-</span>
-          </div>
+        {/* Title + description */}
+        <div className="flex flex-col justify-center gap-1 min-w-0">
+          <h3 className="text-xl font-bold text-white truncate">
+            {campaignTitle || campaignName || "Untitled Campaign"}
+          </h3>
+          <p className="text-white/60 text-sm">
+            {campaignName || "No description provided"}
+          </p>
+          {startDate && endDate && (
+            <p className="text-white/40 text-xs mt-1">
+              {formatDate(startDate)} {startTime} → {formatDate(endDate)} {endTime}
+            </p>
+          )}
+        </div>
+      </div>
 
-          {/* Reward Pool */}
-          <div className="flex-1 flex flex-col items-center p-4 border-r border-white/10">
-            <div className="flex items-center gap-2">
-              <img src="/reward-pool.png" alt="Reward Pool Icon" className="w-5 h-5" />
-              <span className="font-semibold">Reward Pool</span>
-            </div>
-            <span className="text-white mt-1">{rewardPool ? `${rewardPool} $TRUST` : "N/A"}</span>
-          </div>
+      {/* Divider */}
+      <div className="border-t border-white/10" />
 
-          {/* Target Users / Participants */}
-          <div className="flex-1 flex flex-col items-center p-4">
-            <div className="flex items-center gap-2">
-              <img src="/target-users.png" alt="Target Users Icon" className="w-5 h-5" />
-              <span className="font-semibold">Target Users</span>
-            </div>
-            <span className="text-white mt-1">{participants || "N/A"}</span>
+      {/* Stats grid */}
+      <div className="grid grid-cols-2 md:grid-cols-4 divide-y md:divide-y-0 divide-x-0 md:divide-x divide-white/10">
+        {/* Reward Pool */}
+        <div className="flex flex-col gap-1 p-5">
+          <div className="flex items-center gap-2 text-white/50 text-xs font-medium uppercase tracking-wide">
+            <img src="/reward-pool.png" alt="" className="w-4 h-4 opacity-60" />
+            Reward Pool
           </div>
+          <span className="text-white text-lg font-semibold">{rewardPool ? `${rewardPool} $TRUST` : "—"}</span>
+        </div>
+
+        {/* Target Users */}
+        <div className="flex flex-col gap-1 p-5 border-t md:border-t-0 border-l md:border-l border-white/10">
+          <div className="flex items-center gap-2 text-white/50 text-xs font-medium uppercase tracking-wide">
+            <img src="/target-users.png" alt="" className="w-4 h-4 opacity-60" />
+            Target Users
+          </div>
+          <span className="text-white text-lg font-semibold">{participants || "—"}</span>
+        </div>
+
+        {/* XP Allocated */}
+        <div className="flex flex-col gap-1 p-5 border-t border-white/10 md:border-l">
+          <div className="flex items-center gap-2 text-white/50 text-xs font-medium uppercase tracking-wide">
+            <span className="text-purple-400 font-bold text-sm leading-none">XP</span>
+            XP Allocated
+          </div>
+          <span className="text-white text-lg font-semibold">{xpRewards || "—"}</span>
+        </div>
+
+        {/* Per Participant */}
+        <div className="flex flex-col gap-1 p-5 border-t border-white/10 md:border-l">
+          <div className="flex items-center gap-2 text-white/50 text-xs font-medium uppercase tracking-wide">
+            <img src="/reward-pool.png" alt="" className="w-4 h-4 opacity-60" />
+            Per Participant
+          </div>
+          <span className="text-white text-lg font-semibold">
+            {rewardPool && participants && Number(participants) > 0
+              ? `${(Number(rewardPool) / Number(participants)).toFixed(2)} $TRUST`
+              : "—"}
+          </span>
         </div>
       </div>
     </div>

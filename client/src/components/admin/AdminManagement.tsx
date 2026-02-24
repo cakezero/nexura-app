@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useLocation } from "wouter";
 import { Card } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import { RefreshCw, Loader2 } from "lucide-react";
@@ -11,7 +10,6 @@ import { AddAdminModal } from "../../components/AddAdminModal";
 import { getStoredAdminInfo } from "../../lib/config";
 import { projectApiRequest } from "../../lib/projectApi";
 import { useToast } from "../../hooks/use-toast";
-import StudioSidebar from "../../pages/studio/StudioSidebar";
 
 export type AdminType = {
   _id: string;
@@ -25,7 +23,6 @@ export default function AdminManagement() {
   const [admins, setAdmins] = useState<AdminType[]>([]);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const { toast } = useToast();
-  const [, setLocation] = useLocation();
 
   const currentAdmin = getStoredAdminInfo();
 
@@ -44,18 +41,7 @@ export default function AdminManagement() {
   };
 
   return (
-    <div className="flex min-h-screen">
-      {/* Sidebar */}
-      <StudioSidebar
-        activeTab="adminManagement"
-        setActiveTab={(tab) => {
-          if (tab === "campaignSubmissions") setLocation("/studio-dashboard");
-          if (tab === "adminManagement") setLocation("/studio-dashboard/admin-management");
-        }}
-      />
-
-      {/* Main content */}
-<div className="flex-1 p-4 md:p-6 space-y-6 pt-16 md:pt-6 pb-24 md:pb-6">
+    <div className="space-y-6">
   {/* Header: Title + Add Admin button */}
   <div className="flex items-center justify-between">
     <h2 className="text-2xl font-bold text-white">Admin Management</h2>
@@ -180,7 +166,6 @@ export default function AdminManagement() {
             </Table>
           </Card>
         }
-      </div>
     </div>
   );
 }
