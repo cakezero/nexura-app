@@ -122,7 +122,7 @@ export default function ProjectCreateCampaign() {
       fd.append("txHash", "");
       await projectApiRequest({
         method: "POST",
-        endpoint: "/project/create-campaign",
+        endpoint: "/hub/create-campaign",
         formData: fd,
       });
     } catch (err) {

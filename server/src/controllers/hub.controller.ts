@@ -59,7 +59,7 @@ export const createHub = async (req: GlobalRequest, res: GlobalResponse) => {
 
 export const addHubAdmin = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
-    const { email } = req.body;
+    const { email, role } = req.body;
 		if (!email) {
 			res.status(BAD_REQUEST).json({ error: "admin email is required" });
 			return;

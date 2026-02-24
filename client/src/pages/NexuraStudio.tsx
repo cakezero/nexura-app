@@ -73,27 +73,8 @@ export default function NexuraStudio() {
         {/* Divider */}
         <div className="mx-6 sm:mx-auto sm:max-w-4xl border-t border-white/5" />
 
-        {/* Feature Grid */}
-        <div className="px-6 py-12 sm:py-16 max-w-4xl mx-auto w-full">
-          <p className="text-center text-white/40 text-xs font-semibold uppercase tracking-widest mb-8">Everything you need</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {FEATURES.map(({ icon: Icon, title, desc }) => (
-              <div
-                key={title}
-                className="bg-white/[0.03] border border-white/[0.08] rounded-2xl p-5 hover:border-purple-500/40 hover:bg-purple-500/5 transition-all group"
-              >
-                <div className="w-9 h-9 rounded-xl bg-purple-500/15 border border-purple-500/20 flex items-center justify-center mb-4 group-hover:bg-purple-500/25 transition-all">
-                  <Icon className="w-4 h-4 text-purple-400" />
-                </div>
-                <h3 className="text-white font-semibold text-sm mb-1.5">{title}</h3>
-                <p className="text-white/40 text-xs leading-relaxed">{desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
         {/* Footer band */}
-        <div className="mt-auto border-t border-white/5 bg-white/[0.02] px-6 py-6 text-center">
+        <div className="mt-auto bg-white/[0.02] px-6 py-6 text-center">
           <p className="text-white/30 text-sm">Already have a hub? <button onClick={() => setLocation("/projects/create/signin-to-hub")} className="text-purple-400 hover:underline">Sign in</button> — no wallet reconnect needed.</p>
         </div>
 

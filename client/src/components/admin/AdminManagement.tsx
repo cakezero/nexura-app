@@ -32,7 +32,7 @@ export default function AdminManagement() {
   const handleRemoveAdmin = async (id: string) => {
     setRemovingId(id);
     try {
-      await projectApiRequest({ method: "DELETE", endpoint: "/project/remove-admin", params: { id } });
+      await projectApiRequest({ method: "DELETE", endpoint: "/hub/remove-admin", params: { id } });
       setAdmins((prev) => prev.filter((a) => a._id !== id));
       toast({ title: "Admin removed", description: "The admin has been removed from your hub." });
     } catch (err: unknown) {

@@ -9,6 +9,11 @@ const OTPSchema = new Schema({
     type: String,
     required: true
   },
+  role: {
+    type: String,
+    enum: ["admin", "superadmin"],
+    default: "admin"
+  },
   code: {
     type: String,
     required: true,

@@ -65,7 +65,7 @@ const [campaignTasks, setCampaignTasks] = useState<TASKS[]>([]);
   const fetchTasks = async () => {
     try {
       setLoading(true);
-      const res = await projectApiRequest<{ message?: string; pendingTasks?: TASKS[] }>({ endpoint: "/project/campaign-submissions", method: "GET" });
+      const res = await projectApiRequest<{ message?: string; pendingTasks?: TASKS[] }>({ endpoint: "/hub/campaign-submissions", method: "GET" });
       const pendingTasks = res?.pendingTasks ?? [];
 
       const pendingcampaignTasks = pendingTasks.filter((task) => task.page === "campaign");
@@ -115,7 +115,7 @@ const [campaignTasks, setCampaignTasks] = useState<TASKS[]>([]);
       setLoading(true);
       await projectApiRequest<{ message?: string }>({
         method: "POST",
-        endpoint: "/project/validate-campaign-submissions",
+        endpoint: "/hub/validate-campaign-submissions",
         data: { submissionId: id, action }
       });
 
@@ -254,7 +254,7 @@ const fetchBannedUsers = async () => {
 </header>
 
 
-          <main className="flex-1 overflow-y-auto pt-20 pb-28 px-4 md:pt-8 md:pb-8 md:px-8 relative bg-black/20">
+          <main className="flex-1 overflow-y-auto pt-4 pb-8 px-4 md:pt-8 md:pb-8 md:px-8 relative bg-black/20">
             <div className="max-w-7xl mx-auto">
               {activeTab !== "adminManagement" && activeTab !== "campaignsTab" && (
                 <StatsOverview key={activeTab} tasks={activeTab === "campaignSubmissions" ? campaignTasks : []} />

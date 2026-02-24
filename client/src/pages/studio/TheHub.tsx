@@ -68,14 +68,20 @@ const handleSubmit = async () => {
 
     const res = await projectApiRequest<{ message?: string; accessToken?: string; token?: string; project?: Record<string, unknown> }>({
       method: "POST",
-      endpoint: "/project/sign-up",
+      endpoint: "/hub/sign-up",
       formData: fd,
     });
 
     const token = (res.token ?? res.accessToken) as string | undefined;
     if (!token) throw new Error("No access token received");
 
-    storeProjectSession(token, { name: hubName.trim(), email, address, ...(res.project ?? {}) });
+    const serverProject = res.project as { name?: string; logo?: string } | undefined;
+    storeProjectSession(token, {
+      name: serverProject?.name ?? hubName.trim(),
+      logo: serverProject?.logo ?? "",
+      email,
+      address,
+    });
 
     localStorage.removeItem("nexura:hub-credentials");
     localStorage.removeItem("nexura:studio-step");

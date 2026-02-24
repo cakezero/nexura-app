@@ -30,8 +30,8 @@ export default function StudioSidebar({
   useEffect(() => {
     const info = getStoredProjectInfo();
     if (info) {
-      const name = (info.name ?? info.email ?? "project") as string;
-      setProjectHandle(name.startsWith("@") ? name : `@${name}`);
+      const name = (info.name ?? info.email ?? "Project") as string;
+      setProjectHandle(name);
       if (info.logo) setProjectLogo(info.logo as string);
     }
   }, []);

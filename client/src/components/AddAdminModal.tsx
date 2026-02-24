@@ -15,6 +15,13 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { UserPlus } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
 import { projectApiRequest } from "../lib/projectApi";
 import { useToast } from "../hooks/use-toast";
 
@@ -28,6 +35,7 @@ export function AddAdminModal({ children, onSuccess }: AddAdminModalProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
+  const [role, setRole] = useState<"admin" | "superadmin">("admin");
   const { toast } = useToast();
 
   const handleSubmit = async (e?: React.FormEvent) => {
@@ -41,11 +49,12 @@ export function AddAdminModal({ children, onSuccess }: AddAdminModalProps) {
     try {
       await projectApiRequest({
         method: "POST",
-        endpoint: "/project/add-admin",
-        data: { email },
+        endpoint: "/hub/add-admin",
+        data: { email, role },
       });
-      toast({ title: "Invitation sent!", description: `An OTP has been sent to ${email}. The admin can now sign up.` });
+      toast({ title: "Invitation sent!", description: `An OTP has been sent to ${email}. The ${role === "superadmin" ? "Super Admin" : "Admin"} can now sign up.` });
       setEmail("");
+      setRole("admin");
       setOpen(false);
       onSuccess?.();
     } catch (err: unknown) {
@@ -86,6 +95,23 @@ export function AddAdminModal({ children, onSuccess }: AddAdminModalProps) {
               className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus-visible:ring-[#8a3ffc]"
               required
             />
+          </div>
+
+          {/* Role */}
+          <div className="grid gap-2">
+            <Label htmlFor="role" className="text-white/70">Role</Label>
+            <Select value={role} onValueChange={(v) => setRole(v as "admin" | "superadmin")}>
+              <SelectTrigger
+                id="role"
+                className="bg-white/5 border-white/10 text-white focus:ring-[#8a3ffc]"
+              >
+                <SelectValue placeholder="Select role" />
+              </SelectTrigger>
+              <SelectContent className="bg-[#0d0d14] border-white/10 text-white">
+                <SelectItem value="admin">Admin</SelectItem>
+                <SelectItem value="superadmin">Super Admin</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </form>
 

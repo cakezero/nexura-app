@@ -30,14 +30,27 @@ export default function SignInToHub() {
     try {
       const res = await projectApiRequest<{ message?: string; accessToken?: string; token?: string; project?: Record<string, unknown> }>({
         method: "POST",
-        endpoint: "/project/sign-in",
+        endpoint: "/hub/sign-in",
         data: { email, password, role: "project" },
       });
 
       const token = (res.token ?? res.accessToken) as string | undefined;
       if (!token) throw new Error("No access token received");
 
-      storeProjectSession(token, { email, ...(res.project ?? {}) });
+      // Store token first so subsequent authenticated requests work
+      storeProjectSession(token, { email });
+
+      // Fetch project profile to get name and logo
+      try {
+        const profile = await projectApiRequest<{ name?: string; logo?: string }>({
+          method: "GET",
+          endpoint: "/hub/me",
+        });
+        storeProjectSession(token, { email, name: profile.name ?? email, logo: profile.logo ?? "" });
+      } catch {
+        // profile fetch failed — keep email as name
+      }
+
       toast({ title: "Signed in!", description: "Welcome back to Nexura Studio." });
       setLocation("/studio-dashboard");
     } catch (err: unknown) {
@@ -58,7 +71,7 @@ export default function SignInToHub() {
     try {
       await projectApiRequest({
         method: "POST",
-        endpoint: "/project/forgot-password",
+        endpoint: "/hub/forgot-password",
         data: { email: resetEmail, role: "project" },
       });
       toast({ title: "Email sent!", description: `Password reset instructions sent to ${resetEmail}.` });

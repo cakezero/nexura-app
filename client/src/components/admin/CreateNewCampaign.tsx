@@ -101,7 +101,7 @@ useEffect(() => {
     try {
       const res = await projectApiRequest<{ projectCampaigns?: any[] }>({
         method: "GET",
-        endpoint: "/project/get-campaigns",
+        endpoint: "/hub/get-campaigns",
       });
       const found = (res.projectCampaigns ?? []).find((c: any) => c._id === editId);
       if (!found) return;
@@ -122,7 +122,7 @@ useEffect(() => {
       try {
         const qRes = await projectApiRequest<{ campaignQuests?: any[] }>({
           method: "GET",
-          endpoint: "/project/get-campaign",
+          endpoint: "/hub/get-campaign",
           params: { id: editId },
         });
         const tagToType = (tag: string) => {
@@ -211,7 +211,7 @@ const handleSaveDraft = async (thenNavigate?: string) => {
     if (campaignId) params.id = campaignId;
     const res = await projectApiRequest<{ campaignId?: string; message?: string }>({
       method: "PATCH",
-      endpoint: "/project/save-campaign",
+      endpoint: "/hub/save-campaign",
       formData: fd,
       params,
     });
@@ -570,13 +570,16 @@ const isActive =
   <label className="block mb-2 text-sm font-medium">
     XP Rewards
   </label>
-  <Input
-  type="number"
-  placeholder="200 XP per participant"
-  className="bg-white/5 border-white/10"
-  value={xpRewards}
-  onChange={(e) => setXpRewards(e.target.value)}
-/>
+  <div className="relative">
+    <Input
+      type="number"
+      placeholder="200 XP per participant"
+      className="bg-white/5 border-white/10 pr-16 cursor-not-allowed opacity-60"
+      value={xpRewards}
+      readOnly
+    />
+    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 text-xs font-medium select-none">Fixed</span>
+  </div>
 </div>
                     </div>
 
@@ -704,6 +707,30 @@ const isActive =
         ))}
       </div>
     )}
+
+    {/* Tasks tab footer: Save Draft + Next → Review */}
+    <div className="flex justify-between items-center mt-6">
+      <button
+        className="px-4 py-2 bg-gray-700 text-white rounded-lg text-sm hover:bg-gray-600 transition"
+        onClick={() => handleSaveDraft()}
+        disabled={saveLoading}
+      >
+        {saveLoading ? "Saving..." : "Save Draft"}
+      </button>
+      <button
+        className="px-6 py-2 bg-purple-600 text-white rounded-lg text-sm font-semibold hover:bg-purple-700 transition flex items-center gap-2"
+        onClick={() => {
+          if (tasks.length === 0) {
+            toast({ title: "No tasks", description: "Please add at least one task before reviewing.", variant: "destructive" });
+            return;
+          }
+          setActiveTab("review");
+        }}
+      >
+        Next
+        <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+      </button>
+    </div>
   </div>
 )}
 
@@ -1000,7 +1027,7 @@ const isActive =
               <img src="/reward-pool.png" alt="Reward Pool Icon" className="w-5 h-5" />
               <span className="font-semibold">Reward Pool</span>
             </div>
-            <span className="text-white mt-1">{xpRewards || "N/A"}</span>
+            <span className="text-white mt-1">{rewardPool ? `${rewardPool} $TRUST` : "N/A"}</span>
           </div>
 
           {/* Target Users / Participants */}
@@ -1234,7 +1261,7 @@ const isActive =
 
       await projectApiRequest({
         method: "POST",
-        endpoint: "/project/create-campaign",
+        endpoint: "/hub/create-campaign",
         formData: fd,
       });
 
