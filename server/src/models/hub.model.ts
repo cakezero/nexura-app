@@ -1,6 +1,6 @@
 import mongoose, { Schema } from "mongoose";
 
-const projectSchema = new Schema({
+const hubSchema = new Schema({
   name: {
     type: String,
     required: true,
@@ -11,19 +11,24 @@ const projectSchema = new Schema({
     required: true,
     unique: true
   },
+  discordConnected: {
+    type: Boolean,
+    default: false
+  },
   xUsername: {
     type: String,
     required: false,
     unique: true,
     sparse: true
   },
-  email: {
+  guildId: {
     type: String,
-    required: true,
-    unique: true
+    unique: true,
+    required: true
   },
-  password: {
+  verifiedId: {
     type: String,
+    unique: true,
     required: true
   },
   logo: {
@@ -42,12 +47,17 @@ const projectSchema = new Schema({
   xpAllocated: {
     type: Number,
     default: 0
+  },
+  superAdmin: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "admins",
+    required: true
   }
 }, { timestamps: true });
 
-export const project = mongoose.model("projects", projectSchema);
+export const hub = mongoose.model("hubs", hubSchema, "projects");
 
-const projectAdminSchema = new mongoose.Schema({
+const hubAdminSchema = new mongoose.Schema({
   email: {
     type: String,
     required: true,
@@ -63,14 +73,13 @@ const projectAdminSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ["admin", "superadmin"],
-    default: "admin"
-  },
-  project: {
-    type: Schema.Types.ObjectId,
-    ref: 'projects',
+    enum: ["superadmin", "admin"],
     required: true
+  },
+  hub: {
+    type: Schema.Types.ObjectId,
+    ref: 'hubs',
   }
 }, { timestamps: true });
 
-export const projectAdmin = mongoose.model("project-admins", projectAdminSchema);
+export const hubAdmin = mongoose.model("hub-admins", hubAdminSchema);

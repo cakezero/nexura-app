@@ -1,5 +1,19 @@
 import { Router } from "express";
-import { addAdmin, adminLogout, adminLogin, banUser, createAdmin, unBanUser, getBannedUsers, createQuest, getAdmins, getTasks, markTask, removeAdmin, manageAdmin } from "@/controllers/admin.controller";
+import {
+  addAdmin,
+  adminLogout,
+  adminLogin,
+  banUser,
+  createAdmin,
+  unBanUser,
+  getBannedUsers,
+  createQuest,
+  getAdmins,
+  getTasks,
+  markTask,
+  removeAdmin,
+  manageAdmin
+} from "@/controllers/admin.controller";
 import { authenticateAdmin } from "@/middlewares/auth.middleware";
 
 const router = Router();

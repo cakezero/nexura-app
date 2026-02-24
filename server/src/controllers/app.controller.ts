@@ -6,11 +6,10 @@ import { token } from "@/models/tokens.model";
 import { campaignQuest, miniQuest, quest } from "@/models/quests.model";
 import { user } from "@/models/user.model";
 import { performIntuitionOnchainAction } from "@/utils/account";
-import { BOT_TOKEN, THIRD_PARTY_API_KEY, X_API_BEARER_TOKEN } from "@/utils/env.utils";
+import { BOT_TOKEN, THIRD_PARTY_API_KEY } from "@/utils/env.utils";
 import {
   INTERNAL_SERVER_ERROR, 
   OK,
-  CREATED, 
   BAD_REQUEST,
   FORBIDDEN, 
   NOT_FOUND,
@@ -27,7 +26,6 @@ import {
 	miniQuestCompleted,
   questCompleted
 } from "@/models/questsCompleted.models";
-import { bannedUser } from "@/models/bannedUser.model";
 import { GRAPHQL_API_URL } from "@/utils/constants";
 import { GraphQLClient } from "graphql-request";
 import { checksumAddress } from "viem";
@@ -81,6 +79,192 @@ export const updateUser = async (req: GlobalRequest, res: GlobalResponse) => {
     res.status(INTERNAL_SERVER_ERROR).json({ error: "error updating user" });
   }
 }
+
+export const getClaims = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+
+    const appUser = await user.findById(req.id);
+
+    const filter = JSON.parse(req.query.filter as string) ?? { total_market_cap: "desc" };
+
+    const offset = parseInt(req.query.offset as unknown as string);
+
+    // 1️⃣ Fetch all vaults (slice for pagination)
+    const vaultQuery = `
+      query GetExploreTriples($where: triple_term_bool_exp, $orderBy: [triple_term_order_by!], $limit: Int, $offset: Int, $userPositionAddress: String) {
+        triple_terms(where: $where, order_by: $orderBy, limit: $limit, offset: $offset) {
+          term_id
+          counter_term_id
+          total_assets
+          total_market_cap
+          total_position_count
+          term {
+            id
+            total_market_cap
+            total_assets
+            vaults(order_by: {curve_id: asc}) {
+              curve_id
+              current_share_price
+              total_shares
+              total_assets
+              position_count
+              market_cap
+              userPosition: positions(
+              limit: 1
+              where: {account_id: {_eq: $userPositionAddress}}
+              ) {
+                shares
+                account_id
+              }
+            }
+            positions_aggregate {
+              aggregate {
+                count
+              }
+            }
+            triple {
+              term_id
+              counter_term_id
+              created_at
+              subject_id
+              predicate_id
+              object_id
+              subject {
+                term_id
+                wallet_id
+                label
+                image
+                cached_image {
+                  ...CachedImageFields
+                }
+                data
+                type
+                value {
+                  ...AtomValueLight
+                }
+              }
+              predicate {
+                term_id
+                wallet_id
+                label
+                image
+                cached_image {
+                  ...CachedImageFields
+                }
+                data
+                type
+                value {
+                  ...AtomValueLight
+                }
+              }
+              object {
+                term_id
+                wallet_id
+                label
+                image
+                cached_image {
+                  ...CachedImageFields
+                }
+                data
+                type
+                value {
+                  ...AtomValue
+                }
+              }
+              creator {
+                id
+                label
+                image
+                cached_image {
+                  ...CachedImageFields
+                }
+              }
+            }
+          }
+          counter_term {
+            id
+            total_market_cap
+            total_assets
+            vaults(order_by: {curve_id: asc}) {
+              curve_id
+              current_share_price
+              total_shares
+              total_assets
+              position_count
+              market_cap
+              userPosition: positions(
+              limit: 1
+              where: {account_id: {_eq: $userPositionAddress}}
+              ) {
+                shares
+                account_id
+              }
+            }
+            positions_aggregate {
+              aggregate {
+                count
+              }
+            }
+          }
+        }
+      }
+  
+      fragment CachedImageFields on cached_images_cached_image {
+        url
+        safe
+      }
+  
+      fragment AtomValueLight on atom_values {
+        person {
+          name
+          image
+          cached_image {
+            ...CachedImageFields
+          }
+          url
+        }
+        thing {
+          name
+          image
+          cached_image {
+            ...CachedImageFields
+          }
+          url
+        }
+        organization {
+          name
+          image
+          url
+        }
+        account {
+          id
+          label
+          image
+          cached_image {
+            ...CachedImageFields
+          }
+        }
+      }
+      
+      
+      fragment AtomValue on atom_values {
+        ...AtomValueLight
+        json_object {
+        description: data(path: \"description\")
+        }
+      }
+    `;
+
+    const client = new GraphQLClient(GRAPHQL_API_URL);
+
+    const { triple_terms: claims } = await client.request(vaultQuery, { where: {}, orderBy: [filter], limit: 50, offset, userPositionAddress: appUser?.address ?? "..." });
+
+    res.json({ message: "fetched", claims });
+  } catch (e) {
+    logger.error(e);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "Failed to fetch claims" });
+  }
+};
 
 export const updateSubmission = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
@@ -168,15 +352,6 @@ export const getLeaderboard = async (req: GlobalRequest, res: GlobalResponse) =>
   } catch(error) {
     logger.error(error);
     res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching leaderboard data" })
-  }
-}
-
-export const getClaims = async (req: GlobalRequest, res: GlobalResponse) => {
-  try {
-    
-  } catch (error) {
-    logger.error(error);
-    res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching claims" });
   }
 }
 
@@ -694,7 +869,7 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
   let quest: any | undefined = undefined;
 
   try {
-    const { tag, id: postId, questId, page } = req.body; // get task id and store project x id, then remove hardcoded nexura id
+    const { tag, id: postId, questId, page } = req.body; // get task id and store hub x id, then remove hardcoded nexura id
 
     const NEXURA_ID = "1983300499597393920";
     const NEXURA_USERNAME = "NexuraXYZ";

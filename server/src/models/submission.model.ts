@@ -41,9 +41,9 @@ const submissionSchema = new mongoose.Schema({
     ref: "users",
     required: true
   },
-  project: {
+  hub: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "projects",
+    ref: "hubs",
     required: true
   },
 }, { timestamps: true });

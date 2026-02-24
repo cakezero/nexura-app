@@ -1,7 +1,7 @@
 import logger from "@/config/logger";
 import { admin } from "@/models/admin.model";
 import { bannedUser } from "@/models/bannedUser.model";
-import { project, projectAdmin } from "@/models/project.model";
+import { hub, hubAdmin } from "@/models/hub.model";
 import { user } from "@/models/user.model";
 import { BAD_REQUEST, INTERNAL_SERVER_ERROR, UNAUTHORIZED } from "@/utils/status.utils";
 import { JWT } from "@/utils/utils";
@@ -19,7 +19,7 @@ export const upload = multer({
 	limits: { fileSize }
 });
 
-export const authenticateProject = async (req: GlobalRequest, res: GlobalResponse, next: GlobalNextFunction) => {
+export const authenticateHubAdmin = async (req: GlobalRequest, res: GlobalResponse, next: GlobalNextFunction) => {
 	try {
 		const authHeader = req.headers.authorization;
 		if (!authHeader?.startsWith("Bearer ")) {
@@ -30,16 +30,16 @@ export const authenticateProject = async (req: GlobalRequest, res: GlobalRespons
     }
 
 		const { id } = await JWT.verify(authHeader.split(" ")[1]!) as decodedDataType;
-		
-    const projectExists = await project.findById(id).lean();
-    if (!projectExists) {
-      res.status(UNAUTHORIZED).json({ error: "route is available only to projects" });
+
+    const superAdminExists = await hubAdmin.findOne({ _id: id, role: "superadmin" }).lean();
+    if (!superAdminExists) {
+      res.status(UNAUTHORIZED).json({ error: "route is available only to super admins" });
       return;
     }
 
     req.id = id as string;
-    req.adminName = projectExists.name;
-	req.campaignCreator = projectExists;
+    req.adminName = superAdminExists.name;
+  	req.admin = superAdminExists;
 
 		next();
 	} catch (error: any) {
@@ -53,7 +53,7 @@ export const authenticateProject = async (req: GlobalRequest, res: GlobalRespons
 	}
 }
 
-export const authenticateProject2 = async (req: GlobalRequest, res: GlobalResponse, next: GlobalNextFunction) => {
+export const authenticateHubAdmin2 = async (req: GlobalRequest, res: GlobalResponse, next: GlobalNextFunction) => {
 	try {
 		const authHeader = req.headers.authorization;
 		if (!authHeader?.startsWith("Bearer ")) {
@@ -65,30 +65,23 @@ export const authenticateProject2 = async (req: GlobalRequest, res: GlobalRespon
 
     const token = authHeader.split(" ")[1]!;
 
-    const adminOrProjectLoggedOut = await REDIS.get(`logout:${token}`);
-    if (adminOrProjectLoggedOut) {
-      res.status(BAD_REQUEST).json({ error: "admin or project is logged out, kindly login again" });
+    const loggedOut = await REDIS.get(`logout:${token}`);
+    if (loggedOut) {
+      res.status(BAD_REQUEST).json({ error: "admin is logged out, kindly login again" });
       return;
     }
 
     const { id } = await JWT.verify(token) as decodedDataType;
 
-    let exists;
-
-    exists = await projectAdmin.findById(id).lean();
+    const exists = await hubAdmin.findById(id).lean();
     if (!exists) {
-      const projectExists = await project.findById(id).lean();
-      if (!projectExists) {
-        res.status(UNAUTHORIZED).json({ error: "route is available only to projects and project admins" });
-        return;
-      }
-
-      exists = { name: projectExists.name, project: projectExists._id };
+      res.status(UNAUTHORIZED).json({ error: "route is available only to admins" });
+      return;
     }
 
     req.id = id as string;
     req.adminName = exists.name;
-    req.project = exists.project.toString();
+    req.admin = exists;
     req.token = token;
 
 		next();
