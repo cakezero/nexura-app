@@ -115,7 +115,7 @@ useEffect(() => {
       setEndDate(e.date);
       setEndTime(e.time);
       setRewardPool(String(found.reward?.pool ?? ""));
-      setXpRewards(String(found.reward?.xp ?? ""));
+      setXpRewards("200");
       if (found.projectCoverImage) setCoverImagePreview(found.projectCoverImage);
       // Pre-fill tasks from saved quests
       try {
@@ -1011,7 +1011,7 @@ const isActive =
             <span className="text-purple-400 font-bold text-sm leading-none">XP</span>
             XP Allocated
           </div>
-          <span className="text-white text-lg font-semibold">{xpRewards || "—"}</span>
+          <span className="text-white text-lg font-semibold">{xpRewards ? `${xpRewards} XP` : "—"}</span>
         </div>
 
         {/* Per Participant */}
