@@ -98,7 +98,7 @@ export default function NexuraSidebar() {
                         <img
                           src={item.icon}
                           alt={item.title}
-                          className="w-4 h-4 flex-shrink-0 object-contain"
+                          className="w-6 h-6 flex-shrink-0 object-contain"
                         />
                         <span className="text-base font-medium truncate transition-[opacity,max-width,margin-left] duration-300 ease-in-out overflow-hidden max-w-[200px] ml-2 group-data-[collapsible=icon]:max-w-0 group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:ml-0">
                           {item.title}
@@ -111,7 +111,6 @@ export default function NexuraSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-
         <div className="w-full flex justify-between px-4 py-3 border-t border-border/40">
   {/* Discord */}
   <Link
@@ -136,6 +135,23 @@ export default function NexuraSidebar() {
     className="text-sm font-semibold text-white min-w-[44px] min-h-[44px] flex items-center justify-center"
   >
     X
+  </Link>
+
+  {/* Docs link */}
+  <Link
+    href="https://docsnexura.vercel.app"
+    className="min-w-[44px] min-h-[44px] flex items-center justify-center"
+  >
+    {/* Collapsed: icon only */}
+    <img
+      src="/docs-icon.png"
+      alt="Docs"
+      className="w-6 h-6 object-contain group-data-[collapsible=icon]:block hidden"
+    />
+    {/* Expanded: text */}
+    <span className="text-sm font-semibold text-white group-data-[collapsible=icon]:hidden block">
+      Docs
+    </span>
   </Link>
 </div>
       </SidebarContent>
