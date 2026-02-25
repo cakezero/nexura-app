@@ -93,13 +93,13 @@ export default function SignInToHub() {
     <div className="min-h-screen bg-black text-white overflow-auto p-4 sm:p-6 relative">
       <AnimatedBackground />
 
-      <div className="max-w-2xl mx-auto relative z-10 space-y-12">
+      <div className="max-w-md mx-auto relative z-10 space-y-6">
         {/* Header */}
-        <div className="text-center py-8 sm:py-12 px-2 sm:px-0">
-          <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2 sm:mb-4">
+        <div className="text-center py-4 sm:py-6 px-2 sm:px-0">
+          <h1 className="text-xl sm:text-2xl font-bold text-white mb-2">
             Sign in to Your Hub
           </h1>
-          <p className="text-base sm:text-lg text-white/60 leading-relaxed">
+          <p className="text-sm sm:text-base text-white/60 leading-relaxed">
             Enter your credentials to access your existing your project's Hub.
           </p>
         </div>

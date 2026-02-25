@@ -101,11 +101,11 @@ const handleSubmit = async () => {
     <div className="min-h-screen bg-black text-white p-4 sm:p-6 relative">
       <AnimatedBackground />
 
-      <div className="max-w-5xl mx-auto relative z-10 space-y-10">
+      <div className="max-w-xl mx-auto relative z-10 space-y-6">
 
         {/* Page Header */}
         <div className="text-center space-y-2">
-          <h1 className="text-3xl sm:text-4xl font-bold">
+          <h1 className="text-2xl sm:text-3xl font-bold">
             Welcome to Nexura Studio
           </h1>
           <p className="text-white/60 max-w-2xl mx-auto">
@@ -114,7 +114,7 @@ const handleSubmit = async () => {
         </div>
 
         {/* Main Container */}
-        <Card className="bg-gray-900 border-2 border-purple-500 rounded-3xl p-6 sm:p-8 space-y-8">
+        <Card className="bg-gray-900 border-2 border-purple-500 rounded-3xl p-5 sm:p-6 space-y-5">
 
           {/* Intro */}
           <div>

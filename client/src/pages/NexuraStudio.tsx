@@ -33,26 +33,26 @@ export default function NexuraStudio() {
       <div className="relative z-10 flex flex-col min-h-screen">
 
         {/* Hero */}
-        <div className="flex flex-col items-center justify-center text-center px-6 pt-20 pb-12">
+        <div className="flex flex-col items-center justify-center text-center px-6 pt-10 pb-8">
 
           {/* Badge */}
-          <div className="flex items-center gap-2 bg-purple-500/10 border border-purple-500/30 rounded-full px-4 py-1.5 mb-8">
+          <div className="flex items-center gap-2 bg-purple-500/10 border border-purple-500/30 rounded-full px-4 py-1.5 mb-5">
             <div className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
             <span className="text-purple-300 text-xs font-semibold uppercase tracking-widest">ORGANIZATION PLATFORM</span>
           </div>
 
           {/* Icon */}
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-600 to-purple-900 border border-purple-500/40 flex items-center justify-center mb-6 shadow-[0_0_40px_rgba(131,58,253,0.4)]">
-            <Layers className="w-8 h-8 text-white" />
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-600 to-purple-900 border border-purple-500/40 flex items-center justify-center mb-4 shadow-[0_0_40px_rgba(131,58,253,0.4)]">
+            <Layers className="w-6 h-6 text-white" />
           </div>
 
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold mb-4 leading-tight">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold mb-3 leading-tight">
             <span className="bg-gradient-to-r from-white via-purple-200 to-purple-400 bg-clip-text text-transparent">
               Nexura Studio
             </span>
           </h1>
 
-          <p className="text-white/50 text-base sm:text-lg max-w-xl leading-relaxed mb-10">
+          <p className="text-white/50 text-sm sm:text-base max-w-xl leading-relaxed mb-6">
             The all-in-one platform for builders to launch campaigns, distribute rewards,
             and grow their community on the Intuition network.
           </p>
