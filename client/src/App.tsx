@@ -51,6 +51,7 @@ import CreateNewCampaigns from "./components/admin/CreateNewCampaign.tsx";
 import MyCampaign from "./components/admin/MyCampaign.tsx"
 import AdminManagement from "./components/admin/AdminManagement.tsx";
 import AdminSignUp from "./pages/studio/AdminSignUp.tsx";
+import ClaimDetails from "./pages/ClaimDetails";
 
 function Router() {
    const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -88,6 +89,7 @@ function Router() {
       <Route path="/quests/tasks-card" component={QuestEnvironment} />
       <Route path="/analytics" component={Analytics} />
       <Route path="/portal-claims" component={PortalClaims} />
+      <Route path="/portal-claims/:id" component={ClaimDetails} />
       <Route path="/studio" component={NexuraStudio} />
       {/* Profile pages */}
       <Route path="/profile" component={Profile} />
