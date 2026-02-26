@@ -117,10 +117,11 @@ export const getTriple = async (req: GlobalRequest, res: GlobalResponse) => {
                 account_id
               }
             }
-            positions(order_by: [ {
+            positions(order_by: [{
               shares: desc
             }]) {
               shares
+              curve_id
               account {
                 id
                 label
@@ -171,10 +172,11 @@ export const getTriple = async (req: GlobalRequest, res: GlobalResponse) => {
                 account_id
               }
             }
-            positions(order_by: [ {
+            positions(order_by: [{
               shares: desc
             }]) {
               shares
+              curve_id
               account {
                 id
                 label
