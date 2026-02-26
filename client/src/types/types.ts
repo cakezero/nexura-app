@@ -9,26 +9,27 @@ type tripleDetails = {
     url: string,
     safe: true
   },
-  data: string,
-  type: string,
-  value: {
-    person: null,
-    thing: {
-      name: string,
-      image: string,
-      cached_image: {
-        url: string,
-        safe: true
-      },
-      url: string
-    },
-    organization: null,
-    account: null,
-    json_object: {
-      description: string
-    }
-  };
 }
+
+// data: string,
+// type: string,
+// value: {
+//   person: null,
+//   thing: {
+//     name: string,
+//     image: string,
+//     cached_image: {
+//       url: string,
+//       safe: true
+//     },
+//     url: string
+//   },
+//   organization: null,
+//   account: null,
+//   json_object: {
+//     description: string
+//   }
+// };
 
 export type Term = {
   id: Address;
@@ -52,6 +53,15 @@ export type Term = {
     subject: tripleDetails,
     predicate: tripleDetails,
     object: tripleDetails,
+    creator: {
+      id: Address,
+      label: string,
+      image: string,
+      cached_image: {
+        url: string,
+        safe: true
+      }
+    }
   },
   creator: {
     id: Address, // wallet address
@@ -63,3 +73,13 @@ export type Term = {
     }
   };
 }
+
+export type Position = {
+  shares: string;
+  curve_id: number;
+  account: {
+    id: Address;
+    label: string;
+    image: string;
+  }
+};

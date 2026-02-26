@@ -1,8 +1,8 @@
-import { useRoute } from "wouter";
+import { useParams } from "wouter";
 import { useState, useEffect, useRef } from "react"
-// import { claims } from "./testing/claimsData";
-import PositionsTable from "./PositionsTable";
-import { samplePositions } from "./testing/positionData";
+import { Address, formatEther } from "viem";
+import { formatNumber } from "../lib/utils";
+import { toFixed } from "./PortalClaims";
 import {
   AreaChart,
   Area,
@@ -12,6 +12,12 @@ import {
   ResponsiveContainer,
   Line,
 } from "recharts";
+import { apiRequestV2 } from "../lib/queryClient";
+import { useAuth } from "../lib/auth";
+import { useWallet } from "../hooks/use-wallet";
+import { buyShares, sellShares } from "../services/web3";
+import { useToast } from "../hooks/use-toast";
+import { Term, Position } from "../types/types";
 
 function generateChartData(claim: any, growthType: string) {
   // For demo: use fixed pattern similar to your spec
@@ -26,21 +32,35 @@ function generateChartData(claim: any, growthType: string) {
   return dates.map((date, i) => ({ date, value: values[i] }));
 }
 
-export default function ClaimDetails() {
-  const [match, params] = useRoute("/portal-claims/:id");
-  const id = params?.id;
 
+export default function ClaimDetails() {
+  const { id } = useParams();
   const [activeTab, setActiveTab] = useState("support");
   const [isBuy, setIsBuy] = useState(true);
   const [positionType, setPositionType] = useState("support");
   const [growthType, setGrowthType] = useState("linear");
-  const [positionsOption, setPositionsOption] = useState();
+  const [positionsOption, setPositionsOption] = useState("");
   const [loading, setLoading] = useState(false);
-  const [visiblePositions, setVisiblePositions] = useState([]);
+  const [visiblePositions, setVisiblePositions] = useState<Position[]>([]); // this is for all the positions
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const observerRef = useRef(null);
-  const [positions, setPositions] = useState(samplePositions);const ITEMS_PER_PAGE = 10;
+  const [claim, setClaim] = useState<any | null>(null);
+  const [positions, setPositions] = useState([]);
+  const [buying, setBuying] = useState(false);
+  const [selling, setSelling] = useState(false);
+  const [buyAmount, setBuyAmount] = useState("");
+  const [sellAmount, setSellAmount] = useState("");
+  const [term, setTerm] = useState<Term>({});
+  const [counterTerm, setCounterTerm] = useState<Term>({});
+  const [supportCount, setSupportCount] = useState(0);
+  const [opposeCount, setOpposeCount] = useState(0);
+  const [supportPercent, setSupportPercent] = useState(0);
+  const [opposePercent, setOpposePercent] = useState(0);
+  const [totalPostions, setTotalPositions] = useState("0");
+  const [marketCap, setMarketCap] = useState("0");
+
+  const ITEMS_PER_PAGE = 10;
 
 const loadMorePositions = () => {
   if (!hasMore) return;
@@ -48,7 +68,7 @@ const loadMorePositions = () => {
   const start = (page - 1) * ITEMS_PER_PAGE;
   const end = start + ITEMS_PER_PAGE;
 
-  const nextItems = positions.slice(start, end);
+  const nextItems = positions.slice(start, end) as never[];
 
   setVisiblePositions(prev => [...prev, ...nextItems]);
 
@@ -89,26 +109,117 @@ useEffect(() => {
   };
 }, [hasMore, page]);
 
-  const claim = claims.find(c => c.id == id);
+  useEffect(() => {
+    fetchClaim();
+  }, [id]);
+
+  async function fetchClaim() {
+    const fetched = await apiRequestV2("GET", "/api/get-triple?termId=" + id);
+    setClaim(fetched);
+    console.log(fetched)
+
+    setMarketCap(formatNumber(parseFloat(formatEther(BigInt(fetched.total_market_cap)))));
+  
+    const total = parseFloat(formatEther(BigInt(fetched.total_assets)));
+
+    const supportPositions = fetched.term.positions as Position[];
+    const opposePositions = fetched.counter_term.positions as Position[];
+
+    setVisiblePositions([...supportPositions, ...opposePositions]);
+
+    const formattedSupport = formatEther(BigInt(fetched.term.total_assets));
+    const formattedOppose = formatEther(BigInt(fetched.counter_term.total_assets));
+
+    setSupportCount(parseFloat(formattedSupport ?? "0"));
+    setOpposeCount(parseFloat(formattedOppose ?? "0"));
+
+    setTotalPositions(formatNumber(parseInt(fetched.total_position_count)));
+
+    setSupportPercent((supportCount / total) * 100);
+    setOpposePercent((opposeCount / total) * 100);
+
+    setTerm(fetched.term);
+    setCounterTerm(fetched.counter_term);
+  }
+
+  // user postions - add this in the my position tab
+  const getUserPositions = () => {
+    const supportPositionsLinear = term.vaults[0].userPosition ?? [];
+    const supportPositionsExponential = term?.vaults[1].userPosition ?? [];
+
+    const opposePositionsLinear = counterTerm.vaults[0].userPosition ?? [];
+    const opposePositionsExponential = counterTerm?.vaults[1].userPosition ?? [];
+
+    return [...supportPositionsLinear, ...supportPositionsExponential, ...opposePositionsLinear, ...opposePositionsExponential];
+  }
+
+  function getPrice() {
+    let sharePrice = "0";
+
+    const counterSharePrice = (index: number) => {
+      return toFixed(formatEther(BigInt(counterTerm.vaults[index].current_share_price)));
+    }
+
+    const supportSharePrice = (index: number) => {
+      return toFixed(formatEther(BigInt(term.vaults[index].current_share_price)));
+    }
+
+    if (activeTab === "support") {
+      sharePrice = growthType === "linear" ? supportSharePrice(0) : supportSharePrice(1);
+    } else {
+      sharePrice = growthType === "linear" ? counterSharePrice(0) : counterSharePrice(1);
+    }
+
+    return sharePrice;
+  }
+
+  const { user } = useAuth();
+  const { connectWallet } = useWallet();
+  const { toast } = useToast();
+
+  const handleClaimAction = async () => {
+    try {
+      const curveId = growthType === "linear" ? 1n : 2n;
+      
+      if (!buyAmount || !sellAmount) {
+        toast({ title: "Error", description: "select an amount to proceed", variant: "destructive" });
+        return;
+      }
+
+      if (isBuy) {
+        setBuying(true);
+        await buyShares(buyAmount, id as Address, curveId);
+        setSelling(false);
+      } else {
+        setSelling(true);
+        await sellShares(sellAmount, id as Address, curveId);
+        setSelling(false);
+      }
+
+      toast({ title: "Success", description: `Shares ${isBuy ? "bought" : "sold"} successfully!` });
+    } catch (error) {
+      console.error(error);
+      toast({ title: "error", description: `error ${isBuy ? "buying" : "selling"} shares`, variant: "destructive" })
+    }
+  }
+
+  const handleConnectWallet = async () => {
+    await connectWallet();
+  }
+
   if (!claim) return <div className="p-6 text-white">Claim not found</div>;
-
-    const total = claim.support + claim.oppose;
-  const supportPercent = total ? (claim.support / total) * 100 : 0;
-  const opposePercent = total ? (claim.oppose / total) * 100 : 0;
-
 
   return (
     <div className="p-6 text-white space-y-6">
       {/* Top Statement */}
       <div className="flex flex-wrap items-center gap-1">
         <span className="bg-gray-700 px-1 rounded flex items-center gap-1">
-          <img src={claim.icon} alt="Claim Icon" className="w-5 h-5" />
-          {claim.subject}
+          <img src={term.triple.subject.image} alt="Claim Icon" className="w-5 h-5" />
+          {term.triple.subject.label}
         </span>
+        <span>{term.triple.predicate.label}</span>
 
-        <span>{claim.verb}</span>
-
-        <span className="bg-gray-700 px-1 rounded">{claim.object}</span>
+        <span className="bg-gray-700 px-1 rounded">{term.triple.object.label}</span>
       </div>
 
       {/* Support / Oppose Cards */}
@@ -120,10 +231,10 @@ useEffect(() => {
 
     {/* TRUST, intuition icon, support number + user icon */}
     <div className="flex items-center gap-3">
-      <span className="font-semibold text-sm md:text-base">{claim.supportLabel}K TRUST</span> {/* slightly larger */}
+      <span className="font-semibold text-sm md:text-base">{toFixed(formatEther(BigInt(term.total_assets)))} TRUST</span> {/* slightly larger */}
       <img src="/intuition-icon.png" alt="Intuition Icon" className="w-5 h-5" />
       <div className="flex items-center gap-2">
-        <span className="text-blue-400 font-semibold text-base md:text-lg">{claim.support}</span> {/* increased also */}
+        <span className="text-blue-400 font-semibold text-base md:text-lg">{formatNumber(term.positions_aggregate.aggregate.count)}</span> {/* increased also */}
         <img src="/user.png" alt="User Icon" className="w-4 h-4" />
       </div>
     </div>
@@ -136,10 +247,10 @@ useEffect(() => {
 
     {/* TRUST, intuition icon, oppose number + user icon */}
     <div className="flex items-center gap-3">
-      <span className="font-semibold text-sm md:text-base">{claim.opposeLabel}K TRUST</span>
+      <span className="font-semibold text-sm md:text-base">{toFixed(formatEther(BigInt(counterTerm.total_assets)))} TRUST</span>
       <img src="/intuition-icon.png" alt="Intuition Icon" className="w-5 h-5" />
       <div className="flex items-center gap-2">
-        <span className="text-[#F19C03] font-semibold text-base md:text-lg">{claim.oppose}</span>
+        <span className="text-[#F19C03] font-semibold text-base md:text-lg">{formatNumber(counterTerm.positions_aggregate.aggregate.count)}</span>
         <img src="/user-red.png" alt="User Icon" className="w-4 h-4" />
       </div>
     </div>
@@ -172,10 +283,9 @@ useEffect(() => {
       <div className="flex items-center gap-4 mt-4 flex-wrap justify-start">
         {/* Total Market Cap */}
         <div className="flex items-center gap-2">
-          <span>Total Mkt Cap :</span>
           <span className="font-semibold">Total Market Cap</span>
           <span className="font-bold text-xl text-white">
-            {claim.supportLabel + claim.opposeLabel}K TRUST
+            {marketCap} TRUST
           </span>
           <img src="/intuition-icon.png" alt="Intuition Icon" className="w-5 h-5" />
         </div>
@@ -185,8 +295,8 @@ useEffect(() => {
 
         {/* Total Position */}
         <div className="flex items-center gap-2">
-          <span>Total Position :</span>
-          <span className="font-semibold">1.48K</span>
+          <span>Total Position:</span>
+          <span className="font-semibold">{totalPostions}</span>
         </div>
 
         {/* Divider */}
@@ -194,14 +304,14 @@ useEffect(() => {
 
         {/* Creator */}
         <div className="flex items-center gap-2">
-          <span>Creator :</span>
-          <span className="font-semibold">emmygesaga.eth</span>
+          <span>Creator:</span>
+          <span className="font-semibold">{term.triple.creator.label}</span>
         </div>
 
         {/* Share Button */}
         <button
           onClick={() => {
-            const textToShare = `${claim.supportLabel + claim.opposeLabel}K TRUST | Total Position: 1.48K`;
+            const textToShare = `${marketCap} TRUST | Total Position: ${totalPostions}`;
             navigator.clipboard.writeText(textToShare)
               .then(() => alert("Copied to clipboard!"))
               .catch(() => alert("Failed to copy."));
@@ -221,7 +331,7 @@ useEffect(() => {
     <div>
       <span className="text-sm text-gray-400">Share Price</span>
       <div className="text-3xl font-bold text-white">
-        {claim.supportLabel + claim.opposeLabel} TRUST
+        {getPrice()} TRUST
       </div>
     </div>
 
@@ -371,7 +481,9 @@ useEffect(() => {
 <div className="w-full bg-gray-800 rounded-md border border-[#833AFD] flex items-center px-2">
   <input
     type="text"
-    placeholder="0.1"
+              placeholder="0.1"
+              onChange={(e) => isBuy ? setBuyAmount(e.target.value) : setSellAmount(e.target.value)}
+
     className="flex-1 bg-gray-800 text-white p-2 outline-none"
   />
   <span className="text-gray-400 ml-2">min</span>
@@ -382,8 +494,19 @@ useEffect(() => {
   className="w-full bg-gray-800 text-white p-2 rounded-md outline-none border border-[#833AFD]"
 />
 
-    {/* Connect Wallet Button */}
-    <button className="flex items-center justify-center gap-2 bg-white text-black font-semibold py-2 rounded-3xl">
+          {/* Connect Wallet Button */}
+          {user ? (
+            <button onClick={handleClaimAction}className="flex items-center justify-center gap-2 bg-white text-black font-semibold py-2 rounded-3xl">
+              <img src="/key.png" alt="Key Icon" className="w-5 h-5" />
+              {isBuy ? buying ? "Buying" : "Buy" : selling ? "Selling" : "Sell"}
+            </button>
+          ) : (
+            <button className="flex items-center justify-center gap-2 bg-white text-black font-semibold py-2 rounded-3xl">
+              <img src="/key.png" alt="Key Icon" className="w-5 h-5" />
+              Connect Wallet
+            </button>
+          ) }
+    <button onClick={handleConnectWallet} className="flex items-center justify-center gap-2 bg-white text-black font-semibold py-2 rounded-3xl">
       <img src="/key.png" alt="Key Icon" className="w-5 h-5" />
       Connect Wallet
     </button>
@@ -615,7 +738,7 @@ useEffect(() => {
 {/* Positions / Sort Dropdown */}
 <div className="flex items-center gap-2">
   <span className="text-white font-semibold">Positions:</span>
-  
+
   <div className="relative w-48">
     <select
       value={positionsOption}
@@ -651,7 +774,7 @@ useEffect(() => {
 
   {/* Table */}
 <div className="mt-4">
-  <PositionsTable positions={visiblePositions} />
+  {/*<PositionsTable positions={visiblePositions} />*/}
   <div ref={observerRef} className="h-10"></div>
 {/* Spinner */}
         {loading && (

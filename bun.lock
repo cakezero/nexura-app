@@ -4,6 +4,7 @@
   "workspaces": {
     "": {
       "dependencies": {
+        "@0xintuition/sdk": "^2.0.2",
         "@nivo/core": "^0.99.0",
         "@nivo/line": "^0.99.0",
         "@nivo/pie": "^0.99.0",

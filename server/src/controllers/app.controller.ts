@@ -8,10 +8,10 @@ import { user } from "@/models/user.model";
 import { performIntuitionOnchainAction } from "@/utils/account";
 import { BOT_TOKEN, THIRD_PARTY_API_KEY } from "@/utils/env.utils";
 import {
-  INTERNAL_SERVER_ERROR, 
+  INTERNAL_SERVER_ERROR,
   OK,
   BAD_REQUEST,
-  FORBIDDEN, 
+  FORBIDDEN,
   NOT_FOUND,
   UNAUTHORIZED
 } from "@/utils/status.utils";
@@ -33,6 +33,8 @@ import { campaign, campaignCompleted } from "@/models/campaign.model";
 import { dailySignIn } from "@/models/dailySignIn.model";
 import { startOfDayUTC, updateLevel } from "@/utils/utils";
 
+const client = new GraphQLClient(GRAPHQL_API_URL);
+
 export const home = async (req: GlobalRequest, res: GlobalResponse) => {
 	res.send("hi!");
 };
@@ -51,7 +53,7 @@ export const updateUser = async (req: GlobalRequest, res: GlobalResponse) => {
 
     if (profilePicBuffer) {
       const profilePic = await uploadImg({ filename: req.file?.originalname, file: profilePicBuffer, folder: "profile-pictures" });
-  
+
       userToUpdate.profilePic = profilePic;
     }
 
@@ -77,6 +79,139 @@ export const updateUser = async (req: GlobalRequest, res: GlobalResponse) => {
   } catch (error) {
     logger.error(error);
     res.status(INTERNAL_SERVER_ERROR).json({ error: "error updating user" });
+  }
+}
+
+export const getTriple = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const { termId } = req.query as { termId: string };
+    const appUser = await user.findOne({ _id: req.id });
+
+    const query = `
+      query GetTripleTerm($termId: String!, $userPositionAddress: String!) {
+        triple_term(term_id: $termId) {
+          term_id
+          counter_term_id
+          total_assets
+          total_market_cap
+          total_position_count
+          term {
+            total_assets
+            positions_aggregate {
+              aggregate {
+                count
+              }
+            }
+            vaults(order_by: {curve_id: asc}) {
+              curve_id
+              current_share_price
+              total_shares
+              total_assets
+              position_count
+              market_cap
+              userPosition: positions(
+              limit: 1
+              where: { account_id: { _eq: $userPositionAddress }}
+              ) {
+                shares
+                account_id
+              }
+            }
+            positions(order_by: [ {
+              shares: desc
+            }]) {
+              shares
+              account {
+                id
+                label
+                image
+              }
+            }
+            total_assets
+            triple {
+              subject {
+                label
+                image
+              }
+              predicate {
+                label
+                image
+              }
+              object {
+                label
+                image
+              }
+              creator {
+                id
+                image
+                label
+              }
+            }
+            total_market_cap
+          }
+          counter_term {
+            total_assets
+            positions_aggregate {
+              aggregate {
+                count
+              }
+            }
+            vaults(order_by: {curve_id: asc}) {
+              curve_id
+              current_share_price
+              total_shares
+              total_assets
+              position_count
+              market_cap
+              userPosition: positions(
+              limit: 1
+              where: { account_id: { _eq: $userPositionAddress }}
+              ) {
+                shares
+                account_id
+              }
+            }
+            positions(order_by: [ {
+              shares: desc
+            }]) {
+              shares
+              account {
+                id
+                label
+                image
+              }
+            }
+            total_assets
+            triple {
+              subject {
+                label
+                image
+              }
+              predicate {
+                label
+                image
+              }
+              object {
+                label
+                image
+              }
+              creator {
+                id
+                image
+                label
+              }
+            }
+            total_market_cap
+          }
+        }
+      }
+    `;
+
+    const response = await client.request(query, { termId, userPositionAddress: appUser?.address ?? "..." });
+    res.status(OK).json(response.triple_term);
+  } catch (error) {
+    logger.error(error);
+    res.send("failed")
   }
 }
 
@@ -208,12 +343,12 @@ export const getClaims = async (req: GlobalRequest, res: GlobalResponse) => {
           }
         }
       }
-  
+
       fragment CachedImageFields on cached_images_cached_image {
         url
         safe
       }
-  
+
       fragment AtomValueLight on atom_values {
         person {
           name
@@ -245,8 +380,8 @@ export const getClaims = async (req: GlobalRequest, res: GlobalResponse) => {
           }
         }
       }
-      
-      
+
+
       fragment AtomValue on atom_values {
         ...AtomValueLight
         json_object {
@@ -254,8 +389,6 @@ export const getClaims = async (req: GlobalRequest, res: GlobalResponse) => {
         }
       }
     `;
-
-    const client = new GraphQLClient(GRAPHQL_API_URL);
 
     const { triple_terms: claims } = await client.request(vaultQuery, { where: {}, orderBy: [filter], limit: 50, offset, userPositionAddress: appUser?.address ?? "..." });
 
@@ -285,7 +418,7 @@ export const updateSubmission = async (req: GlobalRequest, res: GlobalResponse) 
     if (task.status === "pending") {
       res.status(FORBIDDEN).json({ error: "submission is still pending review" });
       return;
-    } else if (task.status === "done") { 
+    } else if (task.status === "done") {
       res.status(FORBIDDEN).json({ error: "quest has been marked as done" });
       return;
     }
@@ -464,7 +597,7 @@ export const validatePortalTask =  async (req: GlobalRequest, res: GlobalRespons
           }) {
             account_id
           }
-      
+
           counter_positions (where:  {
             account_id:  {
               _eq: $address
@@ -478,8 +611,6 @@ export const validatePortalTask =  async (req: GlobalRequest, res: GlobalRespons
         }
       }
     `; // user needs to atleast support or oppose with 0.5 - 1 trust;
-
-    const client = new GraphQLClient(GRAPHQL_API_URL);
 
     const formattedAddress = checksumAddress(userToCheck.address as `0x${string}`);
 
@@ -751,7 +882,7 @@ export const performDailySignIn = async (req: GlobalRequest, res: GlobalResponse
       userExists.lastSignInDate = onlyDate;
       userExists.xp += 20;
       userExists.streak += 1;
-      
+
       // Update longest streak if current streak is higher
       if (userExists.streak > (userExists.longestStreak || 0)) {
         userExists.longestStreak = userExists.streak;
@@ -772,7 +903,7 @@ export const performDailySignIn = async (req: GlobalRequest, res: GlobalResponse
     if (dailySignInExists.date === yesterdayDate) {
       userExists.xp += 20;
       userExists.streak += 1;
-      
+
       // Update longest streak if current streak is higher
       if (userExists.streak > (userExists.longestStreak || 0)) {
         userExists.longestStreak = userExists.streak;
@@ -934,8 +1065,8 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
             }
           }
 
-          if (!timeToWait) { 
-            await timer.create({ time: new Date(now.getTime() + 1 * 60 * 60 * 1000) }); 
+          if (!timeToWait) {
+            await timer.create({ time: new Date(now.getTime() + 1 * 60 * 60 * 1000) });
           } else {
             timeToWait.time = new Date(now.getTime() + 1 * 60 * 60 * 1000);
             await timeToWait.save();
@@ -1037,8 +1168,8 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
             }
           }
 
-          if (!timeToWait) { 
-            await timer.create({ time: "" }); 
+          if (!timeToWait) {
+            await timer.create({ time: "" });
           } else {
             timeToWait.time = new Date(now.getTime() + 1 * 60 * 60 * 1000);
             await timeToWait.save();
@@ -1101,8 +1232,8 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
             }
           }
 
-          if (!timeToWait) { 
-            await timer.create({ time: "" }); 
+          if (!timeToWait) {
+            await timer.create({ time: "" });
           } else {
             timeToWait.time = new Date(now.getTime() + 1 * 60 * 60 * 1000);
             await timeToWait.save();
@@ -1306,7 +1437,7 @@ export const checkDiscordTask = async (req: GlobalRequest, res: GlobalResponse) 
     switch (tag) {
       case "join":
         const {
-          status, 
+          status,
           data: { roles }
           // remove hardcoded guild id
         } = await axios.get(`https://discord.com/api/guilds/1419336727302111367/members/${discordId}`,

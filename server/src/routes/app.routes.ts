@@ -9,7 +9,8 @@ import {
 	saveCv,
 	updateX,
   updateDiscord,
-	getClaims
+	getClaims,
+  getTriple
 } from "@/controllers/app.controller";
 import {
   discordCallback,
@@ -23,6 +24,7 @@ const router = Router();
 router
   .get("/", home)
   .get("/get-claims", rateLimiter, authenticateUser2, getClaims)
+  .get("/get-triple", rateLimiter, authenticateUser2, getTriple)
   .get("/get-analytics", getAnalytics)
   .post("/check-x", authenticateUser, checkXTask)
   .post("/check-discord", authenticateUser, checkDiscordTask)
