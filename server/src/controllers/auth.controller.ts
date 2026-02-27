@@ -1,4 +1,3 @@
-import bcrypt from "bcrypt";
 import cryptoRandomString from "crypto-random-string";
 import logger from "@/config/logger";
 import {
@@ -7,26 +6,21 @@ import {
 	INTERNAL_SERVER_ERROR,
 	NOT_FOUND,
 	OK,
-	UNAUTHORIZED,
 } from "@/utils/status.utils";
 import {
 	DISCORD_CLIENT_ID,
 	DISCORD_REDIRECT_URI,
 	DISCORD_CLIENT_SECRET, 
-	X_API_BEARER_TOKEN,
 	X_CLIENT_REDIRECT_URI,
 	DISCORD_CLIENT_REDIRECT_URI,
 	X_REDIRECT_URI, 
 	X_API_CLIENT_ID,
-	X_API_CLIENT_SECRET,
 	X_API_KEY,
 	X_API_KEY_SECRET
 } from "@/utils/env.utils";
 import { formatDate } from "date-fns";
 import { user } from "@/models/user.model";
-import { getRefreshToken, JWT, validateProjectData } from "@/utils/utils";
-import { project } from "@/models/project.model";
-import { uploadImg } from "@/utils/img.utils";
+import { getRefreshToken, JWT } from "@/utils/utils";
 import { referredUsers } from "@/models/referrer.model";
 import axios from "axios";
 import { cvModel } from "@/models/cv.models";

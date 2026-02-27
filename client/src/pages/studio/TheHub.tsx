@@ -13,88 +13,88 @@ import { useToast } from "../../hooks/use-toast";
 export default function TheHub() {
   const [hubName, setHubName] = useState("");
   const [description, setDescription] = useState("");
-  const [imageFile, setImageFile] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState("");
   const [loading, setLoading] = useState(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
-const handleImageChange = async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target?.files[0];
+    if (!file) return;
 
-  const reader = new FileReader();
-  reader.onload = () => {
-    setImageFile(file);
-    setImagePreview(reader.result); // Base64 string
+    const reader = new FileReader();
+    reader.onload = () => {
+      setImageFile(file);
+      setImagePreview(reader.result as string); // Base64 string
+    };
+    reader.readAsDataURL(file);
   };
-  reader.readAsDataURL(file);
-};
 
 
-const handleSubmit = async () => {
-  if (!hubName.trim()) {
-    toast({ title: "Missing Project Name", description: "Please enter a project name.", variant: "destructive" });
-    return;
-  }
-
-  if (!imageFile) {
-    toast({ title: "Missing Logo", description: "Please upload a project logo.", variant: "destructive" });
-    return;
-  }
-
-  const credsRaw = localStorage.getItem("nexura:hub-credentials");
-  if (!credsRaw) {
-    toast({ title: "Missing credentials", description: "Please complete the credentials step first.", variant: "destructive" });
-    setLocation("/projects/create/create-hub");
-    return;
-  }
-
-  const { email, address, password } = JSON.parse(credsRaw);
-
-  setLoading(true);
-  try {
-    const fd = new FormData();
-    fd.append("name", hubName.trim());
-    fd.append("email", email);
-    fd.append("description", description ?? "");
-    fd.append("address", address);
-    fd.append("password", password);
-
-    if (imagePreview) {
-      const blob = base64ToBlob(imagePreview);
-      fd.append("logo", blob, "logo.png");
+  const handleSubmit = async () => {
+    if (!hubName.trim()) {
+      toast({ title: "Missing Project Name", description: "Please enter a project name.", variant: "destructive" });
+      return;
     }
 
-    const res = await projectApiRequest<{ message?: string; accessToken?: string; token?: string; project?: Record<string, unknown> }>({
-      method: "POST",
-      endpoint: "/hub/sign-up",
-      formData: fd,
-    });
+    if (!imageFile) {
+      toast({ title: "Missing Logo", description: "Please upload a project logo.", variant: "destructive" });
+      return;
+    }
 
-    const token = (res.token ?? res.accessToken) as string | undefined;
-    if (!token) throw new Error("No access token received");
+    const credsRaw = localStorage.getItem("nexura:hub-credentials");
+    if (!credsRaw) {
+      toast({ title: "Missing credentials", description: "Please complete the credentials step first.", variant: "destructive" });
+      setLocation("/projects/create/create-hub");
+      return;
+    }
 
-    const serverProject = res.project as { name?: string; logo?: string } | undefined;
-    storeProjectSession(token, {
-      name: serverProject?.name ?? hubName.trim(),
-      logo: serverProject?.logo ?? "",
-      email,
-      address,
-    });
+    const { email, address, password } = JSON.parse(credsRaw);
 
-    localStorage.removeItem("nexura:hub-credentials");
-    localStorage.removeItem("nexura:studio-step");
+    setLoading(true);
+    try {
+      const fd = new FormData();
+      fd.append("name", hubName.trim());
+      fd.append("email", email);
+      fd.append("description", description ?? "");
+      fd.append("address", address);
+      fd.append("password", password);
 
-    toast({ title: "Hub created!", description: "Your project hub is live on Nexura Studio." });
-    setLocation("/connect-discord");
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "Sign-up failed. Please try again.";
-    toast({ title: "Sign up failed", description: msg, variant: "destructive" });
-  } finally {
-    setLoading(false);
-  }
-};
+      if (imagePreview) {
+        const blob = base64ToBlob(imagePreview);
+        fd.append("logo", blob, "logo.png");
+      }
+
+      const res = await projectApiRequest<{ message?: string; accessToken?: string; token?: string; project?: Record<string, unknown> }>({
+        method: "POST",
+        endpoint: "/hub/sign-up",
+        formData: fd,
+      });
+
+      const token = (res.token ?? res.accessToken) as string | undefined;
+      if (!token) throw new Error("No access token received");
+
+      const serverProject = res.project as { name?: string; logo?: string } | undefined;
+      storeProjectSession(token, {
+        name: serverProject?.name ?? hubName.trim(),
+        logo: serverProject?.logo ?? "",
+        email,
+        address,
+      });
+
+      localStorage.removeItem("nexura:hub-credentials");
+      localStorage.removeItem("nexura:studio-step");
+
+      toast({ title: "Hub created!", description: "Your project hub is live on Nexura Studio." });
+      setLocation("/connect-discord");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Sign-up failed. Please try again.";
+      toast({ title: "Sign up failed", description: msg, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
 
 
   return (
@@ -126,125 +126,125 @@ const handleSubmit = async () => {
           {/* Horizontal Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <Card className="bg-gray-800 border border-purple-500 rounded-2xl p-6 flex flex-col items-center justify-center text-center gap-3">
-  <img
-    src="/project-icon.png"
-    alt="Project icon"
-    className="w-10 h-10"
-  />
+              <img
+                src="/project-icon.png"
+                alt="Project icon"
+                className="w-10 h-10"
+              />
 
-  <CardTitle className="text-lg">
-    a project or builder
-  </CardTitle>
+              <CardTitle className="text-lg">
+                a project or builder
+              </CardTitle>
 
-  <CardDescription className="text-white/60 max-w-xs">
-    Perfect for building a centralized community hub for your dApp or protocol
-  </CardDescription>
-</Card>
+              <CardDescription className="text-white/60 max-w-xs">
+                Perfect for building a centralized community hub for your dApp or protocol
+              </CardDescription>
+            </Card>
 
 
             <Card className="relative bg-gray-800 border border-purple-500 rounded-2xl p-6 overflow-hidden">
 
-  {/* Blurred content */}
-  <div className="flex flex-col items-center justify-center text-center gap-3 blur-sm select-none">
-    <img
-      src="/members.png"
-      alt="Engagement icon"
-      className="w-10 h-10"
-    />
+              {/* Blurred content */}
+              <div className="flex flex-col items-center justify-center text-center gap-3 blur-sm select-none">
+                <img
+                  src="/members.png"
+                  alt="Engagement icon"
+                  className="w-10 h-10"
+                />
 
-    <CardTitle className="text-lg">
-      Community Access
-    </CardTitle>
+                <CardTitle className="text-lg">
+                  Community Access
+                </CardTitle>
 
-    <CardDescription className="text-white/60 max-w-xs">
-      Allow your team and community to collaborate securely.
-    </CardDescription>
-  </div>
+                <CardDescription className="text-white/60 max-w-xs">
+                  Allow your team and community to collaborate securely.
+                </CardDescription>
+              </div>
 
-  {/* Overlay */}
-  <div className="absolute inset-0 flex items-center justify-center">
-    <span className="text-white font-semibold text-lg tracking-wide">
-      Coming Soon
-    </span>
-  </div>
-</Card>
+              {/* Overlay */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-white font-semibold text-lg tracking-wide">
+                  Coming Soon
+                </span>
+              </div>
+            </Card>
           </div>
 
           {/* Name */}
           <div className="space-y-2">
             <CardTitle className="text-lg">Project Name</CardTitle>
             <Input
-  value={hubName}
-  onChange={(e) => setHubName(e.target.value)}
-  placeholder="Enter your Project Name..."
-  className="bg-gray-800 border-purple-500 text-white"
-/>
+              value={hubName}
+              onChange={(e) => setHubName(e.target.value)}
+              placeholder="Enter your Project Name..."
+              className="bg-gray-800 border-purple-500 text-white"
+            />
           </div>
 
           {/* Description */}
           <div className="space-y-2 relative">
             <CardTitle className="text-lg">Description</CardTitle>
             <Textarea
-  value={description}
-  onChange={(e) => setDescription(e.target.value)}
-  placeholder="Describe your project or community"
-  maxLength={200}
-  className="bg-gray-800 border-purple-500 text-white resize-none h-32"
-/>
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Describe your project or community"
+              maxLength={200}
+              className="bg-gray-800 border-purple-500 text-white resize-none h-32"
+            />
             <span className="absolute bottom-2 right-3 text-xs text-white/40">
               200
             </span>
           </div>
 
           {/* Logo Upload */}
-<div className="space-y-3 w-full">
-  <CardTitle className="text-lg text-center">Project Logo</CardTitle>
+          <div className="space-y-3 w-full">
+            <CardTitle className="text-lg text-center">Project Logo</CardTitle>
 
-  <label className="w-full border-2 border-dashed border-purple-500 rounded-2xl p-8 bg-gray-800 hover:border-purple-400 transition cursor-pointer block">
-    <input
-      type="file"
-      accept="image/*"
-      onChange={handleImageChange}
-      className="hidden"
-    />
+            <label className="w-full border-2 border-dashed border-purple-500 rounded-2xl p-8 bg-gray-800 hover:border-purple-400 transition cursor-pointer block">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                className="hidden"
+              />
 
-    {imagePreview ? (
-      <div className="flex flex-col items-center gap-3">
-        <img
-          src={imagePreview}
-          alt="Preview"
-          className="w-32 h-32 object-cover rounded-xl"
-        />
-        <p className="text-sm text-white/60">Click to change image</p>
-      </div>
-    ) : (
-      <div className="flex flex-col items-center justify-center text-center gap-2 text-white/60">
-        <img
-          src="/upload-icon.png"
-          alt="Upload icon"
-          className="w-16 h-16"
-        />
-        <p className="font-medium text-white">
-          Click to upload or drag and drop
-        </p>
-        <p className="text-sm text-white/50">
-          SVG, PNG, JPG or GIF (max. 10MB)
-        </p>
-      </div>
-    )}
-  </label>
-</div>
+              {imagePreview ? (
+                <div className="flex flex-col items-center gap-3">
+                  <img
+                    src={imagePreview}
+                    alt="Preview"
+                    className="w-32 h-32 object-cover rounded-xl"
+                  />
+                  <p className="text-sm text-white/60">Click to change image</p>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center text-center gap-2 text-white/60">
+                  <img
+                    src="/upload-icon.png"
+                    alt="Upload icon"
+                    className="w-16 h-16"
+                  />
+                  <p className="font-medium text-white">
+                    Click to upload or drag and drop
+                  </p>
+                  <p className="text-sm text-white/50">
+                    SVG, PNG, JPG or GIF (max. 10MB)
+                  </p>
+                </div>
+              )}
+            </label>
+          </div>
 
           {/* Action */}
-<div className="pt-4">
-<Button
-  className="w-full bg-purple-400 border-0 text-white hover:bg-purple-600 hover:shadow-[0_0_28px_rgba(131,58,253,0.7)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
-  onClick={handleSubmit}
-  disabled={loading}
->
-  {loading ? "Creating hub..." : "Save & Continue"}
-</Button>
-</div>
+          <div className="pt-4">
+            <Button
+              className="w-full bg-purple-400 border-0 text-white hover:bg-purple-600 hover:shadow-[0_0_28px_rgba(131,58,253,0.7)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
+              onClick={handleSubmit}
+              disabled={loading}
+            >
+              {loading ? "Creating hub..." : "Save & Continue"}
+            </Button>
+          </div>
         </Card>
       </div>
     </div>

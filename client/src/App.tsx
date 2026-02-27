@@ -41,9 +41,7 @@ import NexuraStudio from "./pages/NexuraStudio.tsx"
 import CreateHub from "./pages/studio/CreateHub.tsx"
 import SignInToHub from "./pages/studio/SignInToHub.tsx"
 import TheHub from "./pages/studio/TheHub.tsx";
-import ConnectTwitter from "./pages/studio/ConnectTwitter.tsx";
-import ConnectedTwitter from "./pages/studio/ConnectedTwitter.tsx"
-import DiscordChannels from "./pages/studio/DiscordChannels.tsx";
+import ConnectedDiscord from "./pages/studio/ConnectedDiscord.tsx";
 import StudioDashboard from "./pages/studio/StudioDashboard.tsx"
 import CampaignsTab from "./components/admin/CampaignsTab.tsx";
 import { getStoredAccessToken, apiRequest } from './lib/config'
@@ -52,6 +50,8 @@ import CreateNewCampaigns from "./components/admin/CreateNewCampaign.tsx";
 import MyCampaign from "./components/admin/MyCampaign.tsx"
 import AdminManagement from "./components/admin/AdminManagement.tsx";
 import AdminSignUp from "./pages/studio/AdminSignUp.tsx";
+import ClaimDetails from "./pages/ClaimDetails";
+import ConnectDiscord from "./pages/studio/ConnectDiscord.tsx";
 
 function Router() {
    const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -89,6 +89,7 @@ function Router() {
       <Route path="/quests/tasks-card" component={QuestEnvironment} />
       <Route path="/analytics" component={Analytics} />
       <Route path="/portal-claims" component={PortalClaims} />
+      <Route path="/portal-claims/:id" component={ClaimDetails} />
       <Route path="/studio" component={NexuraStudio} />
       {/* Profile pages */}
       <Route path="/profile" component={Profile} />
@@ -101,9 +102,8 @@ function Router() {
       <Route path="/projects/create/create-hub" component={CreateHub} />
       <Route path="/projects/create/signin-to-hub" component={SignInToHub} />
       <Route path="/projects/create/the-hub" component={TheHub} />
-      <Route path="/connect-discord" component={ConnectTwitter} />
-      <Route path="/connected-discord" component={ConnectedTwitter} />
-      <Route path="/discord-channels" component={DiscordChannels} />
+      <Route path="/connect-discord" component={ConnectDiscord} />
+      <Route path="/connected-discord" component={ConnectedDiscord} />
       <Route path="/studio-dashboard">
   <StudioDashboard onLogout={handleLogout} />
 </Route>

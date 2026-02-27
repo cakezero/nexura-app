@@ -27,7 +27,7 @@ import {
 	updateLevel
 } from "@/utils/utils";
 import mongoose from "mongoose";
-import { bannedUser } from "@/models/bannedUser.model";
+import { hub } from "@/models/hub.model";
 
 // todo: add ecosystem completed to eco quests
 export const fetchEcosystemDapps = async (
@@ -117,7 +117,7 @@ export const fetchQuests = async (req: GlobalRequest, res: GlobalResponse) => {
 export const fetchMiniQuests = async (req: GlobalRequest, res: GlobalResponse) => {
 	try {
 		const id = req.query.id as string;
-		
+
 		const mainQuest = await quest.findById(id).lean();
 		if (!mainQuest) {
 			res.status(BAD_REQUEST).json({ error: "quest doesn't exist or in invalid" });
@@ -197,7 +197,7 @@ export const fetchCampaignQuests = async (
 
 			mergedCampaignQuest.done = campaign_questCompleted ? campaign_questCompleted.done : false;
 			mergedCampaignQuest.status = campaign_questCompleted ? campaign_questCompleted.status : "";
-			
+
 			campaignQuests.push(mergedCampaignQuest);
 		}
 
@@ -223,8 +223,8 @@ export const fetchCampaignQuests = async (
 		res.status(OK).json({
 			message: "quests fetched!",
 			campaignQuests,
-      campaignCompleted: completedCampaign,
-			project: currentCampaign.creator,
+			campaignCompleted: completedCampaign,
+			hub: currentCampaign.hub,
 			description: currentCampaign.description,
 			address: currentCampaign?.contractAddress,
 			title: currentCampaign.title,
@@ -295,7 +295,7 @@ export const createMiniQuest = async (req: GlobalRequest, res: GlobalResponse) =
 	}
 };
 
-// todo: link ecosystem quest to project
+// todo: link ecosystem quest to hub
 export const createEcosystemQuests = async (
 	req: GlobalRequest,
 	res: GlobalResponse
@@ -474,7 +474,7 @@ export const claimQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 		questUser.xp += questFound.reward;
 
 		const category = questFound.category;
-		if (category === "one-time") { 
+		if (category === "one-time") {
 			await questCompleted.create({
 				done: true,
 				quest: id,
@@ -503,7 +503,7 @@ export const claimQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 			const userReferred = await referredUsers.findOne({ newUser: questUser._id });
 			if (userReferred && userReferred.status !== "Active") {
 				userReferred.status = "Active";
-	
+
 				await userReferred.save();
 			}
 		}
@@ -562,7 +562,7 @@ export const claimEcosystemQuest = async (
 				.status(FORBIDDEN)
 				.json({ error: "ecosystem quest has been completed" });
 			return;
-		} 
+		}
 
 		const now = new Date();
 
@@ -639,9 +639,9 @@ export const submitQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 	try {
 		const userId = req.id;
 
-		// Destructure as projectId to avoid collision with the "project" model import
-		const { submissionLink, questId, page, id, tag, project: projectId } = req.body;
-		if (!submissionLink || !projectId || !questId || !page || !id || !tag) {
+		// Destructure as hubId to avoid collision with the "hub" model import
+		const { submissionLink, questId, page, id, tag, hub: hubId } = req.body;
+		if (!submissionLink || !hubId || !questId || !page || !id || !tag) {
 			res.status(BAD_REQUEST).json({ error: "send required details" });
 			return;
 		}
@@ -655,17 +655,17 @@ export const submitQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 		if (!userExists.socialProfiles?.x) {
 			res.status(BAD_REQUEST).json({ error: "user x profile not linked" });
 			return;
-    }
+		}
 
-    const projectExists = await project.findById(projectId);
-    if (!projectExists) {
-      res.status(BAD_REQUEST).json({ error: "project does not exist" });
-      return;
-    }
+		const hubExists = await hub.findById(hubId);
+		if (!hubExists) {
+			res.status(BAD_REQUEST).json({ error: "hub does not exist" });
+			return;
+		}
 
 		let notComplete;
 
-		const submissionExists = await submission.findOne({ miniQuestId: id, user: userId, page, project: projectId }).lean();
+		const submissionExists = await submission.findOne({ miniQuestId: id, user: userId, page, hub: hubId }).lean();
 		if (submissionExists) {
 			res.status(BAD_REQUEST).json({ error: "quest already submitted" });
 			return;
@@ -678,7 +678,7 @@ export const submitQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 			if (!questExists) {
 				res.status(BAD_REQUEST).json({ error: "mini quest id is invalid" });
 				return;
-      }
+			}
 
 			notComplete = await miniQuestCompleted.create({ miniQuest: id, quest: questId, user: userId });
 		} else {
@@ -690,7 +690,7 @@ export const submitQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 			notComplete = await campaignQuestCompleted.create({ campaign: questId, campaignQuest: id, user: userId });
 		}
 
-		await submission.create({ submissionLink, project: projectId, taskType: tag, address: userExists.address, username: userExists.socialProfiles?.x?.username, miniQuestId: id, user: userId, page, questCompleted: notComplete._id });
+		await submission.create({ submissionLink, hub: hubId, taskType: tag, address: userExists.address, username: userExists.socialProfiles?.x?.username, miniQuestId: id, user: userId, page, questCompleted: notComplete._id });
 
 		res.status(OK).json({ message: "quest submitted" });
 	} catch (error) {

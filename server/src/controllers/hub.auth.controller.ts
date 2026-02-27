@@ -1,20 +1,34 @@
 import { BAD_REQUEST, OK, INTERNAL_SERVER_ERROR, CREATED, NOT_FOUND } from "@/utils/status.utils";
 import {
-  validateHubAdminData,
-  getMissingFields,
-  validateSuperAdminData,
-  JWT,
-  getRefreshToken,
-  hashPassword
+	validateHubAdminData,
+	getMissingFields,
+	validateSuperAdminData,
+	JWT,
+	getRefreshToken,
+	hashPassword
 } from "@/utils/utils";
 import logger from "@/config/logger";
+import { server } from "@/models/server.model";
 import { uploadImg } from "@/utils/img.utils";
-import { CLIENT_URL } from "@/utils/env.utils";
+import {
+	CLIENT_URL,
+	DISCORD_HUB_CLIENT_REDIRECT_URI,
+	DISCORD_HUB_REDIRECT_URI,
+	DISCORD_CLIENT_ID,
+	DISCORD_CLIENT_SECRET,
+	BOT_TOKEN,
+} from "@/utils/env.utils";
 import { hubAdmin, hub } from "@/models/hub.model";
 import bcrypt from "bcrypt";
+import axios from "axios";
 import { resetEmail } from "@/utils/sendMail";
 import { OTP } from "@/models/otp.model";
 import { REDIS } from "@/utils/redis.utils";
+
+const headers = {
+	"Content-Type": "application/x-www-form-urlencoded",
+	"Accept-encoding": "application/x-www-form-urlencoded",
+};
 
 export const signIn = async (req: GlobalRequest, res: GlobalResponse) => {
 	try {
@@ -23,49 +37,21 @@ export const signIn = async (req: GlobalRequest, res: GlobalResponse) => {
 		if (!email || !password) {
 			res.status(BAD_REQUEST).json({ error: "send the required data: email and password" });
 			return;
-    }
+		}
 
-    const normalizedEmail = email.toLowerCase().trim();
-    const adminExists = await hubAdmin.findOne({ email: normalizedEmail }).lean();
-    if (!adminExists) {
-      res.status(BAD_REQUEST).json({ error: "invalid signin credentials" });
-      return;
-    }
+		const adminExists = await hubAdmin.findOne({ email }).lean();
+		if (!adminExists) {
+			res.status(BAD_REQUEST).json({ error: "invalid signin credentials" });
+			return;
+		}
 
-    const comparePassword = await bcrypt.compare(password, adminExists.password);
-    if (!comparePassword) {
-      // Migration fallback: accounts created while password hashing was broken
-      // stored passwords as plain text — migrate them on successful plain-text match
-      if (password === adminExists.password) {
-        // Rehash and persist the corrected password
-        const hashedPassword = await hashPassword(password);
-        await hubAdmin.findByIdAndUpdate(adminExists._id, { password: hashedPassword });
-      } else {
-        res.status(BAD_REQUEST).json({ error: "invalid signin credentials" });
-        return;
-      }
-    }
+		const comparePassword = await bcrypt.compare(password, adminExists.password);
+		if (!comparePassword) {
+			res.status(BAD_REQUEST).json({ error: "invalid signin credentials" });
+			return;
+		}
 
-    const id = adminExists._id.toString();
-
-    // Auto-create a hub for accounts that were created before the hub-creation fix
-    if (!adminExists.hub) {
-      const existingHub = await hub.findOne({ superAdmin: adminExists._id }).lean();
-      if (existingHub) {
-        await hubAdmin.findByIdAndUpdate(adminExists._id, { hub: existingHub._id });
-      } else {
-        const newHub = await hub.create({
-          name: adminExists.name,
-          address: (adminExists as any).address || `0x${id}`,
-          logo: (adminExists as any).logo || "",
-          description: (adminExists as any).description || "",
-          superAdmin: adminExists._id,
-          xpAllocated: 0,
-          campaignsCreated: 0,
-        });
-        await hubAdmin.findByIdAndUpdate(adminExists._id, { hub: newHub._id });
-      }
-    }
+		const id = adminExists._id.toString();
 
 		const accessToken = JWT.sign(id);
 		const refreshToken = getRefreshToken(id);
@@ -86,124 +72,147 @@ export const signIn = async (req: GlobalRequest, res: GlobalResponse) => {
 };
 
 export const superAdminSignUp = async (req: GlobalRequest, res: GlobalResponse) => {
-  try {
-    const { error } = validateSuperAdminData(req.body);
-    if (error) {
-      const missingFields = getMissingFields(error);
-      res.status(BAD_REQUEST).json({ error: `these field(s) are/is required: ${missingFields}` });
+	try {
+		const { error } = validateSuperAdminData(req.body);
+		if (error) {
+			const missingFields = getMissingFields(error);
+			res.status(BAD_REQUEST).json({ error: `these field(s) are/is required: ${missingFields}` });
 			return;
-    }
+		}
 
-    const { name, email, password, address, description } = req.body;
-    const normalizedEmail = (email as string).toLowerCase().trim();
+		req.body.role = "superadmin";
 
-    const existingAdmin = await hubAdmin.findOne({ email: normalizedEmail }).lean();
-    if (existingAdmin) {
-      res.status(BAD_REQUEST).json({ error: "email is already in use" });
-      return;
-    }
+		const superAdmin = await hubAdmin.create(req.body);
 
-    const existingHub = await hub.findOne({
-      $or: [
-        { name: (name as string).trim() },
-        ...(address ? [{ address }] : []),
-      ],
-    }).lean();
-    if (existingHub) {
-      res.status(BAD_REQUEST).json({ error: "a hub with that name or address already exists" });
-      return;
-    }
+		const accessToken = JWT.sign(superAdmin._id.toString());
+		const refreshToken = getRefreshToken(superAdmin._id.toString());
 
-    // Upload logo if provided
-    let logoUrl = "";
-    if (req.file) {
-      logoUrl = await uploadImg({
-        file: req.file.buffer,
-        filename: req.file.originalname,
-        folder: "hub-logos",
-      });
-    }
+		res.cookie("refreshToken", refreshToken, {
+			httpOnly: true,
+			secure: true,
+			maxAge: 30 * 24 * 60 * 60,
+		});
 
-    const hashedPassword = await hashPassword(password);
+		res.status(CREATED).json({ message: "super admin created", accessToken });
+	} catch (error) {
+		logger.error(error);
+		res.status(INTERNAL_SERVER_ERROR).json({ error: "error creating super admin" });
+	}
+}
 
-    // Create the superadmin user first (without hub reference — added after hub is created)
-    const newAdmin = await hubAdmin.create({
-      name: (name as string).trim(),
-      email: normalizedEmail,
-      password: hashedPassword,
-      role: "superadmin",
-      address: address ?? "",
-      logo: logoUrl,
-      description: description ?? "",
-    });
+export const hubDiscordCallback = async (req: GlobalRequest, res: GlobalResponse) => {
+	try {
+		const { code } = req.query as { code: string };
 
-    // Create the hub entity linked to this superadmin
-    const newHub = await hub.create({
-      name: (name as string).trim(),
-      address: address ?? "",
-      logo: logoUrl,
-      description: description ?? "",
-      superAdmin: newAdmin._id,
-      xpAllocated: 0,
-      campaignsCreated: 0,
-    });
+		if (!code) {
+			res.send("Please sign-in/connect discord again");
+			return;
+		}
 
-    // Link the admin back to its hub
-    await hubAdmin.findByIdAndUpdate(newAdmin._id, { hub: newHub._id });
+		const params = new URLSearchParams({
+			client_id: DISCORD_CLIENT_ID,
+			client_secret: DISCORD_CLIENT_SECRET,
+			redirect_uri: DISCORD_HUB_REDIRECT_URI,
+			code,
+			grant_type: "authorization_code",
+		});
 
-    const id = newAdmin._id.toString();
-    const accessToken = JWT.sign(id);
-    const refreshToken = getRefreshToken(id);
+		const { data: { access_token, refresh_token } } = await axios.post("https://discord.com/api/v10/oauth2/token", params, { headers });
 
-    res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      secure: true,
-      maxAge: 30 * 24 * 60 * 60,
-    });
+		const { data } = await axios.get("https://discord.com/api/v10/users/@me/guilds", {
+			headers: {
+				...headers,
+				Authorization: `Bearer ${access_token}`,
+			}
+		});
 
-    res.status(CREATED).json({
-      accessToken,
-      project: { name: newAdmin.name, logo: logoUrl },
-    });
-  } catch (error) {
-    logger.error(error);
-    res.status(INTERNAL_SERVER_ERROR).json({ error: "error creating super admin" });
-  }
+		const serversCreated = await server.create({ servers: data });
+
+		res.redirect(DISCORD_HUB_CLIENT_REDIRECT_URI + `?id=${serversCreated._id}`);
+	} catch (error: any) {
+		logger.error(error);
+		console.error("DISCORD HUB TOKEN ERROR STATUS:", error.response?.status);
+		console.error("DISCORD HUB TOKEN ERROR DATA:", error.response?.data);
+		res.status(INTERNAL_SERVER_ERROR).json({ error: "Error signing in with discord" });
+	}
+}
+
+export const fetchServers = async (req: GlobalRequest, res: GlobalResponse) => {
+	try {
+		const { id } = req.query as { id: string };
+
+		const discordServers = await server.findById(id);
+		if (!discordServers) {
+			res.status(INTERNAL_SERVER_ERROR).json({ error: "kindly authenticate your discord" });
+			return;
+		}
+
+		res.json({ message: "servers fetched", servers: discordServers.servers });
+	} catch (error) {
+		logger.error(error);
+		res.status(INTERNAL_SERVER_ERROR).json({ error: "Error fetching discord servers" });
+	}
+}
+
+export const fetchRoles = async (req: GlobalRequest, res: GlobalResponse) => {
+	try {
+		const { id, serverId } = req.query as { id: string; serverId: string };
+
+		const discordServers = await server.findById(id);
+		if (!discordServers) {
+			res.status(INTERNAL_SERVER_ERROR).json({ error: "kindly authenticate your discord" });
+			return;
+		}
+
+		const { data } = await axios.get(`https://discord.com/api/v10/guilds/${serverId}/roles`, {
+			headers: {
+				...headers,
+				Authorization: `Bot ${BOT_TOKEN}`,
+			}
+		});
+
+		res.json({ message: "roles fetched", roles: data });
+	} catch (error: any) {
+		logger.error(error);
+		console.error("DISCORD HUB TOKEN ERROR STATUS:", error.response?.status);
+		console.error("DISCORD HUB TOKEN ERROR DATA:", error.response?.data);
+		res.status(INTERNAL_SERVER_ERROR).json({ error: "Error fetching discord roles" });
+	}
 }
 
 export const hubAdminSignUp = async (req: GlobalRequest, res: GlobalResponse) => {
-  try {
+	try {
 
-    const { email, code } = req.body;
+		const { email, code } = req.body;
 		const { error } = validateHubAdminData(req.body);
 
-    if (error) {
-      const missingFields = getMissingFields(error);
-      res.status(BAD_REQUEST).json({ error: `these field(s) are/is required: ${missingFields}` });
+		if (error) {
+			const missingFields = getMissingFields(error);
+			res.status(BAD_REQUEST).json({ error: `these field(s) are/is required: ${missingFields}` });
 			return;
-    }
+		}
 
-    const otp = await OTP.findOne({ code, email }).lean();
-    if (!otp) {
-      res.status(BAD_REQUEST).json({ error: "otp has expired" });
-      return;
-    }
+		const otp = await OTP.findOne({ code, email }).lean();
+		if (!otp) {
+			res.status(BAD_REQUEST).json({ error: "otp has expired" });
+			return;
+		}
 
-    const now = new Date();
+		const now = new Date();
 
-    if (otp.expiresAt < now) {
-      res.status(BAD_REQUEST).json({ error: "otp has expired" });
-      return;
-    };
+		if (otp.expiresAt < now) {
+			res.status(BAD_REQUEST).json({ error: "otp has expired" });
+			return;
+		};
 
 		const adminExists = await hubAdmin.findOne({ email }).lean();
 		if (adminExists) {
 			res.status(BAD_REQUEST).json({ error: "email is already in use" });
 			return;
-    }
+		}
 
-    req.body.hub = otp.hubId;
-    req.body.role = "admin";
+		req.body.hub = otp.hubId;
+		req.body.role = "admin";
 
 		const admin = await hubAdmin.create(req.body);
 
@@ -216,7 +225,7 @@ export const hubAdminSignUp = async (req: GlobalRequest, res: GlobalResponse) =>
 			httpOnly: true,
 			secure: true,
 			maxAge: 30 * 24 * 60 * 60,
-    });
+		});
 
 		await OTP.deleteOne({ code });
 
@@ -231,21 +240,21 @@ export const hubAdminSignUp = async (req: GlobalRequest, res: GlobalResponse) =>
 
 export const forgotPassword = async (req: GlobalRequest, res: GlobalResponse) => {
 	try {
-    const { email } = req.body;
+		const { email } = req.body;
 
-    if (!email) {
-      res.status(BAD_REQUEST).json({ error: "email is required" });
-      return;
-    }
+		if (!email) {
+			res.status(BAD_REQUEST).json({ error: "email is required" });
+			return;
+		}
 
-    const hubAdminExists = await hubAdmin.findOne({ email }).lean();
-    if (!hubAdminExists) {
-      res.status(NOT_FOUND).json({ error: "email associated with admin is invalid or does not exist" });
-      return;
-    }
+		const hubAdminExists = await hubAdmin.findOne({ email }).lean();
+		if (!hubAdminExists) {
+			res.status(NOT_FOUND).json({ error: "email associated with admin is invalid or does not exist" });
+			return;
+		}
 
-    const id = hubAdminExists._id.toString();
-    const clientLink = `${CLIENT_URL}/hub/reset-password?token=`;
+		const id = hubAdminExists._id.toString();
+		const clientLink = `${CLIENT_URL}/hub/reset-password?token=`;
 
 		const token = JWT.sign(id, "10m");
 		const link = clientLink + token;
@@ -268,23 +277,23 @@ export const resetPassword = async (req: GlobalRequest, res: GlobalResponse) => 
 		if (!token || !password) {
 			res.status(BAD_REQUEST).json({ error: "send token and password" });
 			return;
-    }
+		}
 
-    const accessTokenUsed = await REDIS.get(`reset-access-token:${token}`);
-    if (accessTokenUsed) {
-      res.status(BAD_REQUEST).json({ error: "access token already used, request a new one to change your password" });
-      return;
-  	}
+		const accessTokenUsed = await REDIS.get(`reset-access-token:${token}`);
+		if (accessTokenUsed) {
+			res.status(BAD_REQUEST).json({ error: "access token already used, request a new one to change your password" });
+			return;
+		}
 
-    const { id } = await JWT.verify(token) as { id: string };
+		const { id } = await JWT.verify(token) as { id: string };
 
 		const adminExists = await hubAdmin.findById(id);
 		if (!adminExists) {
 			res.status(BAD_REQUEST).json({ error: "id associated with admin is invalid" });
 			return;
-    }
+		}
 
-    const hashedPassword = await hashPassword(password);
+		const hashedPassword = await hashPassword(password);
 
 		adminExists.password = hashedPassword;
 		await adminExists.save();
@@ -301,11 +310,11 @@ export const resetPassword = async (req: GlobalRequest, res: GlobalResponse) => 
 };
 
 export const logout = async (req: GlobalRequest, res: GlobalResponse) => {
-  try {
+	try {
 
-    const { token } = req;
+		const { token } = req;
 
-  	await REDIS.set({ key: `logout:${token}`, data: { token }, ttl: 7 * 24 * 60 * 60 });
+		await REDIS.set({ key: `logout:${token}`, data: { token }, ttl: 7 * 24 * 60 * 60 });
 
 		res.clearCookie("refreshToken");
 		res.status(OK).json({ message: "admin logged out!" });

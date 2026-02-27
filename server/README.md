@@ -1,35 +1,31 @@
-# Project Endpoints Documentation
+# Hub Endpoints Documentation
 
-This documentation covers all API endpoints related to projects in the Nexura application server.
+This documentation covers all API endpoints related to hubs (formerly projects) in the Nexura application server.
 
 ## Authentication Endpoints
 
-### POST /project/sign-up
-Sign up a new project.
+### POST /hub/sign-up
+Sign up a new hub.
 
 **Request Body:**
-- `name` (string, required): Project name
-- `email` (string, required): Project email
-- `description` (string, required): Project description
-- `address` (string, required): Project address
-- `password` (string, required): Password (minimum 8 characters)
-- `logo` (file, required): Project logo image
+- `name` (string, required): Hub name
+- `description` (string, required): Hub description
+- `address` (string, required): Hub address
+- `logo` (file, required): Hub logo image
 
 **Response:**
 ```json
 {
-  "message": "project created!",
-  "accessToken": "jwt_token_here"
+  "message": "hub created!",
 }
 ```
 
-### POST /project/sign-in
-Sign in as a project or admin.
+### POST /hub/sign-in
+Sign in as a hub or admin.
 
 **Request Body:**
 - `email` (string, required): Email
 - `password` (string, required): Password
-- `role` (string, required): "project" or "admin"
 
 **Response:**
 ```json
@@ -39,20 +35,20 @@ Sign in as a project or admin.
 }
 ```
 
-### POST /project/logout
-Logout the current project or admin session.
+### POST /hub/logout
+Logout the admin session.
 
 **Request:** Authenticated
 
 **Response:**
 ```json
 {
-  "message": "project or admin logged out!"
+  "message": "admin logged out!"
 }
 ```
 
-### POST /project/reset-password
-Reset project password using token.
+### POST /hub/reset-password
+Reset hub password using token.
 
 **Request Body:**
 - `token` (string, required): Reset token
@@ -65,26 +61,11 @@ Reset project password using token.
 }
 ```
 
-### POST /project/reset-password-admin
-Reset project admin password using token.
-
-**Request Body:**
-- `token` (string, required): Reset token
-- `password` (string, required): New password
-
-**Response:**
-```json
-{
-  "message": "project admin password reset successful!"
-}
-```
-
-### POST /project/forgot-password
+### POST /hub/forgot-password
 Request password reset email.
 
 **Request Body:**
 - `email` (string, required): Email
-- `role` (string, required): "project" or "admin"
 
 **Response:**
 ```json
@@ -93,14 +74,14 @@ Request password reset email.
 }
 ```
 
-### POST /project/admin/sign-up
-Sign up a project admin using OTP.
+### POST /hub/admin/sign-up
+Sign up a hub admin using OTP.
 
 **Request Body:**
 - `email` (string, required): Email
 - `password` (string, required): Password
 - `code` (string, required): 6-digit OTP code
-- `name` (string required): Name
+- `name` (string, required): Name
 
 **Response:**
 ```json
@@ -112,15 +93,15 @@ Sign up a project admin using OTP.
 
 ## Campaign Management Endpoints
 
-### GET /project/get-campaigns
-Fetch all campaigns for the authenticated project.
+### GET /hub/get-campaigns
+Fetch all campaigns for the authenticated hub.
 
 **Request:** Authenticated
 
 **Response:**
 ```json
 {
-  "projectCampaigns": [
+  "hubCampaigns": [
     {
       // Campaign objects
     }
@@ -128,7 +109,7 @@ Fetch all campaigns for the authenticated project.
 }
 ```
 
-### POST /project/validate-campaign-submissions
+### POST /hub/validate-campaign-submissions
 Validate or reject a campaign submission.
 
 **Request Body:**
@@ -137,7 +118,7 @@ Validate or reject a campaign submission.
 
 **Response:** 204 No Content
 
-### PATCH /project/save-campaign-quests
+### PATCH /hub/save-campaign-quests
 Save campaign with quests.
 
 **Request Body:**
@@ -149,13 +130,13 @@ Save campaign with quests.
 
 **Response:** 204 No Content
 
-### PATCH /project/save-campaign
+### PATCH /hub/save-campaign
 Save a campaign draft.
 
 **Request Body:**
 - `title` (string, required): Campaign title
 - `description` (string, required): Campaign description
-- `nameOfProject` (string, required): Project name
+- `nameOfProject` (string, required): Hub name
 - `starts_at` (string, required): Start date
 - `ends_at` (string, required): End date
 - `reward` (object, required): { xp: number, trust?: number, pool: number }
@@ -182,7 +163,7 @@ or if updating:
 }
 ```
 
-### GET /project/get-campaign
+### GET /hub/get-campaign
 Get a specific campaign with its quests.
 
 **Query Parameters:**
@@ -200,13 +181,13 @@ Get a specific campaign with its quests.
 }
 ```
 
-### POST /project/create-campaign
+### POST /hub/create-campaign
 Create a new campaign.
 
 **Request Body:**
 - `title` (string, required): Campaign title
 - `description` (string, required): Campaign description
-- `nameOfProject` (string, required): Project name
+- `nameOfProject` (string, required): Hub name
 - `starts_at` (string, required): Start date
 - `ends_at` (string, required): End date
 - `reward` (object, required): { xp: number, trust?: number, pool: number }
@@ -225,7 +206,7 @@ Create a new campaign.
 }
 ```
 
-### PATCH /project/update-campaign
+### PATCH /hub/update-campaign
 Update an existing campaign.
 
 **Request Body:** (any of the following)
@@ -249,7 +230,7 @@ Update an existing campaign.
 }
 ```
 
-### PATCH /project/close-campaign
+### PATCH /hub/close-campaign
 Close an active campaign.
 
 **Query Parameters:**
@@ -262,7 +243,7 @@ Close an active campaign.
 }
 ```
 
-### PATCH /project/add-campaign-address
+### PATCH /hub/add-campaign-address
 Add contract address to a campaign.
 
 **Request Body:**
@@ -276,14 +257,14 @@ Add contract address to a campaign.
 }
 ```
 
-### PATCH /project/publish-campaign
+### PATCH /hub/publish-campaign
 Publish a saved campaign.
 
 **Query Parameters:**
 - `id` (string, required): Campaign ID
 
-**Request Body**
-- `txHash` (string, required): transaction hash for fee payment
+**Request Body:**
+- `txHash` (string, required): Transaction hash for fee payment
 
 **Response:**
 ```json
@@ -292,7 +273,7 @@ Publish a saved campaign.
 }
 ```
 
-### DELETE /project/delete-campaign
+### DELETE /hub/delete-campaign
 Delete a campaign.
 
 **Query Parameters:**
@@ -300,7 +281,7 @@ Delete a campaign.
 
 **Response:** 204 No Content
 
-### PATCH /project/update-campaign-quest
+### PATCH /hub/update-campaign-quest
 Update a campaign quest.
 
 **Request Body:** Quest update data
@@ -310,7 +291,7 @@ Update a campaign quest.
 
 **Response:** 204 No Content
 
-### DELETE /project/delete-campaign-quest
+### DELETE /hub/delete-campaign-quest
 Delete a campaign quest.
 
 **Query Parameters:**
@@ -318,29 +299,29 @@ Delete a campaign quest.
 
 **Response:** 204 No Content
 
-## Project Management Endpoints
+## Hub Management Endpoints
 
-### PATCH /project/update-project
-Update project information.
+### PATCH /hub/update-hub
+Update hub information.
 
 **Request Body:**
-- `name` (string): Project name
+- `name` (string): Hub name
 - `logo` (string): Logo URL
 
 **Request File:**
 - `logo` (file): New logo image
 
-**Response:** Updated project object
+**Response:** Updated hub object
 
-### DELETE /project/delete-project
-Delete the authenticated project.
+### DELETE /hub/delete-hub
+Delete the authenticated hub.
 
 **Request:** Authenticated
 
 **Response:** 204 No Content
 
-### POST /project/add-admin
-Add a new admin to the project.
+### POST /hub/add-admin
+Add a new admin to the hub.
 
 **Request Body:**
 - `email` (string, required): Admin email
@@ -352,10 +333,32 @@ Add a new admin to the project.
 }
 ```
 
-### DELETE /project/remove-admin
-Remove an admin from the project.
+### DELETE /hub/remove-admin
+Remove an admin from the hub.
 
 **Query Parameters:**
 - `id` (string, required): Admin ID
 
-**Response:** 204 No Content</content>
+**Response:** 204 No Content
+
+## Claims Endpoints
+
+### GET /get-claim
+Get claims for a user.
+
+**Request:** Loose Authentication
+
+**Query Parameters:**
+- `offset` (number, optional): Pagination offset
+- `filter` (string, optional): Filter for claims
+
+**Response:**
+```json
+{
+  "claims": [
+    {
+      // Claim objects
+    }
+  ]
+}
+```

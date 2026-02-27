@@ -3,9 +3,9 @@ import { Button } from "../../components/ui/button";
 import { Link } from "wouter";
 import { ArrowLeft } from "lucide-react";
 import React from "react";
+import { discordHubAuthUrl } from "../../lib/constants";
 
-export default function ConnectTwitter() {
-  // Track step so returning to /studio restores here — only during creation flow
+export default function ConnectDiscord() {
   React.useEffect(() => {
     const hasFullSession =
       !!localStorage.getItem("nexura-project:token") ||
@@ -17,13 +17,13 @@ export default function ConnectTwitter() {
 
   const handleFakeConnect = () => {
     const fakeDiscord = {
-      handle: "Nexura Official",
-      avatar: "/discord-logo.png",
+      handle: "@realproject_handle",
+      avatar: "/original-discord.png",
       verified: true,
     };
 
     localStorage.setItem("discordData", JSON.stringify(fakeDiscord));
-    window.location.href = "/connected-discord";
+    window.location.href = discordHubAuthUrl;
   };
 
   return (
@@ -41,20 +41,20 @@ export default function ConnectTwitter() {
 
         {/* Discord Icon */}
         <div className="flex justify-center">
-          <img src="/discord-logo.png" alt="Discord icon" className="w-12 h-12" />
+          <img src="/original-discord.png" alt="Discord icon" className="w-12 h-12" />
         </div>
 
         <CardTitle className="text-2xl font-semibold">Connect Discord</CardTitle>
         <CardDescription className="text-white/60 text-sm leading-relaxed pb-3">
-          Link your official Discord server to verify your community's identity on Nexura.
+          Authorize your Official Discord account to verify your organization’s identity
         </CardDescription>
 
         <Button
           onClick={handleFakeConnect}
-          className="w-full text-white bg-purple-400 hover:bg-purple-600 hover:shadow-[0_0_28px_rgba(131,58,253,0.7)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2"
+          className="w-full text-white bg-purple-500 hover:bg-purple-600 flex items-center justify-center gap-2"
         >
-          <img src="/discord-logo.png" alt="Discord logo" className="w-4 h-4" />
-          Connect Discord
+          <img src="/original-discord.png" alt="Discord logo" className="w-4 h-4" />
+          Connect
         </Button>
 
       </Card>

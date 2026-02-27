@@ -134,8 +134,8 @@ const miniQuestSchema = new Schema({
 		type: String,
 		required: true,
 	},
-	followers: {
-		type: Number
+	guildId: {
+		type: String
 	},
 	tag: {
 		type: String,

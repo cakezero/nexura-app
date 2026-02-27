@@ -18,6 +18,8 @@ type Quest = {
   tag: "like" | "follow" | "join" | "repost" | "comment" | "portal";
   link: string;
   status: string;
+  guildId?: string;
+  hub?: string;
   done: boolean;
 };
 
@@ -59,7 +61,7 @@ export default function CampaignEnvironment() {
   const [campaignNumber, setCampaignNumber] = useState("000");
   const [reward, setReward] = useState<{ trustTokens: number; xp: number }>({ trustTokens: 0, xp: 0 });
   const [campaignAddress, setCampaignAddress] = useState("");
-  const [campaignProject, setCampaignProject] = useState("");
+  const [campaignHub, setCampaignHub] = useState("");
 
   const [questsCompleted, setQuestsCompleted] = useState(false);
   const [proofLinks, setProofLinks] = useState<Record<string, string>>({});
@@ -99,7 +101,7 @@ export default function CampaignEnvironment() {
       setReward(res.reward || { trustTokens: 0, xp: 0 });
       setTrustClaimed(res.trustClaimed || 0);
       setQuestsCompleted(res.campaignCompleted?.questsCompleted || false);
-      setCampaignProject(res.project?.toString() || "");
+      setCampaignHub(res.hub?.toString() || "");
 
     })();
   }, [claimedQuests, userId]);
@@ -187,7 +189,7 @@ export default function CampaignEnvironment() {
         submissionLink: link,
         page: "campaign",
         tag: quest.tag,
-        project: campaignProject,
+        hub: campaignHub,
       });
 
       toast({
@@ -234,7 +236,7 @@ export default function CampaignEnvironment() {
               throw new Error("discord not connected yet, go to profile to connect");
             }
 
-            const { success } = await apiRequestV2("POST", "/api/check-discord", { campaignId, id: quest._id, channelId: id, tag: quest.tag });
+            const { success } = await apiRequestV2("POST", "/api/check-discord", { campaignId, id: quest._id, channelId: id, tag: quest.tag, guildId: quest.guildId });
             if (!success) {
               throw new Error(`Kindly ${quest.tag} the discord channel`);
             }

@@ -7,7 +7,7 @@ declare global {
     id?: string;
     role?: string;
     adminName?: string;
-    project?: string;
+    admin?: any;
     token?: string;
     campaignCreator?: any;
   }

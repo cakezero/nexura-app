@@ -5,14 +5,14 @@ import { referredUsers } from "@/models/referrer.model";
 import { token } from "@/models/tokens.model";
 import { campaignQuest, miniQuest, quest } from "@/models/quests.model";
 import { user } from "@/models/user.model";
+import { hub } from "@/models/hub.model";
 import { performIntuitionOnchainAction } from "@/utils/account";
-import { BOT_TOKEN, THIRD_PARTY_API_KEY, X_API_BEARER_TOKEN } from "@/utils/env.utils";
+import { BOT_TOKEN, THIRD_PARTY_API_KEY } from "@/utils/env.utils";
 import {
-  INTERNAL_SERVER_ERROR, 
+  INTERNAL_SERVER_ERROR,
   OK,
-  CREATED, 
   BAD_REQUEST,
-  FORBIDDEN, 
+  FORBIDDEN,
   NOT_FOUND,
   UNAUTHORIZED
 } from "@/utils/status.utils";
@@ -27,13 +27,14 @@ import {
 	miniQuestCompleted,
   questCompleted
 } from "@/models/questsCompleted.models";
-import { bannedUser } from "@/models/bannedUser.model";
 import { GRAPHQL_API_URL } from "@/utils/constants";
 import { GraphQLClient } from "graphql-request";
 import { checksumAddress } from "viem";
 import { campaign, campaignCompleted } from "@/models/campaign.model";
 import { dailySignIn } from "@/models/dailySignIn.model";
 import { startOfDayUTC, updateLevel } from "@/utils/utils";
+
+const client = new GraphQLClient(GRAPHQL_API_URL);
 
 export const home = async (req: GlobalRequest, res: GlobalResponse) => {
 	res.send("hi!");
@@ -53,7 +54,7 @@ export const updateUser = async (req: GlobalRequest, res: GlobalResponse) => {
 
     if (profilePicBuffer) {
       const profilePic = await uploadImg({ filename: req.file?.originalname, file: profilePicBuffer, folder: "profile-pictures" });
-  
+
       userToUpdate.profilePic = profilePic;
     }
 
@@ -82,6 +83,325 @@ export const updateUser = async (req: GlobalRequest, res: GlobalResponse) => {
   }
 }
 
+export const getTriple = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const { termId } = req.query as { termId: string };
+    const appUser = await user.findOne({ _id: req.id });
+
+    const query = `
+      query GetTripleTerm($termId: String!, $userPositionAddress: String!) {
+        triple_term(term_id: $termId) {
+          term_id
+          counter_term_id
+          total_assets
+          total_market_cap
+          total_position_count
+          term {
+            total_assets
+            positions_aggregate {
+              aggregate {
+                count
+              }
+            }
+            vaults(order_by: {curve_id: asc}) {
+              curve_id
+              current_share_price
+              total_shares
+              total_assets
+              position_count
+              market_cap
+              userPosition: positions(
+              limit: 1
+              where: { account_id: { _eq: $userPositionAddress }}
+              ) {
+                shares
+                account_id
+              }
+            }
+            positions(order_by: [{
+              shares: desc
+            }]) {
+              shares
+              curve_id
+              account {
+                id
+                label
+                image
+              }
+            }
+            total_assets
+            triple {
+              subject {
+                label
+                image
+              }
+              predicate {
+                label
+                image
+              }
+              object {
+                label
+                image
+              }
+              creator {
+                id
+                image
+                label
+              }
+            }
+            total_market_cap
+          }
+          counter_term {
+            total_assets
+            positions_aggregate {
+              aggregate {
+                count
+              }
+            }
+            vaults(order_by: {curve_id: asc}) {
+              curve_id
+              current_share_price
+              total_shares
+              total_assets
+              position_count
+              market_cap
+              userPosition: positions(
+              limit: 1
+              where: { account_id: { _eq: $userPositionAddress }}
+              ) {
+                shares
+                account_id
+              }
+            }
+            positions(order_by: [{
+              shares: desc
+            }]) {
+              shares
+              curve_id
+              account {
+                id
+                label
+                image
+              }
+            }
+            total_assets
+            triple {
+              subject {
+                label
+                image
+              }
+              predicate {
+                label
+                image
+              }
+              object {
+                label
+                image
+              }
+              creator {
+                id
+                image
+                label
+              }
+            }
+            total_market_cap
+          }
+        }
+      }
+    `;
+
+    const response = await client.request(query, { termId, userPositionAddress: appUser?.address ?? "..." });
+    res.status(OK).json(response.triple_term);
+  } catch (error) {
+    logger.error(error);
+    res.send("failed")
+  }
+}
+
+export const getClaims = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+
+    const appUser = await user.findById(req.id);
+
+    const filter = JSON.parse(req.query.filter as string) ?? { total_market_cap: "desc" };
+
+    const offset = parseInt(req.query.offset as unknown as string);
+
+    // 1️⃣ Fetch all vaults (slice for pagination)
+    const vaultQuery = `
+      query GetExploreTriples($where: triple_term_bool_exp, $orderBy: [triple_term_order_by!], $limit: Int, $offset: Int, $userPositionAddress: String) {
+        triple_terms(where: $where, order_by: $orderBy, limit: $limit, offset: $offset) {
+          term_id
+          counter_term_id
+          total_assets
+          total_market_cap
+          total_position_count
+          term {
+            id
+            total_market_cap
+            total_assets
+            vaults(order_by: {curve_id: asc}) {
+              curve_id
+              current_share_price
+              total_shares
+              total_assets
+              position_count
+              market_cap
+              userPosition: positions(
+              limit: 1
+              where: {account_id: {_eq: $userPositionAddress}}
+              ) {
+                shares
+                account_id
+              }
+            }
+            positions_aggregate {
+              aggregate {
+                count
+              }
+            }
+            triple {
+              term_id
+              counter_term_id
+              created_at
+              subject_id
+              predicate_id
+              object_id
+              subject {
+                term_id
+                wallet_id
+                label
+                image
+                cached_image {
+                  ...CachedImageFields
+                }
+                data
+                type
+                value {
+                  ...AtomValueLight
+                }
+              }
+              predicate {
+                term_id
+                wallet_id
+                label
+                image
+                cached_image {
+                  ...CachedImageFields
+                }
+                data
+                type
+                value {
+                  ...AtomValueLight
+                }
+              }
+              object {
+                term_id
+                wallet_id
+                label
+                image
+                cached_image {
+                  ...CachedImageFields
+                }
+                data
+                type
+                value {
+                  ...AtomValue
+                }
+              }
+              creator {
+                id
+                label
+                image
+                cached_image {
+                  ...CachedImageFields
+                }
+              }
+            }
+          }
+          counter_term {
+            id
+            total_market_cap
+            total_assets
+            vaults(order_by: {curve_id: asc}) {
+              curve_id
+              current_share_price
+              total_shares
+              total_assets
+              position_count
+              market_cap
+              userPosition: positions(
+              limit: 1
+              where: {account_id: {_eq: $userPositionAddress}}
+              ) {
+                shares
+                account_id
+              }
+            }
+            positions_aggregate {
+              aggregate {
+                count
+              }
+            }
+          }
+        }
+      }
+
+      fragment CachedImageFields on cached_images_cached_image {
+        url
+        safe
+      }
+
+      fragment AtomValueLight on atom_values {
+        person {
+          name
+          image
+          cached_image {
+            ...CachedImageFields
+          }
+          url
+        }
+        thing {
+          name
+          image
+          cached_image {
+            ...CachedImageFields
+          }
+          url
+        }
+        organization {
+          name
+          image
+          url
+        }
+        account {
+          id
+          label
+          image
+          cached_image {
+            ...CachedImageFields
+          }
+        }
+      }
+
+
+      fragment AtomValue on atom_values {
+        ...AtomValueLight
+        json_object {
+        description: data(path: \"description\")
+        }
+      }
+    `;
+
+    const { triple_terms: claims } = await client.request(vaultQuery, { where: {}, orderBy: [filter], limit: 50, offset, userPositionAddress: appUser?.address ?? "..." });
+
+    res.json({ message: "fetched", claims });
+  } catch (e) {
+    logger.error(e);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "Failed to fetch claims" });
+  }
+};
+
 export const updateSubmission = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
     const userId = req.id;
@@ -101,7 +421,7 @@ export const updateSubmission = async (req: GlobalRequest, res: GlobalResponse) 
     if (task.status === "pending") {
       res.status(FORBIDDEN).json({ error: "submission is still pending review" });
       return;
-    } else if (task.status === "done") { 
+    } else if (task.status === "done") {
       res.status(FORBIDDEN).json({ error: "quest has been marked as done" });
       return;
     }
@@ -168,15 +488,6 @@ export const getLeaderboard = async (req: GlobalRequest, res: GlobalResponse) =>
   } catch(error) {
     logger.error(error);
     res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching leaderboard data" })
-  }
-}
-
-export const getClaims = async (req: GlobalRequest, res: GlobalResponse) => {
-  try {
-    
-  } catch (error) {
-    logger.error(error);
-    res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching claims" });
   }
 }
 
@@ -289,7 +600,7 @@ export const validatePortalTask =  async (req: GlobalRequest, res: GlobalRespons
           }) {
             account_id
           }
-      
+
           counter_positions (where:  {
             account_id:  {
               _eq: $address
@@ -303,8 +614,6 @@ export const validatePortalTask =  async (req: GlobalRequest, res: GlobalRespons
         }
       }
     `; // user needs to atleast support or oppose with 0.5 - 1 trust;
-
-    const client = new GraphQLClient(GRAPHQL_API_URL);
 
     const formattedAddress = checksumAddress(userToCheck.address as `0x${string}`);
 
@@ -576,7 +885,7 @@ export const performDailySignIn = async (req: GlobalRequest, res: GlobalResponse
       userExists.lastSignInDate = onlyDate;
       userExists.xp += 20;
       userExists.streak += 1;
-      
+
       // Update longest streak if current streak is higher
       if (userExists.streak > (userExists.longestStreak || 0)) {
         userExists.longestStreak = userExists.streak;
@@ -597,7 +906,7 @@ export const performDailySignIn = async (req: GlobalRequest, res: GlobalResponse
     if (dailySignInExists.date === yesterdayDate) {
       userExists.xp += 20;
       userExists.streak += 1;
-      
+
       // Update longest streak if current streak is higher
       if (userExists.streak > (userExists.longestStreak || 0)) {
         userExists.longestStreak = userExists.streak;
@@ -694,7 +1003,7 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
   let quest: any | undefined = undefined;
 
   try {
-    const { tag, id: postId, questId, page } = req.body; // get task id and store project x id, then remove hardcoded nexura id
+    const { tag, id: postId, questId, page } = req.body; // get task id and store hub x id, then remove hardcoded nexura id
 
     const NEXURA_ID = "1983300499597393920";
     const NEXURA_USERNAME = "NexuraXYZ";
@@ -759,8 +1068,8 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
             }
           }
 
-          if (!timeToWait) { 
-            await timer.create({ time: new Date(now.getTime() + 1 * 60 * 60 * 1000) }); 
+          if (!timeToWait) {
+            await timer.create({ time: new Date(now.getTime() + 1 * 60 * 60 * 1000) });
           } else {
             timeToWait.time = new Date(now.getTime() + 1 * 60 * 60 * 1000);
             await timeToWait.save();
@@ -862,8 +1171,8 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
             }
           }
 
-          if (!timeToWait) { 
-            await timer.create({ time: "" }); 
+          if (!timeToWait) {
+            await timer.create({ time: "" });
           } else {
             timeToWait.time = new Date(now.getTime() + 1 * 60 * 60 * 1000);
             await timeToWait.save();
@@ -926,8 +1235,8 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
             }
           }
 
-          if (!timeToWait) { 
-            await timer.create({ time: "" }); 
+          if (!timeToWait) {
+            await timer.create({ time: "" });
           } else {
             timeToWait.time = new Date(now.getTime() + 1 * 60 * 60 * 1000);
             await timeToWait.save();
@@ -1128,13 +1437,19 @@ export const checkDiscordTask = async (req: GlobalRequest, res: GlobalResponse) 
       return
     }
 
+    const serverInfo = await hub.findOne({ guildId });
+    if (!serverInfo) {
+      res.status(BAD_REQUEST).json({ error: "discord server not found" });
+      return;
+    }
+
     switch (tag) {
       case "join":
         const {
-          status, 
+          status,
           data: { roles }
           // remove hardcoded guild id
-        } = await axios.get(`https://discord.com/api/guilds/1419336727302111367/members/${discordId}`,
+        } = await axios.get(`https://discord.com/api/guilds/${guildId}/members/${discordId}`,
           {
             headers: {
               Authorization: `Bot ${BOT_TOKEN}`,
@@ -1155,7 +1470,7 @@ export const checkDiscordTask = async (req: GlobalRequest, res: GlobalResponse) 
           return;
         }
 
-        if (!roles.includes("1439591151081492593")) { // verfied id
+        if (!roles.includes(serverInfo.verifiedId)) { // verfied id
           if (!completed) {
             await campaignQuestCompleted.create({ user: req.id, status: "retry", campaign: campaignId, campaignQuest: id });
           } else {
