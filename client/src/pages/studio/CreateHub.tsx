@@ -192,7 +192,7 @@ export default function SharedAccessCredentials() {
             <CardFooter className="pt-4">
               <Button
                 onClick={handleSignUp}
-                className="w-full bg-purple-500 hover:bg-purple-600 flex items-center justify-center gap-2"
+                className="w-full bg-purple-400 hover:bg-purple-600 hover:shadow-[0_0_28px_rgba(131,58,253,0.7)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2"
               >
                 Next
                 <ArrowRight className="h-5 w-5" />

@@ -61,7 +61,7 @@ export default function NexuraStudio() {
           <div className="flex flex-col items-center gap-3 mb-3">
             <button
               onClick={() => setLocation("/projects/create")}
-              className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl border border-white/80 text-white bg-transparent hover:bg-purple-600 hover:border-purple-600 font-semibold text-base transition-all duration-200 shadow-[0_0_20px_rgba(131,58,253,0)] hover:shadow-[0_0_24px_rgba(131,58,253,0.45)]"
+              className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full bg-purple-400 border border-purple-400 text-white font-semibold text-base transition-all duration-200 hover:bg-purple-600 hover:border-purple-600 hover:shadow-[0_0_28px_rgba(131,58,253,0.7)] hover:scale-[1.03] active:scale-[0.98]"
             >
               Enter Studio
               <ArrowRight className="w-4 h-4" />

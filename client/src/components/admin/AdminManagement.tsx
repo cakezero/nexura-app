@@ -62,7 +62,7 @@ export default function AdminManagement() {
   {/* Three Horizontal Cards */}
   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
     {/* Card 1 */}
-    <div className="flex-1 bg-white/10 backdrop-blur-md rounded-lg p-4 flex items-start gap-4 border-2 border-white">
+    <div className="flex-1 bg-white/[0.06] backdrop-blur-xl rounded-xl p-4 flex items-start gap-4 border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_4px_24px_rgba(0,0,0,0.3)] hover:bg-white/10 hover:border-white/20 transition-all duration-200">
       <img src="/admin.png" alt="Icon 1" className="w-10 h-10 object-contain" />
       <div className="flex flex-col">
         <h4 className="text-lg font-semibold text-white">Total Admins</h4>
@@ -71,7 +71,7 @@ export default function AdminManagement() {
     </div>
 
     {/* Card 2 */}
-    <div className="flex-1 bg-white/10 backdrop-blur-md rounded-lg p-4 flex items-start gap-4 border-2 border-white">
+    <div className="flex-1 bg-white/[0.06] backdrop-blur-xl rounded-xl p-4 flex items-start gap-4 border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_4px_24px_rgba(0,0,0,0.3)] hover:bg-white/10 hover:border-white/20 transition-all duration-200">
       <img src="/approved.png" alt="Icon 2" className="w-10 h-10 object-contain" />
       <div className="flex flex-col">
         <h4 className="text-lg font-semibold text-white">Active Admins</h4>
@@ -80,7 +80,7 @@ export default function AdminManagement() {
     </div>
 
     {/* Card 3 */}
-    <div className="flex-1 bg-white/10 backdrop-blur-md rounded-lg p-4 flex items-start gap-4 border-2 border-white">
+    <div className="flex-1 bg-white/[0.06] backdrop-blur-xl rounded-xl p-4 flex items-start gap-4 border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_4px_24px_rgba(0,0,0,0.3)] hover:bg-white/10 hover:border-white/20 transition-all duration-200">
       <img src="/total-pending.png" alt="Icon 3" className="w-10 h-10 object-contain" />
       <div className="flex flex-col">
         <h4 className="text-lg font-semibold text-white">Pending Invites</h4>

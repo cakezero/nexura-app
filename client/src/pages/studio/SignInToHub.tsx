@@ -154,7 +154,7 @@ export default function SignInToHub() {
           <CardFooter className="pt-4">
             <Button
               onClick={handleSignIn}
-              className="w-full border border-white/80 text-white bg-transparent hover:bg-purple-600 hover:border-purple-600 transition-all flex items-center justify-center gap-2"
+              className="w-full bg-purple-400 border-0 text-white hover:bg-purple-600 hover:shadow-[0_0_28px_rgba(131,58,253,0.7)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2"
               disabled={loading}
             >
               {loading ? "Signing in..." : "Sign In"}

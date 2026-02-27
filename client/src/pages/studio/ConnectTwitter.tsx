@@ -46,12 +46,12 @@ export default function ConnectTwitter() {
 
         <CardTitle className="text-2xl font-semibold">Connect X</CardTitle>
         <CardDescription className="text-white/60 text-sm leading-relaxed pb-3">
-          Link your official X (formerly Twitter) account to verify your organization’s identity.
+          Link your official X (formerly Twitter) account to verify your organization's identity.
         </CardDescription>
 
         <Button
           onClick={handleFakeConnect}
-          className="w-full text-white bg-purple-500 hover:bg-purple-600 flex items-center justify-center gap-2"
+          className="w-full text-white bg-purple-400 hover:bg-purple-600 hover:shadow-[0_0_28px_rgba(131,58,253,0.7)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2"
         >
           <img src="/x-logo.png" alt="X logo" className="w-4 h-4" />
           Connect

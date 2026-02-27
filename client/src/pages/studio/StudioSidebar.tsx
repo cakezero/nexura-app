@@ -44,7 +44,7 @@ export default function StudioSidebar({
   return (
     <>
       {/* ── Desktop sidebar ── */}
-      <div className="w-[18rem] border-r border-white/10 hidden md:flex flex-col z-20">
+      <div className="w-[16rem] border-r border-white/10 hidden md:flex flex-col z-20">
         <div className="p-6 border-b border-white/10 relative">
           <AnimatedBackground className="absolute inset-0 z-0" />
 

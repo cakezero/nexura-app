@@ -238,7 +238,7 @@ const handleSubmit = async () => {
           {/* Action */}
 <div className="pt-4">
 <Button
-  className="w-full bg-purple-500 hover:bg-purple-600"
+  className="w-full bg-purple-400 border-0 text-white hover:bg-purple-600 hover:shadow-[0_0_28px_rgba(131,58,253,0.7)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
   onClick={handleSubmit}
   disabled={loading}
 >

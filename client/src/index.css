@@ -760,6 +760,18 @@ body {
   border-left: 3px solid rgb(147, 51, 234);
 }
 
+.nav-analytics-active {
+  color: rgb(147, 51, 234) !important;
+  border: 2px solid rgb(147, 51, 234);
+  border-left: 3px solid rgb(147, 51, 234);
+}
+
+.nav-studio-active {
+  color: rgb(147, 51, 234) !important;
+  border: 2px solid rgb(147, 51, 234);
+  border-left: 3px solid rgb(147, 51, 234);
+}
+
 /* Project-specific active/nav glow to match homepage style */
 .nav-project-active {
   color: rgb(147, 51, 234) !important;

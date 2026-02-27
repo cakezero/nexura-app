@@ -27,7 +27,6 @@ export default function ConnectedTwitter() {
     if (stored) {
       setTwitterData(JSON.parse(stored));
     } else {
-      // Fake data for now
       const fakeTwitter = {
         handle: "@realproject_handle",
         avatar: "/x-logo.png",
@@ -102,7 +101,7 @@ export default function ConnectedTwitter() {
         </Card>
 
         <Link href="/studio-dashboard" className="w-full">
-          <Button className="w-full bg-purple-500 hover:bg-purple-600 flex items-center justify-center gap-2 mt-4">
+          <Button className="w-full bg-purple-400 hover:bg-purple-600 hover:shadow-[0_0_28px_rgba(131,58,253,0.7)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 mt-4">
             Save & Continue
             <ArrowRight className="h-5 w-5" />
           </Button>
