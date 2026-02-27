@@ -185,16 +185,21 @@ export default function ClaimDetails() {
     try {
       const curveId = growthType === "linear" ? 1n : 2n;
 
-      if (!buyAmount || !sellAmount) {
-        toast({ title: "Error", description: "select an amount to proceed", variant: "destructive" });
-        return;
-      }
-
       if (isBuy) {
+        if (!buyAmount) {
+          toast({ title: "Error", description: "select a buy amount to proceed", variant: "destructive" });
+          return;
+        }
+
         setBuying(true);
         await buyShares(buyAmount, id as Address, curveId);
         setSelling(false);
       } else {
+        if (!sellAmount) {
+          toast({ title: "Error", description: "select a sell amount to proceed", variant: "destructive" });
+          return;
+        }
+
         setSelling(true);
         await sellShares(sellAmount, id as Address, curveId);
         setSelling(false);
