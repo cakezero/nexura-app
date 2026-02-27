@@ -42,7 +42,7 @@ export default function PortalClaims() {
 
     try {
       setLoading(true);
-      const { claims } = await apiRequestV2("POST", `/api/get-claims?filter=${sortOption}&offset=${offset}`);
+      const { claims } = await apiRequestV2("GET", `/api/get-claims?filter=${sortOption}&offset=${offset}`);
 
       if (claims.length < LIMIT) setHasMore(false);
 

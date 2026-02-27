@@ -117,7 +117,7 @@ export default function ClaimDetails() {
   }, [id]);
 
   async function fetchClaim() {
-    const fetched = await apiRequestV2("POST", "/api/get-triple?termId=" + id);
+    const fetched = await apiRequestV2("GET", "/api/get-triple?termId=" + id);
     setClaim(fetched);
 
     // Support / Oppose totals
