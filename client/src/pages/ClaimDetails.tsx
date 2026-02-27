@@ -227,7 +227,7 @@ useEffect(() => {
       </div>
 
       {/* Support / Oppose Cards */}
-<div className="flex gap-4">
+<div className="flex flex-col sm:flex-row gap-4">
   {/* Support Card */}
   <div className="flex-1 bg-[#006CD233] border border-[#393B60] rounded-xl p-4 flex flex-col gap-3">
     {/* Heading */}
@@ -283,7 +283,7 @@ useEffect(() => {
 
           <div>
       {/* Total Market Info Row */}
-      <div className="flex items-center gap-4 mt-4 flex-wrap justify-start">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4 mt-4">
         {/* Total Market Cap */}
         <div className="flex items-center gap-2">
           <span className="font-semibold">Total Market Cap</span>
@@ -294,7 +294,7 @@ useEffect(() => {
         </div>
 
         {/* Divider */}
-        <span className="border-l border-gray-500 h-6"></span>
+        <span className="hidden sm:block border-l border-gray-500 h-6"></span>
 
         {/* Total Position */}
         <div className="flex items-center gap-2">
@@ -303,7 +303,7 @@ useEffect(() => {
         </div>
 
         {/* Divider */}
-        <span className="border-l border-gray-500 h-6"></span>
+        <span className="hidden sm:block border-l border-gray-500 h-6"></span>
 
         {/* Creator */}
         <div className="flex items-center gap-2">
@@ -326,14 +326,14 @@ useEffect(() => {
       </div>
       </div>
 
-<div className="flex gap-4 mt-6">
+<div className="flex flex-col lg:flex-row gap-6 mt-6">
   {/* Graph Placeholder (70%) */}
-  <div className="w-[70%] bg-gradient-to-br from-[#1A0A2B] to-[#0B0515] rounded-xl p-4 shadow-lg">
+  <div className="w-full lg:w-[70%] bg-gradient-to-br from-[#1A0A2B] to-[#0B0515] rounded-xl p-4 shadow-lg">
   {/* Chart Header */}
   <div className="flex items-center justify-between mb-4">
     <div>
       <span className="text-sm text-gray-400">Share Price</span>
-      <div className="text-3xl font-bold text-white">
+      <div className="text-2xl sm:text-3xl font-bold text-white">
         {getPrice()} TRUST
       </div>
     </div>
@@ -413,7 +413,7 @@ useEffect(() => {
 </div>
 
   {/* Control Card (20%) */}
-  <div className="w-[30%] bg-gray-900 rounded-xl p-4 flex flex-col gap-4">
+  <div className="w-full lg:w-[30%] bg-gray-900 rounded-xl p-4 flex flex-col gap-4">
     {/* Support / Oppose Tabs */}
     <div className="flex gap-2">
       <button
@@ -463,7 +463,7 @@ useEffect(() => {
 </div>
 
     {/* Linear Curve Section */}
-    <div className="flex items-center justify-between">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
       <div>
         <h3 className="font-semibold text-white">Linear Curve</h3>
         <p className="text-gray-400 text-sm">Low Risk, Low Reward</p>
@@ -475,7 +475,7 @@ useEffect(() => {
     </div>
 
     {/* Amount Section */}
-    <div className="flex items-center justify-between">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
       <span className="text-gray-400">Amount</span>
       <span className="text-gray-400">TRUST</span>
     </div>
@@ -531,10 +531,10 @@ useEffect(() => {
 </div>
 
 {/* Dual Toggles */}
-<div className="flex justify-between gap-4 mt-4">
+<div className="flex flex-col sm:flex-row gap-4 mt-4">
 
 {/* Left Toggle — Support / Oppose */}
-<div className="w-[15%]">
+<div className="w-full sm:w-1/2 lg:w-[15%]">
   <div className="flex rounded-md border border-[#393B60] w-full h-12 overflow-hidden">
 
     <div
@@ -563,7 +563,7 @@ useEffect(() => {
 </div>
 
 {/* Right Toggle — Linear / Exponential */}
-<div className="w-[20%]">
+<div className="w-full sm:w-1/2 lg:w-[20%]">
   <div className="flex rounded-md border border-[#393B60] w-full h-12 overflow-hidden">
 
     <div
@@ -603,7 +603,7 @@ useEffect(() => {
   </div>
 
   {/* 5 Equal Columns */}
-  <div className="grid grid-cols-5 gap-6">
+  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
 
     {/* A */}
     <div className="flex flex-col gap-2">
@@ -725,12 +725,12 @@ useEffect(() => {
       : "My Position on this Claim"}
   </h3>
 
-  <div className="flex gap-4 items-center">
+  <div className="flex flex-col lg:flex-row gap-4">
   {/* Search Positions Input */}
   <input
     type="text"
     placeholder="Search positions"
-    className="w-1/2 bg-[#06021A] border border-[#393B60] text-white p-2 rounded-2xl outline-none"
+    className="w-full lg:w-1/2 bg-[#06021A] border border-[#393B60] text-white p-2 rounded-2xl outline-none"
   />
 
   {/* Positions / Sort Input */}
@@ -773,7 +773,8 @@ useEffect(() => {
 
 
 {/* TABLE */}
-<div className="mt-4">
+<div className="overflow-x-auto">
+  <div className="min-w-[700px]">
   {visiblePositions.length === 0 ? (
     <div className="text-gray-400 text-center py-4">No positions found</div>
   ) : (
@@ -839,6 +840,7 @@ useEffect(() => {
       <div className="loader"></div>
     </div>
   )}
+</div>
 </div>
 </div>
     </div>

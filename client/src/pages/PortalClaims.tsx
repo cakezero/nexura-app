@@ -104,7 +104,7 @@ export default function PortalClaims() {
       </p>
 
       {/* Controls Section */}
-      <div className="mt-6 flex flex-wrap items-center gap-4">
+      <div className="mt-6 flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-4">
 
         {/* Search */}
         <div className="flex-1 min-w-[280px]">
@@ -116,28 +116,24 @@ export default function PortalClaims() {
         </div>
 
         {/* Grid/List Toggle */}
-        <div className="flex items-center bg-gray-900 border border-gray-700 rounded-lg overflow-hidden">
-          <button
-            onClick={() => setView("list")}
-            className={`px-3 py-2 ${
-              view === "list" ? "bg-gray-800" : ""
-            }`}
-          >
-            <img src="/list.png" alt="List View" className="w-5 h-5" />
-          </button>
+       <div className="hidden md:flex items-center bg-gray-900 border border-gray-700 rounded-lg overflow-hidden">
+  <button
+    onClick={() => setView("list")}
+    className={`px-3 py-2 ${view === "list" ? "bg-gray-800" : ""}`}
+  >
+    <img src="/list.png" alt="List View" className="w-5 h-5" />
+  </button>
 
-          <button
-            onClick={() => setView("grid")}
-            className={`px-3 py-2 ${
-              view === "grid" ? "bg-gray-800" : ""
-            }`}
-          >
-            <img src="/grid.png" alt="Grid View" className="w-5 h-5" />
-          </button>
-        </div>
+  <button
+    onClick={() => setView("grid")}
+    className={`px-3 py-2 ${view === "grid" ? "bg-gray-800" : ""}`}
+  >
+    <img src="/grid.png" alt="Grid View" className="w-5 h-5" />
+  </button>
+</div>
 
         {/* Market Cap Dropdown */}
-<div className="relative">
+<div className="relative w-full sm:w-auto">
   <select
     value={sortOption}
     onChange={(e) => setSortOption(e.target.value)}
@@ -170,104 +166,145 @@ export default function PortalClaims() {
       {/* Claims Table */}
       <div className="mt-8 overflow-x-auto">
       <div className="mt-8">
-        {view === "list" ? (
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-left border-collapse border border-gray-700">
-            <thead>
-  <tr className="bg-gray-800 text-gray-300">
-    <th className="px-4 py-2 w-[40%] border border-gray-700">Claim</th>
-    <th className="px-4 py-2 w-[15%] border border-gray-700">Total Market Cap</th>
-    <th className="px-4 py-2 w-[15%] border border-gray-700">Support</th>
-    <th className="px-4 py-2 w-[15%] border border-gray-700">Oppose</th>
-    <th className="px-4 py-2 w-[15%] border border-gray-700">Portal Claims</th>
-  </tr>
-</thead>
-              <tbody>
-                  {visibleClaims.map((claim, index) => (                  
-                  <tr
-                    key={index}
-                    className="bg-[#060210] cursor-pointer hover:bg-[#1a0f2e]"
-                    onClick={() => setLocation(`/portal-claims/${claim.term_id}`)}
-                  >
-                    {/* Claim */}
-                    <td className="px-4 py-2 border border-gray-700">
-                      <div className="flex flex-wrap items-center gap-1">
-                      {/* Subject with Icon */}
-                      <span className="bg-gray-700 px-1 rounded flex items-center gap-1">
-                        <img src={claim.term.triple.subject.image} alt="Subject Icon" className="w-5 h-5" />
-                        {claim.term.triple.subject.label}
-                      </span>
+        {view === "list" && (
+  <>
+    {/* ================= DESKTOP TABLE ================= */}
+    <div className="hidden md:block overflow-x-auto w-full">
+      <table className="min-w-full text-left border-collapse border border-gray-700">
+        <thead className="text-sm">
+          <tr className="bg-gray-800 text-gray-300">
+            <th className="px-4 py-2 border border-gray-700">Claim</th>
+            <th className="px-4 py-2 border border-gray-700">Market Cap</th>
+            <th className="px-4 py-2 border border-gray-700">Support</th>
+            <th className="px-4 py-2 border border-gray-700">Oppose</th>
+            <th className="px-4 py-2 border border-gray-700 text-center">Actions</th>
+          </tr>
+        </thead>
 
-                        {/* Verb */}
-                        <span>{claim.term.triple.predicate.label}</span>
+        <tbody className="text-sm">
+          {visibleClaims.map((claim, index) => (
+            <tr
+              key={index}
+              className="bg-[#060210] hover:bg-[#1a0f2e] cursor-pointer"
+              onClick={() => setLocation(`/portal-claims/${claim.term_id}`)}
+            >
+              <td className="px-4 py-3 border border-gray-700">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="bg-gray-700 px-2 py-1 rounded flex items-center gap-1">
+                    <img src={claim.term.triple.subject.image} className="w-5 h-5" />
+                    {claim.term.triple.subject.label}
+                  </span>
+                  {claim.term.triple.predicate.label}
+                  <span className="bg-gray-700 px-2 py-1 rounded">
+                    {claim.term.triple.object.label}
+                  </span>
+                </div>
+              </td>
 
-                        {/* Object/Predicate */}
-                        <span className="bg-gray-700 px-1 rounded">{claim.term.triple.object.label}</span>
-                      </div>
-                    </td>
+              <td className="px-4 py-3 border border-gray-700 font-semibold">
+                {toFixed(formatEther(BigInt(claim.total_market_cap)))} TRUST
+              </td>
 
-                    {/* Total Market Cap */}
-<td className="px-4 py-2 border border-gray-700">
-  <div className="font-semibold text-white">
-    {toFixed(
-      formatEther(
-        BigInt(claim.total_market_cap)
-      )
-    )} TRUST
-  </div>
-</td>
+              <td className="px-4 py-3 border border-gray-700 text-blue-400 font-semibold">
+                {formatNumber(claim.term.positions_aggregate.aggregate.count)}
+              </td>
 
-                    {/* Support */}
-                    <td className="px-4 py-2 border border-gray-700">
-                      <div className="flex items-center gap-2">
-                        <span className="text-blue-400 font-semibold">{formatNumber(claim.term.positions_aggregate.aggregate.count)}</span>
-                        <img src="/user.png" alt="User Icon" className="w-4 h-4" />
-                        <div className="bg-[#41289E80] text-white text-xs font-semibold px-1 py-1 rounded-md ml-2">
-                          {toFixed(formatEther(BigInt(claim.term.total_assets)))} TRUST
-                        </div>
-                      </div>
-                    </td>
+              <td className="px-4 py-3 border border-gray-700 text-[#F19C03] font-semibold">
+                {formatNumber(claim.counter_term.positions_aggregate.aggregate.count)}
+              </td>
 
-                    {/* Oppose */}
-                    <td className="px-4 py-2 border border-gray-700">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[#F19C03] font-semibold">{formatNumber(claim.counter_term.positions_aggregate.aggregate.count)}</span>
-                        <img src="/user-red.png" alt="User Icon" className="w-4 h-4" />
-                        <div className="bg-[#41289E80] text-white text-xs font-semibold px-1 py-1 rounded-md ml-2">
-                          {toFixed(formatEther(BigInt(claim.counter_term.total_assets)))} TRUST
-                        </div>
-                      </div>
-                    </td>
+              <td className="px-4 py-3 border border-gray-700 text-center">
+                <div className="flex justify-center gap-2">
+                  <img src="/support.png" className="h-6" />
+                  <img src="/oppose.png" className="h-6" />
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
 
-                    {/* Portal Claims */}
-                    <td className="px-4 py-2 border border-gray-700 flex gap-2 justify-center items-center">
-                      <div className="p-1 rounded-md">
-                        <img src="/support.png" alt="Support" className="w-max h-7" />
-                      </div>
-                      <div className="p-1 rounded-md">
-                        <img src="/oppose.png" alt="Oppose" className="w-max h-7" />
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+    {/* ================= MOBILE STACKED LIST ================= */}
+    <div className="md:hidden flex flex-col gap-4">
+      {visibleClaims.map((claim, index) => (
+        <div
+          key={index}
+          className="bg-[#060210] border border-gray-700 rounded-xl p-4 hover:bg-[#1a0f2e] cursor-pointer"
+          onClick={() => setLocation(`/portal-claims/${claim.term_id}`)}
+        >
+          {/* Claim Statement */}
+          <div className="flex flex-wrap gap-2 mb-3 text-sm">
+            <span className="bg-gray-700 px-2 py-1 rounded flex items-center gap-1">
+              <img src={claim.term.triple.subject.image} className="w-5 h-5" />
+              {claim.term.triple.subject.label}
+            </span>
+            {claim.term.triple.predicate.label}
+            <span className="bg-gray-700 px-2 py-1 rounded">
+              {claim.term.triple.object.label}
+            </span>
           </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {visibleClaims.map((claim) => {
-              const supportCount = Number(claim.term.positions_aggregate.aggregate.count);
-const opposeCount = Number(claim.counter_term.positions_aggregate.aggregate.count);
 
-const total = supportCount + opposeCount;
+          {/* Market Cap */}
+          <div className="flex justify-between text-sm mb-2">
+            <span className="text-gray-400">Market Cap</span>
+            <span className="font-semibold">
+              {toFixed(formatEther(BigInt(claim.total_market_cap)))} TRUST
+            </span>
+          </div>
 
-const supportPercent = total > 0 ? (supportCount / total) * 100 : 0;
-const opposePercent = total > 0 ? (opposeCount / total) * 100 : 0;
-                return (
-                  <div
-                    key={claim.term_id}
-                    className="bg-[#060210] border border-gray-700 rounded-xl p-5 hover:bg-[#2c0738] transition"
-                  >
+          {/* Support / Oppose */}
+          <div className="flex justify-between text-sm mb-3">
+            <div className="text-blue-400 font-semibold">
+              Support: {formatNumber(claim.term.positions_aggregate.aggregate.count)}
+            </div>
+
+            <div className="text-[#F19C03] font-semibold">
+              Oppose: {formatNumber(claim.counter_term.positions_aggregate.aggregate.count)}
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex gap-2">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleClaimAction(claim.term_id);
+              }}
+              className="flex-1 bg-blue-600 py-2 rounded-lg text-sm font-semibold"
+            >
+              Support
+            </button>
+
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleClaimAction(claim.term_id, "oppose");
+              }}
+              className="flex-1 bg-[#F19C03] py-2 rounded-lg text-sm font-semibold"
+            >
+              Oppose
+            </button>
+          </div>
+        </div>
+      ))}
+    </div>
+  </>
+)}
+            <div className="hidden md:grid md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+  {visibleClaims.map((claim) => {
+    const supportCount = Number(claim.term.positions_aggregate.aggregate.count);
+    const opposeCount = Number(claim.counter_term.positions_aggregate.aggregate.count);
+
+    const total = supportCount + opposeCount;
+    const supportPercent = total > 0 ? (supportCount / total) * 100 : 0;
+    const opposePercent = total > 0 ? (opposeCount / total) * 100 : 0;
+
+    return (
+      <div
+        key={claim.term_id}
+        className="bg-[#060210] border border-gray-700 rounded-xl p-5 hover:bg-[#2c0738] transition"
+      >
                     {/* Statement */}
                     <div className="text-gray-300 mb-4 flex flex-wrap items-center gap-2">
                       <span className=" font-bold text-xl bg-gray-700 px-2 py-1 rounded mr-2">
@@ -367,7 +404,6 @@ const opposePercent = total > 0 ? (opposeCount / total) * 100 : 0;
               );
             })}
           </div>
-        )}
 
           {loading && (
             <div className="flex justify-center py-6">
