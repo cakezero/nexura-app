@@ -10,8 +10,10 @@ import { Eye, EyeOff } from "lucide-react";
 import { useLocation } from "wouter";
 import { useToast } from "../../hooks/use-toast";
 import { useWallet } from "../../hooks/use-wallet";
+import { apiRequestV2 } from "../../lib/queryClient";
 
 export default function SharedAccessCredentials() {
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [address, setAddress] = useState("");
   const [password, setPassword] = useState("");
@@ -20,6 +22,7 @@ export default function SharedAccessCredentials() {
   const [hasNumber, setHasNumber] = useState(false);
   const [hasSpecialChar, setHasSpecialChar] = useState(false);
   const [isLongEnough, setIsLongEnough] = useState(false);
+  const [creating, setCreating] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [, setLocation] = useLocation();
@@ -41,32 +44,45 @@ export default function SharedAccessCredentials() {
     if (walletAddress) setAddress(walletAddress);
   }, [walletAddress]);
 
-  function handleSignUp() {
-    if (!isLongEnough || !hasUppercase || !hasNumber || !hasSpecialChar) {
-      toast({ title: "Weak password", description: "Password does not meet all requirements.", variant: "destructive" });
-      return;
-    }
-    if (password !== confirmPassword) {
-      toast({ title: "Password mismatch", description: "Passwords do not match.", variant: "destructive" });
-      return;
-    }
-    if (!email) {
-      toast({ title: "Missing email", description: "Please enter an email address.", variant: "destructive" });
-      return;
-    }
-    if (!address) {
-      toast({ title: "Missing address", description: "Please enter your project wallet address.", variant: "destructive" });
-      return;
-    }
+  async function handleSignUp() {
+    try {
+      if (!isLongEnough || !hasUppercase || !hasNumber || !hasSpecialChar) {
+        toast({ title: "Weak password", description: "Password does not meet all requirements.", variant: "destructive" });
+        return;
+      }
 
-    // Save credentials — API call happens on TheHub after hub details are filled in
-    localStorage.setItem(
-      "nexura:hub-credentials",
-      JSON.stringify({ email, address, password })
-    );
-    localStorage.setItem("nexura:studio-step", "/projects/create/the-hub");
+      if (password !== confirmPassword) {
+        toast({ title: "Password mismatch", description: "Passwords do not match.", variant: "destructive" });
+        return;
+      }
+      if (!email) {
+        toast({ title: "Missing email", description: "Please enter an email address.", variant: "destructive" });
+        return;
+      }
+      if (!address) {
+        toast({ title: "Missing address", description: "Please enter your project wallet address.", variant: "destructive" });
+        return;
+      }
+      if (!name) {
+        toast({ title: "Missing name", description: "Please enter a name.", variant: "destructive" });
+        return;
+      }
 
-    setLocation("/projects/create/the-hub");
+      setCreating(true);
+
+      // Save credentials — API call happens on TheHub after hub details are filled in
+      const { accessToken } = await apiRequestV2("POST", "/api/hub/sign-up", { email, address, name, password });
+
+      localStorage.setItem("nexura-project:token", accessToken);
+
+      setCreating(false);
+
+      setLocation("/projects/create/the-hub");
+    } catch (error: any) {
+      console.log(error);
+      setCreating(false);
+      toast({ title: "Error", description: error.message || "Failed to sign up.", variant: "destructive" });
+    }
   }
 
   return (
@@ -90,6 +106,18 @@ export default function SharedAccessCredentials() {
           {/* Credentials Card */}
           <Card className="border-2 border-purple-500 rounded-3xl p-6 space-y-6 bg-gray-900">
             <div className="space-y-4">
+              {/* name */}
+              <div>
+                <CardTitle className="text-white text-lg sm:text-xl">Email Address</CardTitle>
+                <Input
+                  type="text"
+                  placeholder="Enter super admin name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="mt-2 w-full bg-gray-800 text-white border-purple-500"
+                />
+              </div>
+
               {/* Email */}
               <div>
                 <CardTitle className="text-white text-lg sm:text-xl">Email Address</CardTitle>
@@ -111,9 +139,8 @@ export default function SharedAccessCredentials() {
                   value={address}
                   onChange={(e) => !isConnected && setAddress(e.target.value)}
                   readOnly={isConnected}
-                  className={`mt-2 w-full bg-gray-800 text-white border-purple-500 ${
-                    isConnected ? "opacity-70 cursor-not-allowed select-none font-mono text-sm" : ""
-                  }`}
+                  className={`mt-2 w-full bg-gray-800 text-white border-purple-500 ${isConnected ? "opacity-70 cursor-not-allowed select-none font-mono text-sm" : ""
+                    }`}
                 />
                 {isConnected && (
                   <p className="mt-1 ml-1 text-xs text-white/30">Auto-filled from connected wallet</p>
@@ -191,11 +218,11 @@ export default function SharedAccessCredentials() {
 
             <CardFooter className="pt-4">
               <Button
+                disabled={creating}
                 onClick={handleSignUp}
                 className="w-full bg-purple-400 hover:bg-purple-600 hover:shadow-[0_0_28px_rgba(131,58,253,0.7)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2"
               >
-                Next
-                <ArrowRight className="h-5 w-5" />
+                {creating ? "Creating Super Admin..." : "Create Super Admin"}
               </Button>
             </CardFooter>
           </Card>

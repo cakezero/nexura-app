@@ -61,7 +61,7 @@ export default function ConnectedDiscord() {
 
   async function createHub() {
     try {
-      const hubStorage = localStorage.getItem("hubData");
+      const hubStorage = localStorage.getItem("nexura:hub-details");
       if (!hubStorage) {
         toast({ title: "Error", description: "please start afresh", variant: "destructive" });
         return;
@@ -75,7 +75,7 @@ export default function ConnectedDiscord() {
         guildId: selectedServer.id,
       }
 
-      const { accessToken } = await apiRequestV2("POST", `/api/hub/create`, { data: hubData });
+      const { accessToken } = await apiRequestV2("POST", `/api/hub/create`, hubData);
 
       toast({ title: "Success", description: "Hub created successfully", variant: "default" });
       localStorage.setItem("nexura:proj-token", accessToken);

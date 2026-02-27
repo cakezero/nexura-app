@@ -43,50 +43,18 @@ export default function TheHub() {
       return;
     }
 
-    const credsRaw = localStorage.getItem("nexura:hub-credentials");
-    if (!credsRaw) {
-      toast({ title: "Missing credentials", description: "Please complete the credentials step first.", variant: "destructive" });
-      setLocation("/projects/create/create-hub");
-      return;
-    }
-
-    const { email, address, password } = JSON.parse(credsRaw);
-
     setLoading(true);
     try {
       const fd = new FormData();
       fd.append("name", hubName.trim());
-      fd.append("email", email);
       fd.append("description", description ?? "");
-      fd.append("address", address);
-      fd.append("password", password);
 
       if (imagePreview) {
         const blob = base64ToBlob(imagePreview);
         fd.append("logo", blob, "logo.png");
       }
 
-      const res = await projectApiRequest<{ message?: string; accessToken?: string; token?: string; project?: Record<string, unknown> }>({
-        method: "POST",
-        endpoint: "/hub/sign-up",
-        formData: fd,
-      });
-
-      const token = (res.token ?? res.accessToken) as string | undefined;
-      if (!token) throw new Error("No access token received");
-
-      const serverProject = res.project as { name?: string; logo?: string } | undefined;
-      storeProjectSession(token, {
-        name: serverProject?.name ?? hubName.trim(),
-        logo: serverProject?.logo ?? "",
-        email,
-        address,
-      });
-
-      localStorage.removeItem("nexura:hub-credentials");
-      localStorage.removeItem("nexura:studio-step");
-
-      toast({ title: "Hub created!", description: "Your project hub is live on Nexura Studio." });
+      localStorage.setItem("nexura:hub-details", JSON.stringify(fd));
       setLocation("/connect-discord");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Sign-up failed. Please try again.";
@@ -242,7 +210,7 @@ export default function TheHub() {
               onClick={handleSubmit}
               disabled={loading}
             >
-              {loading ? "Creating hub..." : "Save & Continue"}
+              "Save & Continue"
             </Button>
           </div>
         </Card>
