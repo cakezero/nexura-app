@@ -62,6 +62,12 @@ export default function ClaimDetails() {
   const [opposePercent, setOpposePercent] = useState(0);
   const [totalPostions, setTotalPositions] = useState("0");
   const [marketCap, setMarketCap] = useState("0");
+  const [balance, setBalance] = useState("0");
+
+
+  const { user } = useAuth();
+  const { connectWallet } = useWallet();
+  const { toast } = useToast();
 
   const ITEMS_PER_PAGE = 10;
 
@@ -116,6 +122,15 @@ export default function ClaimDetails() {
   useEffect(() => {
     fetchClaim();
   }, [id]);
+
+  useEffect(() => {
+    (async () => {
+      if (user) {
+        const userBalance = await getBalance();
+        setBalance(userBalance);
+      }
+    })();
+  }, [user]);
 
   async function fetchClaim() {
     const fetched = await apiRequestV2("GET", "/api/get-triple?termId=" + id);
@@ -177,10 +192,6 @@ export default function ClaimDetails() {
 
     return sharePrice;
   }
-
-  const { user } = useAuth();
-  const { connectWallet } = useWallet();
-  const { toast } = useToast();
 
   const handleClaimAction = async () => {
     try {
@@ -359,8 +370,8 @@ export default function ClaimDetails() {
                   key={type}
                   onClick={() => setGrowthType(type)}
                   className={`px-4 py-1 rounded-full text-sm font-semibold transition-all duration-300 ${growthType === type
-                      ? "bg-[#392D5F] text-white"
-                      : "text-gray-400 hover:text-white"
+                    ? "bg-[#392D5F] text-white"
+                    : "text-gray-400 hover:text-white"
                     }`}
                 >
                   {type.charAt(0).toUpperCase() + type.slice(1)}
@@ -431,8 +442,8 @@ export default function ClaimDetails() {
           <div className="flex gap-2">
             <button
               className={`flex-1 rounded-md py-2 font-semibold ${activeTab === "support"
-                  ? "bg-[#0A2D4D] border border-[#006CD2] text-white"
-                  : "bg-gray-800 border border-gray-700 text-gray-400"
+                ? "bg-[#0A2D4D] border border-[#006CD2] text-white"
+                : "bg-gray-800 border border-gray-700 text-gray-400"
                 }`}
               onClick={() => setActiveTab("support")}
             >
@@ -441,8 +452,8 @@ export default function ClaimDetails() {
 
             <button
               className={`flex-1 rounded-md py-2 font-semibold ${activeTab === "oppose"
-                  ? "bg-[#0A2D4D] border border-[#006CD2] text-white"
-                  : "bg-gray-800 border border-gray-700 text-gray-400"
+                ? "bg-[#0A2D4D] border border-[#006CD2] text-white"
+                : "bg-gray-800 border border-gray-700 text-gray-400"
                 }`}
               onClick={() => setActiveTab("oppose")}
             >
@@ -485,7 +496,7 @@ export default function ClaimDetails() {
 
           {/* Amount Section */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <span className="text-gray-400">Amount</span>
+            <span className="text-gray-400">Amount: {balance}</span>
             <span className="text-gray-400">TRUST</span>
           </div>
 
@@ -549,8 +560,8 @@ export default function ClaimDetails() {
             <div
               onClick={() => setPositionType("support")}
               className={`flex-1 flex items-center justify-center font-semibold text-lg transition-colors duration-300 cursor-pointer ${positionType === "support"
-                  ? "bg-[#FFFFFF2B] text-white"
-                  : "bg-[#060210] text-white"
+                ? "bg-[#FFFFFF2B] text-white"
+                : "bg-[#060210] text-white"
                 }`}
             >
               Support
@@ -559,8 +570,8 @@ export default function ClaimDetails() {
             <div
               onClick={() => setPositionType("oppose")}
               className={`flex-1 flex items-center justify-center font-semibold text-lg transition-colors duration-300 cursor-pointer ${positionType === "oppose"
-                  ? "bg-[#FFFFFF2B] text-white"
-                  : "bg-[#060210] text-white"
+                ? "bg-[#FFFFFF2B] text-white"
+                : "bg-[#060210] text-white"
                 }`}
             >
               Oppose
@@ -576,8 +587,8 @@ export default function ClaimDetails() {
             <div
               onClick={() => setGrowthType("linear")}
               className={`flex-1 flex items-center justify-center font-semibold text-lg transition-colors duration-300 cursor-pointer ${growthType === "linear"
-                  ? "bg-[#FFFFFF2B] text-white"
-                  : "bg-[#060210] text-white"
+                ? "bg-[#FFFFFF2B] text-white"
+                : "bg-[#060210] text-white"
                 }`}
             >
               Linear
@@ -586,8 +597,8 @@ export default function ClaimDetails() {
             <div
               onClick={() => setGrowthType("exponential")}
               className={`flex-1 flex items-center justify-center font-semibold text-lg transition-colors duration-300 cursor-pointer ${growthType === "exponential"
-                  ? "bg-[#FFFFFF2B] text-white"
-                  : "bg-[#060210] text-white"
+                ? "bg-[#FFFFFF2B] text-white"
+                : "bg-[#060210] text-white"
                 }`}
             >
               Exponential
@@ -700,8 +711,8 @@ export default function ClaimDetails() {
         <div className="flex gap-2 mb-2 justify-start">
           <button
             className={`rounded-md py-2 px-4 font-semibold ${activeTab === "all"
-                ? "bg-[#0A2D4D] border border-[#006CD2] text-white"
-                : "bg-gray-800 border border-gray-700 text-gray-400"
+              ? "bg-[#0A2D4D] border border-[#006CD2] text-white"
+              : "bg-gray-800 border border-gray-700 text-gray-400"
               }`}
             onClick={() => setActiveTab("all")}
           >
@@ -710,8 +721,8 @@ export default function ClaimDetails() {
 
           <button
             className={`rounded-md py-2 px-4 font-semibold ${activeTab === "my"
-                ? "bg-[#0A2D4D] border border-[#006CD2] text-white"
-                : "bg-gray-800 border border-gray-700 text-gray-400"
+              ? "bg-[#0A2D4D] border border-[#006CD2] text-white"
+              : "bg-gray-800 border border-gray-700 text-gray-400"
               }`}
             onClick={() => setActiveTab("my")}
           >
