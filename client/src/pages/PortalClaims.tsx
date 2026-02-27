@@ -17,6 +17,8 @@ interface Claim {
   counter_term: Term;
 }
 
+
+
 export const toFixed = (num: string) => {
   const localeString = parseFloat(num).toLocaleString();
   return parseFloat(localeString).toFixed(1);
@@ -42,7 +44,7 @@ export default function PortalClaims() {
 
     try {
       setLoading(true);
-      const { claims } = await apiRequestV2("GET", `/api/get-claims?filter=${sortOption}&offset=${offset}`);
+      const { claims } = await apiRequestV2("POST", `/api/get-claims?filter=${sortOption}&offset=${offset}`);
 
       if (claims.length < LIMIT) setHasMore(false);
 
@@ -172,13 +174,14 @@ export default function PortalClaims() {
           <div className="overflow-x-auto">
             <table className="min-w-full text-left border-collapse border border-gray-700">
             <thead>
-              <tr className="bg-gray-800 text-gray-300">
-                <th className="px-4 py-2 w-[50%] border border-gray-700">Claim</th>
-                <th className="px-4 py-2 w-[15%] border border-gray-700">Support</th>
-                <th className="px-4 py-2 w-[15%] border border-gray-700">Oppose</th>
-                <th className="px-4 py-2 w-[20%] border border-gray-700">Portal Claims</th>
-              </tr>
-            </thead>
+  <tr className="bg-gray-800 text-gray-300">
+    <th className="px-4 py-2 w-[40%] border border-gray-700">Claim</th>
+    <th className="px-4 py-2 w-[15%] border border-gray-700">Total Market Cap</th>
+    <th className="px-4 py-2 w-[15%] border border-gray-700">Support</th>
+    <th className="px-4 py-2 w-[15%] border border-gray-700">Oppose</th>
+    <th className="px-4 py-2 w-[15%] border border-gray-700">Portal Claims</th>
+  </tr>
+</thead>
               <tbody>
                   {visibleClaims.map((claim, index) => (                  
                   <tr
@@ -202,6 +205,17 @@ export default function PortalClaims() {
                         <span className="bg-gray-700 px-1 rounded">{claim.term.triple.object.label}</span>
                       </div>
                     </td>
+
+                    {/* Total Market Cap */}
+<td className="px-4 py-2 border border-gray-700">
+  <div className="font-semibold text-white">
+    {toFixed(
+      formatEther(
+        BigInt(claim.total_market_cap)
+      )
+    )} TRUST
+  </div>
+</td>
 
                     {/* Support */}
                     <td className="px-4 py-2 border border-gray-700">
@@ -242,13 +256,13 @@ export default function PortalClaims() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {visibleClaims.map((claim) => {
-                const supportCount = claim.term.positions_aggregate.aggregate.count;
-                const opposeCount = claim.counter_term.positions_aggregate.aggregate.count;
-                
-                const total = supportCount + opposeCount;
+              const supportCount = Number(claim.term.positions_aggregate.aggregate.count);
+const opposeCount = Number(claim.counter_term.positions_aggregate.aggregate.count);
 
-                const supportPercent = total > 0 ? (supportCount / total) * 100 : 0;
-                const opposePercent = total > 0 ? (opposeCount / total) * 100 : 0;
+const total = supportCount + opposeCount;
+
+const supportPercent = total > 0 ? (supportCount / total) * 100 : 0;
+const opposePercent = total > 0 ? (opposeCount / total) * 100 : 0;
                 return (
                   <div
                     key={claim.term_id}
@@ -322,6 +336,7 @@ export default function PortalClaims() {
                       )}
                     </div>
                   </div>
+                  
     
                   {/* Actions */}
                   <div className="flex items-center justify-between mt-5 pt-4 border-t border-gray-700">
@@ -362,14 +377,6 @@ export default function PortalClaims() {
 
           <div ref={observerRef} className="h-10"></div>
         </div>
-
-        {loading && (
-          <div className="flex justify-center py-4">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
-          </div>
-        )}
-
-        <div ref={observerRef} className="h-10"></div>
       </div>
     </div>
   );

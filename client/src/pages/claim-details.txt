@@ -42,13 +42,12 @@ export default function ClaimDetails() {
   const [growthType, setGrowthType] = useState("linear");
   const [positionsOption, setPositionsOption] = useState("");
   const [loading, setLoading] = useState(false);
-  const [positions, setPositions] = useState<Position[]>([]); // all positions
-const [userPositions, setUserPositions] = useState<Position[]>([]); // my positions
-const [visiblePositions, setVisiblePositions] = useState<Position[]>([]); // paginated slice
+  const [visiblePositions, setVisiblePositions] = useState<Position[]>([]); // this is for all the positions
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const observerRef = useRef(null);
   const [claim, setClaim] = useState<any | null>(null);
+  const [positions, setPositions] = useState([]);
   const [buying, setBuying] = useState(false);
   const [selling, setSelling] = useState(false);
   const [buyAmount, setBuyAmount] = useState("");
@@ -73,7 +72,6 @@ const loadMorePositions = () => {
   const nextItems = positions.slice(start, end) as never[];
 
   setVisiblePositions(prev => [...prev, ...nextItems]);
-  console.log(visiblePositions);
 
   if (end >= positions.length) {
     setHasMore(false);
@@ -117,45 +115,44 @@ useEffect(() => {
   }, [id]);
 
   async function fetchClaim() {
-  const fetched = await apiRequestV2("POST", "/api/get-triple?termId=" + id);
-  setClaim(fetched);
+    const fetched = await apiRequestV2("GET", "/api/get-triple?termId=" + id);
+    setClaim(fetched);
+    console.log(fetched)
 
-  // Support / Oppose totals
-  const supportAssets = parseFloat(formatEther(BigInt(fetched.term.total_assets)));
-  const opposeAssets = parseFloat(formatEther(BigInt(fetched.counter_term.total_assets)));
-  const totalAssets = supportAssets + opposeAssets;
+    setMarketCap(formatNumber(parseFloat(formatEther(BigInt(fetched.total_market_cap)))));
+  
+    const total = parseFloat(formatEther(BigInt(fetched.total_assets)));
 
-  setSupportCount(supportAssets);
-  setOpposeCount(opposeAssets);
-  setSupportPercent((supportAssets / totalAssets) * 100);
-  setOpposePercent((opposeAssets / totalAssets) * 100);
+    const supportPositions = fetched.term.positions as Position[];
+    const opposePositions = fetched.counter_term.positions as Position[];
 
-  setTotalPositions(formatNumber(parseInt(fetched.total_position_count)));
-  setMarketCap(formatNumber(parseFloat(formatEther(BigInt(fetched.total_market_cap)))));
+    setVisiblePositions([...supportPositions, ...opposePositions]);
 
-  setTerm(fetched.term);
-  setCounterTerm(fetched.counter_term);
+    const formattedSupport = formatEther(BigInt(fetched.term.total_assets));
+    const formattedOppose = formatEther(BigInt(fetched.counter_term.total_assets));
 
-  // All positions
-  const allPositions = [
-    ...(fetched.term.positions ?? []),
-    ...(fetched.counter_term.positions ?? []),
-  ];
-  setPositions(allPositions);
+    setSupportCount(parseFloat(formattedSupport ?? "0"));
+    setOpposeCount(parseFloat(formattedOppose ?? "0"));
 
-  // My positions (from vaults)
-  const myPositions = [
-    ...(fetched.term.vaults?.[0]?.userPosition ?? []),
-    ...(fetched.term.vaults?.[1]?.userPosition ?? []),
-    ...(fetched.counter_term.vaults?.[0]?.userPosition ?? []),
-    ...(fetched.counter_term.vaults?.[1]?.userPosition ?? []),
-  ];
-  setUserPositions(myPositions);
+    setTotalPositions(formatNumber(parseInt(fetched.total_position_count)));
 
-  // Initially show first page for active tab
-  const initial = activeTab === "all" ? allPositions : myPositions;
-  setVisiblePositions(initial.slice(0, ITEMS_PER_PAGE));
-};
+    setSupportPercent((supportCount / total) * 100);
+    setOpposePercent((opposeCount / total) * 100);
+
+    setTerm(fetched.term);
+    setCounterTerm(fetched.counter_term);
+  }
+
+  // user postions - add this in the my position tab
+  const getUserPositions = () => {
+    const supportPositionsLinear = term.vaults[0].userPosition ?? [];
+    const supportPositionsExponential = term?.vaults[1].userPosition ?? [];
+
+    const opposePositionsLinear = counterTerm.vaults[0].userPosition ?? [];
+    const opposePositionsExponential = counterTerm?.vaults[1].userPosition ?? [];
+
+    return [...supportPositionsLinear, ...supportPositionsExponential, ...opposePositionsLinear, ...opposePositionsExponential];
+  }
 
   function getPrice() {
     let sharePrice = "0";
@@ -262,24 +259,25 @@ useEffect(() => {
 </div>
 
       {/* Progress Bar */}
-<div className="w-full h-5 bg-gray-700 rounded-lg overflow-hidden relative flex">
-  {/* Support */}
-  <div
-    className="bg-blue-600 flex items-center justify-center text-white text-xs font-semibold transition-all duration-500"
-    style={{ width: `${supportPercent}%` }}
-  >
-    {supportPercent.toFixed(0)}%
-  </div>
+      <div className="w-full h-5 bg-gray-700 rounded-lg overflow-hidden relative">
+        <div className="flex h-full text-white text-xs font-semibold">
+          {/* Support */}
+          <div
+            className="bg-blue-600 flex items-center justify-center transition-all duration-500"
+            style={{ width: `${supportPercent}%` }}
+          >
+            {supportPercent.toFixed(0)}%
+          </div>
 
-  {/* Oppose */}
-  <div
-    className="bg-[#F19C03] flex items-center justify-center text-white text-xs font-semibold transition-all duration-500"
-    style={{ width: `${opposePercent}%` }}
-
-  >
-    {opposePercent.toFixed(0)}%
-  </div>
-</div>
+          {/* Oppose */}
+          <div
+            className="bg-[#F19C03] flex items-center justify-center transition-all duration-500"
+            style={{ width: `${opposePercent}%` }}
+          >
+            {opposePercent.toFixed(0)}%
+          </div>
+        </div>
+      </div>
 
           <div>
       {/* Total Market Info Row */}
@@ -504,11 +502,15 @@ useEffect(() => {
               {isBuy ? buying ? "Buying" : "Buy" : selling ? "Selling" : "Sell"}
             </button>
           ) : (
-                <button onClick={handleConnectWallet} className="flex items-center justify-center gap-2 bg-white text-black font-semibold py-2 rounded-3xl">
+            <button className="flex items-center justify-center gap-2 bg-white text-black font-semibold py-2 rounded-3xl">
+              <img src="/key.png" alt="Key Icon" className="w-5 h-5" />
+              Connect Wallet
+            </button>
+          ) }
+    <button onClick={handleConnectWallet} className="flex items-center justify-center gap-2 bg-white text-black font-semibold py-2 rounded-3xl">
       <img src="/key.png" alt="Key Icon" className="w-5 h-5" />
       Connect Wallet
     </button>
-          ) }
   </div>
 </div>
 
@@ -771,74 +773,16 @@ useEffect(() => {
   </div>
 </div>
 
-
-{/* TABLE */}
+  {/* Table */}
 <div className="mt-4">
-  {visiblePositions.length === 0 ? (
-    <div className="text-gray-400 text-center py-4">No positions found</div>
-  ) : (
-    <div className="flex flex-col gap-2">
-      
-      {/* Header Row */}
-      <div className="bg-[#060210] p-3 rounded-md flex items-center text-gray-400 font-semibold text-sm">
-        <div className="w-[5%] text-center">#</div>
-        <div className="w-[45%]">Account</div>
-        <div className="w-[15%] text-center">Curve</div>
-        <div className="w-[20%] text-right">Shares</div>
-      </div>
-
-      {/* Rows */}
-      {visiblePositions.map((pos, idx) => (
-        <div
-          key={idx}
-          className="bg-[#110A2B] p-4 rounded-md flex items-center text-white"
-        >
-          {/* Serial Number */}
-          <div className="w-[5%] text-gray-400 font-semibold text-center">
-            {idx + 1}
-          </div>
-
-          {/* Account */}
-          <div className="w-[45%] flex items-center gap-2 truncate">
-            {pos.account?.image && (
-              <img
-                src={pos.account.image}
-                alt={pos.account.label ?? "User"}
-                className="w-6 h-6 rounded-full object-cover flex-shrink-0"
-              />
-            )}
-            <span className="font-semibold truncate">
-              {pos.account?.label ?? pos.account?.id ?? "Anonymous"}
-            </span>
-          </div>
-
-          {/* Curve */}
-          <div className="w-[15%] text-center text-gray-400">
-            {Number(pos.curve_id) === 1
-  ? "Linear"
-  : Number(pos.curve_id) === 2
-  ? "Exponential"
-  : "—"}
-          </div>
-
-          {/* Shares */}
-          <div className="w-[20%] text-right font-semibold">
-            {toFixed(formatEther(BigInt(pos.shares ?? 0)))} TRUST
-          </div>
-        </div>
-      ))}
-    </div>
-  )}
-
-  {/* Observer div for infinite scroll */}
+  {/*<PositionsTable positions={visiblePositions} />*/}
   <div ref={observerRef} className="h-10"></div>
-
-  {/* Spinner */}
-  {loading && (
-    <div className="flex justify-center my-4">
-      <div className="loader"></div>
-    </div>
-  )}
+{/* Spinner */}
+        {loading && (
+          <div className="flex justify-center my-4">
+            <div className="loader"></div>
+          </div>
+        )}
 </div>
 </div>
     </div>

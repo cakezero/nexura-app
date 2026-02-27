@@ -85,7 +85,7 @@ export const updateUser = async (req: GlobalRequest, res: GlobalResponse) => {
 export const getTriple = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
     const { termId } = req.query as { termId: string };
-    const appUser = await user.findOne({ _id: req.id });
+    // const appUser = await user.findOne({ _id: req.id });
 
     const query = `
       query GetTripleTerm($termId: String!, $userPositionAddress: String!) {
@@ -209,7 +209,7 @@ export const getTriple = async (req: GlobalRequest, res: GlobalResponse) => {
       }
     `;
 
-    const response = await client.request(query, { termId, userPositionAddress: appUser?.address ?? "..." });
+    const response = await client.request( "..." );
     res.status(OK).json(response.triple_term);
   } catch (error) {
     logger.error(error);
@@ -220,7 +220,7 @@ export const getTriple = async (req: GlobalRequest, res: GlobalResponse) => {
 export const getClaims = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
 
-    const appUser = await user.findById(req.id);
+    // const appUser = await user.findById(req.id);
 
     const filter = JSON.parse(req.query.filter as string) ?? { total_market_cap: "desc" };
 
@@ -392,7 +392,7 @@ export const getClaims = async (req: GlobalRequest, res: GlobalResponse) => {
       }
     `;
 
-    const { triple_terms: claims } = await client.request(vaultQuery, { where: {}, orderBy: [filter], limit: 50, offset, userPositionAddress: appUser?.address ?? "..." });
+    const { triple_terms: claims } = await client.request( "...");
 
     res.json({ message: "fetched", claims });
   } catch (e) {
