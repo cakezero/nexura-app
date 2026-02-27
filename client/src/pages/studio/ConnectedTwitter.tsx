@@ -20,20 +20,20 @@ export default function ConnectedTwitter() {
       !!localStorage.getItem("nexura-project:token") ||
       !!localStorage.getItem("nexura:proj-token");
     if (!hasFullSession) {
-      localStorage.setItem("nexura:studio-step", "/connected-twitter");
+      localStorage.setItem("nexura:studio-step", "/connected-discord");
     }
 
-    const stored = localStorage.getItem("twitterData");
+    const stored = localStorage.getItem("discordData");
     if (stored) {
       setTwitterData(JSON.parse(stored));
     } else {
-      const fakeTwitter = {
-        handle: "@realproject_handle",
-        avatar: "/x-logo.png",
+      const fakeDiscord = {
+        handle: "Nexura Official",
+        avatar: "/discord-logo.png",
         verified: true,
       };
-      localStorage.setItem("twitterData", JSON.stringify(fakeTwitter));
-      setTwitterData(fakeTwitter);
+      localStorage.setItem("discordData", JSON.stringify(fakeDiscord));
+      setTwitterData(fakeDiscord);
     }
     setLoading(false);
   }, []);
@@ -62,19 +62,19 @@ export default function ConnectedTwitter() {
         </div>
 
         <h1 className="text-2xl sm:text-3xl font-semibold text-white text-center">
-          X Account Connected
+          Discord Server Connected
         </h1>
 
         <p className="text-white/60 text-center sm:text-base max-w-sm mx-auto">
-          Your X account has been successfully linked to Nexura Studio
+          Your Discord server has been successfully linked to Nexura Studio
         </p>
 
         <Card className="bg-gray-800 border border-purple-500 rounded-2xl p-4 flex items-center justify-between">
 
           <div className="border-2 border-purple-500 rounded-2xl p-2 flex items-center justify-center">
             <img
-              src={twitterData.avatar || "/x-logo.png"}
-              alt="X avatar"
+              src={twitterData.avatar || "/discord-logo.png"}
+              alt="Discord avatar"
               className="w-10 h-10 rounded-full"
             />
           </div>
@@ -85,7 +85,7 @@ export default function ConnectedTwitter() {
                 {twitterData.handle || "@unknown"}
               </span>
               <span className="text-white/60 text-sm">
-                Primary Handle
+                Discord Server
               </span>
             </div>
 
@@ -100,7 +100,7 @@ export default function ConnectedTwitter() {
 
         </Card>
 
-        <Link href="/studio-dashboard" className="w-full">
+        <Link href="/discord-channels" className="w-full">
           <Button className="w-full bg-purple-400 hover:bg-purple-600 hover:shadow-[0_0_28px_rgba(131,58,253,0.7)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 mt-4">
             Save & Continue
             <ArrowRight className="h-5 w-5" />

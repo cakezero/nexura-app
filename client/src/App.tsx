@@ -43,6 +43,7 @@ import SignInToHub from "./pages/studio/SignInToHub.tsx"
 import TheHub from "./pages/studio/TheHub.tsx";
 import ConnectTwitter from "./pages/studio/ConnectTwitter.tsx";
 import ConnectedTwitter from "./pages/studio/ConnectedTwitter.tsx"
+import DiscordChannels from "./pages/studio/DiscordChannels.tsx";
 import StudioDashboard from "./pages/studio/StudioDashboard.tsx"
 import CampaignsTab from "./components/admin/CampaignsTab.tsx";
 import { getStoredAccessToken, apiRequest } from './lib/config'
@@ -100,8 +101,9 @@ function Router() {
       <Route path="/projects/create/create-hub" component={CreateHub} />
       <Route path="/projects/create/signin-to-hub" component={SignInToHub} />
       <Route path="/projects/create/the-hub" component={TheHub} />
-      <Route path="/connect-twitter" component={ConnectTwitter} />
-      <Route path="/connected-twitter" component={ConnectedTwitter} />
+      <Route path="/connect-discord" component={ConnectTwitter} />
+      <Route path="/connected-discord" component={ConnectedTwitter} />
+      <Route path="/discord-channels" component={DiscordChannels} />
       <Route path="/studio-dashboard">
   <StudioDashboard onLogout={handleLogout} />
 </Route>

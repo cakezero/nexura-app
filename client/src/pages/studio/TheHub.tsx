@@ -87,7 +87,7 @@ const handleSubmit = async () => {
     localStorage.removeItem("nexura:studio-step");
 
     toast({ title: "Hub created!", description: "Your project hub is live on Nexura Studio." });
-    setLocation("/connect-twitter");
+    setLocation("/connect-discord");
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Sign-up failed. Please try again.";
     toast({ title: "Sign up failed", description: msg, variant: "destructive" });

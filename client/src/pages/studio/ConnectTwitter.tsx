@@ -11,19 +11,19 @@ export default function ConnectTwitter() {
       !!localStorage.getItem("nexura-project:token") ||
       !!localStorage.getItem("nexura:proj-token");
     if (!hasFullSession) {
-      localStorage.setItem("nexura:studio-step", "/connect-twitter");
+      localStorage.setItem("nexura:studio-step", "/connect-discord");
     }
   }, []);
 
   const handleFakeConnect = () => {
-    const fakeTwitter = {
-      handle: "@realproject_handle",
-      avatar: "/x-logo.png",
+    const fakeDiscord = {
+      handle: "Nexura Official",
+      avatar: "/discord-logo.png",
       verified: true,
     };
 
-    localStorage.setItem("twitterData", JSON.stringify(fakeTwitter));
-    window.location.href = "/connected-twitter";
+    localStorage.setItem("discordData", JSON.stringify(fakeDiscord));
+    window.location.href = "/connected-discord";
   };
 
   return (
@@ -39,22 +39,22 @@ export default function ConnectTwitter() {
           </Link>
         </div>
 
-        {/* X Icon */}
+        {/* Discord Icon */}
         <div className="flex justify-center">
-          <img src="/x-icon.png" alt="X icon" className="w-12 h-12" />
+          <img src="/discord-logo.png" alt="Discord icon" className="w-12 h-12" />
         </div>
 
-        <CardTitle className="text-2xl font-semibold">Connect X</CardTitle>
+        <CardTitle className="text-2xl font-semibold">Connect Discord</CardTitle>
         <CardDescription className="text-white/60 text-sm leading-relaxed pb-3">
-          Link your official X (formerly Twitter) account to verify your organization's identity.
+          Link your official Discord server to verify your community's identity on Nexura.
         </CardDescription>
 
         <Button
           onClick={handleFakeConnect}
           className="w-full text-white bg-purple-400 hover:bg-purple-600 hover:shadow-[0_0_28px_rgba(131,58,253,0.7)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2"
         >
-          <img src="/x-logo.png" alt="X logo" className="w-4 h-4" />
-          Connect
+          <img src="/discord-logo.png" alt="Discord logo" className="w-4 h-4" />
+          Connect Discord
         </Button>
 
       </Card>
