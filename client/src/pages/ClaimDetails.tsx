@@ -19,6 +19,7 @@ import { useWallet } from "../hooks/use-wallet";
 import { buyShares, sellShares } from "../services/web3";
 import { useToast } from "../hooks/use-toast";
 import { Term, Position } from "../types/types";
+import { getPublicClient } from "../lib/viem";
 
 function generateChartData(claim: any, growthType: string) {
   // For demo: use fixed pattern similar to your spec
@@ -214,6 +215,14 @@ export default function ClaimDetails() {
 
   const handleConnectWallet = async () => {
     await connectWallet();
+  }
+
+  async function getBalance() {
+    const publicClient = getPublicClient();
+
+    const balance = await publicClient?.getBalance({ address: user?.address as Address });
+
+    return formatEther(balance ?? 0n);
   }
 
   if (!claim) return <div className="p-6 text-white">Claim not found</div>;
