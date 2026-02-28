@@ -7,7 +7,7 @@ export const buyShares = async (amountTrust: string, termId: Address, curveId = 
   const walletClient = getWalletClient();
   const publicClient = getPublicClient();
 
-  if (!walletClient || !walletClient?.account || !publicClient) {
+  if (!walletClient || !publicClient) {
     throw new Error("wallet not installed or connected");
   }
 
