@@ -103,7 +103,7 @@ function Router() {
       <Route path="/projects/create/signin-to-hub" component={SignInToHub} />
       <Route path="/projects/create/the-hub" component={TheHub} />
       <Route path="/connect-discord" component={ConnectDiscord} />
-      <Route path="/connected-discord" component={ConnectedDiscord} />
+      <Route path="/project/connected-discord" component={ConnectedDiscord} />
       <Route path="/studio-dashboard">
   <StudioDashboard onLogout={handleLogout} />
 </Route>

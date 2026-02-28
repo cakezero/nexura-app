@@ -1,7 +1,7 @@
 
 import { useParams } from "wouter";
 import { useState, useEffect, useRef } from "react"
-import { Address, formatEther } from "viem";
+import { Address, formatEther, parseEther } from "viem";
 import { formatNumber } from "../lib/utils";
 import { toFixed } from "./PortalClaims";
 import {
@@ -20,6 +20,7 @@ import { buyShares, sellShares } from "../services/web3";
 import { useToast } from "../hooks/use-toast";
 import { Term, Position } from "../types/types";
 import { getPublicClient } from "../lib/viem";
+import { multiVaultPreviewDeposit, multiVaultPreviewRedeem } from "@0xintuition/sdk";
 
 function generateChartData(claim: any, growthType: string) {
   // For demo: use fixed pattern similar to your spec
@@ -63,6 +64,7 @@ export default function ClaimDetails() {
   const [totalPostions, setTotalPositions] = useState("0");
   const [marketCap, setMarketCap] = useState("0");
   const [balance, setBalance] = useState("0");
+  const [amountToReceive, setAmountToReceive] = useState("0");
 
 
   const { user } = useAuth();
@@ -122,6 +124,33 @@ export default function ClaimDetails() {
   useEffect(() => {
     fetchClaim();
   }, [id]);
+
+  useEffect(() => {
+    (async () => {
+      const curveId = growthType === "linear" ? 1n : 2n;
+      const publicClient = getPublicClient();
+
+      let sharesAmount = 0n;
+
+      if (isBuy && buyAmount) {
+        const [shares] = await multiVaultPreviewDeposit(
+          { address: "0x", publicClient },
+          { args: [id, curveId, parseEther(buyAmount)] }
+        );
+        sharesAmount = shares;
+
+      } else if (!isBuy && sellAmount) {
+        const [shares] = await multiVaultPreviewRedeem(
+          { address: "0x", publicClient },
+          { args: [id, curveId, parseEther(sellAmount)] }
+        );
+        sharesAmount = shares;
+      }
+
+      setAmountToReceive(formatEther(sharesAmount));
+    })();
+
+  }), [buyAmount, sellAmount];
 
   useEffect(() => {
     (async () => {
@@ -506,7 +535,6 @@ export default function ClaimDetails() {
               type="text"
               placeholder="0.1"
               onChange={(e) => isBuy ? setBuyAmount(e.target.value) : setSellAmount(e.target.value)}
-
               className="flex-1 bg-gray-800 text-white p-2 outline-none"
             />
             <span className="text-gray-400 ml-2">min</span>
@@ -514,6 +542,8 @@ export default function ClaimDetails() {
           <input
             type="text"
             placeholder="Amount you receive"
+            value={amountToReceive}
+            disabled={true}
             className="w-full bg-gray-800 text-white p-2 rounded-md outline-none border border-[#833AFD]"
           />
 
