@@ -20,7 +20,9 @@ import { buyShares, sellShares } from "../services/web3";
 import { useToast } from "../hooks/use-toast";
 import { Term, Position } from "../types/types";
 import { getPublicClient, getWalletClient } from "../lib/viem";
+import chain from "../lib/chain";
 import { multiVaultPreviewDeposit, multiVaultPreviewRedeem, getMultiVaultAddressFromChainId } from "@0xintuition/sdk";
+import Chart from "react-apexcharts";
 
 function generateChartData(claim: any, growthType: string) {
   // For demo: use fixed pattern similar to your spec
@@ -65,6 +67,8 @@ export default function ClaimDetails() {
   const [marketCap, setMarketCap] = useState("0");
   const [balance, setBalance] = useState("0");
   const [amountToReceive, setAmountToReceive] = useState("0");
+  const [isToggled, setIsToggled] = useState(false);
+  const [receiveAmount, setReceiveAmount] = useState("")
 
   const { user } = useAuth();
   const { connectWallet } = useWallet();
@@ -131,6 +135,8 @@ export default function ClaimDetails() {
       
       const walletClient = await getWalletClient();
 
+      await walletClient.switchChain({ id: chain.id });
+      
       const address = getMultiVaultAddressFromChainId(walletClient.chain?.id!);
 
       let sharesAmount = 0n;
@@ -273,6 +279,73 @@ export default function ClaimDetails() {
 
   if (!claim) return <div className="p-6 text-white">Claim not found</div>;
 
+  ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  ////////////////////////////////////////
+  // filter user's positions based on positionType
+const filteredPositions = userPositions.filter(p =>
+  positionType === "support"
+    ? Number(p.curve_id) === 1
+    : Number(p.curve_id) === 2
+);
+
+// total shares owned
+const totalShares = filteredPositions.reduce(
+  (acc, p) => acc + Number(formatEther(BigInt(p.shares ?? 0))),
+  0
+);
+
+// total spent (bought)
+const totalBought = filteredPositions.reduce(
+  (acc, p) => acc + Number(formatEther(BigInt(p.amount ?? 0))), // assuming p.amount is what user spent
+  0
+);
+
+// current value = total shares * current share price
+const currentSharePrice =
+  activeTab === "support"
+    ? Number(getPrice()) // your getPrice already handles support/oppose & growthType
+    : Number(getPrice());
+
+const currentValue = totalShares * currentSharePrice;
+
+// P&L
+const profitLoss = currentValue - totalBought;
+
+// ownership %
+const totalMarketShares =
+  positionType === "support"
+    ? parseFloat(formatEther(BigInt(term.total_assets)))
+    : parseFloat(formatEther(BigInt(counterTerm.total_assets)));
+
+const ownershipPercent = totalMarketShares
+  ? (totalShares / totalMarketShares) * 100
+  : 0;
+
+  type Transaction = {
+  type: "Deposit" | "Withdraw" | "Buy" | "Sell"; 
+  amount: number; 
+  timestamp: string; 
+  icon?: string; 
+  color?: string;
+};
+
+const recentTransactions: Transaction[] = [
+  {
+    type: "Deposit",
+    amount: 0.0972,
+    timestamp: "2026-02-28T20:13:00Z",
+    icon: "/download.png",
+    color: "#00FF62",
+  },
+  {
+    type: "Withdraw",
+    amount: 0.05,
+    timestamp: "2026-02-27T15:45:00Z",
+    icon: "/withdraw.png",
+    color: "#FF4C4C",
+  },
+];
+
   return (
     <div className="p-6 text-white space-y-6">
       {/* Top Statement */}
@@ -298,7 +371,7 @@ export default function ClaimDetails() {
             <span className="font-semibold text-sm md:text-base">{toFixed(formatEther(BigInt(term.total_assets)))} TRUST</span> {/* slightly larger */}
             <img src="/intuition-icon.png" alt="Intuition Icon" className="w-5 h-5" />
             <div className="flex items-center gap-2">
-              <span className="text-blue-400 font-semibold text-base md:text-lg">{formatNumber(term.positions_aggregate.aggregate.count)}</span> {/* increased also */}
+              <span className="text-blue-400 font-semibold text-base md:text-lg">{formatNumber(term.positions_aggregate.aggregate.count, "user")}</span> {/* increased also */}
               <img src="/user.png" alt="User Icon" className="w-4 h-4" />
             </div>
           </div>
@@ -314,7 +387,7 @@ export default function ClaimDetails() {
             <span className="font-semibold text-sm md:text-base">{toFixed(formatEther(BigInt(counterTerm.total_assets)))} TRUST</span>
             <img src="/intuition-icon.png" alt="Intuition Icon" className="w-5 h-5" />
             <div className="flex items-center gap-2">
-              <span className="text-[#F19C03] font-semibold text-base md:text-lg">{formatNumber(counterTerm.positions_aggregate.aggregate.count)}</span>
+              <span className="text-[#F19C03] font-semibold text-base md:text-lg">{formatNumber(counterTerm.positions_aggregate.aggregate.count, "user")}</span>
               <img src="/user-red.png" alt="User Icon" className="w-4 h-4" />
             </div>
           </div>
@@ -335,7 +408,6 @@ export default function ClaimDetails() {
         <div
           className="bg-[#F19C03] flex items-center justify-center text-white text-xs font-semibold transition-all duration-500"
           style={{ width: `${opposePercent}%` }}
-
         >
           {opposePercent.toFixed(0)}%
         </div>
@@ -398,77 +470,80 @@ export default function ClaimDetails() {
               </div>
             </div>
 
-            {/* Toggle Linear / Exponential */}
-            <div className="flex rounded-full bg-[#1F123A] p-1">
-              {["linear", "exponential"].map((type) => (
-                <button
-                  key={type}
-                  onClick={() => setGrowthType(type)}
-                  className={`px-4 py-1 rounded-full text-sm font-semibold transition-all duration-300 ${growthType === type
-                    ? "bg-[#392D5F] text-white"
-                    : "text-gray-400 hover:text-white"
-                    }`}
-                >
-                  {type.charAt(0).toUpperCase() + type.slice(1)}
-                </button>
-              ))}
-            </div>
-          </div>
+                {/* Toggle Linear / Exponential */}
+    <div className="flex rounded-full bg-[#1F123A] p-1">
+      {["linear", "exponential"].map((type) => (
+        <button
+          key={type}
+          onClick={() => setGrowthType(type)}
+          className={`px-4 py-1 rounded-full text-sm font-semibold transition-all duration-300 ${
+            growthType === type
+              ? "bg-[#392D5F] text-white"
+              : "text-gray-400 hover:text-white"
+          }`}
+        >
+          {type.charAt(0).toUpperCase() + type.slice(1)}
+        </button>
+      ))}
+    </div>
+  </div>
 
-          {/* Chart */}
-          <div className="w-full h-[280px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={generateChartData(claim, growthType)}>
-                <CartesianGrid
-                  stroke="#7B5CFF44"
-                  strokeDasharray="3 3"
-                  vertical={false}
-                />
+{/* ApexCharts Area Graph - Deep Complex Purple */}
+<Chart
+  type="area"
+  height={280}
+  series={[
+    {
+      name: "Share Price",
+      data: generateChartData(claim, growthType).map(d => ({
+        x: d.date,
+        y: d.value,
+      })),
+    },
+  ]}
+  options={{
+    chart: {
+      toolbar: { show: false },
+      zoom: { enabled: false },
+      animations: { enabled: true, easing: "easeinout", speed: 800 },
+    },
+    dataLabels: { enabled: false },
+    stroke: { curve: "smooth", width: 3, colors: ["#AD77FF"] },
+    fill: {
+      type: "gradient",
+      gradient: {
+        shade: "light",
+        type: "vertical",
+        gradientToColors: ["#8B3EFE"],
+        opacityFrom: 0.6,
+        opacityTo: 0.3,
+        stops: [0, 50, 100],
+      },
+    },
+    xaxis: {
+      type: "category",
+      labels: { style: { colors: "#BDAFFF" } },
+      axisBorder: { show: false },
+      axisTicks: { show: false },
+      crosshairs: { show: true, width: 1, color: "#8B3EFE" },
+    },
+    yaxis: {
+      show: true,
+      min: Math.min(...generateChartData(claim, growthType).map(d => d.value)) * 0.95,
+      max: Math.max(...generateChartData(claim, growthType).map(d => d.value)) * 1.05,
+      labels: { style: { colors: "#BDAFFF" }, formatter: val => val.toFixed(2) },
+    },
+    tooltip: {
+      theme: "dark",
+      shared: true,
+      intersect: false,
+      x: { show: true },
+      y: { formatter: val => `${val} TRUST` },
+    },
+    grid: { show: false },
+  }}
+/>
 
-                <YAxis
-                  orientation="left"
-                  tick={{ fill: "#BDAFFF", fontSize: 12 }}
-                  axisLine={false}
-                  tickLine={false}
-                  domain={[100, 110]}
-                />
-
-                <XAxis
-                  dataKey="date"
-                  tick={{ fill: "#BDAFFF", fontSize: 12 }}
-                  axisLine={false}
-                  tickLine={false}
-                  padding={{ left: 10, right: 10 }}
-                />
-
-                <Area
-                  type="monotone"
-                  dataKey="value"
-                  stroke="#AD77FF"
-                  strokeWidth={3}
-                  fill="url(#purpleGradient)"
-                  dot={false}
-                  animationDuration={1500}
-                />
-
-                <Line
-                  type="monotone"
-                  dataKey={() => 101} // yellowy or yellowish line
-                  stroke="#FFD166"
-                  strokeWidth={1.5}
-                  dot={false}
-                  activeDot={false}
-                />
-
-                <defs>
-                  <linearGradient id="purpleGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#AD77FF" stopOpacity={0.4} />
-                    <stop offset="100%" stopColor="#AD77FF" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
         </div>
 
         {/* Control Card (20%) */}
@@ -497,36 +572,47 @@ export default function ClaimDetails() {
           </div>
 
           {/* Buy / Sell Toggle */}
-          <div className="flex rounded-full border border-[#006CD2] w-full h-12 overflow-hidden select-none cursor-pointer">
-            {/* Buy */}
-            <div
-              onClick={() => setIsBuy(true)}
-              className={`flex-1 flex items-center justify-center font-semibold text-lg transition-colors duration-300 ${isBuy ? "bg-[#8B3EFE] text-white" : "bg-[#060210] text-white"
-                }`}
-            >
-              Buy
-            </div>
+<div className="flex w-full overflow-hidden select-none cursor-pointer bg-[#060210] border border-[#006CD2] rounded-full">
+  {/* Buy */}
+  <div
+    onClick={() => setIsBuy(true)}
+    className={`flex-1 flex items-center rounded-full justify-center font-semibold text-base h-10 transition-colors duration-300 ${
+      isBuy ? "bg-[#8B3EFE] text-white rounded-l-3xl" : "bg-[#060210] text-white rounded-l-3xl"
+    }`}
+  >
+    Buy
+  </div>
 
-            {/* Sell */}
-            <div
-              onClick={() => setIsBuy(false)}
-              className={`flex-1 flex items-center justify-center font-semibold text-lg transition-colors duration-300 ${!isBuy ? "bg-[#8B3EFE] text-white" : "bg-[#060210] text-white"
-                }`}
-            >
-              Sell
-            </div>
-          </div>
+  {/* Sell */}
+  <div
+    onClick={() => setIsBuy(false)}
+    className={`flex-1 flex items-center rounded-full justify-center font-semibold text-base h-10 transition-colors duration-300 ${
+      !isBuy ? "bg-[#8B3EFE] text-white rounded-r-3xl" : "bg-[#060210] text-white rounded-r-3xl"
+    }`}
+  >
+    Sell
+  </div>
+</div>
 
-          {/* Linear Curve Section */}
+                    {/* Linear Curve Section */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
               <h3 className="font-semibold text-white">Linear Curve</h3>
               <p className="text-gray-400 text-sm">Low Risk, Low Reward</p>
             </div>
             {/* Toggle button */}
-            <button className="bg-gray-700 rounded-full w-12 h-6 relative">
-              <span className="absolute w-5 h-5 bg-white rounded-full left-0 top-0.5 transition-all"></span>
-            </button>
+<button
+  onClick={() => setIsToggled(!isToggled)}
+  className={`bg-gray-700 w-12 h-6 rounded-full relative transition-colors duration-300 ${
+    isToggled ? "bg-purple-400" : "bg-gray-700"
+  }`}
+>
+  <span
+    className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-all duration-300 ${
+      isToggled ? "left-6" : "left-0.5"
+    }`}
+  ></span>
+</button>
           </div>
 
           {/* Amount Section */}
@@ -553,21 +639,32 @@ export default function ClaimDetails() {
             className="w-full bg-gray-800 text-white p-2 rounded-md outline-none border border-[#833AFD]"
           />
 
-          {/* Connect Wallet Button */}
-          {user ? (
-            <button onClick={handleClaimAction} className="flex items-center justify-center gap-2 bg-white text-black font-semibold py-2 rounded-3xl">
-              <img src="/key.png" alt="Key Icon" className="w-5 h-5" />
-              {isBuy ? buying ? "Buying" : "Buy" : selling ? "Selling" : "Sell"}
-            </button>
-          ) : (
-            <button onClick={handleConnectWallet} className="flex items-center justify-center gap-2 bg-white text-black font-semibold py-2 rounded-3xl">
-              <img src="/key.png" alt="Key Icon" className="w-5 h-5" />
-              Connect Wallet
-            </button>
-          )}
+          {/* Connect / Buy / Sell Button */}
+<button
+  onClick={async () => {
+    if (!user) {
+      await handleConnectWallet();
+      return;
+    }
+    await handleClaimAction();
+  }}
+  className="flex items-center justify-center gap-2 bg-white text-black font-semibold py-2 rounded-3xl"
+>
+  <img src="/key.png" alt="Key Icon" className="w-5 h-5" />
+  {user
+    ? isBuy
+      ? buying
+        ? "Buying"
+        : "Buy"
+      : selling
+      ? "Selling"
+      : "Sell"
+    : "Connect Wallet"}
+</button>
         </div>
       </div>
 
+      
       {/* Your Position Card */}
       <div className="bg-[#110A2B] rounded-xl p-4 flex flex-col gap-4">
         {/* Header Line */}

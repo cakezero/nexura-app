@@ -1,4 +1,4 @@
-import { type WalletClient, type Address, type PublicClient, http, custom, createWalletClient, createPublicClient } from "viem";
+import { type WalletClient, type Address, type PublicClient, custom, createWalletClient, createPublicClient } from "viem";
 import chain from "./chain";
 
 let walletClient: WalletClient | undefined = undefined;
@@ -41,7 +41,7 @@ export const getWalletClient = async () => {
     walletClient = createWalletClient({
       chain,
       account,
-      transport: http()
+      transport: custom(window.ethereum!)
     });
 
     return walletClient;
