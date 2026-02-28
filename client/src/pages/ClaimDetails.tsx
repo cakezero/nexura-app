@@ -543,6 +543,7 @@ export default function ClaimDetails() {
             type="text"
             placeholder="Amount you receive"
             value={amountToReceive}
+            disabled={true}
             className="w-full bg-gray-800 text-white p-2 rounded-md outline-none border border-[#833AFD]"
           />
 
