@@ -249,6 +249,8 @@ export default function ClaimDetails() {
       toast({ title: "Success", description: `Shares ${isBuy ? "bought" : "sold"} successfully!` });
     } catch (error) {
       console.error(error);
+      setSelling(false);
+      setBuying(false);
       toast({ title: "error", description: `error ${isBuy ? "buying" : "selling"} shares`, variant: "destructive" })
     }
   }
