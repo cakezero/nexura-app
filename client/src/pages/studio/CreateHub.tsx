@@ -108,7 +108,7 @@ export default function SharedAccessCredentials() {
             <div className="space-y-4">
               {/* name */}
               <div>
-                <CardTitle className="text-white text-lg sm:text-xl">Email Address</CardTitle>
+                <CardTitle className="text-white text-lg sm:text-xl">Super Admin Name</CardTitle>
                 <Input
                   type="text"
                   placeholder="Enter super admin name"
