@@ -19,8 +19,8 @@ import { useWallet } from "../hooks/use-wallet";
 import { buyShares, sellShares } from "../services/web3";
 import { useToast } from "../hooks/use-toast";
 import { Term, Position } from "../types/types";
-import { getPublicClient } from "../lib/viem";
-import { multiVaultPreviewDeposit, multiVaultPreviewRedeem } from "@0xintuition/sdk";
+import { getPublicClient, getWalletClient } from "../lib/viem";
+import { multiVaultPreviewDeposit, multiVaultPreviewRedeem, getMultiVaultAddressFromChainId } from "@0xintuition/sdk";
 
 function generateChartData(claim: any, growthType: string) {
   // For demo: use fixed pattern similar to your spec
@@ -65,7 +65,6 @@ export default function ClaimDetails() {
   const [marketCap, setMarketCap] = useState("0");
   const [balance, setBalance] = useState("0");
   const [amountToReceive, setAmountToReceive] = useState("0");
-
 
   const { user } = useAuth();
   const { connectWallet } = useWallet();
@@ -129,28 +128,31 @@ export default function ClaimDetails() {
     (async () => {
       const curveId = growthType === "linear" ? 1n : 2n;
       const publicClient = getPublicClient();
+      
+      const walletClient = await getWalletClient();
+
+      const address = getMultiVaultAddressFromChainId(walletClient.chain?.id!);
 
       let sharesAmount = 0n;
 
       if (isBuy && buyAmount) {
         const [shares] = await multiVaultPreviewDeposit(
-          { address: user?.address as `0x`, publicClient },
-          { args: [id, curveId, parseEther(buyAmount)] }
+          { address, walletClient, publicClient },
+          { args: [id as "0x", curveId, parseEther(buyAmount)] }
         );
         sharesAmount = shares;
 
       } else if (!isBuy && sellAmount) {
         const [shares] = await multiVaultPreviewRedeem(
-          { address: user?.address as `0x`, publicClient },
-          { args: [id, curveId, parseEther(sellAmount)] }
+          { address, walletClient, publicClient },
+          { args: [id as "0x", curveId, parseEther(sellAmount)] }
         );
         sharesAmount = shares;
       }
 
       setAmountToReceive(formatEther(sharesAmount));
     })();
-
-  }), [buyAmount, sellAmount];
+  }, [buyAmount, sellAmount]);
 
   useEffect(() => {
     (async () => {
@@ -225,6 +227,8 @@ export default function ClaimDetails() {
   const handleClaimAction = async () => {
     try {
       const curveId = growthType === "linear" ? 1n : 2n;
+      
+      const address = activeTab === "support" ? id : counterTerm.id;
 
       if (isBuy) {
         if (!buyAmount) {
@@ -233,8 +237,8 @@ export default function ClaimDetails() {
         }
 
         setBuying(true);
-        await buyShares(buyAmount, id as Address, curveId);
-        setSelling(false);
+        await buyShares(buyAmount, address as Address, curveId);
+        setBuying(false);
       } else {
         if (!sellAmount) {
           toast({ title: "Error", description: "select a sell amount to proceed", variant: "destructive" });
@@ -242,7 +246,7 @@ export default function ClaimDetails() {
         }
 
         setSelling(true);
-        await sellShares(sellAmount, id as Address, curveId);
+        await sellShares(sellAmount, address as Address, curveId);
         setSelling(false);
       }
 

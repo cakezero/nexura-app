@@ -6,6 +6,7 @@ import type { Term } from "../types/types";
 import { useToast } from "../hooks/use-toast";
 import { formatNumber } from "../lib/utils";
 import { useLocation } from "wouter";
+import { getWalletClient } from "../lib/viem";
 
 interface Claim {
   term_id: Address;
@@ -27,7 +28,8 @@ export default function PortalClaims() {
   const [view, setView] = useState("list");
   const [sortOption, setSortOption] = useState('{"total_market_cap":"desc"}');
   const [sortDirection, setSortDirection] = useState("desc");
-    const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [termId, setTermId] = useState("");
   const [activeTab, setActiveTab] = useState("deposit");
   const [isToggled, setIsToggled] = useState(false);
 
@@ -35,7 +37,7 @@ export default function PortalClaims() {
   const [offset, setOffset] = useState<number>(0);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
-    const [activeClaim, setActiveClaim] = useState(null);
+  const [activeClaim, setActiveClaim] = useState<Claim | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [showReviewRedeemModal, setShowReviewRedeemModal] = useState(false);
     const [transactionMode, setTransactionMode] = useState("redeem");
@@ -132,30 +134,33 @@ useEffect(() => {
   }, [sortOption]);
 
   // ---------------- Handlers ----------------
-    const handleSupportClick = (claim) => {
+    const handleSupportClick = (claim: Claim) => {
       setActiveClaim(claim);
+      setTermId(claim.term.id);
       setOpposeMode(false);
       setShowModal(true);
     };
-  
-    const handleOpposeClick = (claim) => {
+
+    const handleOpposeClick = (claim: Claim) => {
       setActiveClaim(claim);
+      setTermId(claim.counter_term.id);
       setTransactionMode("redeem");
       setActiveTab("redeem");
       setShowModal(true);
       setIsToggled(false);
       setOpposeMode(true);
     };
-  
+
     const handleCloseModal = () => {
       setActiveClaim(null);
       setShowModal(false);
       setOpposeMode(false);
     };
 
-  const handleClaimAction = async (claimId: Address, action = "support") => {
+  const handleClaimAction = async (action = "support") => {
     try {
-      await buyShares("0.01", claimId); // example amount
+      await buyShares("0.01", termId as Address, isToggled ? 1n : 0n); // example amount
+
       toast({ title: "Sucesss", description: `Successfully ${action ? "opposed" : "supported"} a claim!` });
     } catch (err: any) {
       console.error(err);
@@ -163,7 +168,6 @@ useEffect(() => {
     }
   };
 
-  
   return (
     <div className="p-6 text-white">
       {/* Header */}
@@ -752,11 +756,11 @@ useEffect(() => {
       {/* Statement */}
       <div className="text-gray-300 mb-6 px-6 flex flex-wrap items-center gap-2">
         <span className="font-bold bg-gray-700 px-2 py-1 rounded inline-flex items-center gap-2">
-          <img src={activeClaim.icon} alt="Claim Icon" className="w-5 h-5 object-contain" />
-          {activeClaim.subject}
+          <img src={activeClaim.term.triple.subject.image} alt="Claim Icon" className="w-5 h-5 object-contain" />
+          {activeClaim.term.triple.subject.label}
         </span>
-        <span>{activeClaim.verb}</span>
-        <span className="bg-gray-700 px-2 py-1 rounded">{activeClaim.object}</span>
+        <span>{activeClaim.term.triple.predicate.label}</span>
+        <span className="bg-gray-700 px-2 py-1 rounded">{activeClaim.term.triple.object.label}</span>
       </div>
 
       {/* Amount Input */}
@@ -772,42 +776,13 @@ useEffect(() => {
 {/* Redeem / Deposit Button */}
 <button
   className="w-full bg-white text-black py-2.5 rounded-3xl font-semibold text-sm"
-onClick={async () => {
-  if (!walletClient || !publicClient || !activeClaim) return;
-
-  try {
-    const balance = await publicClient.getBalance({
-      address: walletClient.account.address,
-    });
-
-    const txAmount = parseTokenAmount(transactionAmount);
-
-if (txAmount > tTrustBalance) {
-  alert("Insufficient tTrust balance");
-  return;
-}
-
-    if (transactionMode === "redeem") {
-      await handleRedeem(transactionAmount);
-    } else {
-      await handleDeposit(transactionAmount);
-    }
-
-    setShowReviewRedeemModal(false);
-    setShowModal(false);
-    setActiveClaim(null);
-  } catch (err) {
-    console.error(err);
-    alert("Transaction failed");
-  }
-}}
+onClick={() => handleClaimAction(transactionMode)}
 >
   {transactionMode === "redeem" ? "Redeem" : "Deposit"}
 </button>
     </div>
   </div>
 )}
-
           {loading && (
             <div className="flex justify-center py-6">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
