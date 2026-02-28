@@ -10,21 +10,13 @@ const hubSchema = new Schema({
     type: Boolean,
     default: false
   },
-  xUsername: {
-    type: String,
-    required: false,
-    unique: true,
-    sparse: true
-  },
   guildId: {
     type: String,
     unique: true,
-    required: true
   },
   verifiedId: {
     type: String,
     unique: true,
-    required: true
   },
   logo: {
     type: String,

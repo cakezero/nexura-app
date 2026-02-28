@@ -199,9 +199,6 @@ export const validateHubData = (reqData: any) => {
 	const hubSchema = z.object({
 		name: z.string().trim(),
     description: z.string().trim(),
-    verifiedId: z.string().trim(),
-    guildId: z.string().trim(),
-		address: z.string().trim(),
 	});
 
 	const parseData = hubSchema.safeParse(reqData);

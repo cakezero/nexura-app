@@ -16,6 +16,7 @@ import {
   saveCampaignWithQuests,
   updateCamapaignQuest,
   updateHub,
+  updateIds,
   createHub
 } from "@/controllers/hub.controller";
 import { Router } from "express";
@@ -29,6 +30,7 @@ router
   .patch("/save-campaign", upload.single("coverImage"), saveCampaign)
   .get("/get-campaign", getCampaign)
   .delete("/delete-hub", deleteHub)
+  .patch("/update-ids", updateIds)
   .delete("/remove-admin", removeHubAdmin)
   .post("/create-hub", upload.single("logo"), createHub)
   .patch("/update-hub", upload.single("logo"), updateHub)

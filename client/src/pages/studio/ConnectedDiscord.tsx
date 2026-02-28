@@ -6,9 +6,11 @@ import { useLocation, useParams } from "wouter";
 import AnimatedBackground from "../../components/AnimatedBackground";
 import { apiRequestV2 } from "../../lib/queryClient";
 import { useToast } from "../../hooks/use-toast";
+import { projectApiRequest } from "../../lib/projectApi";
 
 export default function ConnectedDiscord() {
-  const { id } = useParams();
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get("id");
   const [_, setLocation] = useLocation();
   const [discordData, setDiscordData] = useState<{
     id: string,
@@ -34,23 +36,24 @@ export default function ConnectedDiscord() {
       localStorage.setItem("nexura:studio-step", "/connected-discord");
     }
 
-    const stored = localStorage.getItem("discordData");
-    if (stored) {
-      setDiscordData(JSON.parse(stored));
-    } else {
-      // Fake data for now
-      const fakeDiscord = [{
-        id: "@realproject_handle",
-        name: "/original-discord.png",
-      }];
-      localStorage.setItem("discordData", JSON.stringify(fakeDiscord));
-      setDiscordData(fakeDiscord);
-    }
-    setLoading(false);
+    fetchDiscordData();
   }, []);
+  
+  async function fetchDiscordData() {
+    try {
+      const { servers } = await projectApiRequest<{ servers: { id: string; name: string }[] }>({ method: "GET", endpoint: `/hub/get-servers?id=${id}` });
+      setDiscordData(servers);
+      setLoading(false);
+    } catch (error) {
+      setLoading(false);
+      console.error(error);
+      toast({ title: "Error", description: "Failed to fetch server data", variant: "destructive" });
+    }
+  }
 
   async function fetchRoles() {
     try {
+      console.log({selectedServer})
       const { roles } = await apiRequestV2("GET", `/api/hub/get-roles?serverId=${selectedServer.id}&id=${id}`)
       setRoles(roles);
     } catch (error) {
@@ -61,24 +64,10 @@ export default function ConnectedDiscord() {
 
   async function createHub() {
     try {
-      const hubStorage = localStorage.getItem("nexura:hub-details");
-      if (!hubStorage) {
-        toast({ title: "Error", description: "please start afresh", variant: "destructive" });
-        return;
-      }
 
-      const hubDetails = JSON.parse(hubStorage);
-
-      const hubData = {
-        ...hubDetails,
-        verifiedId: selectedRole,
-        guildId: selectedServer.id,
-      }
-
-      const { accessToken } = await apiRequestV2("POST", `/api/hub/create`, hubData);
+      await projectApiRequest({ method: "PATCH", endpoint: `/hub/update-ids`, data: { verifiedId: selectedRole, guildId: selectedServer.id } });
 
       toast({ title: "Success", description: "Hub created successfully", variant: "default" });
-      localStorage.setItem("nexura:proj-token", accessToken);
 
       setLocation("/");
     } catch (error) {
@@ -142,6 +131,7 @@ export default function ConnectedDiscord() {
               {discordData.map((server, idx) => (
                 <div
                   key={idx}
+                  value={selectedServer}
                   onClick={() => {
                     setSelectedServer(server)
                     fetchRoles()

@@ -8,13 +8,13 @@ export const buyShares = async (amountTrust: string, termId: Address, curveId = 
   const publicClient = getPublicClient();
 
   const { transactionHash } = await deposit(
-    { walletClient, publicClient }, // address?
-    [
-      walletClient?.account?.address, // receiver
-      termId,                       // termId (atom or triple ID)
-      curveId,                // curveId (use 1 for default curve - exponential, use 2 for linear)
-      parseEther(amountTrust),               // assets (amount to deposit)
-   ]
+    { walletClient, publicClient, address: "0x" },
+      [
+        walletClient?.account?.address as "0x", // receiver
+        termId,                       // termId (atom or triple ID)
+        curveId,                
+        0n,               // assets (amount to deposit)
+      ]
   )
 
   return transactionHash;
@@ -26,13 +26,16 @@ export const sellShares = async (sharesAmount: string, termId: Address, curveId 
   const publicClient = getPublicClient();
 
   const { transactionHash } = await redeem(
-    { walletClient, publicClient, address: walletClient.account?.address },
-    [
+    { walletClient, publicClient, address: "" as `0x${string}` },
+    {
+      args: [
       walletClient?.account?.address, // receiver
       termId,                       // termId
       curveId,                      // curveId (use 1 for default curve)
       parseEther(sharesAmount),                // shares amount
-    ]
+      0n
+      ]
+    },
   );
 
   return transactionHash;
