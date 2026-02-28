@@ -54,7 +54,10 @@ export default function TheHub() {
         fd.append("logo", blob, "logo.png");
       }
 
-      localStorage.setItem("nexura:hub-details", JSON.stringify(fd));
+      const { accessToken } = await projectApiRequest<{ accessToken: string }>({ method: "POST", endpoint: `/hub/create-hub`, formData: fd });
+
+      localStorage.setItem("nexura-project:token", accessToken);
+
       setLocation("/connect-discord");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Sign-up failed. Please try again.";
@@ -210,7 +213,7 @@ export default function TheHub() {
               onClick={handleSubmit}
               disabled={loading}
             >
-              "Save & Continue"
+              {loading ? "Creating Hub..." : "Create Hub"}
             </Button>
           </div>
         </Card>

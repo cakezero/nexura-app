@@ -134,14 +134,14 @@ export default function ClaimDetails() {
 
       if (isBuy && buyAmount) {
         const [shares] = await multiVaultPreviewDeposit(
-          { address: "0x", publicClient },
+          { address: user?.address as `0x`, publicClient },
           { args: [id, curveId, parseEther(buyAmount)] }
         );
         sharesAmount = shares;
 
       } else if (!isBuy && sellAmount) {
         const [shares] = await multiVaultPreviewRedeem(
-          { address: "0x", publicClient },
+          { address: user?.address as `0x`, publicClient },
           { args: [id, curveId, parseEther(sellAmount)] }
         );
         sharesAmount = shares;

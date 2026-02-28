@@ -6,15 +6,13 @@ let publicClient: PublicClient | undefined = undefined;
 
 export const getPublicClient = () => {
   if (typeof window === 'undefined') {
-    console.error("window is undefined");
-    return null
+    throw new Error("window is undefined");
   };
 
   const provider = (window as any).ethereum;
 
   if (!provider) {
-    console.error("No Ethereum provider found");
-    return null;
+    throw new Error("No Ethereum provider found");
   }
 
   if (!publicClient) {
@@ -31,11 +29,13 @@ export const getPublicClient = () => {
 
 export const getWalletClient = async () => {
   if (typeof window === 'undefined') {
-    console.error("window is undefined");
-    return null
+    throw new Error("window is undefined");
   };
 
   const [account] = await window.ethereum!.request({ method: 'eth_requestAccounts' });
+  if (!account) {
+    throw new Error("No account found");
+  }
 
   if (!walletClient) {
     walletClient = createWalletClient({

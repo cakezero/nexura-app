@@ -57,6 +57,19 @@ export const createHub = async (req: GlobalRequest, res: GlobalResponse) => {
   }
 };
 
+export const updateIds = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const { verifiedId, guildId } = req.body;
+
+    await hub.findByIdAndUpdate(req.admin.hub, { verifiedId, guildId, discordConnected: true });
+
+    res.status(OK).json({ message: "ids updated successfully" });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "Error updating ids" });
+  }
+}
+
 export const addHubAdmin = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
     const { email, role } = req.body;

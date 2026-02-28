@@ -31,7 +31,7 @@ export const authenticateHubAdmin = async (req: GlobalRequest, res: GlobalRespon
 
 		const { id } = await JWT.verify(authHeader.split(" ")[1]!) as decodedDataType;
 
-    const superAdminExists = await hubAdmin.findOne({ _id: id, role: "superadmin" }).lean();
+    const superAdminExists = await hubAdmin.findOne({ _id: id, role: "superadmin" });
     if (!superAdminExists) {
       res.status(UNAUTHORIZED).json({ error: "route is available only to super admins" });
       return;
