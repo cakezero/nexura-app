@@ -7,10 +7,6 @@ export const buyShares = async (amountTrust: string, termId: Address, curveId = 
   const walletClient = getWalletClient();
   const publicClient = getPublicClient();
 
-  if (!walletClient || !walletClient?.account || !publicClient) {
-    throw new Error("wallet not installed or connected");
-  }
-
   const { transactionHash } = await deposit(
     { walletClient, publicClient, address: walletClient.account?.address }, // address?
     [
