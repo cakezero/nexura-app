@@ -81,7 +81,7 @@ export default function SharedAccessCredentials() {
     } catch (error: any) {
       console.log(error);
       setCreating(false);
-      toast({ title: "Error", description: error.message || "Failed to sign up.", variant: "destructive" });
+      toast({ title: "Error", description: error || "Failed to sign up.", variant: "destructive" });
     }
   }
 
