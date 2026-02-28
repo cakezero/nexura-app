@@ -19,6 +19,8 @@ import { useWallet } from "../hooks/use-wallet";
 import { buyShares, sellShares } from "../services/web3";
 import { useToast } from "../hooks/use-toast";
 import { Term, Position } from "../types/types";
+import { ResponsiveLine } from '@nivo/line';
+import Chart from "react-apexcharts";
 
 function generateChartData(claim: any, growthType: string) {
   // For demo: use fixed pattern similar to your spec
@@ -61,6 +63,8 @@ export default function ClaimDetails() {
   const [opposePercent, setOpposePercent] = useState(0);
   const [totalPostions, setTotalPositions] = useState("0");
   const [marketCap, setMarketCap] = useState("0");
+  const [isToggled, setIsToggled] = useState(false);
+  const [receiveAmount, setReceiveAmount] = useState("")
 
   const ITEMS_PER_PAGE = 10;
 
@@ -157,6 +161,10 @@ export default function ClaimDetails() {
     setVisiblePositions(initial.slice(0, ITEMS_PER_PAGE));
   };
 
+  const mySupportShares = userPositions
+  .filter(p => Number(p.curve_id) === 1) // support curve idk..  or adjust if you have a better check
+  .reduce((acc, p) => acc + Number(formatEther(BigInt(p.shares ?? 0))), 0);
+
   function getPrice() {
     let sharePrice = "0";
 
@@ -213,17 +221,87 @@ export default function ClaimDetails() {
 
   if (!claim) return <div className="p-6 text-white">Claim not found</div>;
 
+
+
+
+  ////////////////////////////////////////
+  // filter user's positions based on positionType
+const filteredPositions = userPositions.filter(p =>
+  positionType === "support"
+    ? Number(p.curve_id) === 1
+    : Number(p.curve_id) === 2
+);
+
+// total shares owned
+const totalShares = filteredPositions.reduce(
+  (acc, p) => acc + Number(formatEther(BigInt(p.shares ?? 0))),
+  0
+);
+
+// total spent (bought)
+const totalBought = filteredPositions.reduce(
+  (acc, p) => acc + Number(formatEther(BigInt(p.amount ?? 0))), // assuming p.amount is what user spent
+  0
+);
+
+// current value = total shares * current share price
+const currentSharePrice =
+  activeTab === "support"
+    ? Number(getPrice()) // your getPrice already handles support/oppose & growthType
+    : Number(getPrice());
+
+const currentValue = totalShares * currentSharePrice;
+
+// P&L
+const profitLoss = currentValue - totalBought;
+
+// ownership %
+const totalMarketShares =
+  positionType === "support"
+    ? parseFloat(formatEther(BigInt(term.total_assets)))
+    : parseFloat(formatEther(BigInt(counterTerm.total_assets)));
+
+const ownershipPercent = totalMarketShares
+  ? (totalShares / totalMarketShares) * 100
+  : 0;
+
+  type Transaction = {
+  type: "Deposit" | "Withdraw" | "Buy" | "Sell"; 
+  amount: number; 
+  timestamp: string; 
+  icon?: string; 
+  color?: string;
+};
+
+const recentTransactions: Transaction[] = [
+  {
+    type: "Deposit",
+    amount: 0.0972,
+    timestamp: "2026-02-28T20:13:00Z",
+    icon: "/download.png",
+    color: "#00FF62",
+  },
+  {
+    type: "Withdraw",
+    amount: 0.05,
+    timestamp: "2026-02-27T15:45:00Z",
+    icon: "/withdraw.png",
+    color: "#FF4C4C",
+  },
+];
+
   return (
     <div className="p-6 text-white space-y-6">
       {/* Top Statement */}
       <div className="flex flex-wrap items-center gap-1">
-        <span className="bg-gray-700 px-1 rounded flex items-center gap-1">
-          <img src={term.triple.subject.image} alt="Claim Icon" className="w-5 h-5" />
-          {term.triple.subject.label}
-        </span>
+        <span className="bg-[#0b0618] px-2 py-1 rounded flex items-center gap-1 max-w-[150px] truncate min-w-0">
+  <img src={term.triple.subject.image} alt="Claim Icon" className="w-5 h-5 flex-shrink-0" />
+  {term.triple.subject.label}
+</span>
+
         <span>{term.triple.predicate.label}</span>
 
-        <span className="bg-gray-700 px-1 rounded">{term.triple.object.label}</span>
+        <span className="bg-[#0b0618] px-2 py-1 rounded ml-2 truncate max-w-[40%] ml-2 min-w-0">{term.triple.object.label}</span>
       </div>
 
       {/* Support / Oppose Cards */}
@@ -327,89 +405,93 @@ export default function ClaimDetails() {
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6 mt-6">
-        {/* Graph Placeholder (70%) */}
-        <div className="w-full lg:w-[70%] bg-gradient-to-br from-[#1A0A2B] to-[#0B0515] rounded-xl p-4 shadow-lg">
-          {/* Chart Header */}
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <span className="text-sm text-gray-400">Share Price</span>
-              <div className="text-2xl sm:text-3xl font-bold text-white">
-                {getPrice()} TRUST
-              </div>
-            </div>
 
-            {/* Toggle Linear / Exponential */}
-            <div className="flex rounded-full bg-[#1F123A] p-1">
-              {["linear", "exponential"].map((type) => (
-                <button
-                  key={type}
-                  onClick={() => setGrowthType(type)}
-                  className={`px-4 py-1 rounded-full text-sm font-semibold transition-all duration-300 ${growthType === type
-                      ? "bg-[#392D5F] text-white"
-                      : "text-gray-400 hover:text-white"
-                    }`}
-                >
-                  {type.charAt(0).toUpperCase() + type.slice(1)}
-                </button>
-              ))}
-            </div>
-          </div>
+{/* Graph Placeholder (70%) */}
+<div className="w-full lg:w-[70%] bg-gradient-to-br from-[#1A0A2B] to-[#0B0515] rounded-xl p-4 shadow-lg">
+  {/* Chart Header */}
+  <div className="flex items-center justify-between mb-4">
+    <div>
+      <span className="text-sm text-gray-400">Share Price</span>
+      <div className="text-2xl sm:text-3xl font-bold text-white">
+        {getPrice()} TRUST
+      </div>
+    </div>
 
-          {/* Chart */}
-          <div className="w-full h-[280px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={generateChartData(claim, growthType)}>
-                <CartesianGrid
-                  stroke="#7B5CFF44"
-                  strokeDasharray="3 3"
-                  vertical={false}
-                />
+    {/* Toggle Linear / Exponential */}
+    <div className="flex rounded-full bg-[#1F123A] p-1">
+      {["linear", "exponential"].map((type) => (
+        <button
+          key={type}
+          onClick={() => setGrowthType(type)}
+          className={`px-4 py-1 rounded-full text-sm font-semibold transition-all duration-300 ${
+            growthType === type
+              ? "bg-[#392D5F] text-white"
+              : "text-gray-400 hover:text-white"
+          }`}
+        >
+          {type.charAt(0).toUpperCase() + type.slice(1)}
+        </button>
+      ))}
+    </div>
+  </div>
 
-                <YAxis
-                  orientation="left"
-                  tick={{ fill: "#BDAFFF", fontSize: 12 }}
-                  axisLine={false}
-                  tickLine={false}
-                  domain={[100, 110]}
-                />
+{/* ApexCharts Area Graph - Deep Complex Purple */}
+<Chart
+  type="area"
+  height={280}
+  series={[
+    {
+      name: "Share Price",
+      data: generateChartData(claim, growthType).map(d => ({
+        x: d.date,
+        y: d.value,
+      })),
+    },
+  ]}
+  options={{
+    chart: {
+      toolbar: { show: false },
+      zoom: { enabled: false },
+      animations: { enabled: true, easing: "easeinout", speed: 800 },
+    },
+    dataLabels: { enabled: false },
+    stroke: { curve: "smooth", width: 3, colors: ["#AD77FF"] },
+    fill: {
+      type: "gradient",
+      gradient: {
+        shade: "light",
+        type: "vertical",
+        gradientToColors: ["#8B3EFE"],
+        opacityFrom: 0.6,
+        opacityTo: 0.3,
+        stops: [0, 50, 100],
+      },
+    },
+    xaxis: {
+      type: "category",
+      labels: { style: { colors: "#BDAFFF" } },
+      axisBorder: { show: false },
+      axisTicks: { show: false },
+      crosshairs: { show: true, width: 1, color: "#8B3EFE" },
+    },
+    yaxis: {
+      show: true,
+      min: Math.min(...generateChartData(claim, growthType).map(d => d.value)) * 0.95,
+      max: Math.max(...generateChartData(claim, growthType).map(d => d.value)) * 1.05,
+      labels: { style: { colors: "#BDAFFF" }, formatter: val => val.toFixed(2) },
+    },
+    tooltip: {
+      theme: "dark",
+      shared: true,
+      intersect: false,
+      x: { show: true },
+      y: { formatter: val => `${val} TRUST` },
+    },
+    grid: { show: false },
+  }}
+/>
 
-                <XAxis
-                  dataKey="date"
-                  tick={{ fill: "#BDAFFF", fontSize: 12 }}
-                  axisLine={false}
-                  tickLine={false}
-                  padding={{ left: 10, right: 10 }}
-                />
-
-                <Area
-                  type="monotone"
-                  dataKey="value"
-                  stroke="#AD77FF"
-                  strokeWidth={3}
-                  fill="url(#purpleGradient)"
-                  dot={false}
-                  animationDuration={1500}
-                />
-
-                <Line
-                  type="monotone"
-                  dataKey={() => 101} // yellowy or yellowish line
-                  stroke="#FFD166"
-                  strokeWidth={1.5}
-                  dot={false}
-                  activeDot={false}
-                />
-
-                <defs>
-                  <linearGradient id="purpleGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#AD77FF" stopOpacity={0.4} />
-                    <stop offset="100%" stopColor="#AD77FF" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
+</div>
 
         {/* Control Card (20%) */}
         <div className="w-full lg:w-[30%] bg-gray-900 rounded-xl p-4 flex flex-col gap-4">
@@ -436,26 +518,28 @@ export default function ClaimDetails() {
             </button>
           </div>
 
-          {/* Buy / Sell Toggle */}
-          <div className="flex rounded-full border border-[#006CD2] w-full h-12 overflow-hidden select-none cursor-pointer">
-            {/* Buy */}
-            <div
-              onClick={() => setIsBuy(true)}
-              className={`flex-1 flex items-center justify-center font-semibold text-lg transition-colors duration-300 ${isBuy ? "bg-[#8B3EFE] text-white" : "bg-[#060210] text-white"
-                }`}
-            >
-              Buy
-            </div>
+{/* Buy / Sell Toggle */}
+<div className="flex w-full overflow-hidden select-none cursor-pointer bg-[#060210] border border-[#006CD2] rounded-full">
+  {/* Buy */}
+  <div
+    onClick={() => setIsBuy(true)}
+    className={`flex-1 flex items-center rounded-full justify-center font-semibold text-base h-10 transition-colors duration-300 ${
+      isBuy ? "bg-[#8B3EFE] text-white rounded-l-3xl" : "bg-[#060210] text-white rounded-l-3xl"
+    }`}
+  >
+    Buy
+  </div>
 
-            {/* Sell */}
-            <div
-              onClick={() => setIsBuy(false)}
-              className={`flex-1 flex items-center justify-center font-semibold text-lg transition-colors duration-300 ${!isBuy ? "bg-[#8B3EFE] text-white" : "bg-[#060210] text-white"
-                }`}
-            >
-              Sell
-            </div>
-          </div>
+  {/* Sell */}
+  <div
+    onClick={() => setIsBuy(false)}
+    className={`flex-1 flex items-center rounded-full justify-center font-semibold text-base h-10 transition-colors duration-300 ${
+      !isBuy ? "bg-[#8B3EFE] text-white rounded-r-3xl" : "bg-[#060210] text-white rounded-r-3xl"
+    }`}
+  >
+    Sell
+  </div>
+</div>
 
           {/* Linear Curve Section */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -464,9 +548,18 @@ export default function ClaimDetails() {
               <p className="text-gray-400 text-sm">Low Risk, Low Reward</p>
             </div>
             {/* Toggle button */}
-            <button className="bg-gray-700 rounded-full w-12 h-6 relative">
-              <span className="absolute w-5 h-5 bg-white rounded-full left-0 top-0.5 transition-all"></span>
-            </button>
+<button
+  onClick={() => setIsToggled(!isToggled)}
+  className={`bg-gray-700 w-12 h-6 rounded-full relative transition-colors duration-300 ${
+    isToggled ? "bg-green-500" : "bg-gray-700"
+  }`}
+>
+  <span
+    className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-all duration-300 ${
+      isToggled ? "left-6" : "left-0.5"
+    }`}
+  ></span>
+</button>
           </div>
 
           {/* Amount Section */}
@@ -476,54 +569,81 @@ export default function ClaimDetails() {
           </div>
 
           {/* Inputs */}
-          <div className="w-full bg-gray-800 rounded-md border border-[#833AFD] flex items-center px-2">
-            <input
-              type="text"
-              placeholder="0.1"
-              onChange={(e) => isBuy ? setBuyAmount(e.target.value) : setSellAmount(e.target.value)}
+<div className="w-full bg-gray-800 rounded-md border border-[#833AFD] flex items-center px-2 mb-2">
+  <input
+    type="number"
+    placeholder="0.1"
+    value={isBuy ? buyAmount : sellAmount}
+    onChange={(e) => {
+      const valStr = e.target.value;
+      // allow empty string, but convert to number only if valid
+      const val = valStr === '' ? '' : parseFloat(valStr);
 
-              className="flex-1 bg-gray-800 text-white p-2 outline-none"
-            />
-            <span className="text-gray-400 ml-2">min</span>
-          </div>
-          <input
-            type="text"
-            placeholder="Amount you receive"
-            className="w-full bg-gray-800 text-white p-2 rounded-md outline-none border border-[#833AFD]"
-          />
+      const sharePrice = getPrice();
 
-          {/* Connect Wallet Button */}
-          {user ? (
-            <button onClick={handleClaimAction} className="flex items-center justify-center gap-2 bg-white text-black font-semibold py-2 rounded-3xl">
-              <img src="/key.png" alt="Key Icon" className="w-5 h-5" />
-              {isBuy ? buying ? "Buying" : "Buy" : selling ? "Selling" : "Sell"}
-            </button>
-          ) : (
-            <button onClick={handleConnectWallet} className="flex items-center justify-center gap-2 bg-white text-black font-semibold py-2 rounded-3xl">
-              <img src="/key.png" alt="Key Icon" className="w-5 h-5" />
-              Connect Wallet
-            </button>
-          )}
+      if (isBuy) {
+        setBuyAmount(val);
+        setReceiveAmount(val === '' ? '' : val / sharePrice);
+      } else {
+        setSellAmount(val);
+        setReceiveAmount(val === '' ? '' : val * sharePrice);
+      }
+    }}
+    className="flex-1 bg-gray-800 text-white p-2 outline-none"
+  />
+  <span className="text-gray-400 ml-2">min</span>
+</div>
+
+<input
+  type="text"
+  placeholder="Amount you receive"
+  value={receiveAmount}
+  readOnly
+  className="w-full bg-gray-800 text-white p-2 rounded-md outline-none border border-[#833AFD]"
+/>
+
+          {/* Connect / Buy / Sell Button */}
+<button
+  onClick={async () => {
+    if (!user) {
+      await handleConnectWallet();
+      return;
+    }
+    await handleClaimAction();
+  }}
+  className="flex items-center justify-center gap-2 bg-white text-black font-semibold py-2 rounded-3xl"
+>
+  <img src="/key.png" alt="Key Icon" className="w-5 h-5" />
+  {user
+    ? isBuy
+      ? buying
+        ? "Buying"
+        : "Buy"
+      : selling
+      ? "Selling"
+      : "Sell"
+    : "Connect Wallet"}
+</button>
         </div>
       </div>
 
       {/* Your Position Card */}
-      <div className="bg-[#110A2B] rounded-xl p-4 flex flex-col gap-4">
-        {/* Header Line */}
-        <div className="flex items-center gap-3 text-white text-lg font-semibold">
-          <span>Your Position</span>
+<div className="bg-[#110A2B] rounded-xl p-4 flex flex-col gap-4">
+  {/* Header Line */}
+  <div className="flex items-center gap-3 text-white text-lg font-semibold">
+    <span>Your Position</span>
 
-          {/* Styled Hyphen */}
-          <div className="w-6 h-[3px] bg-[#AD77FF] rounded-full"></div>
+    {/* Styled Hyphen */}
+    <div className="w-6 h-[3px] bg-[#AD77FF] rounded-full"></div>
 
-          <span>
-            Support: <span className="font-bold">0.0954 TRUST</span>
-          </span>
-        </div>
+    <span>
+      Support: <span className="font-bold">{mySupportShares.toFixed(4)} TRUST</span>
+    </span>
+  </div>
 
-        {/* White Divider */}
-        <div className="h-px w-full bg-white opacity-80"></div>
-      </div>
+  {/* White Divider */}
+  <div className="h-px w-full bg-white opacity-80"></div>
+</div>
 
       {/* Dual Toggles */}
       <div className="flex flex-col sm:flex-row gap-4 mt-4">
@@ -596,89 +716,90 @@ export default function ClaimDetails() {
         {/* 5 Equal Columns */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
 
-          {/* A */}
-          <div className="flex flex-col gap-2">
-            <span className="text-gray-400 text-sm">Current Value</span>
-            <span className="font-semibold">0.0954 TRUST</span>
-          </div>
+          {/* A - Current Value */}
+<div className="flex flex-col gap-2">
+  <span className="text-gray-400 text-sm">Current Value</span>
+  <span className="font-semibold">{currentValue.toFixed(4)} TRUST</span>
+</div>
 
-          {/* B */}
-          <div className="flex flex-col gap-2">
-            <span className="text-gray-400 text-sm">Total Bought</span>
-            <span>0.0972 TRUST</span>
-          </div>
+{/* B - Total Bought */}
+<div className="flex flex-col gap-2">
+  <span className="text-gray-400 text-sm">Total Bought</span>
+  <span>{totalBought.toFixed(4)} TRUST</span>
+</div>
 
-          {/* C */}
-          <div className="flex flex-col gap-2">
-            <span className="text-gray-400 text-sm">P&amp;L</span>
-            <span className="text-red-400">-0.0019 TRUST</span>
-          </div>
+{/* C - P&L */}
+<div className="flex flex-col gap-2">
+  <span className="text-gray-400 text-sm">P&amp;L</span>
+  <span className={profitLoss >= 0 ? "text-green-400" : "text-red-400"}>
+    {profitLoss.toFixed(4)} TRUST
+  </span>
+</div>
 
-          {/* D */}
-          <div className="flex flex-col gap-2">
-            <span className="text-gray-400 text-sm">Shares</span>
-            <span>0</span>
-          </div>
+{/* D - Shares */}
+<div className="flex flex-col gap-2">
+  <span className="text-gray-400 text-sm">Shares</span>
+  <span>{totalShares.toFixed(4)}</span>
+</div>
 
-          {/* E */}
-          <div className="flex flex-col gap-2">
-            <span className="text-gray-400 text-sm">Ownership</span>
-            <span>0.000%</span>
-          </div>
+{/* E - Ownership */}
+<div className="flex flex-col gap-2">
+  <span className="text-gray-400 text-sm">Ownership</span>
+  <span>{ownershipPercent.toFixed(3)}%</span>
+</div>
 
         </div>
       </div>
 
       {/* Recent Activity Card */}
-      <div className="bg-[#110A2B] rounded-xl p-5 mt-6 text-white flex flex-col gap-6">
+<div className="bg-[#110A2B] rounded-xl p-5 mt-6 text-white flex flex-col gap-6">
 
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-lg">Recent Activity</h3>
-          <button className="text-sm text-[#8B3EFE] hover:underline">
-            Show all
-          </button>
-        </div>
+  {/* Header */}
+  <div className="flex items-center justify-between">
+    <h3 className="font-semibold text-lg">Recent Activity</h3>
+    <button className="text-sm text-[#8B3EFE] hover:underline">
+      Show all
+    </button>
+  </div>
 
-        {/* Inner Transaction Card */}
-        <div className="bg-[#060210] rounded-xl p-4 flex flex-col gap-4">
+  {/* Transactions List */}
+  {recentTransactions.map((tx, index) => (
+    <div key={index} className="bg-[#060210] rounded-xl p-4 flex flex-col gap-4">
 
-          {/* Top Row */}
-          <div className="relative flex items-center justify-between">
+      {/* Top Row */}
+      <div className="relative flex items-center justify-between">
 
-            {/* Left Side */}
-            <div className="flex items-center gap-4">
-              <img
-                src="/download.png"
-                alt="Download"
-                className="w-5 h-5 object-contain"
-              />
+        {/* Left Side */}
+        <div className="flex items-center gap-4">
+          <img
+            src={tx.icon || "/download.png"}
+            alt={tx.type}
+            className="w-5 h-5 object-contain"
+          />
 
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-gray-400">
-                  Deposit
-                </span>
-                <span className="font-semibold text-[#00FF62]">
-                  0.0972 TRUST
-                </span>
-              </div>
-            </div>
-
-            {/* Right Side */}
-            <span className="text-2xl font-bold text-[#00FF62] self-center ml-auto">
-              0.0972 TRUST
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-gray-400">{tx.type}</span>
+            <span className="font-semibold" style={{ color: tx.color || "#00FF62" }}>
+              {tx.amount.toFixed(4)} TRUST
             </span>
-
           </div>
-
-          {/* Bottom Row */}
-          <div className="flex items-center justify-between text-sm text-gray-400">
-            <span>08:13PM</span>
-          </div>
-
         </div>
 
+        {/* Right Side */}
+        <span className="text-2xl font-bold" style={{ color: tx.color || "#00FF62" }}>
+          {tx.amount.toFixed(4)} TRUST
+        </span>
       </div>
+
+      {/* Bottom Row */}
+      <div className="flex items-center justify-between text-sm text-gray-400">
+        <span>{new Date(tx.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}</span>
+      </div>
+
+    </div>
+  ))}
+
+</div>
 
       {/* Positions on this Claim Section */}
       <div className="bg-[#110A2B] rounded-xl p-5 text-white flex flex-col gap-4">
