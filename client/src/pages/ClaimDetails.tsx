@@ -368,7 +368,7 @@ const recentTransactions: Transaction[] = [
             <span className="font-semibold text-sm md:text-base">{toFixed(formatEther(BigInt(term.total_assets)))} TRUST</span> {/* slightly larger */}
             <img src="/intuition-icon.png" alt="Intuition Icon" className="w-5 h-5" />
             <div className="flex items-center gap-2">
-              <span className="text-blue-400 font-semibold text-base md:text-lg">{formatNumber(term.positions_aggregate.aggregate.count)}</span> {/* increased also */}
+              <span className="text-blue-400 font-semibold text-base md:text-lg">{formatNumber(term.positions_aggregate.aggregate.count, "user")}</span> {/* increased also */}
               <img src="/user.png" alt="User Icon" className="w-4 h-4" />
             </div>
           </div>
@@ -384,7 +384,7 @@ const recentTransactions: Transaction[] = [
             <span className="font-semibold text-sm md:text-base">{toFixed(formatEther(BigInt(counterTerm.total_assets)))} TRUST</span>
             <img src="/intuition-icon.png" alt="Intuition Icon" className="w-5 h-5" />
             <div className="flex items-center gap-2">
-              <span className="text-[#F19C03] font-semibold text-base md:text-lg">{formatNumber(counterTerm.positions_aggregate.aggregate.count)}</span>
+              <span className="text-[#F19C03] font-semibold text-base md:text-lg">{formatNumber(counterTerm.positions_aggregate.aggregate.count, "user")}</span>
               <img src="/user-red.png" alt="User Icon" className="w-4 h-4" />
             </div>
           </div>
@@ -405,7 +405,6 @@ const recentTransactions: Transaction[] = [
         <div
           className="bg-[#F19C03] flex items-center justify-center text-white text-xs font-semibold transition-all duration-500"
           style={{ width: `${opposePercent}%` }}
-
         >
           {opposePercent.toFixed(0)}%
         </div>

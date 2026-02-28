@@ -18,8 +18,8 @@ interface Claim {
 }
 
 export const toFixed = (num: string) => {
-  const localeString = parseFloat(num).toLocaleString();
-  return parseFloat(localeString).toFixed(1);
+  const parseNumber = parseFloat(num).toFixed(2);
+  return parseFloat(parseNumber).toLocaleString();
 }
 
 export default function PortalClaims() {
@@ -317,20 +317,20 @@ useEffect(() => {
 
       {/* Market Cap */}
       <td className="px-4 py-3 font-semibold">
-        {toFixed(formatEther(BigInt(claim.total_market_cap)))} TRUST
+        {formatNumber(parseFloat(formatEther(BigInt(claim.total_market_cap))))} TRUST
       </td>
 
       {/* Support / Oppose Stats */}
       <td className="px-4 py-3 text-blue-400 font-semibold">
         <div className="flex items-center gap-2">
           <img src="/user.png" className="w-4 h-4" />
-          {formatNumber(claim.term.positions_aggregate.aggregate.count)}
+          {formatNumber(claim.term.positions_aggregate.aggregate.count, "user")}
         </div>
       </td>
       <td className="px-4 py-3 text-[#F19C03] font-semibold">
         <div className="flex items-center gap-2">
           <img src="/user-red.png" className="w-4 h-4" />
-          {formatNumber(claim.counter_term.positions_aggregate.aggregate.count)}
+          {formatNumber(claim.counter_term.positions_aggregate.aggregate.count, "user")}
         </div>
       </td>
 
