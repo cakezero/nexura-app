@@ -589,7 +589,7 @@ useEffect(() => {
     {activeClaim.term.triple.subject.label}
   </span>
   <span>{activeClaim.term.triple.predicate.label}</span>
-  <span className="bg-[#0b0618] px-2 py-1 rounded ml-2 truncate max-w-[40%] ml-2 min-w-0">{activeClaim.term.triple.object.label}</span>
+  <span className="bg-[#0b0618] px-2 py-1 rounded truncate max-w-[40%] ml-2 min-w-0">{activeClaim.term.triple.object.label}</span>
 </div>
 
 {/* Tabs */}

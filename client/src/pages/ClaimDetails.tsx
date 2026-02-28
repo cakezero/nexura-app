@@ -20,6 +20,7 @@ import { buyShares, sellShares } from "../services/web3";
 import { useToast } from "../hooks/use-toast";
 import { Term, Position } from "../types/types";
 import { getPublicClient, getWalletClient } from "../lib/viem";
+import chain from "../lib/chain";
 import { multiVaultPreviewDeposit, multiVaultPreviewRedeem, getMultiVaultAddressFromChainId } from "@0xintuition/sdk";
 import Chart from "react-apexcharts";
 
@@ -134,6 +135,8 @@ export default function ClaimDetails() {
       
       const walletClient = await getWalletClient();
 
+      await walletClient.switchChain({ id: chain.id });
+      
       const address = getMultiVaultAddressFromChainId(walletClient.chain?.id!);
 
       let sharesAmount = 0n;

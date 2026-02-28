@@ -1,11 +1,14 @@
 import { multiVaultDeposit, redeem, getMultiVaultAddressFromChainId } from "@0xintuition/sdk";
 import { Address, parseEther} from "viem";
 import { getWalletClient, getPublicClient } from "../lib/viem";
+import chain from "../lib/chain";
 
 // --- Deposit / Support or Oppose function ---
 export const buyShares = async (amountTrust: string, termId: Address, curveId: bigint) => {
   const walletClient = await getWalletClient();
   const publicClient = getPublicClient();
+  
+  await walletClient.switchChain({ id: chain.id });
 
   const address = getMultiVaultAddressFromChainId(walletClient.chain?.id!);
 
@@ -29,6 +32,8 @@ export const buyShares = async (amountTrust: string, termId: Address, curveId: b
 export const sellShares = async (sharesAmount: string, termId: Address, curveId: bigint) => {
   const walletClient = await getWalletClient();
   const publicClient = getPublicClient();
+  
+  await walletClient.switchChain({ id: chain.id });
 
   const address = getMultiVaultAddressFromChainId(walletClient.chain?.id!);
 
