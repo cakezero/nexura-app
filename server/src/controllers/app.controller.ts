@@ -210,7 +210,7 @@ export const getTriple = async (req: GlobalRequest, res: GlobalResponse) => {
       }
     `;
 
-    const response = await client.request(query, { termId, userPositionAddress: appUser?.address ?? "..." });
+    const response = await client.request(query, { termId, userPositionAddress: appUser?.address ? checksumAddress(appUser.address as `0x${string}`) : "..." });
     res.status(OK).json(response.triple_term);
   } catch (error) {
     logger.error(error);
@@ -393,7 +393,7 @@ export const getClaims = async (req: GlobalRequest, res: GlobalResponse) => {
       }
     `;
 
-    const { triple_terms: claims } = await client.request(vaultQuery, { where: {}, orderBy: [filter], limit: 50, offset, userPositionAddress: appUser?.address ?? "..." });
+    const { triple_terms: claims } = await client.request(vaultQuery, { where: {}, orderBy: [filter], limit: 50, offset, userPositionAddress: appUser?.address ? checksumAddress(appUser.address as `0x${string}`) : "..." });
 
     res.json({ message: "fetched", claims });
   } catch (e) {
