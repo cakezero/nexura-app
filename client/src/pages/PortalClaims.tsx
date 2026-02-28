@@ -6,7 +6,6 @@ import type { Term } from "../types/types";
 import { useToast } from "../hooks/use-toast";
 import { formatNumber } from "../lib/utils";
 import { useLocation } from "wouter";
-import { getWalletClient } from "../lib/viem";
 
 interface Claim {
   term_id: Address;
@@ -40,11 +39,13 @@ export default function PortalClaims() {
   const [activeClaim, setActiveClaim] = useState<Claim | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [showReviewRedeemModal, setShowReviewRedeemModal] = useState(false);
+  const [showReviewDepositModal, setShowReviewDepositModal] = useState(false);
     const [transactionMode, setTransactionMode] = useState("redeem");
     const [opposeMode, setOpposeMode] = useState(false);
     const [transactionAmount, setTransactionAmount] = useState("0");
       // Wallet & Blockchain
       const [tTrustBalance, setTTrustBalance] = useState<bigint>(0n);
+      const [inputValue, setInputValue] = useState(0);
 
       // Returns true if claim matches search
 const claimMatchesSearch = (claim: Claim, term: string) => {
@@ -101,10 +102,37 @@ setOffset((prev) => prev + LIMIT);
 };
 
 useEffect(() => {
-  setOffset(0);
-  setVisibleClaims([]);
-  setHasMore(true);
-  loadMore();
+  const resetAndLoad = async () => {
+    setLoading(true);
+    setOffset(0);
+    setHasMore(true);
+
+    try {
+      const searchQuery = searchTerm
+        ? `&search=${encodeURIComponent(searchTerm)}`
+        : "";
+
+      const { claims } = await apiRequestV2(
+        "GET",
+        `/api/get-claims?filter=${sortOption}&offset=0${searchQuery}`
+      );
+
+      const filteredClaims = claims.filter((claim: Claim) =>
+        claimMatchesSearch(claim, searchTerm)
+      );
+
+      setVisibleClaims(filteredClaims);
+      setOffset(LIMIT);
+      setHasMore(filteredClaims.length >= LIMIT);
+    } catch (err) {
+      console.error(err);
+      setHasMore(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  resetAndLoad();
 }, [sortOption, searchTerm]);
 
   const observerRef = useRef<HTMLDivElement | null>(null);
@@ -158,15 +186,22 @@ useEffect(() => {
     };
 
   const handleClaimAction = async (action = "support") => {
-    try {
-      await buyShares("0.01", termId as Address, isToggled ? 1n : 0n); // example amount
+  try {
+    await buyShares("0.01", termId as Address, isToggled ? 1n : 0n); // example amount
 
-      toast({ title: "Sucesss", description: `Successfully ${action ? "opposed" : "supported"} a claim!` });
-    } catch (err: any) {
-      console.error(err);
-      toast({ title: "Error", description: err, variant: "destructive" });
-    }
-  };
+    toast({
+      title: "Success",
+      description: `Successfully ${action ? "opposed" : "supported"} a claim!`
+    });
+  } catch (err: any) {
+    console.error(err);
+    toast({
+      title: "Error",
+      description: err?.message || String(err), // <-- convert Error object to string
+      variant: "destructive"
+    });
+  }
+};
 
   return (
     <div className="p-6 text-white">
@@ -249,11 +284,11 @@ useEffect(() => {
                 <table className="min-w-full text-left border-collapse">
                   <thead className="text-sm">
                     <tr className="bg-gray-800 text-gray-300">
-                      <th className="px-4 py-2">Claim</th>
+                      <th className="px-16 py-2">Claims</th>
                       <th className="px-4 py-2">Market Cap</th>
                       <th className="px-4 py-2">Support</th>
                       <th className="px-4 py-2">Oppose</th>
-                      <th className="px-4 py-2">Actions</th>
+                      <th className="px-16 py-2">Actions</th>
                     </tr>
                   </thead>
 
@@ -269,12 +304,12 @@ useEffect(() => {
         onClick={() => setLocation(`/portal-claims/${claim.term_id}`)}
       >
         <div className="flex flex-wrap items-center gap-2">
-          <span className="bg-gray-700 px-2 py-1 rounded flex items-center gap-1 max-w-[150px] truncate">
+          <span className="bg-[#0b0618] px-2 py-1 rounded flex items-center gap-1 max-w-[150px] truncate">
             <img src={claim.term.triple.subject.image} className="w-5 h-5 flex-shrink-0" />
             <span className="truncate">{highlightMatch(claim.term.triple.subject.label, searchTerm)}</span>
           </span>
           <span className="max-w-[120px] truncate">{highlightMatch(claim.term.triple.predicate.label, searchTerm)}</span>
-          <span className="bg-gray-700 px-2 py-1 rounded max-w-[150px] truncate">
+          <span className="bg-[#0b0618] px-2 py-1 rounded max-w-[150px] truncate">
             {highlightMatch(claim.term.triple.object.label, searchTerm)}
           </span>
         </div>
@@ -395,7 +430,8 @@ useEffect(() => {
               </div>
             </>
           )}
-          <div className="hidden md:grid md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                    {view === "grid" && (
+          <div className="hidden md:grid md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-2 gap-6">
             {visibleClaims.map((claim) => {
               const supportCount = Number(claim.term.positions_aggregate.aggregate.count);
               const opposeCount = Number(claim.counter_term.positions_aggregate.aggregate.count);
@@ -411,11 +447,11 @@ useEffect(() => {
                 >
                   {/* Statement */}
                   <div className="text-gray-300 mb-4 flex flex-wrap items-center gap-2">
-                    <span className=" font-bold text-xl bg-gray-700 px-2 py-1 rounded mr-2">
+                    <span className="font-bold text-xl bg-[#0b0618] px-2 py-1 rounded mr-2 max-w-[40%] truncate">
                       {claim.term.triple.subject.label}
                     </span>
                     {claim.term.triple.predicate.label}
-                    <span className="bg-gray-700 px-2 py-1 rounded ml-2">
+                    <span className="bg-[#0b0618] px-2 py-1 rounded ml-2 max-w-[40%] truncate">
                       {claim.term.triple.object.label}
                     </span>
                   </div>
@@ -482,27 +518,28 @@ useEffect(() => {
                   {/* Actions */}
                   <div className="flex items-center justify-between mt-5 pt-4 border-t border-gray-700">
 
-{/* Action Buttons */}
-<div className="flex justify-center gap-2">
-  <button
-    onClick={(e) => {
-      e.stopPropagation();
-      handleSupportClick(claim); // open modal
-    }}
-    className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center"
-  >
-    <img src="/support.png" alt="Support" className="w-4 h-4" />
-  </button>
 
-  <button
-    onClick={(e) => {
-      e.stopPropagation();
-      handleOpposeClick(claim); // open modal
-    }}
-    className="h-8 w-8 bg-[#F19C03] rounded-lg flex items-center justify-center"
-  >
-    <img src="/oppose.png" alt="Oppose" className="w-4 h-4" />
-  </button>
+                      {/* Action Buttons */}
+<div className="flex justify-center gap-2">
+          <button
+            className="bg-blue-600 px-4 py-2 rounded-lg text-sm pointer-events-auto"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleSupportClick(claim);
+            }}
+          >
+            Support
+          </button>
+
+          <button
+            className="bg-[#F19C03] px-4 py-2 rounded-lg text-sm pointer-events-auto"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleOpposeClick(claim);
+            }}
+          >
+            Oppose
+          </button>
 </div>
 
                     {/* Total MarketCap */}
@@ -521,6 +558,7 @@ useEffect(() => {
               );
             })}
           </div>
+            )}
 
           {/* Modal */}
   {showModal && activeClaim && (
@@ -546,12 +584,12 @@ useEffect(() => {
 
 {/* Statement */}
 <div className="text-gray-300 mb-6 px-6 flex flex-wrap items-center gap-2">
-  <span className="font-bold bg-gray-700 px-2 py-1 rounded inline-flex items-center gap-2">
+  <span className="bg-[#0b0618] px-2 py-1 rounded flex items-center gap-1 max-w-[150px] truncate min-w-0">
     <img src={activeClaim.term.triple.subject.image} alt="Claim Icon" className="w-5 h-5 object-contain" />
     {activeClaim.term.triple.subject.label}
   </span>
   <span>{activeClaim.term.triple.predicate.label}</span>
-  <span className="bg-gray-700 px-2 py-1 rounded">{activeClaim.term.triple.object.label}</span>
+  <span className="bg-[#0b0618] px-2 py-1 rounded ml-2 truncate max-w-[40%] ml-2 min-w-0">{activeClaim.term.triple.object.label}</span>
 </div>
 
 {/* Tabs */}
@@ -606,36 +644,52 @@ useEffect(() => {
     </div>
 
     {/* Center Big Zero */}
-    <div className="flex flex-col items-center my-4">
-      <span className="text-white font-bold text-6xl">0</span>
-      <span className="text-gray-300 text-xs mt-1">TRUST</span>
+<div className="flex flex-col items-center my-4">
+  <span className="text-white font-bold text-6xl">
+    {Number(inputValue).toFixed(1)} 
+  </span>
+  <span className="text-gray-300 text-xs mt-1">TRUST</span>
+</div>
+
+<input
+  type="number"
+  min="0"
+  value={inputValue}
+  onChange={(e) => setInputValue(e.target.value)}
+  className="w-full bg-[#110A2B] border-2 border-[#393B60] rounded-3xl px-3 py-2 text-white font-semibold text-center mb-2"
+/>
+
+
+    {/* Curve Card */}
+<div className="bg-[#110A2B] border-2 border-[#393B60] p-3 rounded-xl flex flex-col gap-3">
+  {/* Top Row: Title and Risk Label */}
+  <div className="flex justify-between items-center">
+    <div className="flex flex-col">
+      <span className="text-white font-bold text-base">
+        {isToggled ? "Exponential Curve" : "Linear Curve"}
+      </span>
+      <span className="text-gray-300 text-xs mt-0.5">
+        {isToggled ? "High Risk, High Reward" : "Low Risk, Low Reward"}
+      </span>
     </div>
 
-    {/* New Card: Exponential Curve */}
-    <div className="bg-[#110A2B] border-2 border-[#393B60] p-3 rounded-xl flex flex-col gap-3">
-      {/* Top Row: Title and High Risk, High Reward */}
-      <div className="flex justify-between items-center">
-        <div className="flex flex-col">
-          <span className="text-white font-bold text-base">Exponential Curve</span>
-          <span className="text-gray-300 text-xs mt-0.5">High Risk, High Reward</span>
-        </div>
-
-        {/* Toggle Button */}
-        <label className="relative inline-flex items-center cursor-pointer">
-          <input
-            type="checkbox"
-            className="sr-only peer"
-            checked={isToggled}           // state variable
-            onChange={() => setIsToggled(!isToggled)}
-          />
-          <div className="w-10 h-5 bg-white rounded-full peer peer-checked:bg-[#FFF] transition-colors"></div>
-          <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-black rounded-full shadow-md peer-checked:translate-x-5 transition-transform"></div>
-        </label>
-      </div>
-    </div>
+    {/* Toggle Button */}
+    <label className="relative inline-flex items-center cursor-pointer">
+      <input
+        type="checkbox"
+        className="sr-only peer"
+        checked={isToggled}
+        onChange={() => setIsToggled(!isToggled)}
+      />
+      <div className="w-10 h-5 bg-white rounded-full peer peer-checked:bg-[#FFF] transition-colors"></div>
+      <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-black rounded-full shadow-md peer-checked:translate-x-5 transition-transform"></div>
+    </label>
+  </div>
+</div>
 
     {/* Review Deposit Button */}
-    <button className="w-full bg-white text-black py-2.5 rounded-3xl font-semibold mt-3 text-sm">
+    <button className="w-full bg-white text-black py-2.5 rounded-3xl font-semibold mt-3 text-sm"
+    onClick={() => setShowReviewDepositModal(true)}>
       Review Deposit
     </button>
   </div>
@@ -643,7 +697,7 @@ useEffect(() => {
 
 
 {activeTab === "redeem" && (
-  <div className="px-4 md:px-12"> {/* Container padding for left/right */}
+  <div className="px-4 md:px-12">
     {/* Main Card: Active Position */}
     <div className="bg-[#110A2B] border-2 border-[#393B60] p-4 rounded-xl min-h-[120px] flex flex-col justify-between mb-3">
       <div className="flex justify-between items-center mb-2">
@@ -664,33 +718,47 @@ useEffect(() => {
     </div>
 
     {/* Center Big Zero */}
-    <div className="flex flex-col items-center my-4">
-      <span className="text-white font-bold text-6xl">0</span>
-      <span className="text-gray-300 text-xs mt-1">TRUST</span>
+<div className="flex flex-col items-center my-4">
+  <span className="text-white font-bold text-6xl">
+    {Number(inputValue).toFixed(1)} 
+  </span>
+  <span className="text-gray-300 text-xs mt-1">TRUST</span>
+</div>
+
+<input
+  type="number"
+  min="0"
+  value={inputValue}
+  onChange={(e) => setInputValue(e.target.value)}
+  className="w-full bg-[#110A2B] border-2 border-[#393B60] rounded-3xl px-3 py-2 text-white font-semibold text-center mb-2"
+/>
+
+    {/* Curve Card */}
+<div className="bg-[#110A2B] border-2 border-[#393B60] p-3 rounded-xl flex flex-col gap-3">
+  {/* Top Row: Title and Risk Label */}
+  <div className="flex justify-between items-center">
+    <div className="flex flex-col">
+      <span className="text-white font-bold text-base">
+        {isToggled ? "Exponential Curve" : "Linear Curve"}
+      </span>
+      <span className="text-gray-300 text-xs mt-0.5">
+        {isToggled ? "High Risk, High Reward" : "Low Risk, Low Reward"}
+      </span>
     </div>
 
-    {/* New Card: Exponential Curve */}
-    <div className="bg-[#110A2B] border-2 border-[#393B60] p-3 rounded-xl flex flex-col gap-3">
-      {/* Top Row: Title and High Risk, High Reward */}
-      <div className="flex justify-between items-center">
-        <div className="flex flex-col">
-          <span className="text-white font-bold text-base">Exponential Curve</span>
-          <span className="text-gray-300 text-xs mt-0.5">High Risk, High Reward</span>
-        </div>
-
-        {/* Toggle Button */}
-        <label className="relative inline-flex items-center cursor-pointer">
-          <input
-            type="checkbox"
-            className="sr-only peer"
-            checked={isToggled}           // state variable
-            onChange={() => setIsToggled(!isToggled)}
-          />
-          <div className="w-10 h-5 bg-white rounded-full peer peer-checked:bg-[#FFF] transition-colors"></div>
-          <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-black rounded-full shadow-md peer-checked:translate-x-5 transition-transform"></div>
-        </label>
-      </div>
-    </div>
+    {/* Toggle Button */}
+    <label className="relative inline-flex items-center cursor-pointer">
+      <input
+        type="checkbox"
+        className="sr-only peer"
+        checked={isToggled}
+        onChange={() => setIsToggled(!isToggled)}
+      />
+      <div className="w-10 h-5 bg-white rounded-full peer peer-checked:bg-[#FFF] transition-colors"></div>
+      <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-black rounded-full shadow-md peer-checked:translate-x-5 transition-transform"></div>
+    </label>
+  </div>
+</div>
 
     {/* Review Deposit Button */}
 <button
@@ -709,6 +777,78 @@ useEffect(() => {
       >
         ×
       </button>
+    </div>
+  </div>
+)}
+
+{showReviewDepositModal && activeClaim && (
+  <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+    <div className="bg-[#070315] w-full max-w-md mx-4 p-6 rounded-xl relative border-2 border-[#8B3EFE]">
+
+      {/* Close Button */}
+      <button
+        className="absolute top-2 right-2 text-gray-400 hover:text-white text-xl font-bold"
+        onClick={() => setShowReviewDepositModal(false)}
+      >
+        ×
+      </button>
+
+      {/* Title + Support Tag */}
+      <div className="flex items-center gap-2 mb-4">
+        <h2 className="text-white font-bold text-lg">Claim</h2>
+        <span className="bg-[#0A2D4D] border border-white text-white px-3 py-1 rounded-full text-sm font-semibold">
+          Deposit
+        </span>
+      </div>
+
+      {/* Subtitle */}
+      <p className="text-gray-400 text-sm mb-6">
+        Depositing into a triple increases its impact in the intuition system
+      </p>
+
+      {/* Centered Spinner + Label */}
+      <div className="flex flex-col items-center my-6">
+        <img src="/spinner.png" alt="Spinner" className="w-16 h-16 mb-2 animate-spin" />
+        <span className="text-white font-semibold">Review...</span>
+      </div>
+
+      {/* Total Cost */}
+      <div className="bg-[#110A2B] border-2 border-[#393B60] rounded-3xl flex justify-between items-center px-4 py-2 mb-3 mx-4">
+        <span className="text-gray-300 text-sm font-semibold">Total Cost</span>
+        <span className="text-white font-bold">0.0954</span>
+      </div>
+
+      {/* Deposit TRUST Label */}
+      <span className="text-gray-300 font-semibold mb-2 block">Deposit TRUST into Claim</span>
+
+      {/* Statement */}
+      <div className="text-gray-300 mb-6 px-6 flex flex-wrap items-center gap-2">
+        <span className="font-bold bg-[#0b0618] px-2 py-1 rounded inline-flex items-center gap-2 max-w-[150px] truncate">
+          <img src={activeClaim.term.triple.subject.image} alt="Claim Icon" className="w-5 h-5 object-contain" />
+          {activeClaim.term.triple.subject.label}
+        </span>
+        <span>{activeClaim.term.triple.predicate.label}</span>
+        <span className="bg-[#0b0618] px-2 py-1 rounded max-w-[150px] truncate">{activeClaim.term.triple.object.label}</span>
+      </div>
+
+      {/* Amount Input */}
+      <div className="mb-4">
+        <label className="text-gray-300 text-sm mb-1 block">Amount (in TRUST)</label>
+        <input
+          type="text"
+          value={transactionAmount}
+          onChange={(e) => setTransactionAmount(e.target.value)}
+          className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+
+      {/* Deposit / Redeem Button */}
+      <button
+  className="w-full bg-white text-black py-2.5 rounded-3xl font-semibold text-sm"
+  onClick={() => handleClaimAction("deposit")}
+>
+  Deposit
+</button>
     </div>
   </div>
 )}
@@ -755,12 +895,12 @@ useEffect(() => {
 
       {/* Statement */}
       <div className="text-gray-300 mb-6 px-6 flex flex-wrap items-center gap-2">
-        <span className="font-bold bg-gray-700 px-2 py-1 rounded inline-flex items-center gap-2">
+        <span className="font-bold bg-[#0b0618] px-2 py-1 rounded inline-flex items-center gap-2 max-w-[150px] truncate">
           <img src={activeClaim.term.triple.subject.image} alt="Claim Icon" className="w-5 h-5 object-contain" />
           {activeClaim.term.triple.subject.label}
         </span>
         <span>{activeClaim.term.triple.predicate.label}</span>
-        <span className="bg-gray-700 px-2 py-1 rounded">{activeClaim.term.triple.object.label}</span>
+        <span className="bg-[#0b0618] px-2 py-1 rounded max-w-[150px] truncate">{activeClaim.term.triple.object.label}</span>
       </div>
 
       {/* Amount Input */}
@@ -776,9 +916,9 @@ useEffect(() => {
 {/* Redeem / Deposit Button */}
 <button
   className="w-full bg-white text-black py-2.5 rounded-3xl font-semibold text-sm"
-onClick={() => handleClaimAction(transactionMode)}
+  onClick={() => handleClaimAction("redeem")}
 >
-  {transactionMode === "redeem" ? "Redeem" : "Deposit"}
+  Redeem
 </button>
     </div>
   </div>
