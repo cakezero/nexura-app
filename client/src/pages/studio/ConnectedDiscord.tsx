@@ -131,7 +131,6 @@ export default function ConnectedDiscord() {
               {discordData.map((server, idx) => (
                 <div
                   key={idx}
-                  value={selectedServer}
                   onClick={() => {
                     setSelectedServer(server)
                     fetchRoles()
