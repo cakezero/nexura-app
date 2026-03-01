@@ -111,45 +111,48 @@ export default function NexuraSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-        <div className="w-full flex justify-between px-4 py-3 border-t border-border/40">
+        <div className="w-full flex flex-col gap-3 px-4 py-3 border-t border-border/40">
   {/* Discord */}
   <Link
     href="https://discord.gg/ezBvGZVWU"
-    className="min-w-[44px] min-h-[44px] flex items-center justify-center"
+    className="flex items-center gap-2 min-h-[44px] group-data-[collapsible=icon]:justify-center"
   >
-    {/* Collapsed: icon only */}
     <img
       src="/discord-logo.png"
       alt="Discord"
-      className="w-6 h-6 object-contain group-data-[collapsible=icon]:block hidden"
+      className="w-6 h-6 flex-shrink-0 object-contain"
     />
-    {/* Expanded: text */}
-    <span className="text-sm font-semibold text-white group-data-[collapsible=icon]:hidden block">
+    <span className="text-sm font-semibold text-white transition-all duration-300 overflow-hidden max-w-[150px] group-data-[collapsible=icon]:max-w-0 group-data-[collapsible=icon]:opacity-0">
       Discord
     </span>
   </Link>
 
-  {/* X link */}
+  {/* X */}
   <Link
     href="https://x.com/NexuraXYZ"
-    className="text-sm font-semibold text-white min-w-[44px] min-h-[44px] flex items-center justify-center"
+    className="flex items-center gap-2 min-h-[44px] group-data-[collapsible=icon]:justify-center"
   >
-    X
+    <img
+      src="/x-logo.png"
+      alt="X"
+      className="w-6 h-6 flex-shrink-0 object-contain"
+    />
+    <span className="text-sm font-semibold text-white transition-all duration-300 overflow-hidden max-w-[150px] group-data-[collapsible=icon]:max-w-0 group-data-[collapsible=icon]:opacity-0">
+      X
+    </span>
   </Link>
 
-  {/* Docs link */}
+  {/* Docs */}
   <Link
     href="https://docsnexura.vercel.app"
-    className="min-w-[44px] min-h-[44px] flex items-center justify-center"
+    className="flex items-center gap-2 min-h-[44px] group-data-[collapsible=icon]:justify-center"
   >
-    {/* Collapsed: icon only */}
     <img
       src="/docs-icon.png"
       alt="Docs"
-      className="w-6 h-6 object-contain group-data-[collapsible=icon]:block hidden"
+      className="w-6 h-6 flex-shrink-0 object-contain"
     />
-    {/* Expanded: text */}
-    <span className="text-sm font-semibold text-white group-data-[collapsible=icon]:hidden block">
+    <span className="text-sm font-semibold text-white transition-all duration-300 overflow-hidden max-w-[150px] group-data-[collapsible=icon]:max-w-0 group-data-[collapsible=icon]:opacity-0">
       Docs
     </span>
   </Link>

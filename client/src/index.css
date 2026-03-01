@@ -3510,3 +3510,31 @@ body {
 }
 .animate-pulse-slow { animation: pulse-slow 0.8s infinite ease-in-out;
 }
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0b0618;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #8B3EFE;
+  border-radius: 9999px;
+  border: 2px solid #0b0618;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a855f7;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+.animate-slideIn {
+  animation: slideIn 0.25s ease-out forwards;
+}
