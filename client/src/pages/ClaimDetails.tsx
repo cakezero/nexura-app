@@ -83,14 +83,6 @@ export default function ClaimDetails() {
   const [sortOption, setSortOption] = useState("")
   const [positionsOption, setPositionsOption] = useState("all");
   const [activePosition, setActivePosition] = useState<any | null>(null);
-  // const [userShares, setUserShares] = useState("0");
-  // Somewhere in your component
-
-// Assuming you have:
-// - `userPositions` = your fetched user vault positions
-// - `activePosition` = the currently selected position object (from allPositions)
-
-
 
   const { user } = useAuth();
   const { connectWallet } = useWallet();
@@ -420,7 +412,30 @@ const numericBalance = Number(balance);
 const hasBalance = numericBalance > 0;
 
 
-  if (!claim) return <div className="p-3 text-white">Claim not found</div>;
+  if (!claim) return <div className="p-3 text-white">
+    <div className="flex items-center justify-center w-full h-full">
+  <svg
+    className="w-8 h-8 animate-spin text-gray-400"
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+  >
+    <circle
+      className="opacity-25"
+      cx="12"
+      cy="12"
+      r="10"
+      stroke="currentColor"
+      strokeWidth="4"
+    />
+    <path
+      className="opacity-75"
+      fill="currentColor"
+      d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+    />
+  </svg>
+</div>
+      </div>;
 
   return (
     <div className="p-3 text-white space-y-6">

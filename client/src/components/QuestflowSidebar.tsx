@@ -111,18 +111,18 @@ export default function NexuraSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-        <div className="w-full flex flex-col gap-3 px-4 py-3 border-t border-border/40">
+        <div className="w-full flex flex-col gap-2 px-3 py-2 border-t border-border/40">
   {/* Discord */}
   <Link
     href="https://discord.gg/ezBvGZVWU"
-    className="flex items-center gap-2 min-h-[44px] group-data-[collapsible=icon]:justify-center"
+    className="flex items-center gap-2 min-h-[36px] group-data-[collapsible=icon]:justify-center"
   >
     <img
       src="/discord-logo.png"
       alt="Discord"
-      className="w-6 h-6 flex-shrink-0 object-contain"
+      className="w-5 h-5 flex-shrink-0 object-contain"
     />
-    <span className="text-sm font-semibold text-white transition-all duration-300 overflow-hidden max-w-[150px] group-data-[collapsible=icon]:max-w-0 group-data-[collapsible=icon]:opacity-0">
+    <span className="text-sm font-semibold text-white transition-all duration-300 overflow-hidden max-w-[130px] group-data-[collapsible=icon]:max-w-0 group-data-[collapsible=icon]:opacity-0">
       Discord
     </span>
   </Link>
@@ -130,14 +130,14 @@ export default function NexuraSidebar() {
   {/* X */}
   <Link
     href="https://x.com/NexuraXYZ"
-    className="flex items-center gap-2 min-h-[44px] group-data-[collapsible=icon]:justify-center"
+    className="flex items-center gap-2 min-h-[36px] group-data-[collapsible=icon]:justify-center"
   >
     <img
       src="/x-logo.png"
       alt="X"
-      className="w-6 h-6 flex-shrink-0 object-contain"
+      className="w-5 h-5 flex-shrink-0 object-contain"
     />
-    <span className="text-sm font-semibold text-white transition-all duration-300 overflow-hidden max-w-[150px] group-data-[collapsible=icon]:max-w-0 group-data-[collapsible=icon]:opacity-0">
+    <span className="text-sm font-semibold text-white transition-all duration-300 overflow-hidden max-w-[130px] group-data-[collapsible=icon]:max-w-0 group-data-[collapsible=icon]:opacity-0">
       X
     </span>
   </Link>
@@ -145,14 +145,14 @@ export default function NexuraSidebar() {
   {/* Docs */}
   <Link
     href="https://docsnexura.vercel.app"
-    className="flex items-center gap-2 min-h-[44px] group-data-[collapsible=icon]:justify-center"
+    className="flex items-center gap-2 min-h-[36px] group-data-[collapsible=icon]:justify-center"
   >
     <img
       src="/docs-icon.png"
       alt="Docs"
-      className="w-6 h-6 flex-shrink-0 object-contain"
+      className="w-5 h-5 flex-shrink-0 object-contain"
     />
-    <span className="text-sm font-semibold text-white transition-all duration-300 overflow-hidden max-w-[150px] group-data-[collapsible=icon]:max-w-0 group-data-[collapsible=icon]:opacity-0">
+    <span className="text-sm font-semibold text-white transition-all duration-300 overflow-hidden max-w-[130px] group-data-[collapsible=icon]:max-w-0 group-data-[collapsible=icon]:opacity-0">
       Docs
     </span>
   </Link>
