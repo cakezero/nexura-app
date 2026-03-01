@@ -60,6 +60,7 @@ export default function PortalClaims() {
   const balance = await publicClient.getBalance({ address });
   return balance ?? 0n;
 }
+const [modalStep, setModalStep] = useState<"review" | "awaiting">("review");
 
 useEffect(() => {
   (async () => {
@@ -1009,7 +1010,10 @@ const sortClaims = (claims, option) => {
       {/* Close Button */}
       <button
         className="absolute top-2 right-2 text-gray-400 hover:text-white text-xl font-bold"
-        onClick={() => setShowReviewDepositModal(false)}
+        onClick={() => {
+          setShowReviewDepositModal(false);
+          setModalStep("review"); // reset next time
+        }}
       >
         ×
       </button>
@@ -1018,62 +1022,61 @@ const sortClaims = (claims, option) => {
       <div className="flex items-center gap-2 mb-4">
         <h2 className="text-white font-bold text-base">Claim</h2>
         <span
-  className="bg-[#0A2D4D] border border-white text-white px-3 py-1 rounded-full text-sm font-semibold cursor-pointer transition-colors duration-200 hover:bg-[#123a63] hover:border-[#8B3EFE]"
->
-  {opposeMode ? "Oppose" : "Support"}
-</span>
+          className="bg-[#0A2D4D] border border-white text-white px-3 py-1 rounded-full text-sm font-semibold cursor-pointer transition-colors duration-200 hover:bg-[#123a63] hover:border-[#8B3EFE]"
+        >
+          {opposeMode ? "Oppose" : "Support"}
+        </span>
       </div>
 
-      {/* Subtitle */}
       <p className="text-gray-400 text-sm mb-6">
         Staking on a Triple enhances its discoverability in the Intuition system
       </p>
 
-      {/* Centered Spinner + Label */}
-      <div className="flex flex-col items-center my-6">
-        <img src="/spinner.png" alt="Spinner" className="w-16 h-16 mb-2 animate-spin" />
-        <span className="text-white font-semibold">Review...</span>
-      </div>
+      {modalStep === "review" ? (
+        <>
+          {/* Review Step */}
+          <div className="flex flex-col items-center my-6">
+            <img src="/spinner.png" alt="Spinner" className="w-16 h-16 mb-2" />
+            <span className="text-white font-semibold">Review...</span>
+          </div>
 
-{/* Total Cost */}
-<div className="bg-[#110A2B] border-2 border-[#393B60] rounded-3xl flex justify-between items-center px-4 py-2 mb-3 mx-4">
-  <span className="text-gray-300 text-sm font-semibold">Total Cost</span>
-  <span className="text-white font-bold">
-    {transactionAmount ? Number(transactionAmount).toFixed(4) : "0.0000"}
-  </span>
-</div>
+          <div className="bg-[#110A2B] border-2 border-[#393B60] rounded-3xl flex justify-between items-center px-4 py-2 mb-3 mx-4">
+            <span className="text-gray-300 text-sm font-semibold">Total Cost</span>
+            <span className="text-white font-bold">
+              {transactionAmount ? Number(transactionAmount).toFixed(4) : "0.0000"}
+            </span>
+          </div>
 
-      {/* Deposit TRUST Label */}
-      <span className="text-gray-300 font-semibold mb-2 block">Deposit TRUST into Claim</span>
+          <button
+            className="w-full bg-white text-black py-2.5 rounded-3xl font-semibold text-sm"
+            onClick={() => {
+              setModalStep("awaiting");
+              handleClaimAction("deposit");
+            }}
+          >
+            Confirm
+          </button>
+        </>
+      ) : (
+        <>
+          {/* Awaiting Wallet Approval */}
+          <div className="flex flex-col items-center my-6">
+            <img src="/spinner.png" alt="Spinner" className="w-16 h-16 mb-2" />
+            <span className="text-white font-semibold">Awaiting...</span>
+          </div>
 
-      {/* Statement */}
-      <div className="text-gray-300 mb-6 px-6 flex flex-wrap items-center gap-2">
-        <span className="font-bold bg-[#0b0618] px-2 py-1 rounded inline-flex items-center gap-2 max-w-[150px] truncate">
-          <img src={activeClaim.term.triple.subject.image} alt="Claim Icon" className="w-5 h-5 object-contain" />
-          {activeClaim.term.triple.subject.label}
-        </span>
-        <span>{activeClaim.term.triple.predicate.label}</span>
-        <span className="bg-[#0b0618] px-2 py-1 rounded max-w-[150px] truncate">{activeClaim.term.triple.object.label}</span>
-      </div>
-
-{/* Amount Input */}
-<div className="mb-4">
-  <label className="text-gray-300 text-sm mb-1 block">Amount (in TRUST)</label>
-  <input
-    type="text"
-    value={transactionAmount}
-    readOnly
-    className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white cursor-not-allowed"
-  />
-</div>
-
-      {/* Deposit / Redeem Button */}
-      <button
-  className="w-full bg-white text-black py-2.5 rounded-3xl font-semibold text-sm"
-  onClick={() => handleClaimAction("deposit")}
->
-  Deposit
-</button>
+          <div className="flex items-center justify-center gap-2 bg-[#110A2B] border border-[#393B60] rounded-2xl px-4 py-2 mx-4">
+            <img src="/wallet.png" alt="Wallet Icon" className="w-5 h-5" />
+            <span className="text-white font-semibold text-sm">Awaiting wallet approval</span>
+            <div className="relative group">
+              <span className="text-gray-400 font-bold cursor-pointer text-sm">?</span>
+              <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-max bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                Approve this transaction in your wallet
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   </div>
 )}
