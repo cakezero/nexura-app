@@ -1,6 +1,6 @@
 
 import { useParams } from "wouter";
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import { Address, formatEther, parseEther } from "viem";
 import { formatNumber } from "../lib/utils";
 import { toFixed } from "./PortalClaims";
@@ -44,7 +44,6 @@ export default function ClaimDetails() {
   const [isBuy, setIsBuy] = useState(true);
   const [positionType, setPositionType] = useState("support");
   const [growthType, setGrowthType] = useState("linear");
-  const [positionsOption, setPositionsOption] = useState("");
   const [loading, setLoading] = useState(false);
   const [positions, setPositions] = useState<Position[]>([]); // all positions
   const [userPositions, setUserPositions] = useState<Position[]>([]); // my positions
@@ -69,6 +68,9 @@ export default function ClaimDetails() {
   const [amountToReceive, setAmountToReceive] = useState("0");
   const [isToggled, setIsToggled] = useState(false);
   const [receiveAmount, setReceiveAmount] = useState("")
+  const [loadingAmount, setLoadingAmount] = useState(false);
+  const [sortOption, setSortOption] = useState("")
+  const [positionsOption, setPositionsOption] = useState("all");
 
   const { user } = useAuth();
   const { connectWallet } = useWallet();
@@ -190,20 +192,25 @@ export default function ClaimDetails() {
     setCounterTerm(fetched.counter_term);
 
     // All positions
-    const allPositions = [
-      ...(fetched.term.positions ?? []),
-      ...(fetched.counter_term.positions ?? []),
-    ];
-    setPositions(allPositions);
+const allPositions = [
+  ...(fetched.term.positions ?? []).map(p => ({ ...p, direction: "support" })),
+  ...(fetched.counter_term.positions ?? []).map(p => ({ ...p, direction: "oppose" })),
+];
+setPositions(allPositions);
 
     // My positions (from vaults)
-    const myPositions = [
-      ...(fetched.term.vaults?.[0]?.userPosition ?? []),
-      ...(fetched.term.vaults?.[1]?.userPosition ?? []),
-      ...(fetched.counter_term.vaults?.[0]?.userPosition ?? []),
-      ...(fetched.counter_term.vaults?.[1]?.userPosition ?? []),
-    ];
-    setUserPositions(myPositions);
+    let myPositions: Position[] = [];
+if (user) {
+  myPositions = [
+    ...(fetched.term.vaults?.[0]?.userPosition ?? []),
+    ...(fetched.term.vaults?.[1]?.userPosition ?? []),
+    ...(fetched.counter_term.vaults?.[0]?.userPosition ?? []),
+    ...(fetched.counter_term.vaults?.[1]?.userPosition ?? []),
+  ];
+} else {
+  console.log("No user signed in, no positions to fetch");
+}
+setUserPositions(myPositions);
 
     // Initially show first page for active tab
     const initial = activeTab === "all" ? allPositions : myPositions;
@@ -277,140 +284,77 @@ export default function ClaimDetails() {
     return formatEther(balance ?? 0n);
   }
 
-  if (!claim) return <div className="p-6 text-white">Claim not found</div>;
-
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   ////////////////////////////////////////
-  // filter user's positions based on positionType
-const filteredPositions = userPositions.filter(p =>
-  positionType === "support"
-    ? Number(p.curve_id) === 1
-    : Number(p.curve_id) === 2
-);
 
-// total shares owned
-const totalShares = filteredPositions.reduce(
-  (acc, p) => acc + Number(formatEther(BigInt(p.shares ?? 0))),
-  0
-);
+  const processedPositions = useMemo(() => {
+  let data = [...positions];
 
-// total spent (bought)
-const totalBought = filteredPositions.reduce(
-  (acc, p) => acc + Number(formatEther(BigInt(p.amount ?? 0))), // assuming p.amount is what user spent
-  0
-);
+  // FILTER
+  if (positionsOption !== "all") {
+    data = data.filter((pos) => {
+      if (positionsOption === "linear") return Number(pos.curve_id) === 1;
+      if (positionsOption === "exponential") return Number(pos.curve_id) === 2;
+      if (positionsOption === "support") return pos.direction?.toLowerCase() === "support";
+      if (positionsOption === "oppose") return pos.direction?.toLowerCase() === "oppose";
+      return true;
+    });
+  }
 
-// current value = total shares * current share price
-const currentSharePrice =
-  activeTab === "support"
-    ? Number(getPrice()) // your getPrice already handles support/oppose & growthType
-    : Number(getPrice());
+  // SORT
+  switch (sortOption) {
+    case "highest_shares":
+      data.sort((a, b) =>
+        Number(formatEther(BigInt(b.shares ?? 0))) -
+        Number(formatEther(BigInt(a.shares ?? 0)))
+      );
+      break;
+    case "lowest_shares":
+      data.sort((a, b) =>
+        Number(formatEther(BigInt(a.shares ?? 0))) -
+        Number(formatEther(BigInt(b.shares ?? 0)))
+      );
+      break;
+    case "newest":
+      data.sort((a, b) =>
+        new Date(b.created_at).getTime() -
+        new Date(a.created_at).getTime()
+      );
+      break;
+    case "oldest":
+      data.sort((a, b) =>
+        new Date(a.created_at).getTime() -
+        new Date(b.created_at).getTime()
+      );
+      break;
+    case "a_to_z":
+      data.sort((a, b) =>
+        (a.account?.label ?? "").localeCompare(b.account?.label ?? "")
+      );
+      break;
+    case "z_to_a":
+      data.sort((a, b) =>
+        (b.account?.label ?? "").localeCompare(a.account?.label ?? "")
+      );
+      break;
+  }
 
-const currentValue = totalShares * currentSharePrice;
+  return data;
+}, [positions, positionsOption, sortOption]);
 
-// P&L
-const profitLoss = currentValue - totalBought;
-
-// ownership %
-const totalMarketShares =
-  positionType === "support"
-    ? parseFloat(formatEther(BigInt(term.total_assets)))
-    : parseFloat(formatEther(BigInt(counterTerm.total_assets)));
-
-const ownershipPercent = totalMarketShares
-  ? (totalShares / totalMarketShares) * 100
-  : 0;
-
-  type Transaction = {
-  type: "Deposit" | "Withdraw" | "Buy" | "Sell"; 
-  amount: number; 
-  timestamp: string; 
-  icon?: string; 
-  color?: string;
-};
-
-const recentTransactions: Transaction[] = [
-  {
-    type: "Deposit",
-    amount: 0.0972,
-    timestamp: "2026-02-28T20:13:00Z",
-    icon: "/download.png",
-    color: "#00FF62",
-  },
-  {
-    type: "Withdraw",
-    amount: 0.05,
-    timestamp: "2026-02-27T15:45:00Z",
-    icon: "/withdraw.png",
-    color: "#FF4C4C",
-  },
-];
+  if (!claim) return <div className="p-3 text-white">Claim not found</div>;
 
   return (
-    <div className="p-6 text-white space-y-6">
+    <div className="p-3 text-white space-y-6">
       {/* Top Statement */}
       <div className="flex flex-wrap items-center gap-1">
-        <span className="bg-gray-700 px-1 rounded flex items-center gap-1">
-          <img src={term.triple.subject.image} alt="Claim Icon" className="w-5 h-5" />
+          <img src={term.triple.subject.image} alt="Claim Icon" className="w-16 h-16" />
+        <span className="bg-[#0b0618] px-2 py-1 rounded flex items-center gap-1 max-w-[150px] truncate">
           {term.triple.subject.label}
         </span>
         <span>{term.triple.predicate.label}</span>
 
-        <span className="bg-gray-700 px-1 rounded">{term.triple.object.label}</span>
-      </div>
-
-      {/* Support / Oppose Cards */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        {/* Support Card */}
-        <div className="flex-1 bg-[#006CD233] border border-[#393B60] rounded-xl p-4 flex flex-col gap-3">
-          {/* Heading */}
-          <span className="font-semibold text-lg text-[#006CD2]">SUPPORT</span> {/* increased from default btw */}
-
-          {/* TRUST, intuition icon, support number + user icon */}
-          <div className="flex items-center gap-3">
-            <span className="font-semibold text-sm md:text-base">{toFixed(formatEther(BigInt(term.total_assets)))} TRUST</span> {/* slightly larger */}
-            <img src="/intuition-icon.png" alt="Intuition Icon" className="w-5 h-5" />
-            <div className="flex items-center gap-2">
-              <span className="text-blue-400 font-semibold text-base md:text-lg">{formatNumber(term.positions_aggregate.aggregate.count, "user")}</span> {/* increased also */}
-              <img src="/user.png" alt="User Icon" className="w-4 h-4" />
-            </div>
-          </div>
-        </div>
-
-        {/* Oppose Card */}
-        <div className="flex-1 bg-[#F19C0333] border border-[#393B60] rounded-xl p-4 flex flex-col gap-3">
-          {/* Heading */}
-          <span className="font-semibold text-lg text-[#F19C03]">OPPOSE</span>
-
-          {/* TRUST, intuition icon, oppose number + user icon */}
-          <div className="flex items-center gap-3">
-            <span className="font-semibold text-sm md:text-base">{toFixed(formatEther(BigInt(counterTerm.total_assets)))} TRUST</span>
-            <img src="/intuition-icon.png" alt="Intuition Icon" className="w-5 h-5" />
-            <div className="flex items-center gap-2">
-              <span className="text-[#F19C03] font-semibold text-base md:text-lg">{formatNumber(counterTerm.positions_aggregate.aggregate.count, "user")}</span>
-              <img src="/user-red.png" alt="User Icon" className="w-4 h-4" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Progress Bar */}
-      <div className="w-full h-5 bg-gray-700 rounded-lg overflow-hidden relative flex">
-        {/* Support */}
-        <div
-          className="bg-blue-600 flex items-center justify-center text-white text-xs font-semibold transition-all duration-500"
-          style={{ width: `${supportPercent}%` }}
-        >
-          {supportPercent.toFixed(0)}%
-        </div>
-
-        {/* Oppose */}
-        <div
-          className="bg-[#F19C03] flex items-center justify-center text-white text-xs font-semibold transition-all duration-500"
-          style={{ width: `${opposePercent}%` }}
-        >
-          {opposePercent.toFixed(0)}%
-        </div>
+        <span className="bg-[#0b0618] px-2 py-1 rounded max-w-[150px] truncate">{term.triple.object.label}</span>
       </div>
 
       <div>
@@ -418,7 +362,7 @@ const recentTransactions: Transaction[] = [
         <div className="flex flex-col sm:flex-row sm:items-center gap-4 mt-4">
           {/* Total Market Cap */}
           <div className="flex items-center gap-2">
-            <span className="font-semibold">Total Market Cap</span>
+            <span className="font-semibold opacity-50">Total Market Cap</span>
             <span className="font-bold text-xl text-white">
               {marketCap} TRUST
             </span>
@@ -430,7 +374,7 @@ const recentTransactions: Transaction[] = [
 
           {/* Total Position */}
           <div className="flex items-center gap-2">
-            <span>Total Position:</span>
+            <span className="opacity-50">Total Position:</span>
             <span className="font-semibold">{totalPostions}</span>
           </div>
 
@@ -439,7 +383,7 @@ const recentTransactions: Transaction[] = [
 
           {/* Creator */}
           <div className="flex items-center gap-2">
-            <span>Creator:</span>
+            <span className="opacity-50">Creator:</span>
             <span className="font-semibold">{term.triple.creator.label}</span>
           </div>
 
@@ -458,35 +402,35 @@ const recentTransactions: Transaction[] = [
         </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6 mt-6">
+      <div className="flex flex-col lg:flex-row gap-3 mt-3">
         {/* Graph Placeholder (70%) */}
         <div className="w-full lg:w-[70%] bg-gradient-to-br from-[#1A0A2B] to-[#0B0515] rounded-xl p-4 shadow-lg">
           {/* Chart Header */}
           <div className="flex items-center justify-between mb-4">
             <div>
-              <span className="text-sm text-gray-400">Share Price</span>
-              <div className="text-2xl sm:text-3xl font-bold text-white">
+              <span className="text-xs text-gray-400">Share Price</span>
+              <div className="text-xl sm:text-2xl font-bold text-white">
                 {getPrice()} TRUST
               </div>
             </div>
 
-                {/* Toggle Linear / Exponential */}
-    <div className="flex rounded-full bg-[#1F123A] p-1">
-      {["linear", "exponential"].map((type) => (
-        <button
-          key={type}
-          onClick={() => setGrowthType(type)}
-          className={`px-4 py-1 rounded-full text-sm font-semibold transition-all duration-300 ${
-            growthType === type
-              ? "bg-[#392D5F] text-white"
-              : "text-gray-400 hover:text-white"
-          }`}
-        >
-          {type.charAt(0).toUpperCase() + type.slice(1)}
-        </button>
-      ))}
-    </div>
-  </div>
+{/* Toggle Linear / Exponential */}
+<div className="flex rounded-full bg-[#1F123A] p-1">
+  {["linear", "exponential"].map((type) => (
+    <button
+      key={type}
+      onClick={() => setGrowthType(type)}
+      className={`px-4 py-1 rounded-full text-xs font-semibold transition-all duration-300 ${
+        growthType === type
+          ? "bg-[#392D5F] text-white"
+          : "text-gray-400 hover:text-white"
+      }`}
+    >
+      {type.charAt(0).toUpperCase() + type.slice(1)}
+    </button>
+  ))}
+</div>
+</div>
 
 {/* ApexCharts Area Graph - Deep Complex Purple */}
 <Chart
@@ -547,9 +491,9 @@ const recentTransactions: Transaction[] = [
         </div>
 
         {/* Control Card (20%) */}
-        <div className="w-full lg:w-[30%] bg-gray-900 rounded-xl p-4 flex flex-col gap-4">
+        <div className="w-full lg:w-[30%] bg-gray-900 rounded-xl p-6 flex flex-col gap-4">
           {/* Support / Oppose Tabs */}
-          <div className="flex gap-2">
+          <div className="flex gap-4">
             <button
               className={`flex-1 rounded-md py-2 font-semibold ${activeTab === "support"
                 ? "bg-[#0A2D4D] border border-[#006CD2] text-white"
@@ -572,11 +516,11 @@ const recentTransactions: Transaction[] = [
           </div>
 
           {/* Buy / Sell Toggle */}
-<div className="flex w-full overflow-hidden select-none cursor-pointer bg-[#060210] border border-[#006CD2] rounded-full">
+<div className="flex w-full h-max overflow-hidden select-none cursor-pointer bg-[#060210] border border-[#006CD2] rounded-full">
   {/* Buy */}
   <div
     onClick={() => setIsBuy(true)}
-    className={`flex-1 flex items-center rounded-full justify-center font-semibold text-base h-10 transition-colors duration-300 ${
+    className={`flex-1 flex items-center rounded-full justify-center font-semibold text-base h-6 transition-colors duration-300 ${
       isBuy ? "bg-[#8B3EFE] text-white rounded-l-3xl" : "bg-[#060210] text-white rounded-l-3xl"
     }`}
   >
@@ -586,7 +530,7 @@ const recentTransactions: Transaction[] = [
   {/* Sell */}
   <div
     onClick={() => setIsBuy(false)}
-    className={`flex-1 flex items-center rounded-full justify-center font-semibold text-base h-10 transition-colors duration-300 ${
+    className={`flex-1 flex items-center rounded-full justify-center font-semibold text-base h-6 transition-colors duration-300 ${
       !isBuy ? "bg-[#8B3EFE] text-white rounded-r-3xl" : "bg-[#060210] text-white rounded-r-3xl"
     }`}
   >
@@ -594,26 +538,31 @@ const recentTransactions: Transaction[] = [
   </div>
 </div>
 
-                    {/* Linear Curve Section */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div>
-              <h3 className="font-semibold text-white">Linear Curve</h3>
-              <p className="text-gray-400 text-sm">Low Risk, Low Reward</p>
-            </div>
-            {/* Toggle button */}
-<button
-  onClick={() => setIsToggled(!isToggled)}
-  className={`bg-gray-700 w-12 h-6 rounded-full relative transition-colors duration-300 ${
-    isToggled ? "bg-purple-400" : "bg-gray-700"
-  }`}
->
-  <span
-    className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-all duration-300 ${
-      isToggled ? "left-6" : "left-0.5"
+      
+{/* Linear Curve Section */}
+<div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+  <div>
+    <h3 className="font-semibold text-white">Linear Curve</h3>
+    <p className="text-gray-400 text-xs">Low Risk, Low Reward</p>
+  </div>
+
+  {/* Toggle button */}
+  <button
+    onClick={() =>
+      setGrowthType(growthType === "linear" ? "exponential" : "linear")
+    }
+    className={`w-12 h-6 rounded-full relative transition-colors duration-300 ${
+      growthType === "exponential" ? "bg-purple-400" : "bg-gray-700"
     }`}
-  ></span>
-</button>
-          </div>
+  >
+    <span
+      className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-all duration-300 ${
+        growthType === "exponential" ? "left-6" : "left-0.5"
+      }`}
+    ></span>
+  </button>
+  </div>
+
 
           {/* Amount Section */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -631,13 +580,38 @@ const recentTransactions: Transaction[] = [
             />
             <span className="text-gray-400 ml-2">min</span>
           </div>
-          <input
-            type="text"
-            placeholder="Amount you receive"
-            value={amountToReceive}
-            disabled={true}
-            className="w-full bg-gray-800 text-white p-2 rounded-md outline-none border border-[#833AFD]"
-          />
+          <div className="w-full bg-gray-800 border border-[#833AFD] rounded-md px-3 py-2 flex items-center justify-between text-white text-sm">
+  {/* Left label */}
+  <span>Amount you receive</span>
+
+  {/* Right value with spinner */}
+  <div className="flex items-center gap-2">
+    {loadingAmount ? (
+      <svg
+        className="w-4 h-4 animate-spin text-gray-400"
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+      >
+        <circle
+          className="opacity-25"
+          cx="12"
+          cy="12"
+          r="10"
+          stroke="currentColor"
+          strokeWidth="4"
+        ></circle>
+        <path
+          className="opacity-75"
+          fill="currentColor"
+          d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+        ></path>
+      </svg>
+    ) : (
+      <span>{amountToReceive}</span>
+    )}
+  </div>
+</div>
 
           {/* Connect / Buy / Sell Button */}
 <button
@@ -666,176 +640,118 @@ const recentTransactions: Transaction[] = [
 
       
       {/* Your Position Card */}
-      <div className="bg-[#110A2B] rounded-xl p-4 flex flex-col gap-4">
-        {/* Header Line */}
-        <div className="flex items-center gap-3 text-white text-lg font-semibold">
-          <span>Your Position</span>
+<div className="bg-[#110A2B] rounded-xl p-4 flex flex-col gap-4">
+  <div className="flex items-center gap-3 text-white text-base font-semibold">
+    <span>Your Position</span>
+    <div className="w-6 h-[3px] bg-[#AD77FF] rounded-full"></div>
 
-          {/* Styled Hyphen */}
-          <div className="w-6 h-[3px] bg-[#AD77FF] rounded-full"></div>
-
-          <span>
-            Support: <span className="font-bold">0.0954 TRUST</span>
+    {userPositions.length > 0 ? (
+      <>
+        <span>
+          Support:{" "}
+          <span className="font-bold">
+            {toFixed(
+              userPositions
+                .filter(p => p.direction === "support")
+                .reduce((sum, p) => sum + parseFloat(formatEther(BigInt(p.shares))), 0)
+            )}{" "}
+            TRUST
           </span>
-        </div>
+        </span>
+        <span>
+          Oppose:{" "}
+          <span className="font-bold">
+            {toFixed(
+              userPositions
+                .filter(p => p.direction === "oppose")
+                .reduce((sum, p) => sum + parseFloat(formatEther(BigInt(p.shares))), 0)
+            )}{" "}
+            TRUST
+          </span>
+        </span>
+      </>
+    ) : (
+      <span className="text-gray-400 font-semibold">No positions found</span>
+    )}
+  </div>
 
-        {/* White Divider */}
-        <div className="h-px w-full bg-white opacity-80"></div>
-      </div>
-
-      {/* Dual Toggles */}
-      <div className="flex flex-col sm:flex-row gap-4 mt-4">
-
-        {/* Left Toggle — Support / Oppose */}
-        <div className="w-full sm:w-1/2 lg:w-[15%]">
-          <div className="flex rounded-md border border-[#393B60] w-full h-12 overflow-hidden">
-
-            <div
-              onClick={() => setPositionType("support")}
-              className={`flex-1 flex items-center justify-center font-semibold text-lg transition-colors duration-300 cursor-pointer ${positionType === "support"
-                ? "bg-[#FFFFFF2B] text-white"
-                : "bg-[#060210] text-white"
-                }`}
-            >
-              Support
-            </div>
-
-            <div
-              onClick={() => setPositionType("oppose")}
-              className={`flex-1 flex items-center justify-center font-semibold text-lg transition-colors duration-300 cursor-pointer ${positionType === "oppose"
-                ? "bg-[#FFFFFF2B] text-white"
-                : "bg-[#060210] text-white"
-                }`}
-            >
-              Oppose
-            </div>
-
-          </div>
-        </div>
-
-        {/* Right Toggle — Linear / Exponential */}
-        <div className="w-full sm:w-1/2 lg:w-[20%]">
-          <div className="flex rounded-md border border-[#393B60] w-full h-12 overflow-hidden">
-
-            <div
-              onClick={() => setGrowthType("linear")}
-              className={`flex-1 flex items-center justify-center font-semibold text-lg transition-colors duration-300 cursor-pointer ${growthType === "linear"
-                ? "bg-[#FFFFFF2B] text-white"
-                : "bg-[#060210] text-white"
-                }`}
-            >
-              Linear
-            </div>
-
-            <div
-              onClick={() => setGrowthType("exponential")}
-              className={`flex-1 flex items-center justify-center font-semibold text-lg transition-colors duration-300 cursor-pointer ${growthType === "exponential"
-                ? "bg-[#FFFFFF2B] text-white"
-                : "bg-[#060210] text-white"
-                }`}
-            >
-              Exponential
-            </div>
-
-          </div>
-        </div>
-
-      </div>
+  <div className="h-px w-full bg-white opacity-80"></div>
+</div>
 
       {/* Support Position Card */}
-      <div className="bg-[#110A2B] rounded-xl p-5 mt-6 flex flex-col gap-6 text-white">
+      <div className="bg-[#110A2B] rounded-xl p-5 3 flex flex-col gap-3 text-white">
 
         {/* Title Section */}
         <div>
-          <h3 className="font-semibold text-lg">Support Position</h3>
-          <p className="text-gray-400 text-sm">The Ticker (Progressive)</p>
+          <h3 className="font-semibold text-base">Support Position</h3>
+          <p className="text-gray-400 text-xs">The Ticker (Progressive)</p>
         </div>
 
-        {/* 5 Equal Columns */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+        {/* Position Summary Card */}
+<div className="bg-[#110A2B] rounded-xl p-5 flex flex-col gap-4 text-white">
+  {/* Row 1: Support / Oppose Percent */}
+  <div className="flex justify-between text-sm font-semibold text-gray-400">
+    <span>Support: {supportPercent.toFixed(2)}%</span>
+    <span>Oppose: {opposePercent.toFixed(2)}%</span>
+  </div>
 
-          {/* A */}
-          <div className="flex flex-col gap-2">
-            <span className="text-gray-400 text-sm">Current Value</span>
-            <span className="font-semibold">0.0954 TRUST</span>
-          </div>
+  {/* Row 2: Table Header */}
+  <div className="grid grid-cols-5 gap-3 text-gray-400 text-xs font-semibold border-b border-gray-700 pb-2">
+    <span>Side</span>
+    <span>Curve</span>
+    <span>Price / Share</span>
+    <span>Mkt Cap</span>
+    <span>Holders</span>
+  </div>
 
-          {/* B */}
-          <div className="flex flex-col gap-2">
-            <span className="text-gray-400 text-sm">Total Bought</span>
-            <span>0.0972 TRUST</span>
-          </div>
+  {/* Row 3: FOR */}
+  <div className="grid grid-cols-5 gap-3 items-center py-2">
+    <span className="flex items-center gap-2 font-semibold">
+      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+      FOR
+    </span>
+    <span>Exponential</span>
+    <span>{term.vaults?.[1]?.current_share_price ? toFixed(formatEther(BigInt(term.vaults[1].current_share_price))) : "-"}</span>
+    <span>{marketCap}</span>
+    <span>{term.vaults?.[1]?.holders?.length ?? 0}</span>
+  </div>
 
-          {/* C */}
-          <div className="flex flex-col gap-2">
-            <span className="text-gray-400 text-sm">P&amp;L</span>
-            <span className="text-red-400">-0.0019 TRUST</span>
-          </div>
+  {/* Row 4: AGAINST */}
+  <div className="grid grid-cols-5 gap-3 items-center py-2">
+    <span className="flex items-center gap-2 font-semibold">
+      <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+      AGAINST
+    </span>
+    <span>Exponential</span>
+    <span>{counterTerm.vaults?.[1]?.current_share_price ? toFixed(formatEther(BigInt(counterTerm.vaults[1].current_share_price))) : "-"}</span>
+    <span>{marketCap}</span>
+    <span>{counterTerm.vaults?.[1]?.holders?.length ?? 0}</span>
+  </div>
 
-          {/* D */}
-          <div className="flex flex-col gap-2">
-            <span className="text-gray-400 text-sm">Shares</span>
-            <span>0</span>
-          </div>
+  {/* Row 5: FOR Linear */}
+  <div className="grid grid-cols-5 gap-3 items-center py-2">
+    <span className="flex items-center gap-2 font-semibold">
+      <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+      FOR
+    </span>
+    <span>Linear</span>
+    <span>{term.vaults?.[0]?.current_share_price ? toFixed(formatEther(BigInt(term.vaults[0].current_share_price))) : "-"}</span>
+    <span>{marketCap}</span>
+    <span>{term.vaults?.[0]?.holders?.length ?? 0}</span>
+  </div>
 
-          {/* E */}
-          <div className="flex flex-col gap-2">
-            <span className="text-gray-400 text-sm">Ownership</span>
-            <span>0.000%</span>
-          </div>
-
-        </div>
-      </div>
-
-      {/* Recent Activity Card */}
-      <div className="bg-[#110A2B] rounded-xl p-5 mt-6 text-white flex flex-col gap-6">
-
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-lg">Recent Activity</h3>
-          <button className="text-sm text-[#8B3EFE] hover:underline">
-            Show all
-          </button>
-        </div>
-
-        {/* Inner Transaction Card */}
-        <div className="bg-[#060210] rounded-xl p-4 flex flex-col gap-4">
-
-          {/* Top Row */}
-          <div className="relative flex items-center justify-between">
-
-            {/* Left Side */}
-            <div className="flex items-center gap-4">
-              <img
-                src="/download.png"
-                alt="Download"
-                className="w-5 h-5 object-contain"
-              />
-
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-gray-400">
-                  Deposit
-                </span>
-                <span className="font-semibold text-[#00FF62]">
-                  0.0972 TRUST
-                </span>
-              </div>
-            </div>
-
-            {/* Right Side */}
-            <span className="text-2xl font-bold text-[#00FF62] self-center ml-auto">
-              0.0972 TRUST
-            </span>
-
-          </div>
-
-          {/* Bottom Row */}
-          <div className="flex items-center justify-between text-sm text-gray-400">
-            <span>08:13PM</span>
-          </div>
-
-        </div>
-
+  {/* Row 6: AGAINST Linear */}
+  <div className="grid grid-cols-5 gap-3 items-center py-2">
+    <span className="flex items-center gap-2 font-semibold">
+      <div className="w-2 h-2 bg-red-400 rounded-full"></div>
+      AGAINST
+    </span>
+    <span>Linear</span>
+    <span>{counterTerm.vaults?.[0]?.current_share_price ? toFixed(formatEther(BigInt(counterTerm.vaults[0].current_share_price))) : "-"}</span>
+    <span>{marketCap}</span>
+    <span>{counterTerm.vaults?.[0]?.holders?.length ?? 0}</span>
+  </div>
+</div>
       </div>
 
       {/* Positions on this Claim Section */}
@@ -866,7 +782,7 @@ const recentTransactions: Transaction[] = [
 
 
         {/* Dynamic Heading */}
-        <h3 className="font-semibold text-lg">
+        <h3 className="font-semibold text-base">
           {activeTab === "all"
             ? "All Positions on this Claim"
             : "My Position on this Claim"}
@@ -880,7 +796,6 @@ const recentTransactions: Transaction[] = [
             className="w-full lg:w-1/2 bg-[#06021A] border border-[#393B60] text-white p-2 rounded-2xl outline-none"
           />
 
-          {/* Positions / Sort Input */}
           {/* Positions / Sort Dropdown */}
           <div className="flex items-center gap-2">
             <span className="text-white font-semibold">Positions:</span>
@@ -908,75 +823,98 @@ const recentTransactions: Transaction[] = [
           </div>
 
           {/* Sort Input */}
-          <div className="flex items-center gap-2 bg-[#06021A] border border-[#393B60] rounded-2xl px-2 py-2">
-            <input
-              type="text"
-              placeholder="Sort"
-              className="bg-transparent outline-none text-white"
-            />
-            <img src="/up-down.png" alt="Dropdown" className="w-4 h-4" />
-          </div>
+          {/* Sort Dropdown */}
+<div className="flex items-center gap-2">
+  <span className="text-white font-semibold">Sort:</span>
+  
+  <div className="relative w-48">
+    <select
+      value={sortOption}
+      onChange={(e) => setSortOption(e.target.value)}
+      className="appearance-none w-full bg-[#06021A] border border-[#393B60] rounded-2xl px-4 py-2 pr-10 text-white focus:outline-none"
+    >
+      <option value="highest_shares">Highest Shares</option>
+      <option value="lowest_shares">Lowest Shares</option>
+      <option value="newest">Newest</option>
+      <option value="oldest">Oldest</option>
+      <option value="a_to_z">A - Z</option>
+      <option value="z_to_a">Z - A</option>
+    </select>
+
+    {/* Dropdown Icon */}
+    <img
+      src="/up-down.png"
+      alt="Dropdown"
+      className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"
+    />
+  </div>
+</div>
         </div>
 
 
         {/* TABLE */}
-        <div className="overflow-x-auto">
-          <div className="min-w-[700px]">
-            {visiblePositions.length === 0 ? (
-              <div className="text-gray-400 text-center py-4">No positions found</div>
-            ) : (
-              <div className="flex flex-col gap-2">
+<div className="overflow-x-auto">
+  <div className="min-w-[700px]">
+    {processedPositions.length === 0 ? (
+  <div className="text-gray-400 text-center py-4">No positions found</div>
+) : (
+  <div className="flex flex-col gap-2">
 
-                {/* Header Row */}
-                <div className="bg-[#060210] p-3 rounded-md flex items-center text-gray-400 font-semibold text-sm">
-                  <div className="w-[5%] text-center">#</div>
-                  <div className="w-[45%]">Account</div>
-                  <div className="w-[15%] text-center">Curve</div>
-                  <div className="w-[20%] text-right">Shares</div>
-                </div>
+    <div className="bg-[#060210] p-3 rounded-md flex items-center text-gray-400 font-semibold text-xs">
+      <div className="w-[5%] text-center">#</div>
+      <div className="w-[35%]">Account</div>
+      <div className="w-[15%] text-center">Curve</div>
+      <div className="w-[15%] text-center">Direction</div>
+      <div className="w-[20%] text-right">Shares</div>
+    </div>
 
-                {/* Rows */}
-                {visiblePositions.map((pos, idx) => (
-                  <div
-                    key={idx}
-                    className="bg-[#110A2B] p-4 rounded-md flex items-center text-white"
-                  >
-                    {/* Serial Number */}
-                    <div className="w-[5%] text-gray-400 font-semibold text-center">
-                      {idx + 1}
-                    </div>
+    {processedPositions.map((pos, idx) => (
+      <div
+        key={idx}
+        className="bg-[#110A2B] p-4 rounded-md flex items-center text-white"
+      >
+        <div className="w-[5%] text-gray-400 font-semibold text-center">
+          {idx + 1}
+        </div>
 
-                    {/* Account */}
-                    <div className="w-[45%] flex items-center gap-2 truncate">
-                      {pos.account?.image && (
-                        <img
-                          src={pos.account.image}
-                          alt={pos.account.label ?? "User"}
-                          className="w-6 h-6 rounded-full object-cover flex-shrink-0"
-                        />
-                      )}
-                      <span className="font-semibold truncate">
-                        {pos.account?.label ?? pos.account?.id ?? "Anonymous"}
-                      </span>
-                    </div>
+        <div className="w-[35%] flex items-center gap-2 truncate">
+          {pos.account?.image && (
+            <img
+              src={pos.account.image}
+              alt={pos.account.label ?? "User"}
+              className="w-6 h-6 rounded-full object-cover flex-shrink-0"
+            />
+          )}
+          <span className="font-semibold truncate">
+            {pos.account?.label ?? pos.account?.id ?? "Anonymous"}
+          </span>
+        </div>
 
-                    {/* Curve */}
-                    <div className="w-[15%] text-center text-gray-400">
-                      {Number(pos.curve_id) === 1
-                        ? "Linear"
-                        : Number(pos.curve_id) === 2
-                          ? "Exponential"
-                          : "—"}
-                    </div>
+        <div className="w-[15%] text-center text-gray-400">
+          {Number(pos.curve_id) === 1
+            ? "Linear"
+            : Number(pos.curve_id) === 2
+            ? "Exponential"
+            : "—"}
+        </div>
 
-                    {/* Shares */}
-                    <div className="w-[20%] text-right font-semibold">
-                      {toFixed(formatEther(BigInt(pos.shares ?? 0)))} TRUST
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+        <div className="w-[15%] text-center font-semibold">
+          {pos.direction?.toLowerCase() === "support"
+            ? "Support"
+            : pos.direction?.toLowerCase() === "oppose"
+            ? "Oppose"
+            : "—"}
+        </div>
+
+        <div className="w-[20%] text-right font-semibold">
+          {pos.shares
+            ? `${toFixed(formatEther(BigInt(pos.shares)))}`
+            : ""}
+        </div>
+      </div>
+    ))}
+  </div>
+)}
 
             {/* Observer div for infinite scroll */}
             <div ref={observerRef} className="h-10"></div>

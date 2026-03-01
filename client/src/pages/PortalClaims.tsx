@@ -29,7 +29,7 @@ export default function PortalClaims() {
   const [sortDirection, setSortDirection] = useState("desc");
   const [searchTerm, setSearchTerm] = useState("");
   const [termId, setTermId] = useState("");
-  const [activeTab, setActiveTab] = useState("deposit");
+  const [activeTab, setActiveTab] = useState<"deposit" | "redeem">("deposit");
   const [isToggled, setIsToggled] = useState(false);
 
   const [visibleClaims, setVisibleClaims] = useState<Claim[]>([]);
@@ -44,8 +44,15 @@ export default function PortalClaims() {
     const [opposeMode, setOpposeMode] = useState(false);
     const [transactionAmount, setTransactionAmount] = useState("0");
       // Wallet & Blockchain
-      const [tTrustBalance, setTTrustBalance] = useState<bigint>(0n);
-      const [inputValue, setInputValue] = useState(0);
+    const [tTrustBalance, setTTrustBalance] = useState<bigint>(0n);
+    const [inputValue, setInputValue] = useState(0);
+    const [sortedClaims, setSortedClaims] = useState(visibleClaims);
+    const [showCurveInfo, setShowCurveInfo] = useState(false);
+    const [activePosition, setActivePosition] = useState<bigint>(0n);
+
+useEffect(() => {
+  setSortedClaims(sortClaims(visibleClaims, sortOption));
+}, [visibleClaims, sortOption]);
 
       // Returns true if claim matches search
 const claimMatchesSearch = (claim: Claim, term: string) => {
@@ -162,22 +169,30 @@ useEffect(() => {
   }, [sortOption]);
 
   // ---------------- Handlers ----------------
-    const handleSupportClick = (claim: Claim) => {
-      setActiveClaim(claim);
-      setTermId(claim.term.id);
-      setOpposeMode(false);
-      setShowModal(true);
-    };
+const handleSupportClick = (claim: Claim) => {
+  setActiveClaim(claim);
+  setTermId(claim.term.id);
+  setOpposeMode(false);
+  
+  // Get user's current active position for this claim
+  const userPosition = claim.term.user_position?.amount ?? 0n; // replace with actual property
+  setActivePosition(userPosition);
 
-    const handleOpposeClick = (claim: Claim) => {
-      setActiveClaim(claim);
-      setTermId(claim.counter_term.id);
-      setTransactionMode("redeem");
-      setActiveTab("redeem");
-      setShowModal(true);
-      setIsToggled(false);
-      setOpposeMode(true);
-    };
+  setShowModal(true);
+};
+
+const handleOpposeClick = (claim: Claim) => {
+  setActiveClaim(claim);
+  setTermId(claim.counter_term.id);
+  setTransactionMode("redeem");
+  setActiveTab("deposit");
+  setOpposeMode(true);
+
+  const userPosition = claim.counter_term.user_position?.amount ?? 0n;
+  setActivePosition(userPosition);
+
+  setShowModal(true);
+};
 
     const handleCloseModal = () => {
       setActiveClaim(null);
@@ -203,10 +218,57 @@ useEffect(() => {
   }
 };
 
+// Sorting function
+const sortClaims = (claims, option) => {
+  const sorted = [...claims]; // clone to avoid mutating original
+  switch (option) {
+    case "totalMarketCap_desc":
+      return sorted.sort((a, b) => Number(b.total_market_cap) - Number(a.total_market_cap));
+    case "totalMarketCap_asc":
+      return sorted.sort((a, b) => Number(a.total_market_cap) - Number(b.total_market_cap));
+    case "supportMarketCap_desc":
+      return sorted.sort((a, b) =>
+        Number(b.term.total_assets) - Number(a.term.total_assets)
+      );
+    case "supportMarketCap_asc":
+      return sorted.sort((a, b) =>
+        Number(a.term.total_assets) - Number(b.term.total_assets)
+      );
+    case "opposeMarketCap_desc":
+      return sorted.sort((a, b) =>
+        Number(b.counter_term.total_assets) - Number(a.counter_term.total_assets)
+      );
+    case "opposeMarketCap_asc":
+      return sorted.sort((a, b) =>
+        Number(a.counter_term.total_assets) - Number(b.counter_term.total_assets)
+      );
+    case "positions_desc":
+      return sorted.sort(
+        (a, b) =>
+          (b.total_position_count || 0) - (a.total_position_count || 0)
+      );
+    case "positions_asc":
+      return sorted.sort(
+        (a, b) =>
+          (a.total_position_count || 0) - (b.total_position_count || 0)
+      );
+    case "createdAt_desc":
+      return sorted.sort(
+        (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+      );
+    case "createdAt_asc":
+      return sorted.sort(
+        (a, b) => new Date(a.createdAt) - new Date(b.createdAt)
+      );
+    default:
+      return claims;
+  }
+};
+
   return (
-    <div className="p-6 text-white">
+    <div className="p-3 text-white">
       {/* Header */}
-      <h1 className="text-2xl font-bold">Claims</h1>
+      <h1 className="text-base font-semibold">Claims</h1>
 
       <p className="text-gray-400 mt-2 max-w-3xl">
         Semantic statements, allowing anyone to claim anything about anything
@@ -431,7 +493,7 @@ useEffect(() => {
             </>
           )}
                     {view === "grid" && (
-          <div className="hidden md:grid md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-2 gap-6">
+          <div className="hidden md:grid md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-2 gap-3">
             {visibleClaims.map((claim) => {
               const supportCount = Number(claim.term.positions_aggregate.aggregate.count);
               const opposeCount = Number(claim.counter_term.positions_aggregate.aggregate.count);
@@ -443,7 +505,7 @@ useEffect(() => {
               return (
                 <div
                   key={claim.term_id}
-                  className="bg-[#060210] border border-gray-700 rounded-xl p-5 hover:bg-[#2c0738] transition"
+                  className="bg-[#060210] border border-gray-700 rounded-xl p-4 hover:bg-[#2c0738] transition"
                 >
                   {/* Statement */}
                   <div className="text-gray-300 mb-4 flex flex-wrap items-center gap-2">
@@ -545,7 +607,7 @@ useEffect(() => {
                     {/* Total MarketCap */}
                     <div className="flex flex-col items-end text-gray-300 text-sm">
                       <span className="font-semibold">Total Market Cap</span>
-                      <span className="font-bold text-2xl text-white">
+                      <span className="font-bold text-lg text-white">
                         {toFixed(
                           formatEther(
                             BigInt(claim.total_market_cap)
@@ -562,28 +624,29 @@ useEffect(() => {
 
           {/* Modal */}
   {showModal && activeClaim && (
-  <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+  <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
 <div
-  className="bg-[#070315] max-w-2xl w-full mx-4 p-6 rounded-xl relative border-2"
+  className="bg-[#070315] max-w-lg w-full mx-4 p-3 rounded-lg relative border max-h-[85vh] overflow-y-auto"
   style={{ borderColor: "#8B3EFE" }}
 >
 
-
       {/* Title + Support Tag */}
-      <div className="flex items-center gap-2 mb-4">
-        <h2 className="text-white font-bold text-lg">Claim</h2>
-        <span className="bg-[#0A2D4D] border border-white text-white px-3 py-1 rounded-full text-sm font-semibold">
+      <div className="flex items-center gap-2 mb-3">
+        <h2 className="text-white font-bold text-base">Claim</h2>
+        <span
+  className="bg-[#0A2D4D] border border-white text-white px-3 py-1 rounded-full text-sm font-semibold cursor-pointer transition-colors duration-200 hover:bg-[#123a63] hover:border-[#8B3EFE]"
+>
   {opposeMode ? "Oppose" : "Support"}
 </span>
       </div>
 
       {/* Subtitle */}
-      <p className="text-gray-400 text-sm mb-4">
+      <p className="text-gray-400 text-sm mb-3">
         Supporting or Opposing a triple enhances its discoverability in the intuition system
       </p>
 
 {/* Statement */}
-<div className="text-gray-300 mb-6 px-6 flex flex-wrap items-center gap-2">
+<div className="text-gray-300 mb-4 px-6 flex flex-wrap items-center gap-2">
   <span className="bg-[#0b0618] px-2 py-1 rounded flex items-center gap-1 max-w-[150px] truncate min-w-0">
     <img src={activeClaim.term.triple.subject.image} alt="Claim Icon" className="w-5 h-5 object-contain" />
     {activeClaim.term.triple.subject.label}
@@ -593,28 +656,38 @@ useEffect(() => {
 </div>
 
 {/* Tabs */}
-<div className="flex justify-center mb-4">
-  <div className="flex gap-20 relative">
+<div className="flex justify-center mb-3">
+  <div className="flex gap-6 relative">
+    {/* Deposit Tab */}
     <button
-      className={`relative px-4 py-2 font-semibold ${
+      className={`relative px-3 py-1.5 text-sm font-semibold ${
         activeTab === "deposit" ? "text-white" : "text-gray-400"
       }`}
       onClick={() => setActiveTab("deposit")}
     >
       Deposit
       {activeTab === "deposit" && (
-        <span className="absolute left-1/2 bottom-0 w-40 transform -translate-x-1/2 h-1 bg-blue-500 rounded-full"></span>
+        <span className="absolute left-1/2 bottom-0 w-24 transform -translate-x-1/2 h-1 bg-blue-500 rounded-full"></span>
       )}
     </button>
+
+    {/* Redeem Tab */}
     <button
-      className={`relative px-4 py-2 font-semibold ${
-        activeTab === "redeem" ? "text-white" : "text-gray-400"
+      className={`relative px-3 py-1.5 text-sm font-semibold ${
+        Number(tTrustBalance) > 0
+          ? activeTab === "redeem"
+            ? "text-white"
+            : "text-gray-400 hover:text-white cursor-pointer"
+          : "text-gray-500 cursor-not-allowed"
       }`}
-      onClick={() => setActiveTab("redeem")}
+      onClick={() => {
+        if (Number(tTrustBalance) > 0) setActiveTab("redeem");
+      }}
+      disabled={Number(tTrustBalance) <= 0}
     >
       Redeem
-      {activeTab === "redeem" && (
-        <span className="absolute left-1/2 bottom-0 w-40 transform -translate-x-1/2 h-1 bg-blue-500 rounded-full"></span>
+      {activeTab === "redeem" && Number(tTrustBalance) > 0 && (
+        <span className="absolute left-1/2 bottom-0 w-24 transform -translate-x-1/2 h-1 bg-blue-500 rounded-full"></span>
       )}
     </button>
   </div>
@@ -628,11 +701,15 @@ useEffect(() => {
     <div className="bg-[#110A2B] border-2 border-[#393B60] p-4 rounded-xl min-h-[120px] flex flex-col justify-between mb-3">
       <div className="flex justify-between items-center mb-2">
         <span className="text-gray-300 text-sm font-semibold">Your Active Position</span>
-        <span className="bg-[#0A2D4D] border border-white text-white px-2 py-1 rounded-full text-sm font-semibold">
+                <span
+  className="bg-[#0A2D4D] border border-white text-white px-3 py-1 rounded-full text-sm font-semibold cursor-pointer transition-colors duration-200 hover:bg-[#123a63] hover:border-[#8B3EFE]"
+>
   {opposeMode ? "Oppose" : "Support"}
 </span>
       </div>
-      <p className="text-white font-bold text-xl">0.0954 TRUST</p>
+        <p className="text-white font-bold text-xl">
+    {activePosition ? toFixed(formatEther(activePosition)) : "0"} TRUST
+  </p>
     </div>
 
     {/* Wallet Div */}
@@ -643,55 +720,124 @@ useEffect(() => {
 </span>
     </div>
 
-    {/* Center Big Zero */}
-<div className="flex flex-col items-center my-4">
-  <span className="text-white font-bold text-6xl">
-    {Number(inputValue).toFixed(1)} 
-  </span>
+{/* Center Big Zero */}
+<div className="flex flex-col items-center my-2">
+  <input
+    type="number"
+    min="0"
+    placeholder="0"
+    value={inputValue}
+    onChange={(e) => setInputValue(e.target.value)}
+    className="bg-transparent text-white font-bold text-6xl text-center outline-none w-40 
+               appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+  />
   <span className="text-gray-300 text-xs mt-1">TRUST</span>
 </div>
 
-<input
-  type="number"
-  min="0"
-  value={inputValue}
-  onChange={(e) => setInputValue(e.target.value)}
-  className="w-full bg-[#110A2B] border-2 border-[#393B60] rounded-3xl px-3 py-2 text-white font-semibold text-center mb-2"
-/>
+<div className="flex items-start gap-3">
 
+  {/* Curve Card */}
+  <div className="bg-[#110A2B] border-2 border-[#393B60] p-3 rounded-xl flex flex-col gap-3 flex-1">
+    <div className="flex justify-between items-center">
+      <div className="flex flex-col">
+        <span className="text-white font-bold text-base">
+          {isToggled ? "Exponential Curve" : "Linear Curve"}
+        </span>
+        <span className="text-gray-300 text-xs mt-0.5">
+          {isToggled ? "High Risk, High Reward" : "Low Risk, Low Reward"}
+        </span>
+      </div>
 
-    {/* Curve Card */}
-<div className="bg-[#110A2B] border-2 border-[#393B60] p-3 rounded-xl flex flex-col gap-3">
-  {/* Top Row: Title and Risk Label */}
-  <div className="flex justify-between items-center">
-    <div className="flex flex-col">
-      <span className="text-white font-bold text-base">
-        {isToggled ? "Exponential Curve" : "Linear Curve"}
-      </span>
-      <span className="text-gray-300 text-xs mt-0.5">
-        {isToggled ? "High Risk, High Reward" : "Low Risk, Low Reward"}
-      </span>
+      {/* Toggle Button */}
+      <label className="relative inline-flex items-center cursor-pointer">
+        <input
+          type="checkbox"
+          className="sr-only peer"
+          checked={isToggled}
+          onChange={() => setIsToggled(!isToggled)}
+        />
+        <div className="w-10 h-5 bg-white rounded-full peer peer-checked:bg-[#FFF] transition-colors"></div>
+        <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-black rounded-full shadow-md peer-checked:translate-x-5 transition-transform"></div>
+      </label>
+    </div>
+  </div>
+
+  {/* Info Icon (Outside Card) */}
+  <button
+    onClick={() => setShowCurveInfo(true)}
+    className="w-8 h-8 mt-2 flex items-center justify-center rounded-full border border-[#393B60] text-gray-300 text-sm font-bold hover:bg-[#1a133d] hover:text-white transition-colors"
+  >
+    i
+  </button>
+
+  {/* Slide-in Modal */}
+{/* Curve Info Modal */}
+{showCurveInfo && (
+  <div className="fixed top-0 right-0 h-full w-96 bg-[#110A2B] border-l-2 border-[#393B60] p-4 z-50 animate-slideIn overflow-y-auto">
+    
+    {/* Close Button */}
+    <button
+      onClick={() => setShowCurveInfo(false)}
+      className="absolute top-3 right-3 text-gray-400 hover:text-white font-bold"
+    >
+      ✕
+    </button>
+
+    {/* Main Heading */}
+    <h2 className="text-white font-bold text-lg text-center mb-2">How Bonding Curves Work</h2>
+    <p className="text-gray-300 text-sm text-left mb-6">
+      Intuition uses bonding curves to automatically set identity and claim prices based on supply and demand, rewarding early curation of valuable information.
+    </p>
+
+    {/* Linear Curve Section */}
+    <img
+      src="/linear-curve.svg"
+      alt="Linear Curve"
+      className="w-full mb-4 rounded"
+    />
+    <div className="text-left mb-6">
+      <h4 className="text-white font-semibold mb-1">Linear Curve (Safe)</h4>
+      <p className="text-gray-300 text-sm mb-2">
+        The Linear curve keeps pricing stable with gradual increases—your stake value increases or decreases proportionally as more people stake or redeem, making it predictable and lower-risk.
+      </p>
+      <p className="text-gray-400 text-sm">
+        In other words, minus the fees, you will get back your original deposit value, plus any portion of the fees collected.
+      </p>
     </div>
 
-    {/* Toggle Button */}
-    <label className="relative inline-flex items-center cursor-pointer">
-      <input
-        type="checkbox"
-        className="sr-only peer"
-        checked={isToggled}
-        onChange={() => setIsToggled(!isToggled)}
-      />
-      <div className="w-10 h-5 bg-white rounded-full peer peer-checked:bg-[#FFF] transition-colors"></div>
-      <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-black rounded-full shadow-md peer-checked:translate-x-5 transition-transform"></div>
-    </label>
+    {/* Exponential Curve Section */}
+    <img
+      src="/exponential.svg"
+      alt="Exponential Curve"
+      className="w-full mb-4 rounded"
+    />
+    <div className="text-left mb-6">
+      <h4 className="text-white font-semibold mb-1">Exponential Curve (Riskier)</h4>
+      <p className="text-gray-300 text-sm mb-2">
+        The Exponential curve (OffsetProgressive) rewards early stakers significantly more, as each new deposit increases the share price at an increasing rate, creating higher potential returns for curators who stake earliest, but greater potential losses as stakers redeem.
+      </p>
+      <p className="text-gray-300 text-sm">
+        Choose based on your risk tolerance and timing. It's riskier but can yield higher returns; however, if you deposit later, you will pay more for the same amount of shares.
+      </p>
+    </div>
+
   </div>
+)}
+
 </div>
 
-    {/* Review Deposit Button */}
-    <button className="w-full bg-white text-black py-2.5 rounded-3xl font-semibold mt-3 text-sm"
-    onClick={() => setShowReviewDepositModal(true)}>
-      Review Deposit
-    </button>
+{/* Review Deposit Button */}
+<button
+  className={`w-full py-2.5 rounded-3xl font-semibold mt-3 text-sm transition-colors ${
+    inputValue && Number(inputValue) > 0
+      ? "bg-white text-black hover:bg-gray-200"
+      : "bg-gray-700 text-gray-400 cursor-not-allowed"
+  }`}
+  onClick={() => setShowReviewDepositModal(true)}
+  disabled={!inputValue || Number(inputValue) <= 0}
+>
+  {inputValue && Number(inputValue) > 0 ? "Review Deposit" : "Enter an Amount"}
+</button>
   </div>
 )}
 
@@ -702,11 +848,15 @@ useEffect(() => {
     <div className="bg-[#110A2B] border-2 border-[#393B60] p-4 rounded-xl min-h-[120px] flex flex-col justify-between mb-3">
       <div className="flex justify-between items-center mb-2">
         <span className="text-gray-300 text-sm font-semibold">Your Active Position</span>
-        <span className="bg-[#0A2D4D] border border-white text-white px-2 py-1 rounded-full text-sm font-semibold">
+                        <span
+  className="bg-[#0A2D4D] border border-white text-white px-3 py-1 rounded-full text-sm font-semibold cursor-pointer transition-colors duration-200 hover:bg-[#123a63] hover:border-[#8B3EFE]"
+>
   {opposeMode ? "Oppose" : "Support"}
 </span>
       </div>
-      <p className="text-white font-bold text-xl">0.0954 TRUST</p>
+        <p className="text-white font-bold text-xl">
+    {activePosition ? toFixed(formatEther(activePosition)) : "0"} TRUST
+  </p>
     </div>
 
     {/* Wallet Div */}
@@ -717,46 +867,109 @@ useEffect(() => {
 </span>
     </div>
 
-    {/* Center Big Zero */}
-<div className="flex flex-col items-center my-4">
-  <span className="text-white font-bold text-6xl">
-    {Number(inputValue).toFixed(1)} 
-  </span>
+{/* Center Big Zero */}
+<div className="flex flex-col items-center my-2">
+  <input
+    type="number"
+    min="0"
+    placeholder="0"
+    value={inputValue}
+    onChange={(e) => setInputValue(e.target.value)}
+    className="bg-transparent text-white font-bold text-6xl text-center outline-none w-40 
+               appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+  />
   <span className="text-gray-300 text-xs mt-1">TRUST</span>
 </div>
 
-<input
-  type="number"
-  min="0"
-  value={inputValue}
-  onChange={(e) => setInputValue(e.target.value)}
-  className="w-full bg-[#110A2B] border-2 border-[#393B60] rounded-3xl px-3 py-2 text-white font-semibold text-center mb-2"
-/>
+<div className="flex items-start gap-3">
 
-    {/* Curve Card */}
-<div className="bg-[#110A2B] border-2 border-[#393B60] p-3 rounded-xl flex flex-col gap-3">
-  {/* Top Row: Title and Risk Label */}
-  <div className="flex justify-between items-center">
-    <div className="flex flex-col">
-      <span className="text-white font-bold text-base">
-        {isToggled ? "Exponential Curve" : "Linear Curve"}
-      </span>
-      <span className="text-gray-300 text-xs mt-0.5">
-        {isToggled ? "High Risk, High Reward" : "Low Risk, Low Reward"}
-      </span>
+  {/* Curve Card */}
+  <div className="bg-[#110A2B] border-2 border-[#393B60] p-3 rounded-xl flex flex-col gap-3 flex-1">
+    <div className="flex justify-between items-center">
+      <div className="flex flex-col">
+        <span className="text-white font-bold text-base">
+          {isToggled ? "Exponential Curve" : "Linear Curve"}
+        </span>
+        <span className="text-gray-300 text-xs mt-0.5">
+          {isToggled ? "High Risk, High Reward" : "Low Risk, Low Reward"}
+        </span>
+      </div>
+
+      {/* Toggle Button */}
+      <label className="relative inline-flex items-center cursor-pointer">
+        <input
+          type="checkbox"
+          className="sr-only peer"
+          checked={isToggled}
+          onChange={() => setIsToggled(!isToggled)}
+        />
+        <div className="w-10 h-5 bg-white rounded-full peer peer-checked:bg-[#FFF] transition-colors"></div>
+        <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-black rounded-full shadow-md peer-checked:translate-x-5 transition-transform"></div>
+      </label>
     </div>
+  </div>
 
-    {/* Toggle Button */}
-    <label className="relative inline-flex items-center cursor-pointer">
-      <input
-        type="checkbox"
-        className="sr-only peer"
-        checked={isToggled}
-        onChange={() => setIsToggled(!isToggled)}
-      />
-      <div className="w-10 h-5 bg-white rounded-full peer peer-checked:bg-[#FFF] transition-colors"></div>
-      <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-black rounded-full shadow-md peer-checked:translate-x-5 transition-transform"></div>
-    </label>
+  {/* Info Icon (Beside Card) */}
+  <div className="flex flex-col items-center">
+    <button
+      onClick={() => setShowCurveInfo(true)}
+      className="w-8 h-8 mt-2 flex items-center justify-center rounded-full border border-[#393B60] text-gray-300 text-sm font-bold hover:bg-[#1a133d] hover:text-white transition-colors"
+    >
+      i
+    </button>
+
+    {/* Slide-in Modal (Fixed Right) */}
+    {showCurveInfo && (
+      <div className="fixed top-0 right-0 h-full w-96 bg-[#110A2B] border-l-2 border-[#393B60] p-4 z-50 animate-slideIn overflow-y-auto">
+        
+        {/* Close Button */}
+        <button
+          onClick={() => setShowCurveInfo(false)}
+          className="absolute top-3 right-3 text-gray-400 hover:text-white font-bold"
+        >
+          ✕
+        </button>
+
+        {/* Main Heading */}
+        <h2 className="text-white font-bold text-lg text-center mb-2">How Bonding Curves Work</h2>
+        <p className="text-gray-300 text-sm text-left mb-6">
+          Intuition uses bonding curves to automatically set identity and claim prices based on supply and demand, rewarding early curation of valuable information.
+        </p>
+
+        {/* Linear Curve Section */}
+        <img
+          src="/linear-curve.svg"
+          alt="Linear Curve"
+          className="w-full mb-4 rounded"
+        />
+        <div className="text-left mb-6">
+          <h4 className="text-white font-semibold mb-1">Linear Curve (Safe)</h4>
+          <p className="text-gray-300 text-sm mb-2">
+            The Linear curve keeps pricing stable with gradual increases—your stake value increases or decreases proportionally as more people stake or redeem, making it predictable and lower-risk.
+          </p>
+          <p className="text-gray-400 text-sm">
+            In other words, minus the fees, you will get back your original deposit value, plus any portion of the fees collected.
+          </p>
+        </div>
+
+        {/* Exponential Curve Section */}
+        <img
+          src="/exponential.svg"
+          alt="Exponential Curve"
+          className="w-full mb-4 rounded"
+        />
+        <div className="text-left mb-6">
+          <h4 className="text-white font-semibold mb-1">Exponential Curve (Riskier)</h4>
+          <p className="text-gray-300 text-sm mb-2">
+            The Exponential curve (OffsetProgressive) rewards early stakers significantly more, as each new deposit increases the share price at an increasing rate, creating higher potential returns for curators who stake earliest, but greater potential losses as stakers redeem.
+          </p>
+          <p className="text-gray-300 text-sm">
+            Choose based on your risk tolerance and timing. It's riskier but can yield higher returns; however, if you deposit later, you will pay more for the same amount of shares.
+          </p>
+        </div>
+
+      </div>
+    )}
   </div>
 </div>
 
@@ -783,7 +996,7 @@ useEffect(() => {
 
 {showReviewDepositModal && activeClaim && (
   <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-    <div className="bg-[#070315] w-full max-w-md mx-4 p-6 rounded-xl relative border-2 border-[#8B3EFE]">
+    <div className="bg-[#070315] w-full max-w-md mx-4 p-3 rounded-xl relative border-2 border-[#8B3EFE]">
 
       {/* Close Button */}
       <button
@@ -795,7 +1008,7 @@ useEffect(() => {
 
       {/* Title + Support Tag */}
       <div className="flex items-center gap-2 mb-4">
-        <h2 className="text-white font-bold text-lg">Claim</h2>
+        <h2 className="text-white font-bold text-base">Claim</h2>
         <span className="bg-[#0A2D4D] border border-white text-white px-3 py-1 rounded-full text-sm font-semibold">
           Deposit
         </span>
@@ -855,7 +1068,7 @@ useEffect(() => {
 
 {showReviewRedeemModal && activeClaim && (
   <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-    <div className="bg-[#070315] w-full max-w-md mx-4 p-6 rounded-xl relative border-2 border-[#8B3EFE]">
+    <div className="bg-[#070315] w-full max-w-md mx-4 p-3 rounded-xl relative border-2 border-[#8B3EFE]">
 
       {/* Close Button */}
       <button
@@ -867,7 +1080,7 @@ useEffect(() => {
 
       {/* Title + Support Tag */}
       <div className="flex items-center gap-2 mb-4">
-        <h2 className="text-white font-bold text-lg">Claim</h2>
+        <h2 className="text-white font-bold text-base">Claim</h2>
         <span className="bg-[#0A2D4D] border border-white text-white px-3 py-1 rounded-full text-sm font-semibold">
           Support
         </span>
