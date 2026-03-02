@@ -208,7 +208,6 @@ const allPositions = [
 ];
 setPositions(allPositions);
 
-// My positions (from vaults)
 // When fetching user positions
 let myPositions: Position[] = [];
 if (user) {
@@ -417,7 +416,7 @@ const hasBalance = numericBalance > 0;
 
 const currentUrl = window.location.href;
 
- const handleGenerateImage = async () => {
+const handleGenerateImage = async () => {
     if (!cardRef.current) return;
     setGeneratingImage(true);
 
@@ -433,13 +432,35 @@ const currentUrl = window.location.href;
     }
   };
 
-  const handleDownload = () => {
-    if (!imageData) return;
+const handleDownload = async () => {
+  if (!cardRef.current) {
+    alert("Card not ready for download.");
+    return;
+  }
+
+  try {
+    // Capture the modal card
+    const canvas = await html2canvas(cardRef.current, {
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: null,
+      scale: 2,
+    });
+
+    const dataUrl = canvas.toDataURL("image/png");
+
     const link = document.createElement("a");
-    link.href = imageData;
+    link.href = dataUrl;
     link.download = "claim_snapshot.png";
+
+    document.body.appendChild(link);
     link.click();
-  };
+    document.body.removeChild(link);
+  } catch (err) {
+    console.error(err);
+    alert("Failed to download image.");
+  }
+};
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(currentUrl)
@@ -452,7 +473,6 @@ const currentUrl = window.location.href;
     const xUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
     window.open(xUrl, "_blank");
   };
-
 
   if (!claim) return <div className="p-3 text-white">
     <div className="flex items-center justify-center w-full h-full">
@@ -573,7 +593,7 @@ const currentUrl = window.location.href;
             <div className="flex-1 bg-[#006CD233] border border-[#393B60] rounded-xl p-4 flex flex-col gap-3">
               <span className="font-semibold text-lg text-[#006CD2]">SUPPORT</span>
               <div className="flex items-center gap-3">
-                <span className="font-semibold text-sm md:text-base">{claim.supportLabel}K TRUST</span>
+                <span className="font-semibold text-sm md:text-base">{formatNumber(claim.term.positions_aggregate.aggregate.count)}</span>
                 <img src="/intuition-icon.png" alt="Intuition Icon" className="w-5 h-5" />
                 <div className="flex items-center gap-2">
                   <span className="text-blue-400 font-semibold text-base md:text-lg">{claim.support}</span>
@@ -586,7 +606,7 @@ const currentUrl = window.location.href;
             <div className="flex-1 bg-[#F19C0333] border border-[#393B60] rounded-xl p-4 flex flex-col gap-3">
               <span className="font-semibold text-lg text-[#F19C03]">OPPOSE</span>
               <div className="flex items-center gap-3">
-                <span className="font-semibold text-sm md:text-base">{claim.opposeLabel}K TRUST</span>
+                <span className="font-semibold text-sm md:text-base">{formatNumber(claim.counter_term.positions_aggregate.aggregate.count)}</span>
                 <img src="/intuition-icon.png" alt="Intuition Icon" className="w-5 h-5" />
                 <div className="flex items-center gap-2">
                   <span className="text-[#F19C03] font-semibold text-base md:text-lg">{claim.oppose}</span>
@@ -610,6 +630,7 @@ const currentUrl = window.location.href;
         </div>
 
         <div className="flex gap-2 mt-4">
+
   {/* Share on X */}
   <button
     onClick={handleShareX}
