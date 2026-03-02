@@ -4,15 +4,6 @@ import { useState, useEffect, useRef, useMemo } from "react"
 import { Address, formatEther, parseEther } from "viem";
 import { formatNumber } from "../lib/utils";
 import { toFixed } from "./PortalClaims";
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  ResponsiveContainer,
-  Line,
-} from "recharts";
 import { apiRequestV2 } from "../lib/queryClient";
 import { useAuth } from "../lib/auth";
 import { useWallet } from "../hooks/use-wallet";
@@ -33,14 +24,12 @@ function generateChartData(claim: any, growthType: string) {
     const basePrice = 1.06;
     values = dates.map(() => +(basePrice + (Math.random() - 0.5) * 0.01).toFixed(4));
   } else if (growthType === "exponential") {
-    const basePrice = 80; // starting lower so we can rally to 90.69
+    const basePrice = 80;
     const maxPrice = 90.69;
 
     values = dates.map((_, i) => {
-      // simple rally curve: exponential-ish but capped
-      let val = basePrice * Math.pow(1.05, i); // exponential growth
-      if (val > maxPrice) val = maxPrice;       // cap at max
-      // add small random fluctuation
+      let val = basePrice * Math.pow(1.05, i);
+      if (val > maxPrice) val = maxPrice;
       val += (Math.random() - 0.5) * 0.5;
       return +val.toFixed(2);
     });
@@ -82,8 +71,6 @@ export default function ClaimDetails() {
   const [imageData, setImageData] = useState<string | null>(null);
   const [balance, setBalance] = useState("0");
   const [amountToReceive, setAmountToReceive] = useState("0");
-  const [isToggled, setIsToggled] = useState(false);
-  const [receiveAmount, setReceiveAmount] = useState("")
   const [loadingAmount, setLoadingAmount] = useState(false);
   const [sortOption, setSortOption] = useState("")
   const [positionsOption, setPositionsOption] = useState("all");
@@ -189,6 +176,11 @@ export default function ClaimDetails() {
     })();
   }, [user]);
 
+  useEffect(() => {
+  if (!user) return; // only fetch when user exists
+  fetchClaim();
+}, [user]);
+
   async function fetchClaim() {
     const fetched = await apiRequestV2("GET", "/api/get-triple?termId=" + id);
     setClaim(fetched);
@@ -216,15 +208,18 @@ const allPositions = [
 ];
 setPositions(allPositions);
 
-    // My positions (from vaults)
-    let myPositions: Position[] = [];
+// My positions (from vaults)
+// When fetching user positions
+let myPositions: Position[] = [];
 if (user) {
   myPositions = [
-    ...(fetched.term.vaults?.[0]?.userPosition ?? []),
-    ...(fetched.term.vaults?.[1]?.userPosition ?? []),
-    ...(fetched.counter_term.vaults?.[0]?.userPosition ?? []),
-    ...(fetched.counter_term.vaults?.[1]?.userPosition ?? []),
+    ...(fetched.term.vaults?.[0]?.userPosition ?? []).map(p => ({ ...p, direction: "support" })),
+    ...(fetched.term.vaults?.[1]?.userPosition ?? []).map(p => ({ ...p, direction: "support" })),
+    ...(fetched.counter_term.vaults?.[0]?.userPosition ?? []).map(p => ({ ...p, direction: "oppose" })),
+    ...(fetched.counter_term.vaults?.[1]?.userPosition ?? []).map(p => ({ ...p, direction: "oppose" })),
   ];
+
+  console.log("userPositions with direction", myPositions);
 } else {
   console.log("No user signed in, no positions to fetch");
 }
@@ -235,16 +230,16 @@ setUserPositions(myPositions);
     setVisiblePositions(initial.slice(0, ITEMS_PER_PAGE));
   };
 
-  const userShares = useMemo(() => {
-  if (!user || !activePosition) return 0;
+const userShares = useMemo(() => {
+  if (!user) return 0;
 
-  // Find the user's position that matches the active position ID
+  // Find the entry for the logged-in user
   const up = userPositions.find(
-    pos => pos.positionId === activePosition.id
+    pos => pos.account_id.toLowerCase() === user.address.toLowerCase()
   );
 
   return up ? Number(formatEther(BigInt(up.shares))) : 0;
-}, [userPositions, activePosition]);
+}, [userPositions, user]);
 
   function getPrice() {
     let sharePrice = "0";
@@ -303,7 +298,9 @@ const refreshUserData = async () => {
   const updatedBalance = await getBalance();
   setBalance(updatedBalance);
 
-  await fetchClaim(); // updates userPositions & visiblePositions
+  await fetchClaim(); 
+
+  
 };
 
 const handleClaimAction = async () => {
@@ -562,6 +559,7 @@ const currentUrl = window.location.href;
 
         {/* Card + Overlay */}
         <div ref={cardRef} className="relative flex flex-col gap-4">
+          
           {/* Overlay for Generating Image */}
           {generatingImage && (
             <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-white z-10">
@@ -914,7 +912,6 @@ const currentUrl = window.location.href;
         </div>
       </div>
 
-      
       {/* Your Position Card */}
 <div className="bg-[#110A2B] rounded-xl p-4 flex flex-col gap-4">
   <div className="flex items-center gap-3 text-white text-base font-semibold">
@@ -923,34 +920,37 @@ const currentUrl = window.location.href;
 
     {userPositions.length > 0 ? (
       <>
-        <span>
-          Support:{" "}
-          <span className="font-bold">
-            {toFixed(
-              userPositions
-                .filter(p => p.direction === "support")
-                .reduce((sum, p) => sum + parseFloat(formatEther(BigInt(p.shares))), 0)
-            )}{" "}
-            TRUST
+        {userPositions.some(p => p.direction === "support") && (
+          <span>
+            Support:{" "}
+            <span className="font-bold">
+              {toFixed(
+                userPositions
+                  .filter(p => p.direction === "support")
+                  .reduce((sum, p) => sum + parseFloat(formatEther(BigInt(p.shares))), 0)
+              )}{" "}
+              TRUST
+            </span>
           </span>
-        </span>
-        <span>
-          Oppose:{" "}
-          <span className="font-bold">
-            {toFixed(
-              userPositions
-                .filter(p => p.direction === "oppose")
-                .reduce((sum, p) => sum + parseFloat(formatEther(BigInt(p.shares))), 0)
-            )}{" "}
-            TRUST
+        )}
+        {userPositions.some(p => p.direction === "oppose") && (
+          <span>
+            Oppose:{" "}
+            <span className="font-bold">
+              {toFixed(
+                userPositions
+                  .filter(p => p.direction === "oppose")
+                  .reduce((sum, p) => sum + parseFloat(formatEther(BigInt(p.shares))), 0)
+              )}{" "}
+              TRUST
+            </span>
           </span>
-        </span>
+        )}
       </>
     ) : (
       <span className="text-gray-400 font-semibold">No positions found</span>
     )}
   </div>
-
   <div className="h-px w-full bg-white opacity-80"></div>
 </div>
 
