@@ -54,6 +54,9 @@ export default function PortalClaims() {
     const [sortedClaims, setSortedClaims] = useState(visibleClaims);
     const [showCurveInfo, setShowCurveInfo] = useState(false);
     const [activePosition, setActivePosition] = useState<bigint>(0n);
+    const [modalStep, setModalStep] = useState<
+  "review" | "awaiting" | "success" | "failed"
+>("review");
     
 // localstorage stuff
 const [actionState, setActionState] = useState<Record<string, "none" | "supported" | "opposed">>(() => {
@@ -71,7 +74,6 @@ useEffect(() => {
   const balance = await publicClient.getBalance({ address });
   return balance ?? 0n;
 }
-const [modalStep, setModalStep] = useState<"review" | "awaiting">("review");
 
 useEffect(() => {
   (async () => {
@@ -240,6 +242,8 @@ const handleClaimAction = async (action: "deposit" | "redeem" = "deposit") => {
   if (!termId) return;
 
   try {
+    setModalStep("awaiting");
+
     const addressTermId = termId as Address;
 
     if (action === "deposit") {
@@ -255,17 +259,21 @@ const handleClaimAction = async (action: "deposit" | "redeem" = "deposit") => {
       description: `Successfully ${actionText} a claim!`,
     });
 
-    // this should disable the button
     setActionState(prev => ({
       ...prev,
       [termId]: opposeMode ? "opposed" : "supported"
     }));
 
+    setModalStep("success");
+
   } catch (err: any) {
     console.error(err);
+
+    setModalStep("failed"); 
+
     toast({
       title: "Error",
-      description: err?.message || String(err),
+      description: err?.message || "Transaction failed",
       variant: "destructive",
     });
   }
@@ -1047,7 +1055,7 @@ const sortClaims = (claims, option) => {
         className="absolute top-2 right-2 text-gray-400 hover:text-white text-xl font-bold"
         onClick={() => {
           setShowReviewDepositModal(false);
-          setModalStep("review"); // reset next time
+          setModalStep("review");
         }}
       >
         ×
@@ -1056,9 +1064,7 @@ const sortClaims = (claims, option) => {
       {/* Title + Support Tag */}
       <div className="flex items-center gap-2 mb-4">
         <h2 className="text-white font-bold text-base">Claim</h2>
-        <span
-          className="bg-[#0A2D4D] border border-white text-white px-3 py-1 rounded-full text-sm font-semibold cursor-pointer transition-colors duration-200 hover:bg-[#123a63] hover:border-[#8B3EFE]"
-        >
+        <span className="bg-[#0A2D4D] border border-white text-white px-3 py-1 rounded-full text-sm font-semibold cursor-pointer transition-colors duration-200 hover:bg-[#123a63] hover:border-[#8B3EFE]">
           {opposeMode ? "Oppose" : "Support"}
         </span>
       </div>
@@ -1067,9 +1073,9 @@ const sortClaims = (claims, option) => {
         Staking on a Triple enhances its discoverability in the Intuition system
       </p>
 
-      {modalStep === "review" ? (
+      {/* REVIEW */}
+      {modalStep === "review" && (
         <>
-          {/* Review Step */}
           <div className="flex flex-col items-center my-6">
             <img src="/spinner.png" alt="Spinner" className="w-16 h-16 mb-2" />
             <span className="text-white font-semibold">Review...</span>
@@ -1085,16 +1091,18 @@ const sortClaims = (claims, option) => {
           <button
             className="w-full bg-white text-black py-2.5 rounded-3xl font-semibold text-sm"
             onClick={() => {
-              setModalStep("awaiting");
               handleClaimAction("deposit");
+              setShowModal(false);
             }}
           >
             Confirm
           </button>
         </>
-      ) : (
+      )}
+
+      {/* AWAITING */}
+      {modalStep === "awaiting" && (
         <>
-          {/* Awaiting Wallet Approval */}
           <div className="flex flex-col items-center my-6">
             <img src="/spinner.png" alt="Spinner" className="w-16 h-16 mb-2" />
             <span className="text-white font-semibold">Awaiting...</span>
@@ -1102,9 +1110,13 @@ const sortClaims = (claims, option) => {
 
           <div className="flex items-center justify-center gap-2 bg-[#110A2B] border border-[#393B60] rounded-2xl px-4 py-2 mx-4">
             <img src="/wallet.png" alt="Wallet Icon" className="w-5 h-5" />
-            <span className="text-white font-semibold text-sm">Awaiting wallet approval</span>
+            <span className="text-white font-semibold text-sm">
+              Awaiting wallet approval
+            </span>
             <div className="relative group">
-              <span className="text-gray-400 font-bold cursor-pointer text-sm">?</span>
+              <span className="text-gray-400 font-bold cursor-pointer text-sm">
+                ?
+              </span>
               <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-max bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
                 Approve this transaction in your wallet
               </div>
@@ -1112,6 +1124,50 @@ const sortClaims = (claims, option) => {
           </div>
         </>
       )}
+
+      {/* SUCCESS */}
+      {modalStep === "success" && (
+        <div className="flex flex-col items-center my-8">
+          <div className="w-16 h-16 rounded-full bg-green-500 flex items-center justify-center mb-4">
+            <span className="text-white text-2xl font-bold">✓</span>
+          </div>
+
+          <span className="text-white font-semibold mb-6">
+            Successfully {opposeMode ? "opposed" : "supported"}!
+          </span>
+
+          <button
+            className="bg-white text-black px-6 py-2 rounded-3xl font-semibold text-sm"
+            onClick={() => {
+              setShowReviewDepositModal(false);
+              setModalStep("review");
+            }}
+          >
+            Done
+          </button>
+        </div>
+      )}
+
+      {/* FAILED */}
+      {modalStep === "failed" && (
+        <div className="flex flex-col items-center my-8">
+          <div className="w-16 h-16 rounded-full bg-red-500 flex items-center justify-center mb-4">
+            <span className="text-white text-2xl font-bold">✕</span>
+          </div>
+
+          <span className="text-white font-semibold mb-6">
+            Transaction Failed
+          </span>
+
+          <button
+            className="bg-white text-black px-6 py-2 rounded-3xl font-semibold text-sm"
+            onClick={() => setModalStep("review")}
+          >
+            Try Again
+          </button>
+        </div>
+      )}
+
     </div>
   </div>
 )}
