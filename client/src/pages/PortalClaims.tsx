@@ -60,8 +60,7 @@ export default function PortalClaims() {
   "review" | "awaiting" | "success" | "failed"
 >("review");
 // Example state to store totals
-const [userShares, setUserShares] = useState({ support: 0, oppose: 0 });
-const [showTabContent, setShowTabContent] = useState(false);
+const [userShares, setUserShares] = useState<{ support: bigint; oppose: bigint }>({ support: 0n, oppose: 0n });
     
 // localstorage stuff
 const [actionState, setActionState] = useState<Record<string, "none" | "supported" | "opposed">>(() => {
@@ -136,45 +135,75 @@ const loadMore = async () => {
       `/api/get-claims?filter=${sortOption}&offset=${offset}${searchQuery}`
     );
 
-    console.log("=== FETCHED CLAIMS ===", claims);
-
     if (!user) {
-      console.log("No user signed in, no positions to fetch");
       setUserPositions([]);
       setActivePosition(0n);
+      setUserShares({ support: 0n, oppose: 0n });
       return;
     }
 
-    // Collect user positions exactly like your working suggestion
-    let myPositions: Position[] = [];
-    claims.forEach((claim, i) => {
-      const termVaults = claim.term?.vaults ?? [];
-      const counterVaults = claim.counter_term?.vaults ?? [];
+    // Normalize positions for a single claim
+    const normalizePositionsForClaim = (fetchedClaim: Claim, user: User) => {
+      if (!user) return { positions: [], shares: { support: 0n, oppose: 0n } };
 
-      // console.log(`Claim ${i}: termVaults`, termVaults);
-      // console.log(`Claim ${i}: counterVaults`, counterVaults);
+      const myPositions: Position[] = [];
 
-      myPositions.push(
-        ...(termVaults[0]?.userPosition ?? []).map(p => ({ ...p, direction: "support" })),
-        ...(termVaults[1]?.userPosition ?? []).map(p => ({ ...p, direction: "support" })),
-        ...(counterVaults[0]?.userPosition ?? []).map(p => ({ ...p, direction: "oppose" })),
-        ...(counterVaults[1]?.userPosition ?? []).map(p => ({ ...p, direction: "oppose" }))
+      // Term vaults → support
+      fetchedClaim.term.vaults?.forEach(vault => {
+        myPositions.push(
+          ...(vault.userPosition ?? []).map(p => ({
+            ...p,
+            direction: "support",
+            curve_id: Number(vault.curve_id),
+            account: {
+              id: p.account_id,
+              label: p.account_id,
+              image: user.image ?? null,
+            },
+          }))
+        );
+      });
+
+      // Counter term vaults → oppose
+      fetchedClaim.counter_term.vaults?.forEach(vault => {
+        myPositions.push(
+          ...(vault.userPosition ?? []).map(p => ({
+            ...p,
+            direction: "oppose",
+            curve_id: Number(vault.curve_id),
+            account: {
+              id: p.account_id,
+              label: p.account_id,
+              image: user.image ?? null,
+            },
+          }))
+        );
+      });
+
+      // Log positions for debugging
+      console.log(`Normalized positions for claim ${fetchedClaim.id}:`, myPositions);
+
+      // Sum active positions for this claim only
+      const totalShares = myPositions.reduce(
+        (acc, p) => {
+          if (p.direction === "support") acc.support += BigInt(p.shares ?? 0);
+          else if (p.direction === "oppose") acc.oppose += BigInt(p.shares ?? 0);
+          return acc;
+        },
+        { support: 0n, oppose: 0n }
       );
-    });
 
-    console.log("=== USER POSITIONS ===", myPositions);
+      return { positions: myPositions, shares: totalShares };
+    };
 
-    setUserPositions(prev => [...prev, ...myPositions]);
+    // Example usage: normalize first claim (or whichever claim you click)
+    if (claims.length > 0) {
+      const { positions, shares } = normalizePositionsForClaim(claims[0], user);
+      setUserPositions(positions);
+      setUserShares(shares);
+    }
 
-    // Sum activePosition
-    const totalShares = myPositions.reduce(
-      (acc, p) => acc + BigInt(p.shares ?? 0n),
-      0n
-    );
-    console.log("=== TOTAL ACTIVE POSITION ===", totalShares);
-    setActivePosition(prev => prev + totalShares);
-
-    // Pagination logic
+    // Pagination
     if (claims.length === 0 || claims.length < LIMIT) setHasMore(false);
     else setOffset(prev => prev + claims.length);
 
@@ -184,6 +213,7 @@ const loadMore = async () => {
     setLoading(false);
   }
 };
+
 
 // Call whenever user changes
 useEffect(() => {
@@ -853,7 +883,12 @@ const sortClaims = (claims, option) => {
       {opposeMode ? "Oppose" : "Support"}
     </span>
 <span className="font-bold text-lg">
-  {opposeMode ? userShares.oppose : userShares.support} TRUST
+  {toFixed(
+    userPositions
+      .filter(p => p.direction === (opposeMode ? "oppose" : "support"))
+      .reduce((sum, p) => sum + parseFloat(formatEther(BigInt(p.shares ?? 0))), 0)
+  )}{" "}
+  TRUST
 </span>
   </div>
 </div>
