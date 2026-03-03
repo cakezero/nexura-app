@@ -41,7 +41,7 @@ function generateChartData(claim: any, growthType: string) {
 
 export default function ClaimDetails() {
   const { id } = useParams();
-  const [activeTab, setActiveTab] = useState("support");
+  const [activeTab, setActiveTab] = useState("all");
   const [isBuy, setIsBuy] = useState(true);
   const [positionType, setPositionType] = useState("support");
   const [growthType, setGrowthType] = useState("linear");
@@ -211,22 +211,63 @@ const allPositions = [
 ];
 setPositions(allPositions);
 
-// When fetching user positions
+// Normalize user positions to match table structure
 let myPositions: Position[] = [];
+
 if (user) {
   myPositions = [
-    ...(fetched.term.vaults?.[0]?.userPosition ?? []).map(p => ({ ...p, direction: "support" })),
-    ...(fetched.term.vaults?.[1]?.userPosition ?? []).map(p => ({ ...p, direction: "support" })),
-    ...(fetched.counter_term.vaults?.[0]?.userPosition ?? []).map(p => ({ ...p, direction: "oppose" })),
-    ...(fetched.counter_term.vaults?.[1]?.userPosition ?? []).map(p => ({ ...p, direction: "oppose" })),
+    // Support positions from term vaults
+    ...(fetched.term.vaults?.[0]?.userPosition ?? []).map(p => ({
+      ...p,
+      direction: "support",
+      curve_id: 1, // Linear
+      account: {
+        id: p.account_id,  // use ID as display name
+        label: p.account_id,
+        image: user.image ?? null,
+      },
+    })),
+    ...(fetched.term.vaults?.[1]?.userPosition ?? []).map(p => ({
+      ...p,
+      direction: "support",
+      curve_id: 1,
+      account: {
+        id: p.account_id,
+        label: p.account_id,
+        image: user.image ?? null,
+      },
+    })),
+    // Oppose positions from counter_term vaults
+    ...(fetched.counter_term.vaults?.[0]?.userPosition ?? []).map(p => ({
+      ...p,
+      direction: "oppose",
+      curve_id: 2, // Exponential
+      account: {
+        id: p.account_id,
+        label: p.account_id,
+        image: user.image ?? null,
+      },
+    })),
+    ...(fetched.counter_term.vaults?.[1]?.userPosition ?? []).map(p => ({
+      ...p,
+      direction: "oppose",
+      curve_id: 2,
+      account: {
+        id: p.account_id,
+        label: p.account_id,
+        image: user.image ?? null,
+      },
+    })),
   ];
 
-  console.log("userPositions with direction", myPositions);
+  console.log("Normalized userPositions:", myPositions);
 } else {
   console.log("No user signed in, no positions to fetch");
 }
+
 setUserPositions(myPositions);
 
+setUserPositions(myPositions);
     // Initially show first page for active tab
     const initial = activeTab === "all" ? allPositions : myPositions;
     setVisiblePositions(initial.slice(0, ITEMS_PER_PAGE));
@@ -382,12 +423,14 @@ const handleClaimAction = async () => {
 
     return formatEther(balance ?? 0n);
   }
-
+  
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   ////////////////////////////////////////
+  const sourcePositions = activeTab === "my" ? userPositions : positions;
 
   const processedPositions = useMemo(() => {
-  let data = [...positions];
+  // Decide source based on active tab
+  let data = activeTab === "my" ? [...userPositions] : [...positions];
 
   // FILTER
   if (positionsOption !== "all") {
@@ -439,7 +482,8 @@ const handleClaimAction = async () => {
   }
 
   return data;
-}, [positions, positionsOption, sortOption]);
+}, [activeTab, positions, userPositions, positionsOption, sortOption]);
+
 
 const numericBalance = Number(balance);
 const hasBalance = numericBalance > 0;
