@@ -29,6 +29,8 @@ export const toFixed = (num: string) => {
 export default function PortalClaims() {
   const { user } = useAuth();
   const [_, setLocation] = useLocation();
+  const [linearPosition, setLinearPosition] = useState<Position | null>(null);
+const [exponentialPosition, setExponentialPosition] = useState<Position | null>(null);
   const [view, setView] = useState("list");
   const [sortOption, setSortOption] = useState('{"total_market_cap":"desc"}');
   const [sortDirection, setSortDirection] = useState("desc");
@@ -66,6 +68,15 @@ const [userShares, setUserShares] = useState<{ support: bigint; oppose: bigint }
 const [actionState, setActionState] = useState<Record<string, "none" | "supported" | "opposed">>(() => {
   const saved = localStorage.getItem("actionState");
   return saved ? JSON.parse(saved) : {};
+});
+
+
+ const [userSharesByCurve, setUserSharesByCurve] = useState<{
+  support: { linear: bigint; exponential: bigint };
+  oppose: { linear: bigint; exponential: bigint };
+}>({
+  support: { linear: 0n, exponential: 0n },
+  oppose: { linear: 0n, exponential: 0n },
 });
 
 // Whenever state changes, we save it
@@ -138,73 +149,77 @@ const loadMore = async () => {
     if (!user) {
       setUserPositions([]);
       setActivePosition(0n);
-      setUserShares({ support: 0n, oppose: 0n });
+      setUserSharesByCurve({
+        support: { linear: 0n, exponential: 0n },
+        oppose: { linear: 0n, exponential: 0n },
+      });
+      console.log("No user signed in, resetting positions and sharesByCurve");
       return;
     }
 
-    // Normalize positions for a single claim
-    const normalizePositionsForClaim = (fetchedClaim: Claim, user: User) => {
-      if (!user) return { positions: [], shares: { support: 0n, oppose: 0n } };
+    if (!claims?.length) {
+      setHasMore(false);
+      return;
+    }
 
-      const myPositions: Position[] = [];
+    const fetchedClaim = claims[0]; // using first claim for now
 
-      // Term vaults → support
-      fetchedClaim.term.vaults?.forEach(vault => {
-        myPositions.push(
+    // --- Normalize positions ---
+    const normalizePositionsForClaim = (claim: Claim, user: User) => {
+      if (!user) return { positions: [], sharesByCurve: { support: { linear: 0n, exponential: 0n }, oppose: { linear: 0n, exponential: 0n } } };
+
+      const positions: Position[] = [];
+
+      // Support
+      claim.term.vaults?.forEach(vault => {
+        positions.push(
           ...(vault.userPosition ?? []).map(p => ({
             ...p,
             direction: "support",
             curve_id: Number(vault.curve_id),
-            account: {
-              id: p.account_id,
-              label: p.account_id,
-              image: user.image ?? null,
-            },
+            account: { id: p.account_id, label: p.account_id, image: user.image ?? null },
           }))
         );
       });
 
-      // Counter term vaults → oppose
-      fetchedClaim.counter_term.vaults?.forEach(vault => {
-        myPositions.push(
+      // Oppose
+      claim.counter_term.vaults?.forEach(vault => {
+        positions.push(
           ...(vault.userPosition ?? []).map(p => ({
             ...p,
             direction: "oppose",
             curve_id: Number(vault.curve_id),
-            account: {
-              id: p.account_id,
-              label: p.account_id,
-              image: user.image ?? null,
-            },
+            account: { id: p.account_id, label: p.account_id, image: user.image ?? null },
           }))
         );
       });
 
-      // Log positions for debugging
-      console.log(`Normalized positions for claim ${fetchedClaim.id}:`, myPositions);
-
-      // Sum active positions for this claim only
-      const totalShares = myPositions.reduce(
+      // Compute shares by curve
+      const sharesByCurve = positions.reduce(
         (acc, p) => {
-          if (p.direction === "support") acc.support += BigInt(p.shares ?? 0);
-          else if (p.direction === "oppose") acc.oppose += BigInt(p.shares ?? 0);
+          const shares = BigInt(p.shares ?? 0);
+          if (p.direction === "support") {
+            if (p.curve_id === 1) acc.support.linear += shares;
+            else if (p.curve_id === 2) acc.support.exponential += shares;
+          } else if (p.direction === "oppose") {
+            if (p.curve_id === 1) acc.oppose.linear += shares;
+            else if (p.curve_id === 2) acc.oppose.exponential += shares;
+          }
           return acc;
         },
-        { support: 0n, oppose: 0n }
+        { support: { linear: 0n, exponential: 0n }, oppose: { linear: 0n, exponential: 0n } }
       );
 
-      return { positions: myPositions, shares: totalShares };
+      return { positions, sharesByCurve };
     };
 
-    // Example usage: normalize first claim (or whichever claim you click)
-    if (claims.length > 0) {
-      const { positions, shares } = normalizePositionsForClaim(claims[0], user);
-      setUserPositions(positions);
-      setUserShares(shares);
-    }
+    setUserPositions(positions);
+    setUserSharesByCurve(sharesByCurve);
+
+    console.log("Normalized positions and sharesByCurve:", positions, sharesByCurve);
 
     // Pagination
-    if (claims.length === 0 || claims.length < LIMIT) setHasMore(false);
+    if (claims.length < LIMIT) setHasMore(false);
     else setOffset(prev => prev + claims.length);
 
   } catch (err) {
@@ -300,16 +315,25 @@ useEffect(() => {
 
   // ---------------- Handlers ----------------
 const handleSupportClick = (claim: Claim) => {
-  setActiveClaim(claim);
-  setTermId(claim.term.id);
-  setOpposeMode(false);
-  setTransactionAmount("");
-  
-  
-  // Get user's current active position for this claim
-  const userPosition = claim.term.user_position?.amount ?? 0n; 
-  setActivePosition(userPosition);
+  if (!user) return;
 
+  // Filter support positions for this claim
+  const supportPositions = userPositions.filter(p => p.direction === "support");
+
+  const linear = supportPositions.find(p => p.curve_id === 1) ?? null;
+  const exponential = supportPositions.find(p => p.curve_id === 2) ?? null;
+
+  console.log("Support Linear:", linear ?? "No Position Found");
+  console.log("Support Exponential:", exponential ?? "No Position Found");
+
+  // Save positions in state so modal can read them
+  setLinearPosition(linear);
+  setExponentialPosition(exponential);
+
+  // Default active curve (linear)
+  setActivePosition(linear?.shares ?? 0n);
+
+  setActiveClaim(claim);
   setShowModal(true);
 };
 
@@ -321,8 +345,15 @@ const handleOpposeClick = (claim: Claim) => {
   setOpposeMode(true);
   setTransactionAmount("");
 
-  const userPosition = claim.counter_term.user_position?.amount ?? 0n;
-  setActivePosition(userPosition);
+    if (!user) return;
+
+  const opposePositions = userPositions.filter(p => p.direction === "oppose" && p.curve_id);
+
+  const linear = opposePositions.find(p => p.curve_id === 1);
+  const exponential = opposePositions.find(p => p.curve_id === 2);
+
+  console.log("Oppose Linear:", linear ?? "No Position Found");
+  console.log("Oppose Exponential:", exponential ?? "No Position Found");
 
   setShowModal(true);
 };
@@ -805,7 +836,7 @@ const hasActivePosition = userPositions.some(
       <div className="flex items-center gap-2 mb-1 p-2 pb-1">
         <h2 className="text-white font text-base">Stake</h2>
 <span
-  className="bg-[#0A2D4D] text-white border border-white text-xs px-2 py-0.5 rounded-full cursor-pointer transition-colors duration-200 hover:bg-white hover:text-[#0A2D4D] hover:border-[#0A2D4D]"
+  className="bg-[#0A2D4D] text-white text-[9px] px-1 py-[1px] rounded-full cursor-pointer transition-colors duration-200 hover:bg-white hover:text-[#0A2D4D] hover:border-[#0A2D4D]"
 >
   {opposeMode ? "Oppose" : "Support"}
 </span>
@@ -817,58 +848,59 @@ const hasActivePosition = userPositions.some(
       </p>
 
 {/* Statement */}
-<div className="text-gray-300 mb-4 px-6 flex flex-wrap items-center gap-2 text-lg">
-<span className="bg-[#0b0618] hover:bg-[#140a25] transition-colors duration-200 px-2 py-1 rounded flex items-center gap-1 max-w-[150px] truncate min-w-0 cursor-pointer">
-  <img src={activeClaim.term.triple.subject.image} alt="Claim Icon" className="w-5 h-5 object-contain" />
-  {activeClaim.term.triple.subject.label}
-</span>
+<div className="text-gray-300 mb-6 px-6 flex flex-wrap items-center justify-center gap-2 text-sm">
+  <span className="font-bold bg-[#0b0618] hover:bg-[#140a25] transition-colors duration-200 px-3 py-1.5 rounded inline-flex items-center gap-2 max-w-[200px] truncate">
+    <img
+      src={activeClaim.term.triple.subject.image}
+      alt="Claim Icon"
+      className="w-5 h-5 object-contain"
+    />
+    {activeClaim.term.triple.subject.label}
+  </span>
 
-<span className="bg-[#0b0618] hover:bg-[#140a25] transition-colors duration-200 px-2 py-1 rounded truncate max-w-[40%] ml-2 min-w-0 cursor-pointer">
-  {activeClaim.term.triple.object.label}
-</span>
+  <span>{activeClaim.term.triple.predicate.label}</span>
+
+  <span className="bg-[#0b0618] hover:bg-[#140a25] transition-colors duration-200 px-3 py-1.5 rounded max-w-[200px] truncate">
+    {activeClaim.term.triple.object.label}
+  </span>
 </div>
 
 {/* Tabs */}
-<div className="flex justify-center mb-3">
-  <div className="flex gap-6 relative">
+<div className="flex justify-center mb-5">
+  <div className="flex gap-12 relative">
+
     {/* Deposit Tab */}
-<button
-  className={`relative px-3 py-1.5 text-sm ${
-    activeTab === "deposit" ? "text-white" : "text-gray-400"
-  }`}
-  onClick={() => setActiveTab("deposit")}
->
-  Deposit
-  {activeTab === "deposit" && (
-    <span
-      className="absolute left-1/2 bottom-0 w-40 h-0.5 transform -translate-x-1/2 bg-blue-500 rounded-full"
-    ></span>
-  )}
-</button>
+    <button
+      className={`relative px-6 py-3 text-base font-medium ${
+        activeTab === "deposit" ? "text-white" : "text-gray-400"
+      }`}
+      onClick={() => setActiveTab("deposit")}
+    >
+      Deposit
+      {activeTab === "deposit" && (
+        <span
+          className="absolute left-1/2 bottom-0 w-48 h-0.5 transform -translate-x-1/2 bg-blue-500 rounded-full"
+        ></span>
+      )}
+    </button>
 
-{/* Add spacing between tabs */}
-<div className="w-10"></div>
-
-{/* Redeem Tab */}
+    {/* Redeem Tab */}
 <button
-  className={`relative px-3 py-1.5 text-sm ${
-    activePosition > 0
-      ? activeTab === "redeem"
-        ? "text-white"
-        : "text-gray-400 hover:text-white cursor-pointer"
-      : "text-gray-500 cursor-not-allowed pointer-events-none"
+  className={`relative px-6 py-3 text-base font-medium ${
+    activeTab === "redeem"
+      ? "text-white"
+      : "text-gray-400 hover:text-white cursor-pointer"
   }`}
-  onClick={() => {
-    if (activePosition > 0) setActiveTab("redeem");
-  }}
+  onClick={() => setActiveTab("redeem")}
 >
   Redeem
-  {activeTab === "redeem" && activePosition > 0 && (
+  {activeTab === "redeem" && (
     <span
-      className="absolute left-1/2 bottom-0 w-40 h-0.5 transform -translate-x-1/2 bg-blue-500 rounded-full"
+      className="absolute left-1/2 bottom-0 w-48 h-0.5 transform -translate-x-1/2 bg-blue-500 rounded-full"
     ></span>
   )}
 </button>
+
   </div>
 </div>
 
@@ -877,30 +909,41 @@ const hasActivePosition = userPositions.some(
 {activeTab === "deposit" && (
   <div className="px-4 md:px-12">
 {/* Main Card: Active Position */}
-<div className="bg-[#110A2B] border-2 border-[#393B60] p-2 rounded-lg flex items-center justify-between mb-1 font-geist mt-4">
-  <span className="text-gray-300 text-xs">Your Active Position</span>
-
-  <div className="flex items-center gap-2">
-    <span
-      className="bg-[#0A2D4D] border border-white text-white px-2 py-0.5 rounded-full text-xs cursor-pointer transition-colors duration-200 hover:bg-[#123a63] hover:border-[#8B3EFE]"
-    >
-      {opposeMode ? "Oppose" : "Support"}
+<div className="flex justify-center mb-4">
+  <div className="bg-[#110A2B] border-2 border-[#393B60] p-2 rounded-lg flex items-center justify-between gap-6 font-geist mt-4 w-[380px]">
+    
+    <span className="text-gray-300 text-xs whitespace-nowrap">
+      Your Active Position
     </span>
-<span className="text-lg">
-  {toFixed(
-    userPositions
-      .filter(p => p.direction === (opposeMode ? "oppose" : "support"))
-      .reduce((sum, p) => sum + parseFloat(formatEther(BigInt(p.shares ?? 0))), 0)
-  )}{" "}
-  TRUST
-</span>
+
+    <div className="flex items-center gap-2">
+      <span
+        className="bg-[#0A2D4D] border border-white text-[7px] px-2 py-0.5 rounded-full text-xs cursor-pointer transition-colors duration-200 hover:bg-[#123a63] hover:border-[#8B3EFE]"
+      >
+        {opposeMode ? "Oppose" : "Support"}
+      </span>
+
+  {/* Active Curve Amount */}
+  <span className="text-lg whitespace-nowrap">
+    {isToggled
+      ? exponentialPosition
+        ? toFixed(parseFloat(formatEther(BigInt(exponentialPosition.shares ?? 0))))
+        : "No Position Found"
+      : linearPosition
+      ? toFixed(parseFloat(formatEther(BigInt(linearPosition.shares ?? 0))))
+      : "No Position Found"}{" "}
+  </span>
+    </div>
+
   </div>
 </div>
 
 {/* Wallet + Curve Row */}
-<div className="flex items-center justify-between mb-3 px-2">
+<div className="flex justify-center">
+  <div className="flex items-center gap-6 mb-3 w-[380px]"> {/* fixed width matching tabs/card */}
 
-  {/* LEFT: Wallet */}
+{/* LEFT: Wallet */}
+<div className="flex flex-col">
   <div className="bg-[#110A2B] border border-[#393B60] rounded-2xl px-3 py-1.5 flex items-center gap-2 text-xs">
     <img src="/wallet.png" alt="Wallet Icon" className="w-4 h-4" />
     <span className="text-white">
@@ -910,38 +953,47 @@ const hasActivePosition = userPositions.some(
     </span>
   </div>
 
-  {/* RIGHT: Curve + Toggle + Info */}
-  <div className="flex items-center gap-6">
+  {/* Insufficient Funds Warning */}
+  {transactionAmount &&
+   Number(transactionAmount) > Number(tTrustBalance) / 10 ** 18 && (
+    <span className="text-red-500 text-xs mt-1">
+      Insufficient funds
+    </span>
+  )}
+</div>
 
-        {/* Curve Info Text */}
-        <div className="flex flex-col justify-center ml-8">
-          <span className="text-white text-xs">
-            {isToggled ? "Exponential Curve" : "Linear Curve"}
-          </span>
-          <span className="text-[0.6rem] text-gray-300">
-            {isToggled ? "High Risk, High Reward" : "Low Risk, Low Reward"}
-          </span>
-        </div>
+    {/* Right-aligned Cluster: Curve Info + Toggle + Info */}
+<div className="flex items-center gap-1 ml-auto"> {/* ml-auto pushes the whole cluster to far right, gap-1 keeps them tight */}
+  
+  {/* Curve Info Text */}
+  <div className="flex flex-col justify-center text-right"> {/* text-right aligns text toward toggle */}
+    <span className="text-white text-xs">
+      {isToggled ? "Exponential Curve" : "Linear Curve"}
+    </span>
+    <span className="text-[0.6rem] text-gray-300">
+      {isToggled ? "High Risk, High Reward" : "Low Risk, Low Reward"}
+    </span>
+  </div>
 
-    {/* Toggle */}
-    <label className="relative inline-block w-10 h-5 cursor-pointer">
-      <input
-        type="checkbox"
-        className="sr-only peer"
-        checked={isToggled}
-        onChange={() => setIsToggled(!isToggled)}
-      />
-      <span className="block w-full h-full bg-white rounded-full peer-checked:bg-white transition-colors"></span>
-      <span className="absolute left-0.5 top-0.5 w-4 h-4 bg-black rounded-full shadow-md peer-checked:translate-x-[1.25rem] transition-transform"></span>
-    </label>
+  {/* Toggle */}
+  <label className="relative inline-block w-10 h-5 cursor-pointer">
+    <input
+      type="checkbox"
+      className="sr-only peer"
+      checked={isToggled}
+      onChange={() => setIsToggled(!isToggled)}
+    />
+    <span className="block w-full h-full bg-white rounded-full peer-checked:bg-white transition-colors"></span>
+    <span className="absolute left-0.5 top-0.5 w-4 h-4 bg-black rounded-full shadow-md peer-checked:translate-x-[1.25rem] transition-transform"></span>
+  </label>
 
-    {/* Info Button */}
-    <button
-      onClick={() => setShowCurveInfo(true)}
-      className="w-8 h-8 flex items-center justify-center rounded-full border border-[#393B60] text-gray-300 text-sm hover:bg-[#1a133d] hover:text-white transition-colors"
-    >
-      i
-    </button>
+  {/* Info Button */}
+  <button
+    onClick={() => setShowCurveInfo(true)}
+    className="w-8 h-8 flex items-center justify-center rounded-full border border-[#393B60] text-gray-300 text-sm hover:bg-[#1a133d] hover:text-white transition-colors"
+  >
+    i
+  </button>
 
         {/* Slide-in Modal (Fixed Right) */}
         {showCurveInfo && (
@@ -998,9 +1050,10 @@ const hasActivePosition = userPositions.some(
         )}
     </div>
 </div>
+</div>
 
 {/* Center Big Zero */}
-<div className="flex flex-col items-center">
+<div className="flex flex-col items-center mt-2">
   <input
     type="number"
     min="0"
@@ -1008,91 +1061,120 @@ const hasActivePosition = userPositions.some(
     value={transactionAmount || ""} // blank if empty
     onChange={(e) => setTransactionAmount(e.target.value)}
     autoFocus
-    className="bg-transparent text-white text-6xl text-center outline-none w-40
+    className="bg-transparent text-white text-6xl text-center outline-none w-48 h-20
                appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
   />
-  <span className="text-gray-300 text-xs -my-2 mb-2">TRUST</span>
-</div>
+  <span className="text-gray-300 text-xs font-normal mt-1">TRUST</span>
 
+  {/* Min Button */}
+  <button
+    type="button"
+    onClick={() => setTransactionAmount("0.01")}
+    className="mt-4 px-2 py-1 text-xs text-white bg-[#0A2D4D] rounded-full border border-white hover:bg-[#123a63] hover:border-[#8B3EFE] transition-colors"
+  >
+    Min
+  </button>
+</div>
 
 
 {/* Review Deposit Button */}
 <button
-  className={`mx-auto block px-6 py-2.5 rounded-3xl mt-3 text-sm transition-colors ${
-    transactionAmount && Number(transactionAmount) > 0
+  className={`mx-auto block px-6 py-2.5 rounded-3xl mt-4 text-sm transition-colors ${
+    transactionAmount &&
+    Number(transactionAmount) > 0 &&
+    Number(transactionAmount) <= Number(tTrustBalance) / 10 ** 18
       ? "bg-white text-black hover:bg-gray-200"
       : "bg-gray-700 text-gray-400 cursor-not-allowed"
   }`}
   onClick={() => setShowReviewDepositModal(true)}
-  disabled={!transactionAmount || Number(transactionAmount) <= 0}
+  disabled={
+    !transactionAmount ||
+    Number(transactionAmount) <= 0 ||
+    Number(transactionAmount) > Number(tTrustBalance) / 10 ** 18
+  }
 >
-  {transactionAmount && Number(transactionAmount) > 0 ? "Review Deposit" : "Enter an Amount"}
+  {transactionAmount &&
+  Number(transactionAmount) > Number(tTrustBalance) / 10 ** 18
+    ? "Check Your Balance"
+    : transactionAmount && Number(transactionAmount) > 0
+    ? "Review Deposit"
+    : "Enter an Amount"}
 </button>
+
+{/* Optional small red warning below button */}
+{transactionAmount &&
+ Number(transactionAmount) > Number(tTrustBalance) / 10 ** 18 && (
+  <span className="text-red-500 text-xs mt-1 block text-center">
+    Insufficient balance
+  </span>
+)}
   </div>
 )}
 
 
+{/* Tab Content */}
 {activeTab === "redeem" && (
   <div className="px-4 md:px-12">
 {/* Main Card: Active Position */}
-<div className="bg-[#110A2B] border-2 border-[#393B60] p-2 rounded-lg flex items-center justify-between mb-1 font-geist">
-  <span className="text-gray-300 text-xs">Your Active Position</span>
+<div className="flex justify-center mb-4">
+  <div className="bg-[#110A2B] border-2 border-[#393B60] p-2 rounded-lg flex items-center justify-between gap-6 font-geist mt-4 w-[380px]">
+    
+    <span className="text-gray-300 text-xs whitespace-nowrap">
+      Your Active Position
+    </span>
 
-  <div className="flex items-center gap-2">
-    <span
-      className="bg-[#0A2D4D] border border-white text-white px-2 py-0.5 rounded-full text-xs cursor-pointer transition-colors duration-200 hover:bg-[#123a63] hover:border-[#8B3EFE]"
-    >
-      {opposeMode ? "Oppose" : "Support"}
-    </span>
-    <span className="font-bold text-lg">
-      {activePosition ? toFixed(formatEther(activePosition)) : "0"} TRUST
-    </span>
+    <div className="flex items-center gap-2">
+      <span
+        className="bg-[#0A2D4D] border border-white text-[7px] px-2 py-0.5 rounded-full text-xs cursor-pointer transition-colors duration-200 hover:bg-[#123a63] hover:border-[#8B3EFE]"
+      >
+        {opposeMode ? "Oppose" : "Support"}
+      </span>
+
+  {/* Active Curve Amount */}
+  <span className="text-lg whitespace-nowrap">
+    {isToggled
+      ? exponentialPosition
+        ? toFixed(parseFloat(formatEther(BigInt(exponentialPosition.shares ?? 0))))
+        : "No Position Found"
+      : linearPosition
+      ? toFixed(parseFloat(formatEther(BigInt(linearPosition.shares ?? 0))))
+      : "No Position Found"}{" "}
+  </span>
+    </div>
+
   </div>
 </div>
 
-{/* Wallet Div */}
-<div className="ml-1 bg-[#110A2B] border border-[#393B60] rounded-2xl px-2 py-1 flex items-center gap-1.5 text-xs">
-  <img src="/wallet.png" alt="Wallet Icon" className="w-3 h-3" />
-  <span className="text-white font-semibold">
-    {Number(tTrustBalance) / 10 ** 18 >= 0
-      ? (Number(tTrustBalance) / 10 ** 18).toFixed(2)
-      : "0.00"} TRUST
-  </span>
+{/* Wallet + Curve Row */}
+<div className="flex justify-center">
+  <div className="flex items-center gap-6 mb-3 w-[380px]"> {/* fixed width matching tabs/card */}
+
+{/* LEFT: Wallet */}
+<div className="flex flex-col">
+  <div className="bg-[#110A2B] border border-[#393B60] rounded-2xl px-3 py-1.5 flex items-center gap-2 text-xs">
+    <img src="/wallet.png" alt="Wallet Icon" className="w-4 h-4" />
+    <span className="text-white">
+      {Number(tTrustBalance) / 10 ** 18 >= 0
+        ? (Number(tTrustBalance) / 10 ** 18).toFixed(2)
+        : "0.00"} TRUST
+    </span>
+  </div>
+
+  {/* Insufficient Funds Warning */}
+  {transactionAmount &&
+   Number(transactionAmount) > Number(tTrustBalance) / 10 ** 18 && (
+    <span className="text-red-500 text-xs mt-1">
+      Insufficient funds
+    </span>
+  )}
 </div>
 
-{/* Center Big Zero */}
-<div className="flex flex-col items-center">
-  <input
-    type="number"
-    min="0"
-    placeholder="0"
-    value={transactionAmount || ""} // blank if empty
-    onChange={(e) => setTransactionAmount(e.target.value)}
-    autoFocus
-    className="bg-transparent text-white text-6xl text-center outline-none w-40
-               appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-  />
-  <span className="text-gray-300 text-xs -my-2 mb-2">TRUST</span>
-</div>
-
-<div className="flex items-start gap-3">
-
-</div>{/* Wallet + Curve Row */}
-<div className="flex items-center gap-3 mb-2">
-
-{/* Wallet Div (Compact) */}
-<div className="ml-1 bg-[#110A2B] border border-[#393B60] rounded-2xl px-2 py-1 flex items-center gap-1.5 text-xs">
-  <img src="/wallet.png" alt="Wallet Icon" className="w-3 h-3" />
-  <span className="text-white font-semibold">
-    {Number(tTrustBalance) / 10 ** 18 >= 0
-      ? (Number(tTrustBalance) / 10 ** 18).toFixed(2)
-      : "0.00"} TRUST
-  </span>
-</div>
-
-  {/* Curve Info */}
-  <div className="flex flex-col justify-center ml-8">
-    <span className="text-white font-bold text-xs">
+    {/* Right-aligned Cluster: Curve Info + Toggle + Info */}
+<div className="flex items-center gap-1 ml-auto"> {/* ml-auto pushes the whole cluster to far right, gap-1 keeps them tight */}
+  
+  {/* Curve Info Text */}
+  <div className="flex flex-col justify-center text-right"> {/* text-right aligns text toward toggle */}
+    <span className="text-white text-xs">
       {isToggled ? "Exponential Curve" : "Linear Curve"}
     </span>
     <span className="text-[0.6rem] text-gray-300">
@@ -1100,25 +1182,85 @@ const hasActivePosition = userPositions.some(
     </span>
   </div>
 
-  {/* Toggle Button */}
-  <div className="flex-none ml-4">
-    <label className="relative inline-block w-10 h-5 cursor-pointer">
-      <input
-        type="checkbox"
-        className="sr-only peer"
-        checked={isToggled}
-        onChange={() => setIsToggled(!isToggled)}
-      />
-      {/* Track */}
-      <span className="block w-full h-full bg-white rounded-full peer-checked:bg-[#FFF] transition-colors"></span>
-      {/* Thumb */}
-      <span className="absolute left-0.5 top-0.5 w-4 h-4 bg-black rounded-full shadow-md peer-checked:translate-x-[1.25rem] transition-transform"></span>
-    </label>
-  </div>
+  {/* Toggle */}
+  <label className="relative inline-block w-10 h-5 cursor-pointer">
+    <input
+      type="checkbox"
+      className="sr-only peer"
+      checked={isToggled}
+      onChange={() => setIsToggled(!isToggled)}
+    />
+    <span className="block w-full h-full bg-white rounded-full peer-checked:bg-white transition-colors"></span>
+    <span className="absolute left-0.5 top-0.5 w-4 h-4 bg-black rounded-full shadow-md peer-checked:translate-x-[1.25rem] transition-transform"></span>
+  </label>
+
+  {/* Info Button */}
+  <button
+    onClick={() => setShowCurveInfo(true)}
+    className="w-8 h-8 flex items-center justify-center rounded-full border border-[#393B60] text-gray-300 text-sm hover:bg-[#1a133d] hover:text-white transition-colors"
+  >
+    i
+  </button>
+
+        {/* Slide-in Modal (Fixed Right) */}
+        {showCurveInfo && (
+          <div className="fixed top-0 right-0 h-full w-96 bg-[#110A2B] border-l-2 border-[#393B60] p-4 z-50 animate-slideIn overflow-y-auto">
+            
+            {/* Close Button */}
+            <button
+              onClick={() => setShowCurveInfo(false)}
+              className="absolute top-3 right-3 text-gray-400 hover:text-white"
+            >
+              ✕
+            </button>
+
+            {/* Main Heading */}
+            <h2 className="text-white text-lg text-center mb-2">
+              How Bonding Curves Work
+            </h2>
+            <p className="text-gray-300 text-sm text-left mb-6">
+              Intuition uses bonding curves to automatically set identity and claim prices based on supply and demand, rewarding early curation of valuable information.
+            </p>
+
+            {/* Linear Curve Section */}
+            <img
+              src="/linear-curve.svg"
+              alt="Linear Curve"
+              className="w-full mb-4 rounded"
+            />
+            <div className="text-left mb-6">
+              <h4 className="text-white mb-1">Linear Curve (Safe)</h4>
+              <p className="text-gray-300 text-sm mb-2">
+                The Linear curve keeps pricing stable with gradual increases—your stake value increases or decreases proportionally as more people stake or redeem, making it predictable and lower-risk.
+              </p>
+              <p className="text-gray-400 text-sm">
+                In other words, minus the fees, you will get back your original deposit value, plus any portion of the fees collected.
+              </p>
+            </div>
+
+            {/* Exponential Curve Section */}
+            <img
+              src="/exponential.svg"
+              alt="Exponential Curve"
+              className="w-full mb-4 rounded"
+            />
+            <div className="text-left mb-6">
+              <h4 className="text-white mb-1">Exponential Curve (Riskier)</h4>
+              <p className="text-gray-300 text-sm mb-2">
+                The Exponential curve (OffsetProgressive) rewards early stakers significantly more, as each new deposit increases the share price at an increasing rate, creating higher potential returns for curators who stake earliest, but greater potential losses as stakers redeem.
+              </p>
+              <p className="text-gray-300 text-sm">
+                Choose based on your risk tolerance and timing. It's riskier but can yield higher returns; however, if you deposit later, you will pay more for the same amount of shares.
+              </p>
+            </div>
+          </div>
+        )}
+    </div>
+</div>
 </div>
 
 {/* Center Big Zero */}
-<div className="flex flex-col items-center">
+<div className="flex flex-col items-center mt-2">
   <input
     type="number"
     min="0"
@@ -1126,21 +1268,53 @@ const hasActivePosition = userPositions.some(
     value={transactionAmount || ""} // blank if empty
     onChange={(e) => setTransactionAmount(e.target.value)}
     autoFocus
-    className="bg-transparent text-white font-bold text-6xl text-center outline-none w-40
+    className="bg-transparent text-white text-6xl text-center outline-none w-48 h-20
                appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
   />
-  <span className="text-gray-300 text-xs -my-2 mb-2">TRUST</span>
+  <span className="text-gray-300 text-xs font-normal mt-1">TRUST</span>
+
+  {/* Min Button */}
+  <button
+    type="button"
+    onClick={() => setTransactionAmount("0.01")}
+    className="mt-4 px-2 py-1 text-xs text-white bg-[#0A2D4D] rounded-full border border-white hover:bg-[#123a63] hover:border-[#8B3EFE] transition-colors"
+  >
+    Min
+  </button>
 </div>
 
 
     {/* Review Deposit Button */}
 <button
-  className="w-full bg-white text-black py-2.5 rounded-3xl font-semibold mt-3 text-sm"
-  onClick={() => setShowReviewRedeemModal(true)}
+  className={`mx-auto block px-6 py-2.5 rounded-3xl mt-4 text-sm transition-colors ${
+    transactionAmount &&
+    Number(transactionAmount) > 0 &&
+    Number(transactionAmount) <= Number(tTrustBalance) / 10 ** 18
+      ? "bg-white text-black hover:bg-gray-200"
+      : "bg-gray-700 text-gray-400 cursor-not-allowed"
+  }`}
+  onClick={() => setShowReviewDepositModal(true)}
+  disabled={
+    !transactionAmount ||
+    Number(transactionAmount) <= 0 ||
+    Number(transactionAmount) > Number(tTrustBalance) / 10 ** 18
+  }
 >
-  Review Redeem
+{transactionAmount &&
+  Number(transactionAmount) > Number(tTrustBalance) / 10 ** 18
+    ? "Check Your Balance"
+    : transactionAmount && Number(transactionAmount) > 0
+    ? "Review Redeem"
+    : "Enter an Amount"}
 </button>
 
+{/* Optional small red warning below button */}
+{transactionAmount &&
+ Number(transactionAmount) > Number(tTrustBalance) / 10 ** 18 && (
+  <span className="text-red-500 text-xs mt-1 block text-center">
+    Insufficient balance
+  </span>
+)}
   </div>
 )}
       {/* Close Button */}
@@ -1286,75 +1460,126 @@ const hasActivePosition = userPositions.some(
   <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
     <div className="bg-[#070315] w-full max-w-md mx-4 p-3 rounded-xl relative border-2 border-[#8B3EFE]">
 
-      {/* Close Button */}
-      <button
-        className="absolute top-2 right-2 text-gray-400 hover:text-white text-xl font-bold"
-        onClick={() => setShowReviewRedeemModal(false)}
-      >
-        ×
-      </button>
+      {/* Back Button */}
+<button
+  className="absolute -top-1 pb-2 left-2 text-white font-extrabold text-2xl px-2 py-1 rounded hover:bg-gray-700/50 transition-colors"
+  onClick={() => {
+    setShowReviewDepositModal(false);
+    setModalStep("review");
+  }}
+>
+  ←
+</button>
 
       {/* Title + Support Tag */}
       <div className="flex items-center gap-2 mb-4">
-        <h2 className="text-white font-bold text-base">Stake</h2>
-        <span className="bg-[#0A2D4D] border border-white text-white px-3 py-1 rounded-full text-sm font-semibold">
-          Support
-        </span>
+        <h2 className="text-white font-bold text-base mt-2">Stake</h2>
+<span
+  className="bg-[#0A2D4D] text-white border border-white text-xs font-semibold px-2 py-0.5 mt-2 rounded-full cursor-pointer transition-colors duration-200 hover:bg-white hover:text-[#0A2D4D] hover:border-[#0A2D4D]"
+>
+  {opposeMode ? "Oppose" : "Support"}
+</span>
       </div>
 
-      {/* Subtitle */}
       <p className="text-gray-400 text-sm mb-6">
         Staking on a Triple enhances its discoverability in the Intuition system
       </p>
 
-      {/* Centered Spinner + Label */}
-      <div className="flex flex-col items-center my-6">
-        <img src="/spinner.png" alt="Spinner" className="w-16 h-16 mb-2 animate-spin" />
-        <span className="text-white font-semibold">Review...</span>
-      </div>
 
-{/* Total Cost */}
-<div className="bg-[#110A2B] border-2 border-[#393B60] rounded-3xl flex justify-between items-center px-4 py-2 mb-3 mx-4">
+      {/* REVIEW */}
+      {modalStep === "review" && (
+        <>
+          <div className="flex flex-col items-center my-6">
+            <img src="/spinner.png" alt="Spinner" className="w-16 h-16 mb-2" />
+            <span className="text-white font-semibold">Review...</span>
+          </div>
+
+          <div className="bg-[#110A2B] border-2 border-[#393B60] rounded-3xl flex justify-between items-center px-4 py-2 mb-3 mx-4">
             <span className="text-gray-300 text-sm font-semibold">Total Cost</span>
             <span className="text-white font-bold">
               {transactionAmount ? Number(transactionAmount).toFixed(2) : "0.00"}
             </span>
           </div>
 
-      {/* Redeem TRUST Label */}
-      <span className="text-gray-300 font-semibold mb-2 block">Redeem TRUST from Claim</span>
-
-{/* Statement */}
-<div className="text-gray-300 mb-6 px-6 flex flex-wrap items-center gap-2">
-  <span className="font-bold bg-[#0b0618] hover:bg-[#140a25] transition-colors duration-200 px-2 py-1 rounded inline-flex items-center gap-2 max-w-[150px] truncate">
-    <img src={activeClaim.term.triple.subject.image} alt="Claim Icon" className="w-5 h-5 object-contain" />
-    {activeClaim.term.triple.subject.label}
-  </span>
-
-  <span>{activeClaim.term.triple.predicate.label}</span>
-
-  <span className="bg-[#0b0618] hover:bg-[#140a25] transition-colors duration-200 px-2 py-1 rounded max-w-[150px] truncate">
-    {activeClaim.term.triple.object.label}
-  </span>
-</div>
-
-      {/* Amount Input */}
-<div className="mb-4">
-  <label className="text-gray-300 text-sm mb-1 block">Amount (in TRUST)</label>
-  <input
-    type="text"
-    value={transactionAmount}
-    onChange={(e) => setTransactionAmount(e.target.value)}
-    className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-  />
-</div>
-{/* Redeem / Deposit Button */}
 <button
-  className="w-full bg-white text-black py-2.5 rounded-3xl font-semibold text-sm"
-  onClick={() => handleClaimAction("redeem")}
+  className="mx-auto block bg-white text-black px-6 py-1.5 rounded-3xl font-semibold text-sm"
+  onClick={() => {
+    handleClaimAction("deposit");
+    setShowModal(false);
+  }}
 >
-  Redeem
+  Confirm
 </button>
+        </>
+      )}
+
+      {/* AWAITING */}
+      {modalStep === "awaiting" && (
+        <>
+          <div className="flex flex-col items-center my-6">
+            <img src="/spinner.png" alt="Spinner" className="w-16 h-16 mb-2" />
+            <span className="text-white font-semibold">Awaiting...</span>
+          </div>
+
+          <div className="flex items-center justify-center gap-2 bg-[#110A2B] border border-[#393B60] rounded-2xl px-4 py-2 mx-4">
+            <img src="/wallet.png" alt="Wallet Icon" className="w-5 h-5" />
+            <span className="text-white font-semibold text-sm">
+              Awaiting wallet approval
+            </span>
+            <div className="relative group">
+              <span className="text-gray-400 font-bold cursor-pointer text-sm">
+                ?
+              </span>
+              <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-max bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                Approve this transaction in your wallet
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* SUCCESS */}
+      {modalStep === "success" && (
+        <div className="flex flex-col items-center my-8">
+          <div className="w-16 h-16 rounded-full bg-green-500 flex items-center justify-center mb-4">
+            <span className="text-white text-2xl font-bold">✓</span>
+          </div>
+
+          <span className="text-white font-semibold mb-6">
+            Successfully {opposeMode ? "opposed" : "supported"}!
+          </span>
+
+          <button
+            className="bg-white text-black px-6 py-2 rounded-3xl font-semibold text-sm"
+            onClick={() => {
+              setShowReviewDepositModal(false);
+              setModalStep("review");
+            }}
+          >
+            Done
+          </button>
+        </div>
+      )}
+
+      {/* FAILED */}
+      {modalStep === "failed" && (
+        <div className="flex flex-col items-center my-8">
+          <div className="w-16 h-16 rounded-full bg-red-500 flex items-center justify-center mb-4">
+            <span className="text-white text-2xl font-bold">✕</span>
+          </div>
+
+          <span className="text-white font-semibold mb-6">
+            Transaction Failed
+          </span>
+
+          <button
+            className="bg-white text-black px-6 py-2 rounded-3xl font-semibold text-sm"
+            onClick={() => setModalStep("review")}
+          >
+            Try Again
+          </button>
+        </div>
+      )}
     </div>
   </div>
 )}
