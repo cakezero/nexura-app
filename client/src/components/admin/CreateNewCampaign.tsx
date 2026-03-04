@@ -7,8 +7,7 @@ import { Card, CardTitle, CardDescription, CardFooter } from "../../components/u
 import { Input } from "../../components/ui/input";
 import { Button } from "../../components/ui/button";
 import { Link } from "wouter";
-import StudioSidebar from "../../pages/studio/StudioSidebar";
-import AnimatedBackground from "../AnimatedBackground";
+// StudioSidebar and AnimatedBackground are provided by StudioLayout wrapper
 import { projectApiRequest } from "../../lib/projectApi";
 import { payStudioHubFee } from "../../lib/performOnchainAction";
 import { useToast } from "../../hooks/use-toast";
@@ -317,23 +316,7 @@ const isActive =
 
 
   return (
-    <div className="relative min-h-screen w-full overflow-hidden">
-      <div className="relative z-10 flex h-screen">
-        <AnimatedBackground />
-
-<StudioSidebar
-  activeTab="campaignsTab"
-  setActiveTab={(tab) => {
-    if (tab === "campaignSubmissions") setLocation("/studio-dashboard");
-    if (tab === "campaignsTab") setLocation("/studio-dashboard");
-    if (tab === "adminManagement") setLocation("/studio-dashboard");
-  }}
-/>
-
-
-        <div className="flex-1 flex flex-col overflow-hidden backdrop-blur-xl">
-          <main className="flex-1 overflow-y-auto p-4 md:p-8 pt-16 md:pt-8 pb-24 md:pb-8 text-white">
-            <div className="max-w-5xl mx-auto space-y-8">
+            <div className="max-w-5xl mx-auto space-y-8 text-white">
 
               {/* Title */}
               <div>
@@ -759,7 +742,7 @@ const isActive =
                 ...newTask,
                 type,
                 platform: isDiscord ? "Discord" : isTwitter ? "Twitter" : (isPortal || isOther) ? "" : newTask.platform,
-                evidence: isDiscord || isPortal ? "" : newTask.evidence,
+                evidence: isDiscord || isPortal ? "" : isTwitter ? "submit_link" : newTask.evidence,
                 validation: isDiscord ? "Discord Auth" : isPortal ? "Auto Verified" : (newTask.validation === "Discord Auth" || newTask.validation === "Auto Verified" ? "Manual Validation" : newTask.validation),
                 verificationMode: "",
               });
@@ -817,11 +800,11 @@ const isActive =
         {/* Handle or URL */}
         <div className="mb-4">
           <label className="text-sm text-white/70 mb-2 block">
-            {newTask.platform === "Discord" ? "Discord Invite Link" : newTask.type === "Follow us on X" ? "Twitter Username" : "Handle or URL"}
+            {newTask.platform === "Discord" ? "Discord Invite Link" : newTask.type === "Follow us on X" ? "Profile URL" : "Handle or URL"}
           </label>
           <input
             type="text"
-            placeholder={newTask.platform === "Discord" ? "https://discord.gg/..." : newTask.type === "Follow us on X" ? "@username" : "..."}
+            placeholder={newTask.platform === "Discord" ? "https://discord.gg/..." : newTask.type === "Follow us on X" ? "https://x.com/username" : "..."}
             value={newTask.handleOrUrl}
             onChange={(e) =>
               setNewTask({ ...newTask, handleOrUrl: e.target.value })
@@ -899,19 +882,13 @@ const isActive =
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-6">
-            {/* Evidence Upload */}
+            {/* Evidence Upload — auto-set to Submit Link for twitter tasks */}
             <div>
-              <label className="text-sm text-white/70 mb-2 block">Evidence Upload Management</label>
-              <select
-                className="w-full p-2 rounded-lg bg-[#0d0d14] text-white border border-white/10 focus:outline-none focus:border-purple-500 [&>option]:bg-[#0d0d14]"
-                value={newTask.evidence}
-                onChange={(e) =>
-                  setNewTask({ ...newTask, evidence: e.target.value })
-                }
-              >
-                <option value="">Select option</option>
-                <option value="submit_link">Submit Link</option>
-              </select>
+              <label className="text-sm text-white/70 mb-2 block">Evidence Upload</label>
+              <div className="w-full p-2 rounded-lg bg-white/5 text-white border border-white/10 flex items-center gap-2">
+                <span>🔗</span>
+                <span>Submit Link</span>
+              </div>
             </div>
 
             {/* Validation Type */}
@@ -1423,9 +1400,5 @@ const isActive =
   )}
 
         </div>
-        </main>
-        </div>
-    </div>
-    </div>
   );
 }
