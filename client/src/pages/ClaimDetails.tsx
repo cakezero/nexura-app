@@ -205,70 +205,79 @@ const currentAmount = isBuy ? buyAmount : sellAmount;
     setTerm(fetched.term);
     setCounterTerm(fetched.counter_term);
 
-    // All positions
-const allPositions = [
-  ...(fetched.term.positions ?? []).map(p => ({ ...p, direction: "support" })),
-  ...(fetched.counter_term.positions ?? []).map(p => ({ ...p, direction: "oppose" })),
-];
-setPositions(allPositions);
+    const loadMore = async () => {
+  if (loading || !hasMore) return;
+  setLoading(true);
 
-// Normalize user positions to match table structure
-let myPositions: Position[] = [];
+  try {
+    const searchQuery = searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : "";
+    const { claims } = await apiRequestV2(
+      "GET",
+      `/api/get-claims?filter=${sortOption}&offset=${offset}${searchQuery}`
+    );
 
-if (user) {
-  myPositions = [
-    // Support positions from term vaults
-    ...(fetched.term.vaults?.[0]?.userPosition ?? []).map(p => ({
-      ...p,
-      direction: "support",
-      curve_id: 1, // Linear
-      account: {
-        id: p.account_id,  // use ID as display name
-        label: p.account_id,
-        image: user.image ?? null,
-      },
-    })),
-    ...(fetched.term.vaults?.[1]?.userPosition ?? []).map(p => ({
-      ...p,
-      direction: "support",
-      curve_id: 1,
-      account: {
-        id: p.account_id,
-        label: p.account_id,
-        image: user.image ?? null,
-      },
-    })),
-    // Oppose positions from counter_term vaults
-    ...(fetched.counter_term.vaults?.[0]?.userPosition ?? []).map(p => ({
-      ...p,
-      direction: "oppose",
-      curve_id: 2, // Exponential
-      account: {
-        id: p.account_id,
-        label: p.account_id,
-        image: user.image ?? null,
-      },
-    })),
-    ...(fetched.counter_term.vaults?.[1]?.userPosition ?? []).map(p => ({
-      ...p,
-      direction: "oppose",
-      curve_id: 2,
-      account: {
-        id: p.account_id,
-        label: p.account_id,
-        image: user.image ?? null,
-      },
-    })),
-  ];
+    if (!user) {
+      setUserPositions([]);
+      console.log("No user signed in, no positions to fetch");
+      return;
+    }
 
-  console.log("Normalized userPositions:", myPositions);
-} else {
-  console.log("No user signed in, no positions to fetch");
-}
+    if (claims.length > 0) {
+      const fetched = claims[0]; // use first claim for now
 
-setUserPositions(myPositions);
+      // Aggregate all positions (optional for table)
+      const allPositions = [
+        ...(fetched.term.positions ?? []).map(p => ({ ...p, direction: "support" })),
+        ...(fetched.counter_term.positions ?? []).map(p => ({ ...p, direction: "oppose" })),
+      ];
+      setPositions(allPositions);
 
-setUserPositions(myPositions);
+      // Normalize user positions
+      const myPositions: Position[] = [
+        ...(fetched.term.vaults?.[0]?.userPosition ?? []).map(p => ({
+          ...p,
+          direction: "support",
+          curve_id: 1,
+          account: { id: p.account_id, label: p.account_id, image: user.image ?? null },
+        })),
+        ...(fetched.term.vaults?.[1]?.userPosition ?? []).map(p => ({
+          ...p,
+          direction: "support",
+          curve_id: 1,
+          account: { id: p.account_id, label: p.account_id, image: user.image ?? null },
+        })),
+        ...(fetched.counter_term.vaults?.[0]?.userPosition ?? []).map(p => ({
+          ...p,
+          direction: "oppose",
+          curve_id: 2,
+          account: { id: p.account_id, label: p.account_id, image: user.image ?? null },
+        })),
+        ...(fetched.counter_term.vaults?.[1]?.userPosition ?? []).map(p => ({
+          ...p,
+          direction: "oppose",
+          curve_id: 2,
+          account: { id: p.account_id, label: p.account_id, image: user.image ?? null },
+        })),
+      ];
+
+      console.log("Normalized userPositions:", myPositions);
+      setUserPositions(myPositions);
+    }
+
+    // Handle pagination
+    if (claims.length === 0 || claims.length < LIMIT) {
+      setHasMore(false);
+    } else {
+      setOffset(prev => prev + claims.length);
+    }
+
+  } catch (err) {
+    console.error("Failed to load positions:", err);
+  } finally {
+    setLoading(false);
+  }
+};
+
     // Initially show first page for active tab
     const initial = activeTab === "all" ? allPositions : myPositions;
     setVisiblePositions(initial.slice(0, ITEMS_PER_PAGE));
