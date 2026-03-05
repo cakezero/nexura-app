@@ -316,6 +316,7 @@ export const saveCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
         campaignNumber: campaignCount + 1,
         projectCoverImage: req.body.coverImage ?? "pending",
         creator: req.id,
+        hub: req.admin.hub,
         reward: {
           xp: reward.xp ?? 0,
           pool: reward.pool ?? 0,
