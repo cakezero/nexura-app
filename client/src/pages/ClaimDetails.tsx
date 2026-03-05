@@ -382,71 +382,82 @@ const refreshUserData = async () => {
 const handleClaimAction = async () => {
   if (!user) return await handleConnectWallet();
 
-  try {
-    const curveId = growthType === "linear" ? 1n : 2n;
-    const address = activeTab === "support" ? id : claim.counter_term_id;
+  const amountNum = parseFloat(isBuy ? buyAmount : sellAmount);
+  if (!amountNum || amountNum <= 0) {
+    toast({ title: "Error", description: "Enter a valid amount", variant: "destructive" });
+    return;
+  }
 
-    if (isBuy) {
-      if (!buyAmount) throw new Error("No buy amount selected");
-      setBuying(true);
+  const curveId = growthType === "linear" ? 1n : 2n;
+  const address = activeTab === "support" ? id : claim.counter_term_id;
 
-      // Optimistically update userPositions
-      setUserPositions(prev => {
-        const existingSupport = prev.find(
-          p => p.direction === "support" && p.account.id === user.address
-        );
-        const newShares = parseFloat(buyAmount);
+  const updateVaultPrice = (amount: number, isBuying: boolean) => {
+    const vaultIndex = growthType === "linear" ? 0 : 1;
 
-        if (existingSupport) {
-          return prev.map(p =>
-            p === existingSupport
-              ? { ...p, shares: parseFloat(p.shares.toString()) + newShares }
-              : p
-          );
-        } else {
-          return [
-            ...prev,
-            {
-              direction: "support",
-              shares: newShares,
-              account: {
-                id: user.address,
-                label: user.address,
-                image: user.image ?? null,
-              },
-              curve_id: growthType === "linear" ? 1 : 2,
-            },
-          ];
-        }
-      });
-
-      await buyShares(buyAmount, address as Address, curveId);
-      setBuying(false);
+    if (activeTab === "support") {
+      const vault = term.vaults[vaultIndex];
+      const currentPrice = BigInt(vault.current_share_price);
+      const delta = parseEther(amount.toString());
+      vault.current_share_price = isBuying
+        ? (currentPrice + delta).toString()
+        : currentPrice > delta
+        ? (currentPrice - delta).toString()
+        : "0";
     } else {
-      if (!sellAmount) throw new Error("No sell amount selected");
-      setSelling(true);
-
-      // Optimistically update userPositions
-      setUserPositions(prev => {
-        const dir = activeTab; // "support" or "oppose"
-        const existing = prev.find(
-          p => p.direction === dir && p.account.id === user.address
-        );
-        if (existing) {
-          return prev.map(p =>
-            p === existing
-              ? { ...p, shares: parseFloat(p.shares.toString()) - parseFloat(sellAmount) }
-              : p
-          );
-        }
-        return prev;
-      });
-
-      await sellShares(sellAmount, address as Address, curveId);
-      setSelling(false);
+      const vault = counterTerm.vaults[vaultIndex];
+      const currentPrice = BigInt(vault.current_share_price);
+      const delta = parseEther(amount.toString());
+      vault.current_share_price = isBuying
+        ? (currentPrice + delta).toString()
+        : currentPrice > delta
+        ? (currentPrice - delta).toString()
+        : "0";
     }
+  };
 
-    // Refresh balance and user positions after the tx is mined
+  try {
+    if (isBuy) setBuying(true);
+    else setSelling(true);
+
+    // Optimistically update user positions
+    setUserPositions(prev => {
+      const dir = activeTab; // "support" or "oppose"
+      const existing = prev.find(p => p.direction === dir && p.account.id === user.address);
+
+      if (existing) {
+        existing.shares = isBuy
+          ? existing.shares + amountNum
+          : Math.max(existing.shares - amountNum, 0);
+        return [...prev];
+      }
+
+      if (isBuy) {
+        return [
+          ...prev,
+          {
+            direction: dir,
+            shares: amountNum,
+            account: {
+              id: user.address,
+              label: user.address,
+              image: user.image ?? null,
+            },
+            curve_id: growthType === "linear" ? 1 : 2,
+          },
+        ];
+      }
+
+      return prev;
+    });
+
+    // Optimistically update vault price
+    updateVaultPrice(amountNum, isBuy);
+
+    // Execute blockchain transaction
+    if (isBuy) await buyShares(buyAmount, address as Address, curveId);
+    else await sellShares(sellAmount, address as Address, curveId);
+
+    // Refresh balances and positions
     await refreshUserData();
 
     toast({
@@ -469,16 +480,16 @@ const handleClaimAction = async () => {
         </div>
       ),
     });
-
   } catch (err: any) {
     console.error(err);
-    setBuying(false);
-    setSelling(false);
     toast({
       title: "Error",
       description: err.message || `Failed ${isBuy ? "buying" : "selling"} shares`,
-      variant: "destructive"
+      variant: "destructive",
     });
+  } finally {
+    setBuying(false);
+    setSelling(false);
   }
 };
 
