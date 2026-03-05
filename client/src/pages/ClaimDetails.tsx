@@ -78,6 +78,7 @@ export default function ClaimDetails() {
   const [activePosition, setActivePosition] = useState<any | null>(null);
   const inputAmount = isBuy ? buyAmount : sellAmount;
   const receiveTimeoutRef = useRef(null);
+  // const [userShares, setUserShares] = useState("")
 
 const currentAmount = isBuy ? buyAmount : sellAmount;
 
@@ -205,79 +206,70 @@ const currentAmount = isBuy ? buyAmount : sellAmount;
     setTerm(fetched.term);
     setCounterTerm(fetched.counter_term);
 
-    const loadMore = async () => {
-  if (loading || !hasMore) return;
-  setLoading(true);
+    // All positions
+const allPositions = [
+  ...(fetched.term.positions ?? []).map(p => ({ ...p, direction: "support" })),
+  ...(fetched.counter_term.positions ?? []).map(p => ({ ...p, direction: "oppose" })),
+];
+setPositions(allPositions);
 
-  try {
-    const searchQuery = searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : "";
-    const { claims } = await apiRequestV2(
-      "GET",
-      `/api/get-claims?filter=${sortOption}&offset=${offset}${searchQuery}`
-    );
+// Normalize user positions to match table structure
+let myPositions: Position[] = [];
 
-    if (!user) {
-      setUserPositions([]);
-      console.log("No user signed in, no positions to fetch");
-      return;
-    }
+if (user) {
+  myPositions = [
+    // Support positions from term vaults
+    ...(fetched.term.vaults?.[0]?.userPosition ?? []).map(p => ({
+      ...p,
+      direction: "support",
+      curve_id: 1, // Linear
+      account: {
+        id: p.account_id,  // use ID as display name
+        label: p.account_id,
+        image: user.image ?? null,
+      },
+    })),
+    ...(fetched.term.vaults?.[1]?.userPosition ?? []).map(p => ({
+      ...p,
+      direction: "support",
+      curve_id: 1,
+      account: {
+        id: p.account_id,
+        label: p.account_id,
+        image: user.image ?? null,
+      },
+    })),
+    // Oppose positions from counter_term vaults
+    ...(fetched.counter_term.vaults?.[0]?.userPosition ?? []).map(p => ({
+      ...p,
+      direction: "oppose",
+      curve_id: 2, // Exponential
+      account: {
+        id: p.account_id,
+        label: p.account_id,
+        image: user.image ?? null,
+      },
+    })),
+    ...(fetched.counter_term.vaults?.[1]?.userPosition ?? []).map(p => ({
+      ...p,
+      direction: "oppose",
+      curve_id: 2,
+      account: {
+        id: p.account_id,
+        label: p.account_id,
+        image: user.image ?? null,
+      },
+    })),
+  ];
 
-    if (claims.length > 0) {
-      const fetched = claims[0]; // use first claim for now
+  console.log("Normalized userPositions:", myPositions);
+} else {
+  console.log("No user signed in, no positions to fetch");
+}
 
-      // Aggregate all positions (optional for table)
-      const allPositions = [
-        ...(fetched.term.positions ?? []).map(p => ({ ...p, direction: "support" })),
-        ...(fetched.counter_term.positions ?? []).map(p => ({ ...p, direction: "oppose" })),
-      ];
-      setPositions(allPositions);
+setUserPositions(myPositions);
 
-      // Normalize user positions
-      const myPositions: Position[] = [
-        ...(fetched.term.vaults?.[0]?.userPosition ?? []).map(p => ({
-          ...p,
-          direction: "support",
-          curve_id: 1,
-          account: { id: p.account_id, label: p.account_id, image: user.image ?? null },
-        })),
-        ...(fetched.term.vaults?.[1]?.userPosition ?? []).map(p => ({
-          ...p,
-          direction: "support",
-          curve_id: 1,
-          account: { id: p.account_id, label: p.account_id, image: user.image ?? null },
-        })),
-        ...(fetched.counter_term.vaults?.[0]?.userPosition ?? []).map(p => ({
-          ...p,
-          direction: "oppose",
-          curve_id: 2,
-          account: { id: p.account_id, label: p.account_id, image: user.image ?? null },
-        })),
-        ...(fetched.counter_term.vaults?.[1]?.userPosition ?? []).map(p => ({
-          ...p,
-          direction: "oppose",
-          curve_id: 2,
-          account: { id: p.account_id, label: p.account_id, image: user.image ?? null },
-        })),
-      ];
-
-      console.log("Normalized userPositions:", myPositions);
-      setUserPositions(myPositions);
-    }
-
-    // Handle pagination
-    if (claims.length === 0 || claims.length < LIMIT) {
-      setHasMore(false);
-    } else {
-      setOffset(prev => prev + claims.length);
-    }
-
-  } catch (err) {
-    console.error("Failed to load positions:", err);
-  } finally {
-    setLoading(false);
-  }
-};
-
+setUserPositions(myPositions);
     // Initially show first page for active tab
     const initial = activeTab === "all" ? allPositions : myPositions;
     setVisiblePositions(initial.slice(0, ITEMS_PER_PAGE));
@@ -321,36 +313,29 @@ const userShares = useMemo(() => {
 function getPrice() {
   let sharePrice = "0";
 
-  const counterSharePrice = (index: number) => {
-    console.log(`Counter vault index ${index}:`, counterTerm.vaults[index].current_share_price);
-    return counterTerm.vaults[index].current_share_price;
-  };
-
-  const supportSharePrice = (index: number) => {
-    console.log(`Support vault index ${index}:`, term.vaults[index].current_share_price);
-    return term.vaults[index].current_share_price;
+  const getVaultPrice = (vaults: typeof term.vaults | typeof counterTerm.vaults, index: number) => {
+    const price = vaults[index]?.current_share_price ?? "0";
+    console.log(`Vault index ${index}:`, price);
+    return price;
   };
 
   if (activeTab === "support") {
-    if (growthType === "linear") {
-      console.log("ActiveTab: support, GrowthType: linear");
-      sharePrice = supportSharePrice(0);
-    } else {
-      console.log("ActiveTab: support, GrowthType: exponential");
-      sharePrice = supportSharePrice(1);
-    }
+    sharePrice = growthType === "linear"
+      ? getVaultPrice(term.vaults, 0)
+      : getVaultPrice(term.vaults, 1);
+    console.log(`ActiveTab: support, GrowthType: ${growthType}`);
   } else {
-    if (growthType === "linear") {
-      console.log("ActiveTab: oppose, GrowthType: linear");
-      sharePrice = counterSharePrice(0);
-    } else {
-      console.log("ActiveTab: oppose, GrowthType: exponential");
-      sharePrice = counterSharePrice(1);
-    }
+    sharePrice = growthType === "linear"
+      ? getVaultPrice(counterTerm.vaults, 0)
+      : getVaultPrice(counterTerm.vaults, 1);
+    console.log(`ActiveTab: oppose, GrowthType: ${growthType}`);
   }
 
-  console.log("Calculated sharePrice:", sharePrice);
-  return sharePrice;
+  // Use formatEther to convert BigInt string → human-readable decimal
+  const formattedPrice = parseFloat(formatEther(sharePrice)).toFixed(2);
+  console.log("Calculated sharePrice (formatted):", formattedPrice);
+
+  return formattedPrice;
 }  
 
  const getUserShares = async () => {
@@ -1180,7 +1165,7 @@ const handleDownload = async () => {
 </div>
 </div>
 
-      {/* Your Position Card */}
+{/* Your Position Card */}
 <div className="bg-[#110A2B] rounded-xl p-4 flex flex-col gap-4">
   <div className="flex items-center gap-3 text-white text-base font-semibold">
     <span>Your Position</span>
@@ -1195,7 +1180,7 @@ const handleDownload = async () => {
               {toFixed(
                 userPositions
                   .filter(p => p.direction === "support")
-                  .reduce((sum, p) => sum + parseFloat(formatEther(BigInt(p.shares))), 0)
+                  .reduce((sum, p) => sum + parseFloat(formatEther(p.shares)), 0)
               )}{" "}
               TRUST
             </span>
@@ -1208,7 +1193,7 @@ const handleDownload = async () => {
               {toFixed(
                 userPositions
                   .filter(p => p.direction === "oppose")
-                  .reduce((sum, p) => sum + parseFloat(formatEther(BigInt(p.shares))), 0)
+                  .reduce((sum, p) => sum + parseFloat(formatEther(p.shares)), 0)
               )}{" "}
               TRUST
             </span>
@@ -1399,4 +1384,3 @@ const handleDownload = async () => {
     </div>
   );
 }
- 
