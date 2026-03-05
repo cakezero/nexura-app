@@ -128,7 +128,9 @@ export default function CampaignEnvironment() {
 
   // Open quest links
   const markQuestAsVisited = (quest: Quest) => {
-    window.open(quest.link, "_blank");
+    let url = quest.link?.trim() || "#";
+    if (url !== "#" && !/^https?:\/\//i.test(url)) url = `https://${url}`;
+    window.open(url, "_blank");
 
     if (!visitedQuests.includes(quest._id)) setVisitedQuests([...visitedQuests, quest._id]);
     if (quest.status === "retry") {
