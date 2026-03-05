@@ -284,7 +284,7 @@ export default function CampaignEnvironment() {
         throw new Error("Kindly complete quests to claim reward");
       }
 
-      if (trustClaimed < 4000) {
+      if (campaignAddress && trustClaimed < 4000) {
         await claimCampaignOnchainReward({ campaignAddress, userId });
       }
 
