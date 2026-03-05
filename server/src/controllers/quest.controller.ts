@@ -693,8 +693,8 @@ export const submitQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 		await submission.create({ submissionLink, hub: hubId, taskType: tag, address: userExists.address, username: userExists.socialProfiles?.x?.username, miniQuestId: id, user: userId, page, questCompleted: notComplete._id });
 
 		res.status(OK).json({ message: "quest submitted" });
-	} catch (error) {
+	} catch (error: any) {
 		logger.error(error);
-		res.status(INTERNAL_SERVER_ERROR).json({ error: "error submitting quest" });
+		res.status(INTERNAL_SERVER_ERROR).json({ error: error?.message || "error submitting quest" });
 	}
 };

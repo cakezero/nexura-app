@@ -74,6 +74,12 @@ export const createCampaign = async (
 	res: GlobalResponse
 ) => {
 	try {
+		// Parse JSON string fields from multipart FormData
+		if (typeof req.body.reward === "string") req.body.reward = JSON.parse(req.body.reward);
+		if (typeof req.body.campaignQuests === "string") req.body.campaignQuests = JSON.parse(req.body.campaignQuests);
+
+		logger.info("createCampaign body: " + JSON.stringify({ ...req.body, txHash: "***" }));
+
 		const requestData: ICreateCampaign = req.body;
 		const coverImageAsFile = req.file?.buffer;
 
@@ -103,35 +109,33 @@ export const createCampaign = async (
 			return;
 		}
 
-		const xpAllocated = createdHub.xpAllocated;
-		if (xpAllocated === 0) {
-			res
-				.status(FORBIDDEN)
-				.json({ error: "contact nexura team to recieve xp allocation" });
-			return;
-		}
+		const xpAllocated = createdHub.xpAllocated || 200;
 
-		const { success } = validateCampaignData(requestData);
-		if (!success) {
+		const validation = validateCampaignData(requestData);
+		if (!validation.success) {
+			logger.error("createCampaign validation failed: " + JSON.stringify(validation.error?.errors));
 			res
 				.status(BAD_REQUEST)
-				.json({ error: "send the correct data required to create a campaign" });
+				.json({ error: "Validation failed: " + validation.error?.errors?.map((e: any) => `${e.path.join(".")}: ${e.message}`).join(", ") });
 			return;
 		}
 
-		if (!coverImageAsFile) {
+		const existingCoverImage = req.body.existingCoverImage as string | undefined;
+		if (!coverImageAsFile && !existingCoverImage) {
 			res
 				.status(BAD_REQUEST)
 				.json({ error: "hub cover image is required" });
 			return;
 		}
 
-		const projectCoverImageUrl = await uploadImg({
-			file: coverImageAsFile,
-			filename: req.file?.originalname as string,
-			folder: "cover-images",
-			maxSize: 2 * 1024 ** 2, // 2 MB
-		});
+		const projectCoverImageUrl = coverImageAsFile
+			? await uploadImg({
+					file: coverImageAsFile,
+					filename: req.file?.originalname as string,
+					folder: "cover-images",
+					maxSize: 2 * 1024 ** 2,
+			  })
+			: existingCoverImage!;
 
 		const ends_at = new Date(requestData.ends_at);
 
@@ -143,6 +147,15 @@ export const createCampaign = async (
 
 		requestData.project_image = createdHub.logo;
 
+		// Fill required fields the client doesn't send
+		requestData.project_name = requestData.nameOfProject || requestData.project_name || requestData.title;
+		requestData.sub_title = requestData.description || requestData.title;
+		requestData.campaignNumber = (createdHub.campaignsCreated || 0) + 1;
+		requestData.totalTrustAvailable = requestData.reward?.pool || 0;
+		if (requestData.reward && requestData.reward.trustTokens === undefined) {
+			requestData.reward.trustTokens = requestData.reward.pool || 0;
+		}
+
 		const newCampaign = new campaign(requestData);
 
     newCampaign.totalXpAvailable = xpAllocated;
@@ -152,7 +165,6 @@ export const createCampaign = async (
 		newCampaign.status = "Active";
 
 		createdHub.campaignsCreated += 1;
-		createdHub.xpAllocated = 0;
 
 		const campaignQuestsFromBody = req.body.campaignQuests as Record<string, any>[];
 
@@ -174,11 +186,11 @@ export const createCampaign = async (
 		await createdHub.save();
 
 		res.status(CREATED).json({ message: "campaign created!" });
-	} catch (error) {
+	} catch (error: any) {
 		logger.error(error);
 		res
 			.status(INTERNAL_SERVER_ERROR)
-			.json({ error: "error creating campaign!" });
+			.json({ error: error?.message || "error creating campaign!" });
 	}
 };
 
@@ -247,11 +259,11 @@ export const joinCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
 
 			campaignToJoin.participants += 1;
 
-			if (campaignToJoin.trustClaimed < campaignToJoin.totalTrustAvailable) {
+			if (campaignToJoin.contractAddress && campaignToJoin.trustClaimed < campaignToJoin.totalTrustAvailable) {
 				await performIntuitionOnchainAction({
 					action: "join",
 					userId,
-					contractAddress: campaignToJoin.contractAddress!,
+					contractAddress: campaignToJoin.contractAddress,
 				});
 			}
 
@@ -263,11 +275,11 @@ export const joinCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
 		}
 
 		res.status(BAD_REQUEST).json({ error: "already joined campaign" });
-	} catch (error) {
+	} catch (error: any) {
 		logger.error(error);
 		res
 			.status(INTERNAL_SERVER_ERROR)
-			.json({ error: "error joining campaign!" });
+			.json({ error: error?.message || "error joining campaign!" });
 	}
 };
 
@@ -497,9 +509,9 @@ export const publishCampaign = async (req: GlobalRequest, res: GlobalResponse) =
 		await createdHub.save();
 
 		res.status(OK).json({ message: "campaign published" });
-	} catch (error) {
+	} catch (error: any) {
 		logger.error(error);
-		res.status(INTERNAL_SERVER_ERROR).json({ error: "error publishing campaign" });
+		res.status(INTERNAL_SERVER_ERROR).json({ error: error?.message || "error publishing campaign" });
 	}
 };
 
