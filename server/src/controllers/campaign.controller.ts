@@ -186,11 +186,11 @@ export const createCampaign = async (
 		await createdHub.save();
 
 		res.status(CREATED).json({ message: "campaign created!" });
-	} catch (error) {
+	} catch (error: any) {
 		logger.error(error);
 		res
 			.status(INTERNAL_SERVER_ERROR)
-			.json({ error: "error creating campaign!" });
+			.json({ error: error?.message || "error creating campaign!" });
 	}
 };
 
@@ -275,11 +275,11 @@ export const joinCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
 		}
 
 		res.status(BAD_REQUEST).json({ error: "already joined campaign" });
-	} catch (error) {
+	} catch (error: any) {
 		logger.error(error);
 		res
 			.status(INTERNAL_SERVER_ERROR)
-			.json({ error: "error joining campaign!" });
+			.json({ error: error?.message || "error joining campaign!" });
 	}
 };
 
@@ -509,9 +509,9 @@ export const publishCampaign = async (req: GlobalRequest, res: GlobalResponse) =
 		await createdHub.save();
 
 		res.status(OK).json({ message: "campaign published" });
-	} catch (error) {
+	} catch (error: any) {
 		logger.error(error);
-		res.status(INTERNAL_SERVER_ERROR).json({ error: "error publishing campaign" });
+		res.status(INTERNAL_SERVER_ERROR).json({ error: error?.message || "error publishing campaign" });
 	}
 };
 

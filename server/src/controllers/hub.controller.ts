@@ -359,7 +359,7 @@ export const saveCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
         if (questsToSave.length > 0) {
           await campaignQuest.insertMany(
             questsToSave.map((q: any) => (
-              q.tag === "discord" ? { ...q, campaign: id, guildId: hubFound.guildId } :
+              q.tag === "discord" ? { ...q, campaign: savedCampaignId, guildId: hubFound.guildId } :
               { ...q, campaign: savedCampaignId }))
           );
         }
@@ -393,9 +393,9 @@ export const saveCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
     }
 
     res.status(OK).json({ campaignId: id });
-  } catch (error) {
+  } catch (error: any) {
     logger.error(error);
-    res.status(INTERNAL_SERVER_ERROR).json({ error: 'Failed to save campaign' });
+    res.status(INTERNAL_SERVER_ERROR).json({ error: error?.message || 'Failed to save campaign' });
   }
 }
 
