@@ -44,13 +44,24 @@ export const fetchCampaigns = async (
 		// Hide only studio drafts (status: "Save"). All other campaigns
 		// (Active, Scheduled, Ended, or legacy campaigns with no status field)
 		// remain visible so non-studio campaigns are unaffected.
-		const campaigns = await campaign.find({ status: { $ne: "Save" } }).lean();
+		const campaigns = await campaign.find({ status: { $ne: "Save" } });
+
+		// Auto-promote Scheduled campaigns whose start time has passed
+		const now = new Date();
+		for (const c of campaigns) {
+			if (c.status === "Scheduled" && c.starts_at && new Date(c.starts_at) <= now) {
+				c.status = "Active";
+				await c.save();
+			}
+		}
+
+		const campaignsLean = campaigns.map(c => c.toObject());
 
 		const joinedCampaigns = await campaignCompleted.find({ user: req.id }).lean();
 
 		const mergedCampaigns: any[] = [];
 
-		for (const c of campaigns) {
+		for (const c of campaignsLean) {
 			const joined = joinedCampaigns.find((j) => j.campaign?.toString() === c._id.toString());
 
 			const mergedJoinedCampaign: Record<any, unknown> = c;
@@ -247,6 +258,11 @@ export const joinCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
 			res
 				.status(NOT_FOUND)
 				.json({ error: "id associated with campaign is invalid" });
+			return;
+		}
+
+		if (campaignToJoin.status === "Scheduled") {
+			res.status(BAD_REQUEST).json({ error: "This campaign hasn't started yet. Please check back later." });
 			return;
 		}
 
@@ -502,7 +518,9 @@ export const publishCampaign = async (req: GlobalRequest, res: GlobalResponse) =
 			return res.status(BAD_REQUEST).json({ error: "campaign is not in save status" });
 		}
 
-		campaignExists.status = "Active";
+		// If starts_at is in the future, mark as Scheduled instead of Active
+		const startsAt = campaignExists.starts_at ? new Date(campaignExists.starts_at) : null;
+		campaignExists.status = (startsAt && startsAt > new Date()) ? "Scheduled" : "Active";
 		createdHub.campaignsCreated += 1;
 
 		await campaignExists.save();
