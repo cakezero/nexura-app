@@ -653,7 +653,7 @@ const isActive =
               {index + 1}
             </div>
 
-            <p className="flex-1 text-white">{task.type === "others" ? task.description : task.type}</p>
+            <p className="flex-1 text-white">{task.description || task.type}</p>
 
             <div className="flex items-center gap-2">
               <button
@@ -682,26 +682,27 @@ const isActive =
       </div>
     )}
 
-    {/* Tasks tab footer: Save Draft + Next → Review */}
+    {/* Tasks tab footer: Back ← Details | Next → Review (auto-saves draft) */}
     <div className="flex justify-between items-center mt-6">
       <button
-        className="px-4 py-2 bg-gray-700 text-white rounded-lg text-sm hover:bg-gray-600 transition"
-        onClick={() => handleSaveDraft()}
-        disabled={saveLoading}
+        className="px-6 py-2 bg-gray-700 text-white rounded-lg text-sm font-semibold hover:bg-gray-600 transition flex items-center gap-2"
+        onClick={() => setActiveTab("details")}
       >
-        {saveLoading ? "Saving..." : "Save Draft"}
+        <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+        Back
       </button>
       <button
-        className="px-6 py-2 bg-purple-600 text-white rounded-lg text-sm font-semibold hover:bg-purple-700 transition flex items-center gap-2"
-        onClick={() => {
+        className="px-6 py-2 bg-purple-600 text-white rounded-lg text-sm font-semibold hover:bg-purple-700 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+        disabled={saveLoading}
+        onClick={async () => {
           if (tasks.length === 0) {
             toast({ title: "No tasks", description: "Please add at least one task before reviewing.", variant: "destructive" });
             return;
           }
-          setActiveTab("review");
+          await handleSaveDraft("review");
         }}
       >
-        Next
+        {saveLoading ? "Saving..." : "Next"}
         <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
       </button>
     </div>
@@ -1047,7 +1048,7 @@ const isActive =
             </div>
 
             <div className="flex-1 min-w-0">
-              <p className="text-white">{task.type === "others" ? task.description : task.type}</p>
+              <p className="text-white">{task.description || task.type}</p>
               {task.type === "others" && task.description && (
                 <p className="text-xs text-white/50 truncate">{task.verificationMode === "image_upload" ? "📷 Image proof" : task.verificationMode === "submit_link" ? "🔗 Link submission" : task.verificationMode === "auto" ? "⚡ Auto" : ""}</p>
               )}
@@ -1107,13 +1108,6 @@ const isActive =
 
   {/* Right buttons */}
   <div className="flex items-center gap-2 mt-4">
-    <button
-      className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 transition"
-      onClick={() => handleSaveDraft()}
-      disabled={saveLoading}
-    >
-      {saveLoading ? "Saving..." : "Save Draft"}
-    </button>
 <button
   onClick={() => setShowPublishModal(true)}
   className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 transition disabled:opacity-50 disabled:cursor-not-allowed"

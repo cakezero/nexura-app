@@ -431,13 +431,13 @@ export default function CampaignEnvironment() {
                         <>
                           <button
                             onClick={() => markQuestAsVisited(quest)}
-                            className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-sm sm:text-base font-semibold bg-white/10 hover:bg-white/20 border border-white/20"
+                            className="px-3 py-1.5 rounded-full text-xs font-semibold bg-white/10 hover:bg-white/20 border border-white/20"
                           >
                             View Link
                           </button>
                           <button
                             onClick={() => setExpandedQuestId(isExpanded ? null : quest._id)}
-                            className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-sm sm:text-base font-semibold bg-purple-700 hover:bg-purple-800"
+                            className="px-3 py-1.5 rounded-full text-xs font-semibold bg-purple-700 hover:bg-purple-800"
                           >
                             Submit Proof
                           </button>

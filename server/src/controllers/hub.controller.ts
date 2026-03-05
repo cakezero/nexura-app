@@ -227,6 +227,7 @@ export const validateCampaignSubmissions = async (req: GlobalRequest, res: Globa
     } else if (action === "reject") {
       userSubmission.status = "retry";
       userSubmission.validatedBy = req.adminName;
+      userSubmission.rejectedCount = (userSubmission.rejectedCount || 0) + 1;
       model.status = "retry";
     }
 
