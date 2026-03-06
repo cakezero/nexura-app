@@ -1265,7 +1265,7 @@ const isActive =
   }}
   disabled={loading || !paymentTxHash}
 >
-  {loading ? <span className="flex items-center gap-2"><span className="inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />Publishing...</span> : "Confirm & Publish"}
+  {loading ? <span className="flex items-center gap-2"><span className="inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />Publishing...</span> : "Publish"}
 </button>
 
         {/* Cancel Button */}
@@ -1385,22 +1385,7 @@ const isActive =
   }}
   className="mt-6 w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-purple-800 text-white text-sm font-semibold hover:opacity-90 hover:shadow-[0_0_20px_rgba(131,58,253,0.5)] hover:-translate-y-0.5 active:translate-y-0 transition-all"
 >
-  <span>Launch Campaign Now</span>
-
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    className="w-6 h-6 text-white"
-    fill="none"
-    viewBox="0 0 24 24"
-    stroke="currentColor"
-    strokeWidth={2.5}
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M5 12h14M13 6l6 6-6 6"
-    />
-  </svg>
+  <span>Continue</span>
 </Button>
 
       </div>

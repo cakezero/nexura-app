@@ -490,7 +490,8 @@ export const publishCampaign = async (req: GlobalRequest, res: GlobalResponse) =
 			return res.status(BAD_REQUEST).json({ error: "campaign is not in save status" });
 		}
 
-		campaignExists.status = "Active";
+		const startsAt = campaignExists.starts_at ? new Date(campaignExists.starts_at) : null;
+		campaignExists.status = startsAt && startsAt > new Date() ? "Scheduled" : "Active";
 		createdHub.campaignsCreated += 1;
 
 		await campaignExists.save();
