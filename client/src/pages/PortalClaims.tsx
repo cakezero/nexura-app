@@ -61,21 +61,12 @@ export default function PortalClaims() {
   >("review");
   // Example state to store totals
   const [userShares, setUserShares] = useState<{ support: bigint; oppose: bigint }>({ support: 0n, oppose: 0n });
-  const walletKey = user?.address ? `actionState_${user.address}` : null;
 
-  // localstorage stuff for fetching user wallet button states
-const [actionState, setActionState] = useState<
-  Record<string, "none" | "supported" | "opposed">
->({});
-
-useEffect(() => {
-  if (!user?.address) return;
-
-  const saved = localStorage.getItem(`actionState_${user.address}`);
-  setActionState(saved ? JSON.parse(saved) : {});
-}, [user?.address]);
-
-
+  // localstorage stuff
+  const [actionState, setActionState] = useState<Record<string, "none" | "supported" | "opposed">>(() => {
+    const saved = localStorage.getItem("actionState");
+    return saved ? JSON.parse(saved) : {};
+  });
   const [userSharesByCurve, setUserSharesByCurve] = useState<{
     support: { linear: bigint; exponential: bigint };
     oppose: { linear: bigint; exponential: bigint };
@@ -86,15 +77,10 @@ useEffect(() => {
   const [supportShares, setSupportShares] = useState<{ linear: bigint; exponential: bigint }>({ linear: 0n, exponential: 0n });
   const [opposeShares, setOpposeShares] = useState<{ linear: bigint; exponential: bigint }>({ linear: 0n, exponential: 0n });
 
-  // wallet address save
-useEffect(() => {
-  if (!user?.address) return;
-
-  localStorage.setItem(
-    `actionState_${user.address}`,
-    JSON.stringify(actionState)
-  );
-}, [actionState, user?.address]);
+  // Whenever state changes, we save it
+  useEffect(() => {
+    localStorage.setItem("actionState", JSON.stringify(actionState));
+  }, [actionState]);
 
   async function fetchWalletBalance(address: Address) {
     const publicClient = getPublicClient();
