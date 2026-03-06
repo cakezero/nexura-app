@@ -701,9 +701,9 @@ const handleDownload = async () => {
 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4 text-lg">
   <img src={term.triple.subject.image} alt="Claim Icon" className="w-12 h-12 sm:w-16 sm:h-16" />
   <div className="flex flex-wrap gap-1 sm:gap-2 items-center">
-    <span className="bg-[#0b0618] px-2 py-1 rounded max-w-[100px] sm:max-w-[150px] truncate">{term.triple.subject.label}</span>
+    <span className="bg-[#0b0618] px-2 py-1 rounded">{term.triple.subject.label}</span>
     <span>{term.triple.predicate.label}</span>
-    <span className="bg-[#0b0618] px-2 py-1 rounded max-w-[100px] sm:max-w-[150px] truncate">{term.triple.object.label}</span>
+    <span className="bg-[#0b0618] px-2 py-1 rounded">{term.triple.object.label}</span>
   </div>
 </div>
       <div>
