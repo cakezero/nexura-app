@@ -208,7 +208,7 @@ const loadMore = async () => {
 if (claims.length > 0) {
   // const { positions, sharesByCurve } = fetchUserPositionsForClaim(claims[0], user);
   setUserPositions(positions);
-  setUserSharesByCurve(sharesByCurve);
+  setUserSharesByCurve(userSharesByCurve);
   console.log("Updated userPositions and userSharesByCurve state");
 }
     // Handle pagination
