@@ -44,24 +44,13 @@ export const fetchCampaigns = async (
 		// Hide only studio drafts (status: "Save"). All other campaigns
 		// (Active, Scheduled, Ended, or legacy campaigns with no status field)
 		// remain visible so non-studio campaigns are unaffected.
-		const campaigns = await campaign.find({ status: { $ne: "Save" } });
-
-		// Auto-promote Scheduled campaigns whose start time has passed
-		const now = new Date();
-		for (const c of campaigns) {
-			if (c.status === "Scheduled" && c.starts_at && new Date(c.starts_at) <= now) {
-				c.status = "Active";
-				await c.save();
-			}
-		}
-
-		const campaignsLean = campaigns.map(c => c.toObject());
+		const campaigns = await campaign.find({ status: { $ne: "Save" } }).lean();
 
 		const joinedCampaigns = await campaignCompleted.find({ user: req.id }).lean();
 
 		const mergedCampaigns: any[] = [];
 
-		for (const c of campaignsLean) {
+		for (const c of campaigns) {
 			const joined = joinedCampaigns.find((j) => j.campaign?.toString() === c._id.toString());
 
 			const mergedJoinedCampaign: Record<any, unknown> = c;
@@ -85,12 +74,6 @@ export const createCampaign = async (
 	res: GlobalResponse
 ) => {
 	try {
-		// Parse JSON string fields from multipart FormData
-		if (typeof req.body.reward === "string") req.body.reward = JSON.parse(req.body.reward);
-		if (typeof req.body.campaignQuests === "string") req.body.campaignQuests = JSON.parse(req.body.campaignQuests);
-
-		logger.info("createCampaign body: " + JSON.stringify({ ...req.body, txHash: "***" }));
-
 		const requestData: ICreateCampaign = req.body;
 		const coverImageAsFile = req.file?.buffer;
 
@@ -120,33 +103,35 @@ export const createCampaign = async (
 			return;
 		}
 
-		const xpAllocated = createdHub.xpAllocated || 200;
-
-		const validation = validateCampaignData(requestData);
-		if (!validation.success) {
-			logger.error("createCampaign validation failed: " + JSON.stringify(validation.error?.errors));
+		const xpAllocated = createdHub.xpAllocated;
+		if (xpAllocated === 0) {
 			res
-				.status(BAD_REQUEST)
-				.json({ error: "Validation failed: " + validation.error?.errors?.map((e: any) => `${e.path.join(".")}: ${e.message}`).join(", ") });
+				.status(FORBIDDEN)
+				.json({ error: "contact nexura team to recieve xp allocation" });
 			return;
 		}
 
-		const existingCoverImage = req.body.existingCoverImage as string | undefined;
-		if (!coverImageAsFile && !existingCoverImage) {
+		const { success } = validateCampaignData(requestData);
+		if (!success) {
+			res
+				.status(BAD_REQUEST)
+				.json({ error: "send the correct data required to create a campaign" });
+			return;
+		}
+
+		if (!coverImageAsFile) {
 			res
 				.status(BAD_REQUEST)
 				.json({ error: "hub cover image is required" });
 			return;
 		}
 
-		const projectCoverImageUrl = coverImageAsFile
-			? await uploadImg({
-					file: coverImageAsFile,
-					filename: req.file?.originalname as string,
-					folder: "cover-images",
-					maxSize: 2 * 1024 ** 2,
-			  })
-			: existingCoverImage!;
+		const projectCoverImageUrl = await uploadImg({
+			file: coverImageAsFile,
+			filename: req.file?.originalname as string,
+			folder: "cover-images",
+			maxSize: 2 * 1024 ** 2, // 2 MB
+		});
 
 		const ends_at = new Date(requestData.ends_at);
 
@@ -158,15 +143,6 @@ export const createCampaign = async (
 
 		requestData.project_image = createdHub.logo;
 
-		// Fill required fields the client doesn't send
-		requestData.project_name = requestData.nameOfProject || requestData.project_name || requestData.title;
-		requestData.sub_title = requestData.description || requestData.title;
-		requestData.campaignNumber = (createdHub.campaignsCreated || 0) + 1;
-		requestData.totalTrustAvailable = requestData.reward?.pool || 0;
-		if (requestData.reward && requestData.reward.trustTokens === undefined) {
-			requestData.reward.trustTokens = requestData.reward.pool || 0;
-		}
-
 		const newCampaign = new campaign(requestData);
 
     newCampaign.totalXpAvailable = xpAllocated;
@@ -176,6 +152,7 @@ export const createCampaign = async (
 		newCampaign.status = "Active";
 
 		createdHub.campaignsCreated += 1;
+		createdHub.xpAllocated = 0;
 
 		const campaignQuestsFromBody = req.body.campaignQuests as Record<string, any>[];
 
@@ -197,11 +174,11 @@ export const createCampaign = async (
 		await createdHub.save();
 
 		res.status(CREATED).json({ message: "campaign created!" });
-	} catch (error: any) {
+	} catch (error) {
 		logger.error(error);
 		res
 			.status(INTERNAL_SERVER_ERROR)
-			.json({ error: error?.message || "error creating campaign!" });
+			.json({ error: "error creating campaign!" });
 	}
 };
 
@@ -261,11 +238,6 @@ export const joinCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
 			return;
 		}
 
-		if (campaignToJoin.status === "Scheduled") {
-			res.status(BAD_REQUEST).json({ error: "This campaign hasn't started yet. Please check back later." });
-			return;
-		}
-
 		const completedCampaign = await campaignCompleted.findOne({
 			user: userId,
 			campaign: id,
@@ -275,11 +247,11 @@ export const joinCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
 
 			campaignToJoin.participants += 1;
 
-			if (campaignToJoin.contractAddress && campaignToJoin.trustClaimed < campaignToJoin.totalTrustAvailable) {
+			if (campaignToJoin.trustClaimed < campaignToJoin.totalTrustAvailable) {
 				await performIntuitionOnchainAction({
 					action: "join",
 					userId,
-					contractAddress: campaignToJoin.contractAddress,
+					contractAddress: campaignToJoin.contractAddress!,
 				});
 			}
 
@@ -291,11 +263,11 @@ export const joinCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
 		}
 
 		res.status(BAD_REQUEST).json({ error: "already joined campaign" });
-	} catch (error: any) {
+	} catch (error) {
 		logger.error(error);
 		res
 			.status(INTERNAL_SERVER_ERROR)
-			.json({ error: error?.message || "error joining campaign!" });
+			.json({ error: "error joining campaign!" });
 	}
 };
 
@@ -518,18 +490,17 @@ export const publishCampaign = async (req: GlobalRequest, res: GlobalResponse) =
 			return res.status(BAD_REQUEST).json({ error: "campaign is not in save status" });
 		}
 
-		// If starts_at is in the future, mark as Scheduled instead of Active
 		const startsAt = campaignExists.starts_at ? new Date(campaignExists.starts_at) : null;
-		campaignExists.status = (startsAt && startsAt > new Date()) ? "Scheduled" : "Active";
+		campaignExists.status = startsAt && startsAt > new Date() ? "Scheduled" : "Active";
 		createdHub.campaignsCreated += 1;
 
 		await campaignExists.save();
 		await createdHub.save();
 
 		res.status(OK).json({ message: "campaign published" });
-	} catch (error: any) {
+	} catch (error) {
 		logger.error(error);
-		res.status(INTERNAL_SERVER_ERROR).json({ error: error?.message || "error publishing campaign" });
+		res.status(INTERNAL_SERVER_ERROR).json({ error: "error publishing campaign" });
 	}
 };
 

@@ -7,7 +7,8 @@ import { Card, CardTitle, CardDescription, CardFooter } from "../../components/u
 import { Input } from "../../components/ui/input";
 import { Button } from "../../components/ui/button";
 import { Link } from "wouter";
-// StudioSidebar and AnimatedBackground are provided by StudioLayout wrapper
+import StudioSidebar from "../../pages/studio/StudioSidebar";
+import AnimatedBackground from "../AnimatedBackground";
 import { projectApiRequest } from "../../lib/projectApi";
 import { payStudioHubFee } from "../../lib/performOnchainAction";
 import { useToast } from "../../hooks/use-toast";
@@ -80,28 +81,9 @@ const [rewardPool, setRewardPool] = useState("");
 const [participants, setParticipants] = useState("");
 const [xpRewards, setXpRewards] = useState("200");
 const [publishedCampaign, setPublishedCampaign] = useState<any | null>(null);
-const [paymentTxHash, setPaymentTxHash] = useState(() => localStorage.getItem("nexura:studio-txhash") ?? "");
+const [paymentTxHash, setPaymentTxHash] = useState("");
 const [paymentLoading, setPaymentLoading] = useState(false);
 const [isEditMode, setIsEditMode] = useState(false);
-const [campaignStatus, setCampaignStatus] = useState<string | null>(null);
-
-// Sync pendingTxHash from DB on mount, also redirect if hub hasn't been created
-useEffect(() => {
-  projectApiRequest<{ hub?: any }>({ method: "GET", endpoint: "/hub/me" })
-    .then(({ hub }) => {
-      if (!hub?._id) {
-        // No hub yet — send them to complete hub setup
-        setLocation("/projects/create/the-hub");
-        return;
-      }
-      const dbHash: string = hub?.pendingTxHash ?? "";
-      if (dbHash) {
-        setPaymentTxHash(dbHash);
-        localStorage.setItem("nexura:studio-txhash", dbHash);
-      }
-    })
-    .catch(() => {});
-}, []);
 
 // Pre-fill from existing draft when ?edit=<id> is in the URL
 const parseDateTime = (isoStr: string) => {
@@ -124,7 +106,6 @@ useEffect(() => {
       if (!found) return;
       setCampaignId(editId);
       setIsEditMode(true);
-      setCampaignStatus(found.status ?? null);
       setCampaignTitle(found.title ?? "");
       setCampaignName(found.description ?? found.nameOfProject ?? "");
       const s = parseDateTime(found.starts_at ?? "");
@@ -144,9 +125,9 @@ useEffect(() => {
           params: { id: editId },
         });
         const tagToType = (tag: string) => {
-          if (tag === "comment" || tag === "comment-x") return "Comment on our X post";
-          if (tag === "follow" || tag === "follow-x") return "Follow us on X";
-          if (tag === "join" || tag === "join-discord") return "Join Us On Discord";
+          if (tag === "comment") return "Comment on our X post";
+          if (tag === "follow") return "Follow us on X";
+          if (tag === "join") return "Join Us On Discord";
           if (tag === "portal") return "Check Out the Portal Claims";
           return "others";
         };
@@ -156,7 +137,7 @@ useEffect(() => {
           return "";
         };
         const tagToValidation = (tag: string) => {
-          if (tag === "join" || tag === "join-discord") return "Discord Auth";
+          if (tag === "join") return "Discord Auth";
           if (tag === "portal") return "Auto Verified";
           return "Manual Validation";
         };
@@ -183,9 +164,9 @@ const formatDate = (dateStr: string) => {
 
 
 const typeToTag = (type: string) => {
-  if (type === "Comment on our X post") return "comment-x";
-  if (type === "Follow us on X") return "follow-x";
-  if (type === "Join Us On Discord") return "join-discord";
+  if (type === "Comment on our X post") return "comment";
+  if (type === "Follow us on X") return "follow";
+  if (type === "Join Us On Discord") return "join";
   if (type === "Check Out the Portal Claims") return "portal";
   return "other";
 };
@@ -204,7 +185,6 @@ const buildCampaignFormData = (isDraft: boolean): FormData => {
   fd.append("ends_at", endDate && endTime ? `${endDate}T${endTime}` : endDate);
   fd.append("reward", JSON.stringify({ xp: Number(xpRewards) || 0, pool: Number(rewardPool) || 0 }));
   if (coverImage instanceof File) fd.append("coverImage", coverImage);
-  else if (coverImagePreview) fd.append("existingCoverImage", coverImagePreview);
   if (isDraft) fd.append("isDraft", "true");
   fd.append("campaignQuests", JSON.stringify(
     tasks.map(t => ({
@@ -318,7 +298,23 @@ const isActive =
 
 
   return (
-            <div className="max-w-5xl mx-auto space-y-8 text-white">
+    <div className="relative min-h-screen w-full overflow-hidden">
+      <div className="relative z-10 flex h-screen">
+        <AnimatedBackground />
+
+<StudioSidebar
+  activeTab="campaignsTab"
+  setActiveTab={(tab) => {
+    if (tab === "campaignSubmissions") setLocation("/studio-dashboard");
+    if (tab === "campaignsTab") setLocation("/studio-dashboard");
+    if (tab === "adminManagement") setLocation("/studio-dashboard");
+  }}
+/>
+
+
+        <div className="flex-1 flex flex-col overflow-hidden backdrop-blur-xl">
+          <main className="flex-1 overflow-y-auto p-4 md:p-8 pt-16 md:pt-8 pb-24 md:pb-8 text-white">
+            <div className="max-w-5xl mx-auto space-y-8">
 
               {/* Title */}
               <div>
@@ -653,7 +649,7 @@ const isActive =
               {index + 1}
             </div>
 
-            <p className="flex-1 text-white">{task.description || task.type}</p>
+            <p className="flex-1 text-white">{task.type === "others" ? task.description : task.type}</p>
 
             <div className="flex items-center gap-2">
               <button
@@ -682,27 +678,26 @@ const isActive =
       </div>
     )}
 
-    {/* Tasks tab footer: Back ← Details | Next → Review (auto-saves draft) */}
+    {/* Tasks tab footer: Save Draft + Next → Review */}
     <div className="flex justify-between items-center mt-6">
       <button
-        className="px-6 py-2 bg-gray-700 text-white rounded-lg text-sm font-semibold hover:bg-gray-600 transition flex items-center gap-2"
-        onClick={() => setActiveTab("details")}
+        className="px-4 py-2 bg-gray-700 text-white rounded-lg text-sm hover:bg-gray-600 transition"
+        onClick={() => handleSaveDraft()}
+        disabled={saveLoading}
       >
-        <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-        Back
+        {saveLoading ? "Saving..." : "Save Draft"}
       </button>
       <button
-        className="px-6 py-2 bg-purple-600 text-white rounded-lg text-sm font-semibold hover:bg-purple-700 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-        disabled={saveLoading}
-        onClick={async () => {
+        className="px-6 py-2 bg-purple-600 text-white rounded-lg text-sm font-semibold hover:bg-purple-700 transition flex items-center gap-2"
+        onClick={() => {
           if (tasks.length === 0) {
             toast({ title: "No tasks", description: "Please add at least one task before reviewing.", variant: "destructive" });
             return;
           }
-          await handleSaveDraft("review");
+          setActiveTab("review");
         }}
       >
-        {saveLoading ? "Saving..." : "Next"}
+        Next
         <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
       </button>
     </div>
@@ -745,7 +740,7 @@ const isActive =
                 ...newTask,
                 type,
                 platform: isDiscord ? "Discord" : isTwitter ? "Twitter" : (isPortal || isOther) ? "" : newTask.platform,
-                evidence: isDiscord || isPortal ? "" : isTwitter ? "submit_link" : newTask.evidence,
+                evidence: isDiscord || isPortal ? "" : newTask.evidence,
                 validation: isDiscord ? "Discord Auth" : isPortal ? "Auto Verified" : (newTask.validation === "Discord Auth" || newTask.validation === "Auto Verified" ? "Manual Validation" : newTask.validation),
                 verificationMode: "",
               });
@@ -803,11 +798,11 @@ const isActive =
         {/* Handle or URL */}
         <div className="mb-4">
           <label className="text-sm text-white/70 mb-2 block">
-            {newTask.platform === "Discord" ? "Discord Invite Link" : newTask.type === "Follow us on X" ? "Profile URL" : "Handle or URL"}
+            {newTask.platform === "Discord" ? "Discord Invite Link" : newTask.type === "Follow us on X" ? "Twitter Username" : "Handle or URL"}
           </label>
           <input
             type="text"
-            placeholder={newTask.platform === "Discord" ? "https://discord.gg/..." : newTask.type === "Follow us on X" ? "https://x.com/username" : "..."}
+            placeholder={newTask.platform === "Discord" ? "https://discord.gg/..." : newTask.type === "Follow us on X" ? "@username" : "..."}
             value={newTask.handleOrUrl}
             onChange={(e) =>
               setNewTask({ ...newTask, handleOrUrl: e.target.value })
@@ -885,13 +880,19 @@ const isActive =
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-6">
-            {/* Evidence Upload — auto-set to Submit Link for twitter tasks */}
+            {/* Evidence Upload */}
             <div>
-              <label className="text-sm text-white/70 mb-2 block">Evidence Upload</label>
-              <div className="w-full p-2 rounded-lg bg-white/5 text-white border border-white/10 flex items-center gap-2">
-                <span>🔗</span>
-                <span>Submit Link</span>
-              </div>
+              <label className="text-sm text-white/70 mb-2 block">Evidence Upload Management</label>
+              <select
+                className="w-full p-2 rounded-lg bg-[#0d0d14] text-white border border-white/10 focus:outline-none focus:border-purple-500 [&>option]:bg-[#0d0d14]"
+                value={newTask.evidence}
+                onChange={(e) =>
+                  setNewTask({ ...newTask, evidence: e.target.value })
+                }
+              >
+                <option value="">Select option</option>
+                <option value="submit_link">Submit Link</option>
+              </select>
             </div>
 
             {/* Validation Type */}
@@ -1048,7 +1049,7 @@ const isActive =
             </div>
 
             <div className="flex-1 min-w-0">
-              <p className="text-white">{task.description || task.type}</p>
+              <p className="text-white">{task.type === "others" ? task.description : task.type}</p>
               {task.type === "others" && task.description && (
                 <p className="text-xs text-white/50 truncate">{task.verificationMode === "image_upload" ? "📷 Image proof" : task.verificationMode === "submit_link" ? "🔗 Link submission" : task.verificationMode === "auto" ? "⚡ Auto" : ""}</p>
               )}
@@ -1108,6 +1109,13 @@ const isActive =
 
   {/* Right buttons */}
   <div className="flex items-center gap-2 mt-4">
+    <button
+      className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 transition"
+      onClick={() => handleSaveDraft()}
+      disabled={saveLoading}
+    >
+      {saveLoading ? "Saving..." : "Save Draft"}
+    </button>
 <button
   onClick={() => setShowPublishModal(true)}
   className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1124,45 +1132,7 @@ const isActive =
   {/* ========================= */}
   {/* PUBLISH MODAL */}
   {/* ========================= */}
-  {showPublishModal && (isEditMode && campaignStatus === "Active" ? (
-    /* Quick confirm for updating an already-active campaign */
-    <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/80 backdrop-blur-sm p-4">
-      <div className="bg-[#0d0d14] w-full max-w-md border border-purple-500/20 p-6 rounded-2xl relative shadow-[0_0_60px_rgba(131,58,253,0.2)] animate-modal-pop">
-        <button onClick={() => setShowPublishModal(false)} className="absolute top-3 right-3 text-white/50 hover:text-white text-xl">✕</button>
-        <h2 className="text-lg font-bold text-white mb-2">Update Campaign</h2>
-        <p className="text-white/60 text-sm mb-4">Save your changes to this active campaign?</p>
-        <button
-          className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-purple-600 to-purple-800 text-white text-sm font-semibold hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          disabled={loading}
-          onClick={async () => {
-            if (!campaignTitle || !campaignName) {
-              toast({ title: "Incomplete details", description: "Please fill in campaign name and title.", variant: "destructive" });
-              return;
-            }
-            if (tasks.length === 0) {
-              toast({ title: "No tasks", description: "Please add at least one task.", variant: "destructive" });
-              return;
-            }
-            setLoading(true);
-            try {
-              const fd = buildCampaignFormData(false);
-              await projectApiRequest({ method: "PATCH", endpoint: "/hub/save-campaign", formData: fd, params: { id: campaignId! } });
-              toast({ title: "Campaign updated!", description: "Your changes have been saved." });
-              setShowPublishModal(false);
-            } catch (err: unknown) {
-              const msg = err instanceof Error ? err.message : "Failed to update campaign.";
-              toast({ title: "Update failed", description: msg, variant: "destructive" });
-            } finally {
-              setLoading(false);
-            }
-          }}
-        >
-          {loading ? <span className="flex items-center gap-2"><span className="inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />Saving...</span> : "Save Changes"}
-        </button>
-        <button onClick={() => setShowPublishModal(false)} className="mt-2 w-full py-2.5 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white text-sm font-medium transition-all">Cancel</button>
-      </div>
-    </div>
-  ) : (
+  {showPublishModal && (
     <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/80 backdrop-blur-sm p-4">
       <div className="bg-[#0d0d14] w-full max-w-md border border-purple-500/20 p-6 rounded-2xl relative shadow-[0_0_60px_rgba(131,58,253,0.2)] animate-modal-pop">
 
@@ -1222,9 +1192,6 @@ const isActive =
                 try {
                   const hash = await payStudioHubFee();
                   setPaymentTxHash(hash);
-                  localStorage.setItem("nexura:studio-txhash", hash);
-                  // Persist to DB so reloads or other devices retain the hash
-                  projectApiRequest({ method: "PATCH", endpoint: "/hub/save-payment-hash", data: { txHash: hash } }).catch(() => {});
                   toast({ title: "Payment successful", description: "1000 TRUST sent. You can now publish your campaign." });
                 } catch (err: any) {
                   toast({ title: "Payment failed", description: err.message ?? "Transaction was rejected.", variant: "destructive" });
@@ -1254,62 +1221,38 @@ const isActive =
       toast({ title: "No tasks", description: "Please add at least one task.", variant: "destructive" });
       return;
     }
-    const needsPayment = !(isEditMode && campaignStatus === "Active");
-    if (needsPayment && !paymentTxHash.trim()) {
+    if (!paymentTxHash.trim()) {
       toast({ title: "Payment required", description: "Please complete the 1000 TRUST payment before publishing.", variant: "destructive" });
-      return;
-    }
-    if (!(coverImage instanceof File) && !coverImagePreview) {
-      toast({ title: "Cover image required", description: "Please upload a cover image for your campaign.", variant: "destructive" });
       return;
     }
 
     setLoading(true);
     try {
-      if (isEditMode && campaignId) {
-        // Editing an existing campaign — save changes first
-        const fd = buildCampaignFormData(false);
-        const params: Record<string, string> = { id: campaignId };
-        await projectApiRequest({
-          method: "PATCH",
-          endpoint: "/hub/save-campaign",
-          formData: fd,
-          params,
-        });
+      const fd = new FormData();
+      fd.append("title", campaignTitle);
+      fd.append("description", campaignName);
+      fd.append("nameOfProject", campaignName);
+      fd.append("starts_at", startDate && startTime ? `${startDate}T${startTime}` : startDate);
+      fd.append("ends_at", endDate && endTime ? `${endDate}T${endTime}` : endDate);
+      fd.append("reward", JSON.stringify({ xp: Number(xpRewards) || 0, pool: Number(rewardPool) || 0 }));
+      fd.append("txHash", paymentTxHash);
+      fd.append("campaignQuests", JSON.stringify(
+        tasks.map((t: any) => ({
+          title: t.type,
+          description: t.description,
+          url: t.handleOrUrl,
+          reward: { xp: Number(xpRewards) || 0 },
+        }))
+      ));
+      if (coverImage instanceof File) fd.append("coverImage", coverImage);
 
-        if (campaignStatus === "Active") {
-          // Already published — just saved the update
-          toast({ title: "Campaign updated!", description: "Your changes have been saved." });
-        } else {
-          // Draft — publish it
-          await projectApiRequest({
-            method: "PATCH",
-            endpoint: "/hub/publish-campaign",
-            data: { txHash: paymentTxHash },
-            params: { id: campaignId },
-          });
-          toast({ title: "Campaign published!", description: "Your campaign is now live." });
-          localStorage.removeItem("nexura:studio-txhash");
-          projectApiRequest({ method: "PATCH", endpoint: "/hub/save-payment-hash", data: { txHash: null } }).catch(() => {});
-          setPaymentTxHash("");
-        }
-      } else {
-        // Brand-new campaign
-        const fd = buildCampaignFormData(false);
-        fd.append("txHash", paymentTxHash);
+      await projectApiRequest({
+        method: "POST",
+        endpoint: "/hub/create-campaign",
+        formData: fd,
+      });
 
-        await projectApiRequest({
-          method: "POST",
-          endpoint: "/hub/create-campaign",
-          formData: fd,
-        });
-
-        toast({ title: "Campaign published!", description: "Your campaign is now live." });
-        localStorage.removeItem("nexura:studio-txhash");
-        projectApiRequest({ method: "PATCH", endpoint: "/hub/save-payment-hash", data: { txHash: null } }).catch(() => {});
-        setPaymentTxHash("");
-      }
-
+      toast({ title: "Campaign published!", description: "Your campaign is now live." });
       setPublishedCampaign({ title: campaignTitle, name: campaignName, rewardPool, coverImage: coverImagePreview ?? undefined });
       setShowPublishModal(false);
       setShowSuccessModal(true);
@@ -1320,9 +1263,9 @@ const isActive =
       setLoading(false);
     }
   }}
-  disabled={loading || (!(isEditMode && campaignStatus === "Active") && !paymentTxHash)}
+  disabled={loading || !paymentTxHash}
 >
-  {loading ? <span className="flex items-center gap-2"><span className="inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />Publishing...</span> : isEditMode && campaignStatus === "Active" ? "Save Changes" : "Confirm & Publish"}
+  {loading ? <span className="flex items-center gap-2"><span className="inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />Publishing...</span> : "Publish"}
 </button>
 
         {/* Cancel Button */}
@@ -1335,7 +1278,7 @@ const isActive =
 
       </div>
     </div>
-  ))}
+  )}
 
   {/* ========================= */}
   {/* SUCCESS MODAL */}
@@ -1442,22 +1385,7 @@ const isActive =
   }}
   className="mt-6 w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-purple-800 text-white text-sm font-semibold hover:opacity-90 hover:shadow-[0_0_20px_rgba(131,58,253,0.5)] hover:-translate-y-0.5 active:translate-y-0 transition-all"
 >
-  <span>Launch Campaign Now</span>
-
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    className="w-6 h-6 text-white"
-    fill="none"
-    viewBox="0 0 24 24"
-    stroke="currentColor"
-    strokeWidth={2.5}
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M5 12h14M13 6l6 6-6 6"
-    />
-  </svg>
+  <span>Continue</span>
 </Button>
 
       </div>
@@ -1465,5 +1393,9 @@ const isActive =
   )}
 
         </div>
+        </main>
+        </div>
+    </div>
+    </div>
   );
 }

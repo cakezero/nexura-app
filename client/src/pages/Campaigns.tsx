@@ -214,10 +214,10 @@ export default function Campaigns() {
     return (
       <Card
         key={campaign._id}
-        className="bg-[#0d1117] border border-white/5 rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition flex flex-col sm:flex-col"
+        className="bg-[#0d1117] border border-white/5 rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition flex flex-col"
       >
         {/* Campaign Banner */}
-        <div className="relative h-40 sm:h-48 md:h-44 bg-black w-full">
+        <div className="relative h-36 bg-black w-full">
           {campaign.projectCoverImage && (
             <img
               src={campaign.projectCoverImage}
@@ -252,24 +252,24 @@ export default function Campaigns() {
         </div>
 
         {/* Campaign Details */}
-        <div className="p-4 sm:p-5 flex flex-col space-y-2">
-          <h2 className="text-sm sm:text-base font-semibold text-white">{campaign.title}</h2>
-          <p className="text-xs sm:text-sm text-gray-400">{campaign.description}</p>
+        <div className="p-3 sm:p-4 flex flex-col space-y-1.5">
+          <h2 className="text-sm font-semibold text-white">{campaign.title}</h2>
+          <p className="text-xs text-gray-400">{campaign.description}</p>
 
-          <div className="flex flex-col sm:flex-row justify-between text-xs sm:text-sm gap-1">
+          <div className="flex flex-row justify-between text-xs gap-1">
             <span className="text-gray-500">Project:</span>
             <span className="text-white">{campaign.project_name}</span>
           </div>
 
-          <div className="flex flex-col sm:flex-row justify-between text-xs sm:text-sm gap-1 items-start sm:items-center">
+          <div className="flex flex-row justify-between text-xs gap-1 items-center">
             <span className="text-gray-500">Participants:</span>
             <span className="text-white flex items-center gap-1">
-              <Users className="w-3 h-3 sm:w-4 sm:h-4" />
+              <Users className="w-3 h-3" />
               {campaign.participants.toLocaleString()}
             </span>
           </div>
 
-          <div className="flex flex-col sm:flex-row justify-between text-sm items-center">
+          <div className="flex flex-row justify-between text-xs items-center">
             <span className="text-gray-500">Reward:</span>
             <span className="text-white flex items-center gap-1">
               {`${campaign.reward.trustTokens} TRUST + ${campaign.reward.xp} XP`}
@@ -277,7 +277,7 @@ export default function Campaigns() {
           </div>
 
           {campaign.reward.pool && (
-            <div className="flex flex-col sm:flex-row justify-between text-sm items-center">
+            <div className="flex flex-row justify-between text-xs items-center">
               <span className="text-gray-500">Reward Pool:</span>
               <span className="text-white flex items-center gap-1">
                 {campaign.reward.pool} TRUST (FCFS)
@@ -286,17 +286,17 @@ export default function Campaigns() {
           )}
 
           {campaign.starts_at && (
-            <div className="flex flex-col sm:flex-row justify-between text-sm items-center">
+            <div className="flex flex-row justify-between text-xs items-center">
               <span className="text-gray-500">Duration:</span>
               <span className="text-white flex items-center gap-1">
-                <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
+                <Clock className="w-3 h-3" />
                 {starts_atFormatted} – {ends_atFormatted}
               </span>
             </div>
           )}
 
           <Button
-            className={`w-full mt-2 sm:mt-3 py-2.5 sm:py-3 text-sm sm:text-base font-medium rounded-xl ${loadingCampaign === campaign._id
+            className={`w-full mt-2 py-2 text-xs font-medium rounded-xl ${loadingCampaign === campaign._id
               ? "bg-gray-600 cursor-not-allowed text-gray-300"
               : isActive
                 ? "bg-[#1f6feb] hover:bg-[#388bfd] text-white"
@@ -351,7 +351,7 @@ export default function Campaigns() {
               <p className="text-white/60">No active campaigns at the moment. Check back soon!</p>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
               {activeCampaigns.map((campaign) => renderCampaignCard(campaign, true))}
             </div>
           )}
@@ -361,7 +361,7 @@ export default function Campaigns() {
         {upcomingCampaigns.length > 0 && (
           <div className="space-y-4 sm:space-y-6 mt-8 sm:mt-12">
             <h2 className="text-lg sm:text-2xl font-semibold text-white">Upcoming Campaigns</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
               {upcomingCampaigns.map((campaign) => renderCampaignCard(campaign, false))}
             </div>
           </div>
