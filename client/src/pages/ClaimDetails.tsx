@@ -1039,7 +1039,6 @@ export default function ClaimDetails() {
                 className={`w-12 h-6 rounded-full relative transition-colors duration-300 ${growthType === "exponential" ? "bg-purple-400" : "bg-gray-700"
                   }`}
               />
-            </button>
 
             {/* Info Button */}
             <button
