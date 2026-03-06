@@ -1003,38 +1003,46 @@ const handleDownload = async () => {
   </div>
 
  {/* Curve Section */}
-  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 w-full">
-    <div className="flex-1">
-      <h3 className="text-white text-sm">
-        {growthType === "exponential" ? "Exponential Curve" : "Linear Curve"}
-      </h3>
-      <p className="text-gray-400 text-[0.65rem]">
-        {growthType === "exponential" ? "High Risk, High Reward" : "Low Risk, Low Reward"}
-      </p>
-    </div>
+<div className="flex items-center justify-between w-full gap-2">
 
-    <div className="flex items-center gap-2 mt-2 sm:mt-0">
-      {/* Toggle Button */}
-      <button
-        onClick={() => setGrowthType(growthType === "linear" ? "exponential" : "linear")}
-        className={`w-12 h-6 rounded-full relative transition-colors duration-300 ${
-          growthType === "exponential" ? "bg-purple-400" : "bg-gray-700"
+  {/* Left: Curve Info */}
+  <div className="flex flex-col min-w-0">
+    <h3 className="text-white text-sm truncate">
+      {growthType === "exponential" ? "Exponential Curve" : "Linear Curve"}
+    </h3>
+    <p className="text-gray-400 text-[0.65rem] truncate">
+      {growthType === "exponential"
+        ? "High Risk, High Reward"
+        : "Low Risk, Low Reward"}
+    </p>
+  </div>
+
+  {/* Right: Controls */}
+  <div className="flex items-center gap-2 flex-shrink-0">
+
+    {/* Toggle Button */}
+    <button
+      onClick={() =>
+        setGrowthType(growthType === "linear" ? "exponential" : "linear")
+      }
+      className={`w-12 h-6 rounded-full relative transition-colors duration-300 ${
+        growthType === "exponential" ? "bg-purple-400" : "bg-gray-700"
+      }`}
+    >
+      <span
+        className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-all duration-300 ${
+          growthType === "exponential" ? "left-6" : "left-0.5"
         }`}
-      >
-        <span
-          className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-all duration-300 ${
-            growthType === "exponential" ? "left-6" : "left-0.5"
-          }`}
-        ></span>
-      </button>
+      />
+    </button>
 
-      {/* Info Button */}
-      <button
-        onClick={() => setShowCurveInfo(true)}
-        className="w-8 h-8 flex items-center justify-center rounded-full border border-[#393B60] text-gray-300 text-sm hover:bg-[#1a133d] hover:text-white transition-colors"
-      >
-        i
-      </button>
+    {/* Info Button */}
+    <button
+      onClick={() => setShowCurveInfo(true)}
+      className="w-8 h-8 flex items-center justify-center rounded-full border border-[#393B60] text-gray-300 text-sm hover:bg-[#1a133d] hover:text-white transition-colors"
+    >
+      i
+    </button>
 
         {/* Slide-in Modal (Fixed Right) */}
         {showCurveInfo && (
@@ -1286,74 +1294,83 @@ const handleDownload = async () => {
   </div>
 </div>
 
-{/* Dynamic Heading */}
-<h3 className="text-sm sm:text-base text-white font-semibold">
-  {activeTab === "all"
-    ? "All Positions on this Claim"
-    : "My Position on this Claim"}
-</h3>
+{/* Header + Controls */}
+<div className="flex flex-col gap-3">
 
-<div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full">
-  {/* Search Positions Input */}
-  <input
-    type="text"
-    placeholder="Search positions"
-    className="w-full sm:w-1/2 bg-[#06021A] border border-[#393B60] text-white p-2 rounded-2xl outline-none text-sm"
-  />
+  {/* Dynamic Heading */}
+  <h3 className="text-sm sm:text-base text-white font-semibold">
+    {activeTab === "all"
+      ? "All Positions on this Claim"
+      : "My Position on this Claim"}
+  </h3>
 
-  {/* Positions / Sort Dropdown */}
-  <div className="flex items-center gap-2 w-full sm:w-auto">
-    <span className="text-white text-sm whitespace-nowrap">Positions:</span>
+  {/* Controls */}
+  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
 
-    <div className="relative flex-1 sm:flex-auto">
-      <select
-        value={positionsOption}
-        onChange={(e) => setPositionsOption(e.target.value)}
-        className="appearance-none w-full bg-[#06021A] border border-[#393B60] rounded-2xl px-4 py-2 pr-10 text-white text-sm focus:outline-none"
-      >
-        <option value="all">All</option>
-        <option value="linear">Linear</option>
-        <option value="exponential">Exponential</option>
-        <option value="support">Support</option>
-        <option value="oppose">Oppose</option>
-      </select>
+    {/* Search */}
+    <input
+      type="text"
+      placeholder="Search positions"
+      className="w-full sm:w-[35%] bg-[#06021A] border border-[#393B60] text-white p-2 rounded-2xl outline-none text-sm"
+    />
 
-      {/* Icon inside the select */}
-      <img
-        src="/up-down.png"
-        alt="Dropdown"
-        className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"
-      />
+    {/* Right Side Controls */}
+    <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full sm:w-auto">
+
+      {/* Positions */}
+      <div className="flex items-center gap-2 w-full sm:w-auto">
+        <span className="text-white text-sm whitespace-nowrap">Positions:</span>
+
+        <div className="relative w-full sm:w-36">
+          <select
+            value={positionsOption}
+            onChange={(e) => setPositionsOption(e.target.value)}
+            className="appearance-none w-full bg-[#06021A] border border-[#393B60] rounded-2xl px-4 py-2 pr-10 text-white text-sm focus:outline-none"
+          >
+            <option value="all">All</option>
+            <option value="linear">Linear</option>
+            <option value="exponential">Exponential</option>
+            <option value="support">Support</option>
+            <option value="oppose">Oppose</option>
+          </select>
+
+          <img
+            src="/up-down.png"
+            alt="Dropdown"
+            className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"
+          />
+        </div>
+      </div>
+
+      {/* Sort */}
+      <div className="flex items-center gap-2 w-full sm:w-auto">
+        <span className="text-white text-sm whitespace-nowrap">Sort:</span>
+
+        <div className="relative w-full sm:w-40">
+          <select
+            value={sortOption}
+            onChange={(e) => setSortOption(e.target.value)}
+            className="appearance-none w-full bg-[#06021A] border border-[#393B60] rounded-2xl px-4 py-2 pr-10 text-white text-sm focus:outline-none"
+          >
+            <option value="highest_shares">Highest Shares</option>
+            <option value="lowest_shares">Lowest Shares</option>
+            <option value="newest">Newest</option>
+            <option value="oldest">Oldest</option>
+            <option value="a_to_z">A - Z</option>
+            <option value="z_to_a">Z - A</option>
+          </select>
+
+          <img
+            src="/up-down.png"
+            alt="Dropdown"
+            className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"
+          />
+        </div>
+      </div>
+
     </div>
   </div>
-
-{/* Sort Dropdown */}
-<div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full">
-  <span className="text-white text-sm sm:text-base whitespace-nowrap">Sort:</span>
-
-  <div className="relative flex-1 sm:flex-auto w-full sm:w-auto">
-    <select
-      value={sortOption}
-      onChange={(e) => setSortOption(e.target.value)}
-      className="appearance-none w-full bg-[#06021A] border border-[#393B60] rounded-2xl px-4 py-2 pr-10 text-white text-sm sm:text-base focus:outline-none"
-    >
-      <option value="highest_shares">Highest Shares</option>
-      <option value="lowest_shares">Lowest Shares</option>
-      <option value="newest">Newest</option>
-      <option value="oldest">Oldest</option>
-      <option value="a_to_z">A - Z</option>
-      <option value="z_to_a">Z - A</option>
-    </select>
-
-    {/* Dropdown Icon */}
-    <img
-      src="/up-down.png"
-      alt="Dropdown"
-      className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"
-    />
-  </div>
 </div>
-
 
        {/* TABLE */}
 <div className="overflow-x-auto w-full">
