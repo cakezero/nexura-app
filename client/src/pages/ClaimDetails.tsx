@@ -233,7 +233,7 @@ if (user) {
     ...(fetched.term.vaults?.[1]?.userPosition ?? []).map(p => ({
       ...p,
       direction: "support",
-      curve_id: 1,
+      curve_id: 2,
       account: {
         id: p.account_id,
         label: p.account_id,
@@ -244,7 +244,7 @@ if (user) {
     ...(fetched.counter_term.vaults?.[0]?.userPosition ?? []).map(p => ({
       ...p,
       direction: "oppose",
-      curve_id: 2, // Exponential
+      curve_id: 1, // linear
       account: {
         id: p.account_id,
         label: p.account_id,
@@ -254,7 +254,7 @@ if (user) {
     ...(fetched.counter_term.vaults?.[1]?.userPosition ?? []).map(p => ({
       ...p,
       direction: "oppose",
-      curve_id: 2,
+      curve_id: 2, // exponential
       account: {
         id: p.account_id,
         label: p.account_id,
@@ -299,15 +299,15 @@ setUserPositions(myPositions);
 }, [term, counterTerm]);
 
 const userShares = useMemo(() => {
-  if (!user) return 0;
+  if (!user) return "0";
 
   // Find the entry for the logged-in user
   const up = userPositions.find(
-    pos => pos.account_id.toLowerCase() === user.address.toLowerCase()
+    pos => pos.account_id.toLowerCase() === user.address.toLowerCase() && Number(pos.curve_id) === (growthType === "linear" ? 1 : 2),
   );
 
-  return up ? Number(formatEther(BigInt(up.shares))) : 0;
-}, [userPositions, user]);
+  return up ? formatEther(BigInt(up.shares)) : "0";
+}, [userPositions, user, growthType]);
 
 const hasOppositePosition = useMemo(() => {
   if (!user || !userPositions.length) return false;
@@ -332,7 +332,7 @@ function getPrice() {
     return price;
   };
 
-  if (activeTab === "support") {
+  if (mainTab === "support") {
     sharePrice = growthType === "linear"
       ? getVaultPrice(term.vaults, 0)
       : getVaultPrice(term.vaults, 1);
@@ -378,7 +378,7 @@ function getPrice() {
     totalShares += userSupportShares + userOpposeShares;
   }
 
-  setUserShares(formatEther(totalShares));
+  // setUserShares(formatEther(totalShares));
 };
 
 const refreshUserData = async () => {
@@ -1014,7 +1014,7 @@ const handleDownload = async () => {
     <div className="flex items-center gap-2 mt-2 sm:mt-0">
       {/* Toggle Button */}
       <button
-        onClick={() => setGrowthType(growthType !== "linear" ? "exponential" : "linear")}
+        onClick={() => setGrowthType(growthType === "linear" ? "exponential" : "linear")}
         className={`w-12 h-6 rounded-full relative transition-colors duration-300 ${
           growthType === "exponential" ? "bg-purple-400" : "bg-gray-700"
         }`}
@@ -1185,7 +1185,7 @@ const handleDownload = async () => {
 
 {/* Connect / Buy / Sell Button */}
   <div className="mt-3 flex flex-col gap-2 w-full">
-    {currentAmount && Number(currentAmount) > (isBuy ? Number(balance) : userShares) && (
+    {currentAmount && Number(currentAmount) > (isBuy ? Number(balance) : Number(userShares)) && (
       <span className="text-red-400 text-xs">
         You cannot {isBuy ? "buy more than your balance" : "sell more than your shares"}!
       </span>
@@ -1194,13 +1194,13 @@ const handleDownload = async () => {
     <button
       onClick={async () => {
         if (!user) { await handleConnectWallet(); return; }
-        if (!currentAmount || Number(currentAmount) <= 0 || Number(currentAmount) > (isBuy ? Number(balance) : userShares)) return;
+        if (!currentAmount || Number(currentAmount) <= 0 || Number(currentAmount) > (isBuy ? Number(balance) : Number(userShares))) return;
         await handleClaimAction();
         isBuy ? setBuyAmount("") : setSellAmount("");
       }}
-      disabled={!user || !currentAmount || Number(currentAmount) <= 0 || Number(currentAmount) > (isBuy ? Number(balance) : userShares)}
+      disabled={!user || !currentAmount || Number(currentAmount) <= 0 || Number(currentAmount) > (isBuy ? Number(balance) : Number(userShares))}
       className={`flex items-center justify-center gap-2 py-2 w-full text-sm rounded-3xl transition-all duration-200 ${
-        !user || !currentAmount || Number(currentAmount) <= 0 || Number(currentAmount) > (isBuy ? Number(balance) : userShares)
+        !user || !currentAmount || Number(currentAmount) <= 0 || Number(currentAmount) > (isBuy ? Number(balance) : Number(userShares))
           ? "bg-gray-600 text-gray-400 cursor-not-allowed"
           : "bg-gradient-to-r from-[#8B3EFE] to-[#B57EFF] text-white hover:from-[#B57EFF] hover:to-[#8B3EFE] hover:scale-105"
       }`}
@@ -1232,14 +1232,14 @@ const handleDownload = async () => {
             const totalSupport = toFixed(
              (userPositions
                 .filter(p => p.direction === "support")
-                .reduce((sum, p) => parseFloat(formatEther(BigInt(p.shares))), 0)).toString()
+                .reduce((sum, p) => sum + parseFloat(formatEther(BigInt(p.shares))), 0)).toString()
             );
             return <span className="whitespace-nowrap">Support: <span className="text-white">{totalSupport} TRUST</span></span>;
           } else if (opposePosition) {
             const totalOppose = toFixed(
              (userPositions
                 .filter(p => p.direction === "oppose")
-                .reduce((sum, p) => parseFloat(formatEther(BigInt(p.shares))), 0)).toString()
+                .reduce((sum, p) => sum + parseFloat(formatEther(BigInt(p.shares))), 0)).toString()
             );
             return <span className="whitespace-nowrap">Oppose: <span className="text-white">{totalOppose} TRUST</span></span>;
           } else {
