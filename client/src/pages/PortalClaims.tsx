@@ -36,7 +36,7 @@ export default function PortalClaims() {
   const [termId, setTermId] = useState("");
   const [activeTab, setActiveTab] = useState<"deposit" | "redeem">("deposit");
   const [isToggled, setIsToggled] = useState(false);
-  const [positions, setPositions] = useState<Position[]>([]); 
+  const [positions, setPositions] = useState<Position[]>([]);
   const [userPositions, setUserPositions] = useState<Position[]>([]);
   const [totalPostions, setTotalPositions] = useState("0");
   const [visibleClaims, setVisibleClaims] = useState<Claim[]>([]);
@@ -61,7 +61,7 @@ export default function PortalClaims() {
 >("review");
 // Example state to store totals
 const [userShares, setUserShares] = useState<{ support: bigint; oppose: bigint }>({ support: 0n, oppose: 0n });
-    
+
 // localstorage stuff
 const [actionState, setActionState] = useState<Record<string, "none" | "supported" | "opposed">>(() => {
   const saved = localStorage.getItem("actionState");
@@ -423,7 +423,7 @@ const handleClaimAction = async (action: "deposit" | "redeem" = "deposit") => {
       description: (
         <div className="flex items-center gap-2">
           <img src="/check.png" alt="success" className="w-4 h-4" />
-          <span>Successfully {actionText} a claim!</span>
+          <span>Successfully {action === "deposit" ? "bought" : "sold"} a claim!</span>
         </div>
       ),
     });
@@ -979,9 +979,9 @@ const hasAnyPosition =
 {/* Redeem Tab */}
 <button
   className={`relative px-6 py-3 text-base font-medium transition-colors duration-200
-    ${hasAnyPosition 
+    ${hasAnyPosition
       ? activeTab === "redeem"
-        ? "text-white" 
+        ? "text-white"
         : "text-gray-400 hover:text-white cursor-pointer"
       : "text-gray-600 cursor-not-allowed pointer-events-none"
     }`}
@@ -1005,7 +1005,7 @@ const hasAnyPosition =
 {/* Main Card: Active Position */}
 <div className="flex justify-center mb-4">
   <div className="bg-[#110A2B] border-2 border-[#393B60] p-2 rounded-lg flex items-center justify-between gap-6 mt-4 w-[380px]">
-    
+
     <span className="text-gray-300 text-xs whitespace-nowrap">
       Your Active Position
     </span>
@@ -1053,7 +1053,7 @@ const hasAnyPosition =
 
     {/* Right-aligned Cluster: Curve Info + Toggle + Info */}
 <div className="flex items-center gap-1 ml-auto"> {/* ml-auto pushes the whole cluster to far right, gap-1 keeps them tight */}
-  
+
   {/* Curve Info Text */}
   <div className="flex flex-col justify-center text-right"> {/* text-right aligns text toward toggle */}
     <span className="text-white text-xs">
@@ -1091,7 +1091,7 @@ const hasAnyPosition =
         {/* Slide-in Modal (Fixed Right) */}
         {showCurveInfo && (
           <div className="fixed top-0 right-0 h-full w-96 bg-[#110A2B] border-l-2 border-[#393B60] p-4 z-50 animate-slideIn overflow-y-auto">
-            
+
             {/* Close Button */}
             <button
               onClick={() => setShowCurveInfo(false)}
@@ -1217,7 +1217,7 @@ const hasAnyPosition =
 {/* Main Card: Active Position */}
 <div className="flex justify-center mb-4">
   <div className="bg-[#110A2B] border-2 border-[#393B60] p-2 rounded-lg flex items-center justify-between gap-6 mt-4 w-[380px]">
-    
+
     <span className="text-gray-300 text-xs whitespace-nowrap">
       Your Active Position
     </span>
@@ -1266,7 +1266,7 @@ const hasAnyPosition =
 
     {/* Right-aligned Cluster: Curve Info + Toggle + Info */}
 <div className="flex items-center gap-1 ml-auto"> {/* ml-auto pushes the whole cluster to far right, gap-1 keeps them tight */}
-  
+
   {/* Curve Info Text */}
   <div className="flex flex-col justify-center text-right"> {/* text-right aligns text toward toggle */}
     <span className="text-white text-xs">
@@ -1304,7 +1304,7 @@ const hasAnyPosition =
         {/* Slide-in Modal (Fixed Right) */}
         {showCurveInfo && (
           <div className="fixed top-0 right-0 h-full w-96 bg-[#110A2B] border-l-2 border-[#393B60] p-4 z-50 animate-slideIn overflow-y-auto">
-            
+
             {/* Close Button */}
             <button
               onClick={() => setShowCurveInfo(false)}
@@ -1400,7 +1400,7 @@ const hasAnyPosition =
       ? "bg-white text-black hover:bg-gray-200"
       : "bg-gray-700 text-gray-400 cursor-not-allowed"
   }`}
-  onClick={() => setShowReviewDepositModal(true)}
+  onClick={() => setShowReviewRedeemModal(true)}
   disabled={
     !transactionAmount ||
     Number(transactionAmount) <= 0 ||
