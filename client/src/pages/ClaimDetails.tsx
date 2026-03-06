@@ -211,7 +211,7 @@ if (user) {
     ...(fetched.term.vaults?.[1]?.userPosition ?? []).map(p => ({
       ...p,
       direction: "support",
-      curve_id: 1,
+      curve_id: 2,
       account: {
         id: p.account_id,
         label: p.account_id,
@@ -222,7 +222,7 @@ if (user) {
     ...(fetched.counter_term.vaults?.[0]?.userPosition ?? []).map(p => ({
       ...p,
       direction: "oppose",
-      curve_id: 2, // Exponential
+      curve_id: 1, // Linear
       account: {
         id: p.account_id,
         label: p.account_id,
@@ -281,11 +281,14 @@ const userShares = useMemo(() => {
 
   // Find the entry for the logged-in user
   const up = userPositions.find(
-    pos => pos.account_id.toLowerCase() === user.address.toLowerCase()
+    pos =>
+      pos?.account_id.toLowerCase() === user.address.toLowerCase() &&
+      Number(pos?.curve_id) === (growthType === "linear" ? 1 : 2) &&
+      pos?.direction === mainTab
   );
 
   return up ? Number(formatEther(BigInt(up.shares))) : 0;
-}, [userPositions, user]);
+}, [userPositions, user, growthType, mainTab]);
 
 const hasOppositePosition = useMemo(() => {
   if (!user || !userPositions.length) return false;
@@ -310,7 +313,7 @@ function getPrice() {
     return price;
   };
 
-  if (activeTab === "support") {
+  if (mainTab === "support") {
     sharePrice = growthType === "linear"
       ? getVaultPrice(term.vaults, 0)
       : getVaultPrice(term.vaults, 1);
@@ -356,7 +359,7 @@ function getPrice() {
     totalShares += userSupportShares + userOpposeShares;
   }
 
-  setUserShares(formatEther(totalShares));
+  // setUserShares(formatEther(totalShares));
 };
 
 const refreshUserData = async () => {
@@ -366,7 +369,6 @@ const refreshUserData = async () => {
   setBalance(updatedBalance);
 
   await fetchClaim();
-
 
 };
 
@@ -668,12 +670,12 @@ const handleDownload = async () => {
     let fluctuation: number;
 
     if (growthType === "linear") {
-      fluctuation = (Math.random() - 0.5) * 0.02; 
+      fluctuation = (Math.random() - 0.5) * 0.02;
     } else {
-      fluctuation = (Math.random() - 0.5) * 0.1; 
+      fluctuation = (Math.random() - 0.5) * 0.1;
     }
 
-    let value = lastValue - Math.abs(fluctuation); 
+    let value = lastValue - Math.abs(fluctuation);
 
     // Clamp values
     if (todayPrice <= 1) {
@@ -1262,14 +1264,14 @@ const handleDownload = async () => {
             const totalSupport = toFixed(
              (userPositions
                 .filter(p => p.direction === "support")
-                .reduce((sum, p) => parseFloat(formatEther(BigInt(p.shares))), 0)).toString()
+                .reduce((sum, p) => sum + parseFloat(formatEther(BigInt(p.shares))), 0)).toString()
             );
             return <span className="whitespace-nowrap">Support: <span className="text-white">{totalSupport} TRUST</span></span>;
           } else if (opposePosition) {
             const totalOppose = toFixed(
              (userPositions
                 .filter(p => p.direction === "oppose")
-                .reduce((sum, p) => parseFloat(formatEther(BigInt(p.shares))), 0)).toString()
+                .reduce((sum, p) => sum + parseFloat(formatEther(BigInt(p.shares))), 0)).toString()
             );
             return <span className="whitespace-nowrap">Oppose: <span className="text-white">{totalOppose} TRUST</span></span>;
           } else {

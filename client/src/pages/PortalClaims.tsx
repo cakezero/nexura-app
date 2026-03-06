@@ -293,8 +293,8 @@ const calculateUserShares = (claim: Claim, userAddress: string) => {
     const curveId = String(vault.curve_id).trim();
 
     (vault.userPosition ?? []).forEach((p) => {
-      if (p.account_id.toLowerCase() === userAddress.toLowerCase()) {
-        const shares = BigInt(p.shares);
+      if (p?.account_id.toLowerCase() === userAddress.toLowerCase()) {
+        const shares = BigInt(p.shares ?? 0);
 
         if (curveId === "1") linear += shares;
         if (curveId === "2") exponential += shares;
@@ -343,8 +343,8 @@ const handleOpposeClick = (claim: Claim) => {
     const curveId = String(vault.curve_id).trim();
 
     (vault.userPosition ?? []).forEach((p) => {
-      if (p.account_id.toLowerCase() === user.address.toLowerCase()) {
-        const shares = BigInt(p.shares);
+      if (p?.account_id.toLowerCase() === user.address.toLowerCase()) {
+        const shares = BigInt(p.shares ?? 0);
         if (curveId === "1") linear += shares;
         if (curveId === "2") exponential += shares;
       }
