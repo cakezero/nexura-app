@@ -600,29 +600,32 @@ const hasAnyPosition =
         className="px-4 py-3"
         onClick={() => setLocation(`/portal-claims/${claim.term_id}`)}
       >
-        <div className="flex flex-wrap items-center gap-2">
-  {/* Subject */}
-  <span
-    className="bg-[#1a1328] px-2 py-1 rounded flex items-center gap-1 max-w-[200px] truncate cursor-pointer hover:bg-[#2b1f45] transition-colors duration-200"
-  >
-    <img
-      src={claim.term.triple.subject.image}
-      className="w-5 h-5 flex-shrink-0"
-    />
-    <span className="truncate">
-      {highlightMatch(claim.term.triple.subject.label, searchTerm)}
-    </span>
+        <div className="flex flex-wrap items-center gap-{/* Subject */}
+<span
+  className="bg-[#22193A] px-2.5 py-1 rounded flex items-center gap-2 max-w-[240px] truncate cursor-pointer hover:bg-[#2f2350] transition-colors duration-200"
+>
+  <img
+    src={claim.term.triple.subject.image}
+    className="w-5 h-5 flex-shrink-0"
+  />
+  <span className="truncate">
+    {highlightMatch(claim.term.triple.subject.label, searchTerm)}
   </span>
+</span>
 
-  {/* Predicate */}
-  <span className="text-xs">{highlightMatch(claim.term.triple.predicate.label, searchTerm)}</span>
+{/* Predicate */}
+<span
+  className="text-xs px-1 cursor-pointer hover:text-white transition-colors duration-200"
+>
+  {highlightMatch(claim.term.triple.predicate.label, searchTerm)}
+</span>
 
-  {/* Object */}
-  <span
-    className="bg-[#1a1328] px-2 py-1 rounded max-w-[250px] truncate cursor-pointer hover:bg-[#2b1f45] transition-colors duration-200"
-  >
-    {highlightMatch(claim.term.triple.object.label, searchTerm)}
-  </span>
+{/* Object */}
+<span
+  className="bg-[#22193A] px-2.5 py-1 rounded max-w-[280px] truncate cursor-pointer hover:bg-[#2f2350] transition-colors duration-200"
+>
+  {highlightMatch(claim.term.triple.object.label, searchTerm)}
+</span>
 </div>
       </td>
 
