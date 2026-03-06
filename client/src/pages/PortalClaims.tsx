@@ -63,26 +63,26 @@ export default function PortalClaims() {
   const [userShares, setUserShares] = useState<{ support: bigint; oppose: bigint }>({ support: 0n, oppose: 0n });
 
   // localstorage stuff
-const [actionState, setActionState] = useState<Record<string, "none" | "supported" | "opposed">>({});
+  const [actionState, setActionState] = useState<Record<string, "none" | "supported" | "opposed">>({});
 
-const storageKey = user?.address
-  ? `actionState_${user.address.toLowerCase()}`
-  : null;
+  const storageKey = user?.address
+    ? `actionState_${user.address.toLowerCase()}`
+    : null;
 
-// load wallet state
-useEffect(() => {
-  if (!storageKey) return;
+  // load wallet state
+  useEffect(() => {
+    if (!storageKey) return;
 
-  const saved = localStorage.getItem(storageKey);
-  setActionState(saved ? JSON.parse(saved) : {});
-}, [storageKey]);
+    const saved = localStorage.getItem(storageKey);
+    setActionState(saved ? JSON.parse(saved) : {});
+  }, [storageKey]);
 
-// save wallet state
-useEffect(() => {
-  if (!storageKey) return;
+  // save wallet state
+  useEffect(() => {
+    if (!storageKey) return;
 
-  localStorage.setItem(storageKey, JSON.stringify(actionState));
-}, [actionState, storageKey]);
+    localStorage.setItem(storageKey, JSON.stringify(actionState));
+  }, [actionState, storageKey]);
 
 
   const [userSharesByCurve, setUserSharesByCurve] = useState<{
@@ -273,170 +273,170 @@ useEffect(() => {
     }
   }, [showModal]);
 
-const formatTrust = (shares: bigint, decimals = 18, precision = 2) => {
-  const divisor = 10n ** BigInt(decimals);
-  const formatted = Number(shares) / Number(divisor);
+  const formatTrust = (shares: bigint, decimals = 18, precision = 2) => {
+    const divisor = 10n ** BigInt(decimals);
+    const formatted = Number(shares) / Number(divisor);
 
-  const factor = 10 ** precision;
-  const truncated = Math.floor(formatted * factor) / factor;
+    const factor = 10 ** precision;
+    const truncated = Math.floor(formatted * factor) / factor;
 
-  return truncated.toFixed(precision);
-};
+    return truncated.toFixed(precision);
+  };
 
 
-//// ------------------- Update Automatically.. active position--------
-const calculateUserShares = (claim: Claim, userAddress: string) => {
-  let linear = 0n;
-  let exponential = 0n;
+  //// ------------------- Update Automatically.. active position--------
+  const calculateUserShares = (claim: Claim, userAddress: string) => {
+    let linear = 0n;
+    let exponential = 0n;
 
-  claim.term.vaults?.forEach((vault) => {
-    const curveId = String(vault.curve_id).trim();
+    claim.term.vaults?.forEach((vault) => {
+      const curveId = String(vault.curve_id).trim();
 
-    (vault.userPosition ?? []).forEach((p) => {
-      if (p?.account_id.toLowerCase() === userAddress.toLowerCase()) {
-        const shares = BigInt(p.shares ?? 0);
+      (vault.userPosition ?? []).forEach((p) => {
+        if (p?.account_id.toLowerCase() === userAddress.toLowerCase()) {
+          const shares = BigInt(p.shares ?? 0);
 
-        if (curveId === "1") linear += shares;
-        if (curveId === "2") exponential += shares;
-      }
-    });
-  });
-
-  return { linear, exponential };
-};
-
-// ---------------- Handlers ----------------
-const handleSupportClick = (claim: Claim) => {
-  if (!user) return;
-
-  setActiveClaim(claim);
-  setTermId(claim.term.id);
-  setOpposeMode(false);
-  setTransactionAmount("");
-
-  const { linear, exponential } = calculateUserShares(claim, user.address);
-
-  console.log("Support Linear:", linear.toString(), "Exponential:", exponential.toString());
-
-  setSupportShares({ linear, exponential });
-
-  // Set active position to the currently toggled curve
-  setActivePosition(isToggled ? exponential : linear);
-
-  setShowModal(true);
-};
-
-const handleOpposeClick = (claim: Claim) => {
-  if (!user) return;
-
-  setActiveClaim(claim);
-  setTermId(claim.counter_term.id);
-  setTransactionMode("redeem");
-  setActiveTab("deposit");
-  setOpposeMode(true);
-  setTransactionAmount("");
-
-  let linear = 0n;
-  let exponential = 0n;
-
-  claim.counter_term.vaults?.forEach((vault) => {
-    const curveId = String(vault.curve_id).trim();
-
-    (vault.userPosition ?? []).forEach((p) => {
-      if (p?.account_id.toLowerCase() === user.address.toLowerCase()) {
-        const shares = BigInt(p.shares ?? 0);
-        if (curveId === "1") linear += shares;
-        if (curveId === "2") exponential += shares;
-      }
-    });
-  });
-
-  console.log("Oppose Linear:", linear.toString(), "Exponential:", exponential.toString());
-
-  setOpposeShares({ linear, exponential });
-
-  // Set active position to currently toggled curve
-  setActivePosition(isToggled ? exponential : linear);
-
-  setShowModal(true);
-};
-
-const displayedShares = opposeMode
-  ? (isToggled ? opposeShares.exponential : opposeShares.linear)
-  : (isToggled ? supportShares.exponential : supportShares.linear);
-
-const handleCloseModal = () => {
-  setActiveClaim(null);
-  setShowModal(false);
-  setOpposeMode(false);
-};
-
-const maxRedeemable = Number(displayedShares) / 10 ** 18;
-
-const handleClaimAction = async (action: "deposit" | "redeem" = "deposit") => {
-  if (!termId || !user?.address) return;
-
-  try {
-    setModalStep("awaiting");
-
-    const addressTermId = termId as Address;
-
-    if (action === "deposit") {
-      await buyShares(transactionAmount, addressTermId, isToggled ? 2n : 1n);
-    } else {
-      await sellShares(transactionAmount, addressTermId, isToggled ? 2n : 1n);
-    }
-
-    // Refresh wallet balance after transaction
-    const balance = await fetchWalletBalance(user.address);
-    setTTrustBalance(balance);
-
-    // ---------------- Recalculate shares after transaction ----------------
-    if (activeClaim) {
-      const { linear, exponential } = calculateUserShares(activeClaim, user.address);
-
-      if (opposeMode) {
-        setOpposeShares({ linear, exponential });
-      } else {
-        setSupportShares({ linear, exponential });
-      }
-
-      setActivePosition(isToggled ? exponential : linear);
-    }
-    // -----------------------------------------------------------------------
-
-    const actionText = opposeMode ? "opposed" : "supported";
-
-    toast({
-      title: "Success",
-      description: (
-        <div className="flex items-center gap-2">
-          <img src="/check.png" alt="success" className="w-4 h-4" />
-          <span>Successfully {action === "deposit" ? "bought" : "sold"} a claim!</span>
-        </div>
-      ),
+          if (curveId === "1") linear += shares;
+          if (curveId === "2") exponential += shares;
+        }
+      });
     });
 
-    setActionState(prev => ({
-      ...prev,
-      [termId]: opposeMode ? "opposed" : "supported"
-    }));
+    return { linear, exponential };
+  };
 
+  // ---------------- Handlers ----------------
+  const handleSupportClick = (claim: Claim) => {
+    if (!user) return;
+
+    setActiveClaim(claim);
+    setTermId(claim.term.id);
+    setOpposeMode(false);
     setTransactionAmount("");
-    setModalStep("success");
 
-  } catch (err: any) {
-    console.error(err);
+    const { linear, exponential } = calculateUserShares(claim, user.address);
 
-    setModalStep("failed");
+    console.log("Support Linear:", linear.toString(), "Exponential:", exponential.toString());
 
-    toast({
-      title: "Error",
-      description: err?.message || "Transaction failed",
-      variant: "destructive",
+    setSupportShares({ linear, exponential });
+
+    // Set active position to the currently toggled curve
+    setActivePosition(isToggled ? exponential : linear);
+
+    setShowModal(true);
+  };
+
+  const handleOpposeClick = (claim: Claim) => {
+    if (!user) return;
+
+    setActiveClaim(claim);
+    setTermId(claim.counter_term.id);
+    setTransactionMode("redeem");
+    setActiveTab("deposit");
+    setOpposeMode(true);
+    setTransactionAmount("");
+
+    let linear = 0n;
+    let exponential = 0n;
+
+    claim.counter_term.vaults?.forEach((vault) => {
+      const curveId = String(vault.curve_id).trim();
+
+      (vault.userPosition ?? []).forEach((p) => {
+        if (p?.account_id.toLowerCase() === user.address.toLowerCase()) {
+          const shares = BigInt(p.shares ?? 0);
+          if (curveId === "1") linear += shares;
+          if (curveId === "2") exponential += shares;
+        }
+      });
     });
-  }
-};
+
+    console.log("Oppose Linear:", linear.toString(), "Exponential:", exponential.toString());
+
+    setOpposeShares({ linear, exponential });
+
+    // Set active position to currently toggled curve
+    setActivePosition(isToggled ? exponential : linear);
+
+    setShowModal(true);
+  };
+
+  const displayedShares = opposeMode
+    ? (isToggled ? opposeShares.exponential : opposeShares.linear)
+    : (isToggled ? supportShares.exponential : supportShares.linear);
+
+  const handleCloseModal = () => {
+    setActiveClaim(null);
+    setShowModal(false);
+    setOpposeMode(false);
+  };
+
+  const maxRedeemable = Number(displayedShares) / 10 ** 18;
+
+  const handleClaimAction = async (action: "deposit" | "redeem" = "deposit") => {
+    if (!termId || !user?.address) return;
+
+    try {
+      setModalStep("awaiting");
+
+      const addressTermId = termId as Address;
+
+      if (action === "deposit") {
+        await buyShares(transactionAmount, addressTermId, isToggled ? 2n : 1n);
+      } else {
+        await sellShares(transactionAmount, addressTermId, isToggled ? 2n : 1n);
+      }
+
+      // Refresh wallet balance after transaction
+      const balance = await fetchWalletBalance(user.address);
+      setTTrustBalance(balance);
+
+      // ---------------- Recalculate shares after transaction ----------------
+      if (activeClaim) {
+        const { linear, exponential } = calculateUserShares(activeClaim, user.address);
+
+        if (opposeMode) {
+          setOpposeShares({ linear, exponential });
+        } else {
+          setSupportShares({ linear, exponential });
+        }
+
+        setActivePosition(isToggled ? exponential : linear);
+      }
+      // -----------------------------------------------------------------------
+
+      const actionText = opposeMode ? "opposed" : "supported";
+
+      toast({
+        title: "Success",
+        description: (
+          <div className="flex items-center gap-2">
+            <img src="/check.png" alt="success" className="w-4 h-4" />
+            <span>Successfully {action === "deposit" ? "bought" : "sold"} a claim!</span>
+          </div>
+        ),
+      });
+
+      setActionState(prev => ({
+        ...prev,
+        [termId]: opposeMode ? "opposed" : "supported"
+      }));
+
+      setTransactionAmount("");
+      setModalStep("success");
+
+    } catch (err: any) {
+      console.error(err);
+
+      setModalStep("failed");
+
+      toast({
+        title: "Error",
+        description: err?.message || "Transaction failed",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Sorting function
   const sortClaims = (claims, option) => {
@@ -1165,10 +1165,10 @@ const handleClaimAction = async (action: "deposit" | "redeem" = "deposit") => {
                     {/* Review Deposit Button */}
                     <button
                       className={`mx-auto block px-6 py-2.5 rounded-3xl mt-4 text-sm transition-colors ${transactionAmount &&
-                          Number(transactionAmount) > 0 &&
-                          Number(transactionAmount) <= Number(tTrustBalance) / 10 ** 18
-                          ? "bg-white text-black hover:bg-gray-200"
-                          : "bg-gray-700 text-gray-400 cursor-not-allowed"
+                        Number(transactionAmount) > 0 &&
+                        Number(transactionAmount) <= Number(tTrustBalance) / 10 ** 18
+                        ? "bg-white text-black hover:bg-gray-200"
+                        : "bg-gray-700 text-gray-400 cursor-not-allowed"
                         }`}
                       onClick={() => setShowReviewDepositModal(true)}
                       disabled={
@@ -1371,10 +1371,10 @@ const handleClaimAction = async (action: "deposit" | "redeem" = "deposit") => {
                     {/* Review Deposit Button */}
                     <button
                       className={`mx-auto block px-5 py-1.5 rounded-3xl mt-4 text-sm transition-colors ${transactionAmount &&
-                          Number(transactionAmount) > 0 &&
-                          Number(transactionAmount) <= Number(tTrustBalance) / 10 ** 18
-                          ? "bg-white text-black hover:bg-gray-200"
-                          : "bg-gray-700 text-gray-400 cursor-not-allowed"
+                        Number(transactionAmount) > 0 &&
+                        Number(transactionAmount) <= Number(tTrustBalance) / 10 ** 18
+                        ? "bg-white text-black hover:bg-gray-200"
+                        : "bg-gray-700 text-gray-400 cursor-not-allowed"
                         }`}
                       onClick={() => setShowReviewRedeemModal(true)}
                       disabled={
