@@ -329,8 +329,7 @@ const handleUpdateCampaign = async () => {
 
     setCampaignId(savedCampaignId);
     toast({ title: "Campaign updated!", description: "Your campaign changes have been saved." });
-    setPublishedCampaign({ title: campaignName, description: campaignTitle, name: campaignName, rewardPool, coverImage: coverImagePreview ?? undefined });
-    setShowSuccessModal(true);
+    setLocation("/studio-dashboard/campaigns-tab");
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Failed to update campaign.";
     toast({ title: "Update failed", description: msg, variant: "destructive" });
@@ -1162,19 +1161,23 @@ const isActive =
 >
   Deploy Rewards Contract
 </button>
-<button
-  onClick={() => {
-    if (isEditMode) {
-      handleUpdateCampaign();
-      return;
-    }
-    setShowPublishModal(true);
-  }}
-  className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-  disabled={loading || saveLoading}
->
-  {isEditMode ? "Update Campaign" : "Publish Campaign"}
-</button>
+{isEditMode && isPublished ? (
+  <button
+    onClick={() => handleUpdateCampaign()}
+    className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+    disabled={loading || saveLoading}
+  >
+    Update Campaign
+  </button>
+) : (
+  <button
+    onClick={() => setShowPublishModal(true)}
+    className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+    disabled={loading || saveLoading}
+  >
+    Publish Campaign
+  </button>
+)}
   </div>
 </div>
   </Card>
