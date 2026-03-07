@@ -379,14 +379,20 @@ export default function Campaigns() {
         </div>
 
         {/* Upcoming Campaigns */}
-        {upcomingCampaigns.length > 0 && (
-          <div className="space-y-4 sm:space-y-6 mt-8 sm:mt-12">
-            <h2 className="text-lg sm:text-2xl font-semibold text-white">Upcoming Campaigns</h2>
+        <div className="space-y-4 sm:space-y-6 mt-8 sm:mt-12">
+          <h2 className="text-lg sm:text-2xl font-semibold text-white">Upcoming Campaigns</h2>
+          {isLoading ? (
+            <div className="text-center py-6 sm:py-12 text-muted-foreground">Loading campaigns...</div>
+          ) : upcomingCampaigns.length === 0 ? (
+            <Card className="glass glass-hover rounded-3xl p-6 sm:p-8 text-center">
+              <p className="text-white/60">No upcoming campaigns.</p>
+            </Card>
+          ) : (
             <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
               {upcomingCampaigns.map((campaign) => renderCampaignCard(campaign, false))}
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
