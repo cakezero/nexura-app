@@ -458,7 +458,7 @@ export default function CampaignEnvironment() {
                       {visited && !claimed && requiresProof && !pending && (
                         <button
                           onClick={() => setExpandedQuestId(isExpanded ? null : quest._id)}
-                          className="px-3 py-1.5 rounded-full text-xs font-semibold bg-purple-700 hover:bg-purple-800"
+                          className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-sm sm:text-base font-semibold bg-purple-700 hover:bg-purple-800"
                         >
                           Submit Proof
                         </button>
