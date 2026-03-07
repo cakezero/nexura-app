@@ -83,6 +83,7 @@ const [publishedCampaign, setPublishedCampaign] = useState<any | null>(null);
 const [paymentTxHash, setPaymentTxHash] = useState("");
 const [paymentLoading, setPaymentLoading] = useState(false);
 const [isEditMode, setIsEditMode] = useState(false);
+const [isPublished, setIsPublished] = useState(false);
 
 // Pre-fill from existing draft when ?edit=<id> is in the URL
 const parseDateTime = (isoStr: string) => {
@@ -105,6 +106,7 @@ useEffect(() => {
       if (!found) return;
       setCampaignId(editId);
       setIsEditMode(true);
+      setIsPublished(found.status !== "Save");
       setCampaignTitle(found.title ?? "");
       setCampaignName(found.description ?? found.nameOfProject ?? "");
       const s = parseDateTime(found.starts_at ?? "");
@@ -547,10 +549,11 @@ const isActive =
 
     <Input
   type="number"
-  className="bg-white/5 border-white/10 pl-20"
+  className={`bg-white/5 border-white/10 pl-20 ${isPublished ? "cursor-not-allowed opacity-60" : ""}`}
   placeholder="0"
   value={rewardPool}
   onChange={(e) => setRewardPool(e.target.value)}
+  readOnly={isPublished}
 />
   </div>
 </div>
@@ -571,9 +574,10 @@ const isActive =
     <Input
   type="number"
   placeholder="Enter number of participants"
-  className="bg-white/5 border-white/10 pl-10"
+  className={`bg-white/5 border-white/10 pl-10 ${isPublished ? "cursor-not-allowed opacity-60" : ""}`}
   value={participants}
   onChange={(e) => setParticipants(e.target.value)}
+  readOnly={isPublished}
 />
   </div>
 </div>
@@ -606,7 +610,9 @@ const isActive =
                       </div>
                       {/* Text */}
                       <CardDescription className="text-white/60 text-sm">
-                        Disclaimer: If you want to provide rewards for this campaign, please reach out to Nexura via Discord.
+                        {isPublished
+                          ? "The reward pool and number of participants cannot be changed after the campaign has been published."
+                          : "The reward pool and number of participants cannot be changed once the campaign is published. Please make sure these values are correct before publishing."}
                       </CardDescription>
                     </div>
 
