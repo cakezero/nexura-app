@@ -33,6 +33,7 @@ import { checksumAddress } from "viem";
 import { campaign, campaignCompleted } from "@/models/campaign.model";
 import { dailySignIn } from "@/models/dailySignIn.model";
 import { startOfDayUTC, updateLevel } from "@/utils/utils";
+import { toNumber } from "ethers";
 
 const client = new GraphQLClient(GRAPHQL_API_URL);
 
@@ -80,6 +81,47 @@ export const updateUser = async (req: GlobalRequest, res: GlobalResponse) => {
   } catch (error) {
     logger.error(error);
     res.status(INTERNAL_SERVER_ERROR).json({ error: "error updating user" });
+  }
+}
+
+export const getClaimXp = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const { transactionHash, trustAmount } = req.body;
+    const { id } = req;
+
+    if (!transactionHash || !trustAmount) {
+      res.status(BAD_REQUEST).json({ error: "transaction hash and trust amount are required" });
+      return;
+    }
+
+    if (Number(trustAmount) < 200) {
+      res.status(BAD_REQUEST).json({ error: "trust amount must be at least 200 to claim xp" });
+      return;
+    }
+
+    const trustUser = await user.findById(id);
+    if (!trustUser) {
+      res.status(BAD_REQUEST).json({ error: "user not found" });
+      return;
+    }
+
+    const date = new Date();
+    const exactDate = date.toISOString().split("T")[0];
+
+    if (trustUser.dailyTrustXpDate === exactDate) {
+      res.status(OK).json({ message: "xp for claim already made today" });
+      return;
+    }
+
+    trustUser.dailyTrustXpDate = exactDate as string;
+    trustUser.xp += 20;
+
+    await trustUser.save();
+    
+    res.status(OK).json({ message: "xp claim successful" });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error adding claim xp" });
   }
 }
 
