@@ -361,7 +361,7 @@ export default function PortalClaims() {
       setModalStep("awaiting");
 
       const addressTermId = termId as Address;
-      
+
       let txHash: string = "";
 
       if (action === "deposit") {
@@ -1335,7 +1335,7 @@ export default function PortalClaims() {
                       <button
                         type="button"
                         onClick={() => {
-                          const max = Number(displayedShares) / 10 ** 18;
+                          const max = formatEther(displayedShares);
                           setTransactionAmount(max.toString());
                         }}
                         className="mt-4 px-2 py-1 text-xs text-white bg-[#0A2D4D] rounded-full border border-white hover:bg-[#123a63] hover:border-[#8B3EFE] transition-colors"
@@ -1343,7 +1343,6 @@ export default function PortalClaims() {
                         Max
                       </button>
                     </div>
-
 
                     {/* Review Deposit Button */}
                     <button
@@ -1599,8 +1598,18 @@ export default function PortalClaims() {
                     </div>
 
                     <span className="text-white mb-6">
-                      Successfully {opposeMode ? "opposed" : "supported"}!
+                      Successfully redeemed shares!
                     </span>
+                    
+                    <a
+                      href={transactionLink} // this is where you will add the explorer link stuff
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-500 flex items-center gap-1 mb-6 hover:underline"
+                    >
+                      View Transaction on Explorer
+                      <img src="/share.png" alt="share icon" className="w-4 h-4" />
+                    </a>
 
                     <button
                       className="bg-white text-black px-6 py-2 rounded-3xl text-sm"
