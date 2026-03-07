@@ -166,17 +166,12 @@ export default function ClaimDetails() {
     fetchClaim();
   }, [user]);
 
-  const formatTrustExact = (value: bigint) => {
-  const str = (Number(value) / 1e18).toString();
-  const [whole, decimal = ""] = str.split(".");
-  return `${whole}.${decimal.padEnd(4, "0").slice(0, 4)}`;
-};
 
-const format4 = (value: number | string) => {
-  const str = String(value);
-  const [whole, decimal = ""] = str.split(".");
-  return `${whole}.${decimal.padEnd(4, "0").slice(0, 4)}`;
-};
+  const format4 = (value: number | string) => {
+    const str = String(value);
+    const [whole, decimal = ""] = str.split(".");
+    return `${whole}.${decimal.padEnd(4, "0").slice(0, 4)}`;
+  };
 
   async function fetchClaim() {
     const fetched = await apiRequestV2("GET", "/api/get-triple?termId=" + id);
@@ -300,7 +295,7 @@ const format4 = (value: number | string) => {
         pos?.direction === mainTab
     );
 
-    return up ? Number(formatEther(BigInt(parseInt(up.shares) > 0 ? up.shares : 0))) : 0;
+    return up ? formatEther(BigInt(parseInt(up.shares) > 0 ? up.shares : 0)) : 0;
   }, [userPositions, user, growthType, mainTab]);
 
   const hasOppositePosition = useMemo(() => {
@@ -411,7 +406,7 @@ const format4 = (value: number | string) => {
       else setSelling(true);
 
       // -------------------- Execute transaction --------------------
-      if (isBuy) await buyShares(buyAmount, address as Address, curveId);
+      if (isBuy) console.log(await buyShares(buyAmount, address as Address, curveId));
       else await sellShares(sellAmount, address as Address, curveId);
 
       // -------------------- Refresh user data --------------------
@@ -1066,11 +1061,12 @@ const format4 = (value: number | string) => {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 w-full">
             <span className="text-gray-400 text-xs">Amount:</span>
             <span className="text-gray-400 flex items-center gap-1 justify-end text-xs">
-  <img src="/wallet.png" alt="Wallet Icon" className="w-4 h-4" />
-  {isBuy
-    ? `${format4(balance)} TRUST`
-    : `${format4(userShares)} shares`}
-</span>
+              <img src="/wallet.png" alt="Wallet Icon" className="w-4 h-4" />
+              {isBuy
+                ? `${format4(balance)} TRUST`
+                : `${format4(userShares)} shares`
+              }
+            </span>
           </div>
 
           {/* Input */}
@@ -1182,9 +1178,9 @@ const format4 = (value: number | string) => {
       </div>
 
       {/* Your Position Card */}
-<div className="bg-[#110A2B] rounded-xl p-4 flex flex-col gap-3 w-full">
-  {/* Header */}
-  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 text-white text-sm sm:text-base w-full">
+    <div className="bg-[#110A2B] rounded-xl p-4 flex flex-col gap-3 w-full">
+    {/* Header */}
+    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 text-white text-sm sm:text-base w-full">
     
     <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
       <span>Your Position</span>
@@ -1210,30 +1206,30 @@ const format4 = (value: number | string) => {
             );
 
           if (supportTotal > 0) {
-  return (
-    <div className="flex items-center gap-2 whitespace-nowrap">
-      <span className="px-2 py-[2px] text-[10px] bg-blue-500/50 rounded-3xl text-blue-400 cursor-pointer transition">
-        Support
-      </span>
-      <span className="text-white text-xs">
-        {formatTrustExact(supportTotal)} TRUST
-      </span>
-    </div>
-  );
-}
+            return (
+              <div className="flex items-center gap-2 whitespace-nowrap">
+                <span className="px-2 py-[2px] text-[10px] bg-blue-500/50 rounded-3xl text-blue-400 cursor-pointer transition">
+                  Support
+                </span>
+                <span className="text-white text-xs">
+                  {supportTotal.toFixed(4)} TRUST
+                </span>
+              </div>
+            );
+          }
 
-if (opposeTotal > 0) {
-  return (
-    <div className="flex items-center gap-2 whitespace-nowrap">
-      <span className="px-2 py-[2px] text-[10px] bg-[#F19C03] rounded-3xl text-blue-400 cursor-pointer transition">
-        Oppose
-      </span>
-      <span className="text-white text-xs">
-        {formatTrustExact(opposeTotal)} TRUST
-      </span>
-    </div>
-  );
-}
+          if (opposeTotal > 0) {
+            return (
+              <div className="flex items-center gap-2 whitespace-nowrap">
+                <span className="px-2 py-[2px] text-[10px] bg-[#F19C03] rounded-3xl text-blue-400 cursor-pointer transition">
+                  Oppose
+                </span>
+                <span className="text-white text-xs">
+                  {opposeTotal.toFixed(4)} TRUST
+                </span>
+              </div>
+            );
+          }
 
           return (
             <span className="text-gray-400 text-xs sm:text-sm">
