@@ -98,26 +98,33 @@ export default function PortalClaims() {
   }, [visibleClaims, sortOption]);
 
   // Returns true if claim matches search
-  const claimMatchesSearch = (claim: Claim, term: string) => {
-    const lower = term.toLowerCase();
-    return (
-      claim.term.triple.subject.label.toLowerCase().includes(lower) ||
-      claim.term.triple.predicate.label.toLowerCase().includes(lower) ||
-      claim.term.triple.object.label.toLowerCase().includes(lower)
-    );
-  };
+const claimMatchesSearch = (claim: Claim, term: string) => {
+  if (!term.trim()) return true;
 
-  const highlightMatch = (text: string, term: string) => {
-    if (!term) return text;
-    const regex = new RegExp(`(${term})`, "gi");
-    return text.split(regex).map((part, i) =>
-      regex.test(part) ? (
-        <span key={i} className="bg-yellow-400 text-black px-0.5 rounded">{part}</span>
-      ) : (
-        part
-      )
-    );
-  };
+  const lower = term.toLowerCase();
+
+  return (
+    claim.term.triple.subject.label.toLowerCase().includes(lower) ||
+    claim.term.triple.predicate.label.toLowerCase().includes(lower) ||
+    claim.term.triple.object.label.toLowerCase().includes(lower)
+  );
+};
+
+const highlightMatch = (text: string, term: string) => {
+  if (!term) return text;
+
+  const regex = new RegExp(`(${term})`, "gi");
+
+  return text.split(regex).map((part, i) =>
+    part.toLowerCase() === term.toLowerCase() ? (
+      <span key={i} className="bg-yellow-400 text-black px-0.5 rounded">
+        {part}
+      </span>
+    ) : (
+      part
+    )
+  );
+};
 
   const { toast } = useToast();
 
@@ -131,7 +138,7 @@ export default function PortalClaims() {
       const searchQuery = searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : "";
       const { claims } = await apiRequestV2(
         "GET",
-        `/api/get-claims?filter=${sortOption}&offset=${offset}${searchQuery}`
+        `/api/get-claims?filter=${sortOption}&offset=${offset}`
       );
 
       if (!user) {
@@ -195,15 +202,18 @@ export default function PortalClaims() {
 
         const { claims } = await apiRequestV2(
           "GET",
-          `/api/get-claims?filter=${sortOption}&offset=0${searchQuery}`
+          `/api/get-claims?filter=${sortOption}&offset=0`
         );
 
         const filteredClaims = claims.filter((claim: Claim) =>
-          claimMatchesSearch(claim, searchTerm)
-        );
+  claimMatchesSearch(claim, searchTerm)
+);
+
+setVisibleClaims(prev => [...prev, ...filteredClaims]);
+        
 
         setVisibleClaims(filteredClaims);
-        setOffset(LIMIT);
+        setOffset(claims.length);
         setHasMore(filteredClaims.length >= LIMIT);
       } catch (err) {
         console.error(err);
