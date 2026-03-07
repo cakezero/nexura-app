@@ -273,7 +273,7 @@ export default function PortalClaims() {
     }
   }, [showModal]);
 
-  const formatTrust = (shares: bigint, decimals = 18, precision = 2) => {
+  const formatTrust = (shares: bigint, decimals = 18, precision = 4) => {
     const divisor = 10n ** BigInt(decimals);
     const formatted = Number(shares) / Number(divisor);
 
@@ -412,7 +412,7 @@ export default function PortalClaims() {
         description: (
           <div className="flex items-center gap-2">
             <img src="/check.png" alt="success" className="w-4 h-4" />
-            <span>Successfully {action === "deposit" ? "bought a claim!" : "sold shares"}</span>
+            <span>Successfully {action === "deposit" ? "depoosited" : "redeemed"}</span>
           </div>
         ),
       });
@@ -598,7 +598,7 @@ export default function PortalClaims() {
                             >
                               <img
                                 src={claim.term.triple.subject.image}
-                                className="w-5 h-5 flex-shrink-0"
+                                className="w-7 h-7 flex-shrink-0"
                               />
                               <span className="truncate">
                                 {highlightMatch(claim.term.triple.subject.label, searchTerm)}
@@ -640,40 +640,40 @@ export default function PortalClaims() {
                           </div>
                         </td>
 
-                        {/* Actions: buttons only */}
-                        <td className="px-4 py-3 text-center text-xs">
-                          <div className="flex justify-center gap-2">
-                            {/* Support Button */}
-                            <button
-                              className={`px-4 py-2 rounded-lg text-xs transition-all
-    ${actionState[claim.term.id] === "supported"
-                                  ? "bg-transparent text-blue-600 border border-blue-600 hover:bg-blue-600 hover:text-white" // hovered reverts
-                                  : "bg-blue-600 text-white hover:brightness-110"
-                                }`}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleSupportClick(claim);
-                              }}
-                            >
-                              {actionState[claim.term.id] === "supported" ? "Supported" : "Support"}
-                            </button>
+   {/* Actions: buttons only */}
+<td className="px-4 py-3 text-center text-xs">
+  <div className="flex justify-center gap-2">
+    {/* Support Button */}
+    <button
+      className={`px-4 py-2 rounded-lg text-xs transition-all ${
+        actionState[claim.term.id] === "supported"
+          ? "bg-transparent text-blue-600 border border-blue-600 hover:bg-blue-600 hover:text-white"
+          : "bg-blue-600 text-white hover:brightness-110"
+      }`}
+      onClick={(e) => {
+        e.stopPropagation();
+        handleSupportClick(claim);
+      }}
+    >
+      {actionState[claim.term.id] === "supported" ? "Supported" : "Support"}
+    </button>
 
-                            {/* Oppose Button */}
-                            <button
-                              className={`px-4 py-2 rounded-lg text-xs transition-all
-    ${actionState[claim.counter_term.id] === "opposed"
-                                  ? "bg-transparent text-[#F19C03] border border-[#F19C03] hover:bg-[#F19C03] hover:text-white"
-                                  : "bg-[#F19C03] text-white hover:brightness-110"
-                                }`}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleOpposeClick(claim);
-                              }}
-                            >
-                              {actionState[claim.counter_term.id] === "opposed" ? "Opposed" : "Oppose"}
-                            </button>
-                          </div>
-                        </td>
+    {/* Oppose Button */}
+    <button
+      className={`px-4 py-2 rounded-lg text-xs transition-all ${
+        actionState[claim.counter_term.id] === "opposed"
+          ? "bg-transparent text-[#F19C03] border border-[#F19C03] hover:bg-[#F19C03] hover:text-white"
+          : "bg-[#F19C03] text-white hover:brightness-110"
+      }`}
+      onClick={(e) => {
+        e.stopPropagation();
+        handleOpposeClick(claim);
+      }}
+    >
+      {actionState[claim.counter_term.id] === "opposed" ? "Opposed" : "Oppose"}
+    </button>
+  </div>
+</td>
                       </tr>
                     ))}
                   </tbody>
@@ -904,11 +904,11 @@ export default function PortalClaims() {
                 <div className="flex items-center gap-2 mb-1 p-2 pb-1">
                   <h2 className="text-white font text-base">Stake</h2>
                   <div className="flex items-center gap-1 group relative">
-                    <span
-                      className="bg-[#0A2D4D] text-white text-[9px] px-1 py-[1px] rounded-full cursor-pointer transition-colors duration-200 hover:bg-white hover:text-[#0A2D4D] hover:border-[#0A2D4D]"
-                    >
-                      {opposeMode ? "Oppose" : "Support"}
-                    </span>
+                   <span
+                            className="bg-[#0A2D4D] text-white text-[9px] px-1 py-[1px] rounded-full cursor-pointer transition-colors duration-200 hover:bg-white hover:text-[#0A2D4D] hover:border-[#0A2D4D]"
+                          >
+                            {opposeMode ? "Oppose" : "Support"}
+                          </span>
 
                     <span className="text-[10px] bg-gray-300 text-black rounded-full w-3 h-3 flex items-center justify-center cursor-default">
                       ?
@@ -1429,10 +1429,10 @@ export default function PortalClaims() {
                 <div className="flex items-center gap-2 mb-4">
                   <h2 className="text-white text-base mt-2">Stake</h2>
                   <span
-                    className="bg-[#0A2D4D] text-white border border-white text-xs px-2 py-0.5 mt-2 rounded-full cursor-pointer transition-colors duration-200 hover:bg-white hover:text-[#0A2D4D] hover:border-[#0A2D4D]"
-                  >
-                    {opposeMode ? "Oppose" : "Support"}
-                  </span>
+                            className="bg-[#0A2D4D] text-white text-[9px] px-1 py-[1px] rounded-full cursor-pointer transition-colors duration-200 hover:bg-white hover:text-[#0A2D4D] hover:border-[#0A2D4D]"
+                          >
+                            {opposeMode ? "Oppose" : "Support"}
+                          </span>
                 </div>
 
                 <p className="text-gray-400 text-sm mb-6">
@@ -1556,46 +1556,93 @@ export default function PortalClaims() {
                   Staking on a Triple enhances its discoverability in the Intuition system
                 </p>
 
-                {/* Centered Spinner + Label */}
-                <div className="flex flex-col items-center my-6">
-                  <img src="/spinner.png" alt="Spinner" className="w-16 h-16 mb-2" />
-                  <span className="text-white">Review...</span>
-                </div>
+                {/* REVIEW */}
+                {modalStep === "review" && (
+                  <>
+                    <div className="flex flex-col items-center my-6">
+                      <img src="/spinner.png" alt="Spinner" className="w-16 h-16 mb-2" />
+                      <span className="text-white">Review...</span>
+                    </div>
 
-                {/* Redeem TRUST Label */}
-                <span className="text-gray-300 mb-2 block">Redeem TRUST from Claim</span>
+                    <button
+                      className="mx-auto block bg-white text-black px-6 py-1.5 rounded-3xl text-sm"
+                      onClick={() => {
+                        handleClaimAction("deposit");
+                        setShowModal(false);
+                      }}
+                    >
+                      Confirm
+                    </button>
+                  </>
+                )}
 
-                {/* Statement */}
-                <div className="text-gray-300 mb-6 px-6 flex flex-wrap items-center gap-2">
-                  <span className="bg-[#0b0618] hover:bg-[#140a25] transition-colors duration-200 px-2 py-1 rounded inline-flex items-center gap-2 max-w-[150px] truncate">
-                    <img src={activeClaim.term.triple.subject.image} alt="Claim Icon" className="w-5 h-5 object-contain" />
-                    {activeClaim.term.triple.subject.label}
-                  </span>
+                {/* AWAITING */}
+                {modalStep === "awaiting" && (
+                  <>
+                    <div className="flex flex-col items-center my-6">
+                      <img src="/spinner.png" alt="Spinner" className="w-16 h-16 mb-2" />
+                      <span className="text-white">Awaiting...</span>
+                    </div>
 
-                  <span>{activeClaim.term.triple.predicate.label}</span>
+                    <div className="flex items-center justify-center gap-2 bg-[#110A2B] border border-[#393B60] rounded-2xl px-4 py-2 mx-4">
+                      <img src="/wallet.png" alt="Wallet Icon" className="w-5 h-5" />
+                      <span className="text-white text-sm">
+                        Awaiting wallet approval
+                      </span>
+                      <div className="relative group">
+                        <span className="text-gray-400 cursor-pointer text-sm">
+                          ?
+                        </span>
+                        <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-max bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                          Approve this transaction in your wallet
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
 
-                  <span className="bg-[#0b0618] hover:bg-[#140a25] transition-colors duration-200 px-2 py-1 rounded max-w-[150px] truncate">
-                    {activeClaim.term.triple.object.label}
-                  </span>
-                </div>
+                {/* SUCCESS */}
+                {modalStep === "success" && (
+                  <div className="flex flex-col items-center my-8">
+                    <div className="w-16 h-16 rounded-full bg-green-500 flex items-center justify-center mb-4">
+                      <span className="text-white text-2xl">✓</span>
+                    </div>
 
-                {/* Amount Input */}
-                <div className="mb-4">
-                  <label className="text-gray-300 text-sm mb-1 block">Amount (in TRUST)</label>
-                  <input
-                    type="text"
-                    value={transactionAmount}
-                    onChange={(e) => setTransactionAmount(e.target.value)}
-                    className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                {/* Redeem / Deposit Button */}
-                <button
-                  className="w-full bg-white text-black py-2.5 rounded-3xl text-sm"
-                  onClick={() => handleClaimAction("redeem")}
-                >
-                  Redeem
-                </button>
+                    <span className="text-white mb-6">
+                      Successfully {opposeMode ? "opposed" : "supported"}!
+                    </span>
+
+                    <button
+                      className="bg-white text-black px-6 py-2 rounded-3xl text-sm"
+                      onClick={() => {
+                        setShowReviewDepositModal(false);
+                        setModalStep("review");
+                      }}
+                    >
+                      Done
+                    </button>
+                  </div>
+                )}
+
+                {/* FAILED */}
+                {modalStep === "failed" && (
+                  <div className="flex flex-col items-center my-8">
+                    <div className="w-16 h-16 rounded-full bg-red-500 flex items-center justify-center mb-4">
+                      <span className="text-white text-2xl">✕</span>
+                    </div>
+
+                    <span className="text-white mb-6">
+                      Transaction Failed
+                    </span>
+
+                    <button
+                      className="bg-white text-black px-6 py-2 rounded-3xl text-sm"
+                      onClick={() => setModalStep("review")}
+                    >
+                      Try Again
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           )}
