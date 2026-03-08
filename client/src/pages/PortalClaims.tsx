@@ -1489,7 +1489,7 @@ setVisibleClaims(prev => [...prev, ...filteredClaims]);
       className="text-blue-500 flex items-center gap-1 mb-6 hover:underline"
     >
       View Transaction on Explorer
-      <img src="/share.png" alt="share icon" className="w-4 h-4" />
+      {/*<img src="/share.png" alt="share icon" className="w-4 h-4" />*/}
     </a>
 
     <button
@@ -1618,7 +1618,7 @@ setVisibleClaims(prev => [...prev, ...filteredClaims]);
                       className="text-blue-500 flex items-center gap-1 mb-6 hover:underline"
                     >
                       View Transaction on Explorer
-                      <img src="/share.png" alt="share icon" className="w-4 h-4" />
+                      {/*<img src="/share.png" alt="share icon" className="w-4 h-4" />*/}
                     </a>
 
                     <button
