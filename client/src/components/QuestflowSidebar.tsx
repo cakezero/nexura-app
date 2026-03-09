@@ -115,7 +115,7 @@ export default function NexuraSidebar() {
         <div className="w-full flex flex-col gap-1 px-2 py-1 border-t border-border/40">
   {/* Discord */}
   <a
-    href="https://discord.gg/ezBvGZVWU"
+    href="https://discord.gg/PK7wbXVCsE"
     target="_blank"
     rel="noopener noreferrer"
     className="flex items-center gap-1 min-h-[28px] group-data-[collapsible=icon]:justify-center hover:bg-gray-700 rounded px-1 transition-colors"
@@ -155,7 +155,7 @@ export default function NexuraSidebar() {
     className="flex items-center gap-1 min-h-[28px] group-data-[collapsible=icon]:justify-center hover:bg-gray-700 rounded px-1 transition-colors"
   >
     <img
-      src="/docs-icon.png"
+      src="/notebook.png"
       alt="Docs"
       className="w-4 h-4 flex-shrink-0 object-contain"
     />

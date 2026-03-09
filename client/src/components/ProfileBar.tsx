@@ -17,6 +17,7 @@ import { apiRequest } from "../lib/queryClient";
 import SignUpPopup from "./SignUpPopup";
 import DailyCheckInModal from "./DailyCheckInModal";
 import NetworkButton from "./NetworkButton";
+import XPRewardPopup from "./XPRewardPopup";
 
 interface ProfileBarProps {
   userId?: string;
@@ -130,6 +131,13 @@ export default function ProfileBar({ userId = "user-123" }: ProfileBarProps) {
 
   const [location, setLocation] = useLocation();
   const { toast } = useToast();
+  const [showXpPopup, setShowXpPopup] = useState(false);
+  const [flipped, setFlipped] = useState(false);
+
+useEffect(() => {
+  const interval = setInterval(() => setFlipped(prev => !prev), 5000);
+  return () => clearInterval(interval);
+}, []);
 
   const handleLogout = () => {
     signOut();
@@ -158,10 +166,25 @@ export default function ProfileBar({ userId = "user-123" }: ProfileBarProps) {
   const showLevelInHeader = hasServerProfile || walletConnected;
 
   return (
-    <div className="flex items-center gap-4">
-      {walletConnected && <NetworkButton />}
-      {hasServerProfile && <DailySignInBadge />}
-      {showLevelInHeader && <LevelBadge />}
+        <>
+<div className="flex items-center gap-4">
+  {/* XP Reward button - in flow with other buttons */}
+  {hasServerProfile && (
+    <button
+      onClick={() => setShowXpPopup(true)}
+      className="bg-purple-600 text-white px-3 py-1.5 rounded-full shadow-lg hover:bg-purple-700 transition font-bold text-xs sm:text-sm"
+    >
+      🎉 XP Reward
+    </button>
+  )}
+
+  {/* Network Button */}
+  {walletConnected && <NetworkButton />}
+
+  {/* Always visible badges */}
+  {hasServerProfile && <DailySignInBadge />}
+  {showLevelInHeader && <LevelBadge />}
+
 
       {hasServerProfile ? (
         <DropdownMenu>
@@ -239,5 +262,12 @@ export default function ProfileBar({ userId = "user-123" }: ProfileBarProps) {
         <SignUpPopup mode="user" />
       )}
     </div>
+{showXpPopup && (
+  <XPRewardPopup
+    forceShow={true}
+    onClose={() => setShowXpPopup(false)}
+  />
+)}
+    </>
   );
 };

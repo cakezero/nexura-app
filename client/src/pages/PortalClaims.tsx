@@ -9,6 +9,7 @@ import { getPublicClient } from "../lib/viem";
 import { useAuth } from "../lib/auth";
 import { network } from "../lib/constants";
 import { Term, Position } from "../types/types";
+import XPRewardPopup from "../components/XPRewardPopup"
 
 const explorer = network === "testnet" ? "https://testnet.explorer.intuition.systems" : "https://explorer.intuition.systems";
 
@@ -31,6 +32,7 @@ export const toFixed = (num: string) => {
 export default function PortalClaims() {
   const { user } = useAuth();
   const [_, setLocation] = useLocation();
+  const [showPopup, setShowPopup] = useState(false);
   const [view, setView] = useState("list");
   const [sortOption, setSortOption] = useState('{"total_market_cap":"desc"}');
   const [sortDirection, setSortDirection] = useState("desc");
@@ -64,6 +66,10 @@ export default function PortalClaims() {
   >("review");
   // Example state to store totals
   const [userShares, setUserShares] = useState<{ support: bigint; oppose: bigint }>({ support: 0n, oppose: 0n });
+
+    useEffect(() => {
+    setShowPopup(true);
+  }, []);
 
 
   const [userSharesByCurve, setUserSharesByCurve] = useState<{
@@ -1652,6 +1658,7 @@ export default function PortalClaims() {
           )}
 
           <div ref={observerRef} className="h-10"></div>
+          <XPRewardPopup show={showPopup} onClose={() => setShowPopup(false)} />
         </div>
       </div>
     </div>
