@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { useLocation } from "wouter";
 
 type Props = {
   onClose?: () => void;
@@ -8,21 +9,24 @@ type Props = {
 
 const XPRewardPopup: React.FC<Props> = ({ onClose, forceShow = false }) => {
   const [show, setShow] = useState(false);
+const [location] = useLocation();
+const TARGET_PAGE = "/portal-claims";
   const LOCAL_KEY = "xpPopupShownCount";
 
   useEffect(() => {
-    if (forceShow) {
-      setShow(true);
-      return;
-    }
+  if (location !== TARGET_PAGE) return;
 
-    const count = parseInt(localStorage.getItem(LOCAL_KEY) || "0");
-    if (count < 2) {
-      setShow(true);
-      localStorage.setItem(LOCAL_KEY, (count + 1).toString());
-    }
-  }, [forceShow]);
+  if (forceShow) {
+    setShow(true);
+    return;
+  }
 
+  const count = parseInt(localStorage.getItem(LOCAL_KEY) || "0");
+  if (count < 2) {
+    setShow(true);
+    localStorage.setItem(LOCAL_KEY, (count + 1).toString());
+  }
+}, [forceShow, location]);
   if (!show) return null;
 
   return createPortal(
@@ -34,11 +38,14 @@ const XPRewardPopup: React.FC<Props> = ({ onClose, forceShow = false }) => {
         >
           🎉 XP Reward!
         </h2>
-        <p className="mb-6 text-center text-white text-[16px] sm:text-[18px] leading-snug">
-          Whenever you use our portal claims to support or oppose with{" "}
-          <strong>200TRUST</strong> and above, you get <strong>20XP</strong> for
-          free!
-        </p>
+     <p className="mb-3 text-center text-white text-[16px] sm:text-[18px] leading-snug">
+  Whenever you support or oppose a portal claim with <strong>200 TRUST</strong> or more, you earn <strong>50 XP</strong>.
+  You can earn up to <strong>50 XP per day</strong>, <strong>350 XP per week</strong>, and <strong>1,400 XP per month</strong>.
+</p>
+
+<p className="text-center text-gray-400 text-[11px]">
+  XP rewards reset every 24 hours at 12AM UTC.
+</p>
         <div className="flex justify-center">
           <button
             onClick={() => {

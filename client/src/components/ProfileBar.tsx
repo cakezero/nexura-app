@@ -169,14 +169,14 @@ useEffect(() => {
         <>
 <div className="flex items-center gap-4">
   {/* XP Reward button - in flow with other buttons */}
-  {hasServerProfile && (
-    <button
-      onClick={() => setShowXpPopup(true)}
-      className="bg-purple-600 text-white px-3 py-1.5 rounded-full shadow-lg hover:bg-purple-700 transition font-bold text-xs sm:text-sm"
-    >
-      🎉 XP Reward
-    </button>
-  )}
+  {hasServerProfile && location === "/portal-claims" && (
+  <button
+    onClick={() => setShowXpPopup(true)}
+    className="bg-purple-600 text-white px-3 py-1.5 rounded-full shadow-lg hover:bg-purple-700 transition font-bold text-xs sm:text-sm"
+  >
+    🎉 XP Reward
+  </button>
+)}
 
   {/* Network Button */}
   {walletConnected && <NetworkButton />}
