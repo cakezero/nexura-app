@@ -38,13 +38,13 @@ const TARGET_PAGE = "/portal-claims";
         >
           🎉 XP Reward!
         </h2>
-     <p className="mb-3 text-center text-white text-[16px] sm:text-[18px] leading-snug">
-  Whenever you support or oppose a portal claim with <strong>200 TRUST</strong> or more, you earn <strong>50 XP</strong>.
+   <p className="mb-3 text-center text-white text-[16px] sm:text-[18px] leading-snug">
+  Whenever you support or oppose a <strong>Portal Claim using Nexura</strong> with <strong>200 TRUST</strong> or more, you earn <strong>50 XP</strong>.
   You can earn up to <strong>50 XP per day</strong>, <strong>350 XP per week</strong>, and <strong>1,400 XP per month</strong>.
 </p>
 
 <p className="text-center text-gray-400 text-[11px]">
-  XP rewards reset every 24 hours at 12AM UTC.
+  XP rewards reset every 24 hours at 12 AM UTC.
 </p>
         <div className="flex justify-center">
           <button
