@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
 import { z } from "zod";
-import { JWT_SECRET, network, REFRESH_SECRET } from "./env.utils";
+import { JWT_SECRET, network, REFRESH_SECRET, STUDIO_FEE_CONTRACT } from "./env.utils";
 import { performIntuitionOnchainAction } from "./account";
 import { NexonsAddress } from "./constants";
 import { ethers } from "ethers";
@@ -308,6 +308,15 @@ export const getRefreshToken = (id: any) => {
 
 export const checkPayment = async (txHash: string) => {
 	const provider = new ethers.JsonRpcProvider(chain.rpcUrls.default.http[0]);
+	const feeContract = STUDIO_FEE_CONTRACT?.trim();
+
+	if (!feeContract) {
+		throw new Error(`Studio fee contract is not configured for ${network ?? "the current"} network`);
+	}
+
+	if (!ethers.isAddress(feeContract)) {
+		throw new Error(`Studio fee contract is invalid: ${feeContract}`);
+	}
 
 	const feeInterface = new ethers.Interface(["event FeePaid(uint256 totalCampaigns)"]);
 
@@ -316,13 +325,11 @@ export const checkPayment = async (txHash: string) => {
 		throw new Error("Transaction failed");
 	}
 
-	const FEE_CONTRACT = network === "testnet" ? "0x742ed23dD10686C22A5cD459Af96BC1F83e58C7a" : "";
-
 	let totalCampaigns: bigint = 0n;
 
 	// Check logs
 	for (const log of receipt.logs) {
-		if (log.address.toLowerCase() !== FEE_CONTRACT.toLowerCase()) continue;
+		if (log.address.toLowerCase() !== feeContract.toLowerCase()) continue;
 
     const parsed = feeInterface.parseLog(log);
 

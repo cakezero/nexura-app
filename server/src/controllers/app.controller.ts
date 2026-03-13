@@ -7,7 +7,7 @@ import { campaignQuest, miniQuest, quest } from "@/models/quests.model";
 import { user } from "@/models/user.model";
 import { hub } from "@/models/hub.model";
 import { performIntuitionOnchainAction } from "@/utils/account";
-import { BOT_TOKEN, THIRD_PARTY_API_KEY } from "@/utils/env.utils";
+import { BOT_TOKEN, network, STUDIO_FEE_CONTRACT, THIRD_PARTY_API_KEY } from "@/utils/env.utils";
 import {
   INTERNAL_SERVER_ERROR,
   OK,
@@ -38,6 +38,15 @@ const client = new GraphQLClient(GRAPHQL_API_URL);
 
 export const home = async (req: GlobalRequest, res: GlobalResponse) => {
 	res.send("hi!");
+};
+
+export const getStudioPaymentConfig = async (_req: GlobalRequest, res: GlobalResponse) => {
+  res.status(OK).json({
+    network,
+    contractAddress: STUDIO_FEE_CONTRACT,
+    chainId: network === "mainnet" ? "0x483" : "0x350b",
+    amount: network === "mainnet" ? "1000" : "2",
+  });
 };
 
 export const updateUser = async (req: GlobalRequest, res: GlobalResponse) => {

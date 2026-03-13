@@ -1,9 +1,10 @@
 import chain from "./chain";
 import { getWalletClient } from "./viem";
-import { network, NEXONS, NEXONS_ABI, CAMPAIGN_ABI, STUDIO_FEE_CONTRACT } from "./constants";
+import { network, NEXONS, NEXONS_ABI, CAMPAIGN_ABI } from "./constants";
 import { ethers } from "ethers";
 import { parseAbi, type Address, parseEther } from "viem";
 import { getIntuitionNetworkParams } from "./utils";
+import { buildUrl } from "./queryClient";
 
 const ERC20_TRANSFER_ABI = [
   "function transfer(address to, uint256 amount) returns (bool)",
@@ -16,16 +17,48 @@ const STUDIO_FEE_ABI = [
   "error SendTheRequiredFeeAmount(uint fee)",
 ];
 
+type StudioPaymentConfig = {
+  network?: string;
+  contractAddress?: string;
+  chainId: string;
+  amount: string;
+};
+
 const mainnet = network === "mainnet";
 
 const chainId = mainnet ? "0x483" : "0x350b";
 
-const ensureSwitch = async () => {
+const requireContractAddress = (address: string | undefined, label: string, networkLabel = network ?? "the current") => {
+  const normalized = address?.trim();
+
+  if (!normalized) {
+    throw new Error(`${label} is not configured for ${networkLabel} network.`);
+  }
+
+  if (!ethers.isAddress(normalized)) {
+    throw new Error(`${label} is invalid: ${normalized}`);
+  }
+
+  return normalized;
+};
+
+const getStudioPaymentConfig = async (): Promise<StudioPaymentConfig> => {
+  const response = await fetch(buildUrl("/api/studio-payment-config"));
+
+  if (!response.ok) {
+    const json = await response.json().catch(() => null);
+    throw new Error(json?.error || "Unable to load studio payment configuration.");
+  }
+
+  return response.json();
+};
+
+const ensureSwitch = async (targetChainId: string) => {
   // Fast path: switch if chain is already in wallet
   try {
     await window.ethereum.request({
       method: "wallet_switchEthereumChain",
-      params: [{ chainId }]
+      params: [{ chainId: targetChainId }]
     });
     return;
   } catch (err: any) {
@@ -34,26 +67,28 @@ const ensureSwitch = async () => {
   }
 
   // Add (+ auto-switch) for wallets that don't know the chain yet
-  const params = getIntuitionNetworkParams(false, chainId);
+  const params = getIntuitionNetworkParams(false, targetChainId);
   await (window as any).ethereum.request({ method: "wallet_addEthereumChain", params });
 };
 
 export const payStudioHubFee = async (): Promise<string> => {
   try {
     if (!window.ethereum) throw new Error("No wallet provider available. Connect a wallet with RainbowKit first.");
+    const config = await getStudioPaymentConfig();
+    const studioFeeContract = requireContractAddress(config.contractAddress, "Studio fee contract", config.network ?? "the server");
 
-    await ensureSwitch();
+    await ensureSwitch(config.chainId);
 
     const provider = new ethers.BrowserProvider((window as any).ethereum);
     const signer = await provider.getSigner();
 
     const contract = new ethers.Contract(
-      STUDIO_FEE_CONTRACT,
+      studioFeeContract,
       STUDIO_FEE_ABI,
       signer
     );
 
-    const tx = await contract.payFee({ value: parseEther(mainnet ? "1000" : "2") });
+    const tx = await contract.payFee({ value: parseEther(config.amount) });
 
     await tx.wait();
 
@@ -84,6 +119,7 @@ export const claimCampaignOnchainReward = async ({ campaignAddress, userId }: { 
   try {
     const walletClient = getWalletClient();
     if (!walletClient) throw new Error("No wallet provider available. Connect a wallet with RainbowKit first.");
+    const validatedCampaignAddress = requireContractAddress(campaignAddress, "Campaign contract");
 
     await window.ethereum.request({
       method: "wallet_switchEthereumChain",
@@ -95,7 +131,7 @@ export const claimCampaignOnchainReward = async ({ campaignAddress, userId }: { 
     const signer = await provider.getSigner();
 
     const contract = new ethers.Contract(
-      campaignAddress,
+      validatedCampaignAddress,
       CAMPAIGN_ABI,
       signer
     );

@@ -5,6 +5,7 @@ import {
 	checkXTask,
 	checkDiscordTask,
 	home,
+  getStudioPaymentConfig,
   getAnalytics,
 	saveCv,
 	updateX,
@@ -23,6 +24,7 @@ const router = Router();
 
 router
   .get("/", home)
+  .get("/studio-payment-config", getStudioPaymentConfig)
   .get("/get-claims", rateLimiter, authenticateUser2, getClaims)
   .get("/get-triple", rateLimiter, authenticateUser2, getTriple)
   .get("/get-analytics", getAnalytics)
