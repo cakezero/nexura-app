@@ -64,17 +64,21 @@ export const resetEmail = async (email: string, link: string) => {
 export const addHubAdminEmail = async (email: string, code: string, origin?: string) => {
   try {
     const baseUrl = origin || CLIENT_URL;
+    const signUpUrl = `${baseUrl}/studio/register?email=${encodeURIComponent(email)}`;
+    logger.info(`Sending admin invite to ${email} with link ${signUpUrl}`);
     await transporter.sendMail({
       from: EMAIL_USER,
       to: email,
       subject: "Hub admin setup",
       template: "admin-setup",
       context: {
-        url: `${baseUrl}/studio/register?email=${encodeURIComponent(email)}`,
+        url: signUpUrl,
         code
       },
     } as MailOptions);
+    logger.info(`Admin invite email sent successfully to ${email}`);
   } catch (error: any) {
+    logger.error(`Failed to send admin invite email to ${email}:`, error.message);
     throw new Error(error.message);
   }
 };

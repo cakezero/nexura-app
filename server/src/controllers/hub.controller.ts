@@ -132,9 +132,10 @@ export const addHubAdmin = async (req: GlobalRequest, res: GlobalResponse) => {
     await addHubAdminEmail(email, code, origin);
 
     res.status(OK).json({ message: "otp sent" });
-  } catch (error) {
-    logger.error(error);
-    res.status(INTERNAL_SERVER_ERROR).json({ error: 'Failed to add hub admin' });
+  } catch (error: any) {
+    logger.error("addHubAdmin failed:", error);
+    const msg = error?.message || 'Failed to add hub admin';
+    res.status(INTERNAL_SERVER_ERROR).json({ error: msg });
   }
 };
 
