@@ -320,9 +320,19 @@ export const checkPayment = async (txHash: string) => {
 
 	const feeInterface = new ethers.Interface(["event FeePaid(uint256 totalCampaigns)"]);
 
-	const receipt = await provider.getTransactionReceipt(txHash);
-	if (!receipt || receipt.status !== 1) {
-		throw new Error("Transaction failed");
+	// Retry receipt lookup up to 5 times — testnet RPC can return null transiently
+	let receipt: ethers.TransactionReceipt | null = null;
+	for (let attempt = 0; attempt < 5; attempt++) {
+		receipt = await provider.getTransactionReceipt(txHash);
+		if (receipt) break;
+		await new Promise(r => setTimeout(r, 1500 * (attempt + 1)));
+	}
+
+	if (!receipt) {
+		throw new Error("Transaction receipt not found. The transaction may still be pending or the hash is incorrect.");
+	}
+	if (receipt.status !== 1) {
+		throw new Error("Transaction failed on-chain");
 	}
 
 	let totalCampaigns: bigint = 0n;
