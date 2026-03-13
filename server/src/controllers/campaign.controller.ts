@@ -87,24 +87,6 @@ export const createCampaign = async (
 			return;
 		}
 
-		// Accept txHash from body OR fall back to DB-stored pendingTxHash
-		const bodyHash = req.body.txHash as string | undefined;
-		const txHash = bodyHash || (createdHub as any).pendingTxHash as string | null;
-		if (!txHash) {
-			res.status(BAD_REQUEST).json({ error: "No confirmed payment found. Please complete the launch fee payment first." });
-			return;
-		}
-		const campaignNo = await checkPayment(txHash);
-		if (!campaignNo) {
-			res.status(FORBIDDEN).json({ error: "kindly pay the require amount (1000 TRUST) to proceed" });
-			return;
-		}
-
-		if (createdHub.campaignsCreated >= campaignNo) {
-			res.status(FORBIDDEN).json({ error: "kindly pay the required amount (1000 TRUST) to proceed" });
-			return;
-		}
-
 		const xpAllocated = createdHub.xpAllocated;
 		if (xpAllocated === 0) {
 			res
