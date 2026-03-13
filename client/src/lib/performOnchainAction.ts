@@ -20,10 +20,24 @@ const mainnet = network === "mainnet";
 
 const chainId = mainnet ? "0x483" : "0x350b";
 
+const getInjectedProvider = () => {
+  const ethereum = (window as any).ethereum;
+  if (!ethereum) return null;
+
+  if (Array.isArray(ethereum.providers) && ethereum.providers.length > 0) {
+    return ethereum.providers.find((provider: any) => provider?.isMetaMask) ?? ethereum.providers[0];
+  }
+
+  return ethereum;
+};
+
 const ensureSwitch = async () => {
+  const provider = getInjectedProvider();
+  if (!provider) throw new Error("No wallet provider available. Connect a wallet first.");
+
   // Fast path: switch if chain is already in wallet
   try {
-    await window.ethereum.request({
+    await provider.request({
       method: "wallet_switchEthereumChain",
       params: [{ chainId }]
     });
@@ -35,16 +49,20 @@ const ensureSwitch = async () => {
 
   // Add (+ auto-switch) for wallets that don't know the chain yet
   const params = getIntuitionNetworkParams(false, chainId);
-  await (window as any).ethereum.request({ method: "wallet_addEthereumChain", params });
+  await provider.request({ method: "wallet_addEthereumChain", params });
 };
 
 export const payStudioHubFee = async (): Promise<string> => {
   try {
-    if (!window.ethereum) throw new Error("No wallet provider available. Connect a wallet with RainbowKit first.");
+    const injectedProvider = getInjectedProvider();
+    if (!injectedProvider) throw new Error("No wallet provider available. Connect a wallet with RainbowKit first.");
+    if (!STUDIO_FEE_CONTRACT) {
+      throw new Error("Studio fee contract is not configured for this network. Please set VITE_STUDIO_FEE_CONTRACT_MAINNET or VITE_STUDIO_FEE_CONTRACT_TESTNET.");
+    }
 
     await ensureSwitch();
 
-    const provider = new ethers.BrowserProvider((window as any).ethereum);
+    const provider = new ethers.BrowserProvider(injectedProvider);
     const signer = await provider.getSigner();
 
     const contract = new ethers.Contract(
@@ -85,12 +103,15 @@ export const claimCampaignOnchainReward = async ({ campaignAddress, userId }: { 
     const walletClient = getWalletClient();
     if (!walletClient) throw new Error("No wallet provider available. Connect a wallet with RainbowKit first.");
 
-    await window.ethereum.request({
+    const injectedProvider = getInjectedProvider();
+    if (!injectedProvider) throw new Error("No wallet provider available. Connect a wallet first.");
+
+    await injectedProvider.request({
       method: "wallet_switchEthereumChain",
       params: [{ chainId }]
     });
 
-    const provider = new ethers.BrowserProvider((window as any).ethereum);
+    const provider = new ethers.BrowserProvider(injectedProvider);
 
     const signer = await provider.getSigner();
 
@@ -152,16 +173,19 @@ export const mintNexon = async (level: number, userId: string) => {
     const walletClient = getWalletClient();
     if (!walletClient) throw new Error("No wallet provider available. Connect a wallet with RainbowKit first.");
 
+    const injectedProvider = getInjectedProvider();
+    if (!injectedProvider) throw new Error("No wallet provider available. Connect a wallet first.");
+
     const mainnet = network === "mainnet";
 
-    await window.ethereum.request({
+    await injectedProvider.request({
       method: "wallet_switchEthereumChain",
       params: [{ chainId: mainnet ? "0x483" : "0x350b" }]
     });
 
     const { address, metadata } = NEXONS[level];
 
-    const provider = new ethers.BrowserProvider((window as any).ethereum);
+    const provider = new ethers.BrowserProvider(injectedProvider);
 
     const signer = await provider.getSigner();
 

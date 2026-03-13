@@ -1,7 +1,10 @@
 
 export const network = (import.meta as any).env?.VITE_NETWORK;
 
-export const STUDIO_FEE_CONTRACT  = network === "mainnet" ? "" : "0x742ed23dD10686C22A5cD459Af96BC1F83e58C7a" as `0x${string}`;
+const mainnetStudioFeeContract = (import.meta as any).env?.VITE_STUDIO_FEE_CONTRACT_MAINNET;
+const testnetStudioFeeContract = (import.meta as any).env?.VITE_STUDIO_FEE_CONTRACT_TESTNET ?? "0x742ed23dD10686C22A5cD459Af96BC1F83e58C7a";
+
+export const STUDIO_FEE_CONTRACT = (network === "mainnet" ? mainnetStudioFeeContract : testnetStudioFeeContract) as `0x${string}` | undefined;
 
 export const BACKEND_URL = (import.meta as any).env?.VITE_BACKEND_URL;
 
