@@ -112,8 +112,10 @@ export default function CampaignsTab() {
 
   const now = new Date();
 
-  const isDraft = (c: Campaign) => c.status === "Save" || !c.status;
-  const isScheduled = (c: Campaign) => c.status === "Scheduled";
+  const isDraft = (c: Campaign) => c.status === "Save";
+  const isCompleted = (c: Campaign) => !!c.ends_at && new Date(c.ends_at) <= now;
+  const isScheduled = (c: Campaign) => !isDraft(c) && !isCompleted(c) && !!c.starts_at && new Date(c.starts_at) > now;
+  const isActiveCampaign = (c: Campaign) => !isDraft(c) && !isScheduled(c) && !isCompleted(c);
 
   // Countdown ticker for scheduled campaigns
   useEffect(() => {
@@ -150,19 +152,19 @@ export default function CampaignsTab() {
 
   const filteredCampaigns = campaigns.filter((c) => {
     if (activeTab === "all") return true;
-    if (activeTab === "active") return c.status === "Active" && new Date(c.ends_at) > now;
+    if (activeTab === "active") return isActiveCampaign(c);
     if (activeTab === "upcoming") return isScheduled(c);
-    if (activeTab === "completed") return !isDraft(c) && !isScheduled(c) && new Date(c.ends_at) <= now;
+    if (activeTab === "completed") return isCompleted(c);
     if (activeTab === "drafts") return isDraft(c);
     return true;
   });
 
   const tabs = [
     { id: "all", label: "All Campaigns", count: campaigns.length },
-    { id: "active", label: "Active", count: campaigns.filter(c => c.status === "Active" && new Date(c.ends_at) > now).length },
+    { id: "active", label: "Active", count: campaigns.filter((c) => isActiveCampaign(c)).length },
     { id: "upcoming", label: "Upcoming", count: campaigns.filter(c => isScheduled(c)).length },
     { id: "drafts", label: "Drafts", count: campaigns.filter(c => isDraft(c)).length },
-    { id: "completed", label: "Completed", count: campaigns.filter(c => !isDraft(c) && !isScheduled(c) && new Date(c.ends_at) <= now).length },
+    { id: "completed", label: "Completed", count: campaigns.filter((c) => isCompleted(c)).length },
   ];
 
   const CampaignCard = ({ campaign }: { campaign: Campaign }) => {
@@ -177,7 +179,7 @@ export default function CampaignsTab() {
     } else if (scheduled) {
       status = "Upcoming";
       statusColor = "bg-blue-500";
-    } else if (new Date(campaign.ends_at) <= now) {
+    } else if (isCompleted(campaign)) {
       status = "Completed";
       statusColor = "bg-gray-500";
     }
@@ -187,7 +189,7 @@ export default function CampaignsTab() {
       return date.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
     };
 
-    const isActive = !draft && !scheduled && new Date(campaign.ends_at) > now;
+    const isActive = isActiveCampaign(campaign);
 
     return (
       <Card className="w-full h-full bg-gray-900 text-white rounded-xl overflow-hidden shadow-lg flex flex-col">

@@ -36,6 +36,22 @@ interface ICreateCampaign {
 	description: string;
 }
 
+const getTemporalCampaignStatus = (campaignDoc: {
+	status?: string;
+	starts_at?: string | Date;
+	ends_at?: string | Date;
+}) => {
+	if (campaignDoc.status === "Save") return "Save";
+
+	const now = new Date();
+	const startsAt = campaignDoc.starts_at ? new Date(campaignDoc.starts_at) : null;
+	const endsAt = campaignDoc.ends_at ? new Date(campaignDoc.ends_at) : null;
+
+	if (endsAt && endsAt <= now) return "Ended";
+	if (startsAt && startsAt > now) return "Scheduled";
+	return "Active";
+};
+
 export const fetchCampaigns = async (
 	req: GlobalRequest,
 	res: GlobalResponse
@@ -45,12 +61,31 @@ export const fetchCampaigns = async (
 		// (Active, Scheduled, Ended, or legacy campaigns with no status field)
 		// remain visible so non-studio campaigns are unaffected.
 		const campaigns = await campaign.find({ status: { $ne: "Save" } }).lean();
+		const statusUpdates: Array<{ _id: unknown; status: string }> = [];
+		const normalizedCampaigns = campaigns.map((c) => {
+			const normalizedStatus = getTemporalCampaignStatus(c);
+			if (normalizedStatus !== c.status) {
+				statusUpdates.push({ _id: c._id, status: normalizedStatus });
+			}
+			return { ...c, status: normalizedStatus };
+		});
+
+		if (statusUpdates.length > 0) {
+			await campaign.bulkWrite(
+				statusUpdates.map(({ _id, status }) => ({
+					updateOne: {
+						filter: { _id },
+						update: { $set: { status } },
+					},
+				}))
+			);
+		}
 
 		const joinedCampaigns = await campaignCompleted.find({ user: req.id }).lean();
 
 		const mergedCampaigns: any[] = [];
 
-		for (const c of campaigns) {
+		for (const c of normalizedCampaigns) {
 			const joined = joinedCampaigns.find((j) => j.campaign?.toString() === c._id.toString());
 
 			const mergedJoinedCampaign: Record<any, unknown> = c;
@@ -445,9 +480,28 @@ export const claimCampaignRewards = async (
 
 export const fetchHubCampaigns = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
-    const hubCampaigns = await campaign.find({ hub: req.admin.hub }).lean();
+		const hubCampaigns = await campaign.find({ hub: req.admin.hub }).lean();
+		const statusUpdates: Array<{ _id: unknown; status: string }> = [];
+		const normalizedCampaigns = hubCampaigns.map((c) => {
+			const normalizedStatus = getTemporalCampaignStatus(c);
+			if (normalizedStatus !== c.status) {
+				statusUpdates.push({ _id: c._id, status: normalizedStatus });
+			}
+			return { ...c, status: normalizedStatus };
+		});
 
-    res.status(OK).json({ hubCampaigns });
+		if (statusUpdates.length > 0) {
+			await campaign.bulkWrite(
+				statusUpdates.map(({ _id, status }) => ({
+					updateOne: {
+						filter: { _id },
+						update: { $set: { status } },
+					},
+				}))
+			);
+		}
+
+		res.status(OK).json({ hubCampaigns: normalizedCampaigns });
   } catch (error) {
     logger.error(error);
     res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching hub campaigns" });
