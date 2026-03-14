@@ -50,6 +50,9 @@ export const AWS_S3_BUCKET = process.env.AWS_S3_BUCKET as string;
 
 export const EMAIL_USER = process.env.EMAIL_USER as string;
 export const EMAIL_PASSWORD = process.env.EMAIL_PASSWORD as string;
+export const SMTP_HOST = process.env.SMTP_HOST as string | undefined;
+export const SMTP_PORT = process.env.SMTP_PORT as string | undefined;
+export const SMTP_SECURE = process.env.SMTP_SECURE as string | undefined;
 
 export const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID as string;
 
