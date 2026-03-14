@@ -375,9 +375,9 @@ export default function Analytics() {
   })();
 
   const chartSubtitle = {
-    "1d": "Daily Trajectory \u2014 today (UTC)",
-    "7d": "Daily Trajectory \u2014 last 14 days",
-    "30d": "Daily Trajectory \u2014 last 30 days",
+    "1d": "Daily Trajectory for today (UTC)",
+    "7d": "Daily Trajectory for last 14 days",
+    "30d": "Daily Trajectory for last 30 days",
   }[chartScale];
 
   const chartTotal = {
