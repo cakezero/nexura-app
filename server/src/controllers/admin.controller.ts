@@ -242,8 +242,8 @@ export const createAdmin = async (req: GlobalRequest, res: GlobalResponse) => {
 export const getTasks = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
 
-		const pendingTasks = await submission.find().lean().sort({ createdAt: 1 });
-		
+		const pendingTasks = await submission.find({ hub: "nexura-hub" }).lean().sort({ createdAt: 1 });
+
 		res.status(OK).json({ message: "submitted tasks fetched", pendingTasks });
 	} catch (error) {
 		logger.error(error);
