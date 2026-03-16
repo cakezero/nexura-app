@@ -96,7 +96,7 @@ function Router() {
       <Route path="/achievements" component={Achievements} />
       <Route path="/leaderboard" component={Leaderboard} />
       {/* Developer pages */}
-      {/*<Route path="/projects/create" component={ProjectCreate} />
+      <Route path="/projects/create" component={ProjectCreate} />
       <Route path="/projects/create/create-hub" component={CreateHub} />
       <Route path="/projects/create/signin-to-hub" component={SignInToHub} />
       <Route path="/projects/create/the-hub" component={TheHub} />
@@ -104,8 +104,8 @@ function Router() {
       <Route path="/project/connected-discord" component={ConnectedDiscord} />
       <Route path="/studio-dashboard">
         <StudioDashboard onLogout={handleLogout} />
-      </Route>*/}
-      {/*<Route path="/studio-dashboard/create-new-campaign">
+      </Route>
+      <Route path="/studio-dashboard/create-new-campaign">
         <StudioLayout title="Create Campaign" onLogout={handleLogout}>
           <CreateNewCampaigns />
         </StudioLayout>
@@ -132,7 +132,7 @@ function Router() {
       </Route>
       <Route path="/studio/register" component={AdminSignUp} />
       <Route path="/project/:projectId/*" component={ProjectDashboard} />
-      <Route path="/project/:projectId/:rest*" component={ProjectDashboard} />*/}
+      <Route path="/project/:projectId/:rest*" component={ProjectDashboard} />
       {/* Referral */}
       <Route path="/ref/:referrerCode" component={UserReferred} />
       {/* Fallback to 404 */}
