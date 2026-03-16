@@ -807,7 +807,9 @@ const isActive =
 />
   </div>
   <p className="text-[11px] text-white/50 mt-2">
-    When you deploy the rewards contract, this exact TRUST amount is auto-deducted from your wallet and locked as the reward pool.
+    {hasRewards
+      ? "When you deploy the rewards contract, this exact TRUST amount is auto-deducted from your wallet and locked as the reward pool."
+      : "You have chosen to run this campaign without TRUST rewards, so it can be published without deploying a contract."}
   </p>
   {hasRewards && rewardContractAddress && rewardsDeployment && (
     <div className="mt-3 rounded-md border border-green-500/30 bg-green-900/20 px-3 py-2 text-[11px] text-green-200 space-y-1">
