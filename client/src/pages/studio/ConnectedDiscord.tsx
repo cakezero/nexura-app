@@ -67,12 +67,12 @@ export default function ConnectedDiscord() {
 
       await projectApiRequest({ method: "PATCH", endpoint: `/hub/update-ids`, data: { verifiedId: selectedRole, guildId: selectedServer.id } });
 
-      toast({ title: "Success", description: "Hub created successfully", variant: "default" });
+      toast({ title: "Success", description: "Project created successfully", variant: "default" });
 
       setLocation("/");
     } catch (error) {
       console.error(error);
-      toast({ title: "Error", description: "Failed to create hub", variant: "destructive" });
+      toast({ title: "Error", description: "Failed to create project", variant: "destructive" });
     }
   }
 
@@ -104,7 +104,7 @@ export default function ConnectedDiscord() {
         </h1>
 
         <p className="text-white/60 text-center sm:text-base max-w-sm mx-auto">
-          Finalize your server and role synchronization to start managing your hub
+          Finalize your server and role synchronization to start managing your project
         </p>
 
         {/* Server Dropdown */}

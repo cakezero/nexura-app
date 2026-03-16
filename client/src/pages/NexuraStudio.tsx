@@ -149,7 +149,7 @@ export default function NexuraStudio() {
         {/* Footer band */}
         <div className="mt-auto bg-white/[0.02] px-6 py-4 text-center">
           <p className="text-white/30 text-xs">
-            Already have a hub?{" "}
+            Already have a project?{" "}
             <button
               onClick={() => setLocation("/projects/create/signin-to-hub")}
               className="text-purple-400 hover:underline"

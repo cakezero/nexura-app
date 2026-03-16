@@ -105,6 +105,9 @@ function Router() {
       <Route path="/studio-dashboard">
         <StudioDashboard onLogout={handleLogout} />
       </Route>
+      <Route path="/studio-dashboard/dashboard">
+        <StudioDashboard onLogout={handleLogout} />
+      </Route>
       <Route path="/studio-dashboard/create-new-campaign">
         <StudioLayout title="Create Campaign" onLogout={handleLogout}>
           <CreateNewCampaigns />
@@ -126,7 +129,7 @@ function Router() {
         </StudioLayout>
       </Route>
       <Route path="/studio-dashboard/hub-profile">
-        <StudioLayout title="Hub Profile" onLogout={handleLogout}>
+        <StudioLayout title="Project Profile" onLogout={handleLogout}>
           <HubProfile />
         </StudioLayout>
       </Route>

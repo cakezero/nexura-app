@@ -290,7 +290,7 @@ export default function Campaigns() {
       : 0;
     const hasTrustReward = Number(campaign.reward?.pool ?? campaign.totalTrustAvailable ?? 0) > 0;
     const hubInfo: HubInfo = campaign.hubInfo ?? {
-      name: campaign.project_name || "Unknown Hub",
+      name: campaign.project_name || "Unknown Project",
       description: "",
       logo: "",
       website: "",
@@ -348,7 +348,7 @@ export default function Campaigns() {
           </h2>
 
           <div className="flex flex-row justify-between text-xs gap-1 items-center">
-            <span className="text-gray-500">Hub:</span>
+            <span className="text-gray-500">Project:</span>
             <button
               type="button"
               className="text-white underline-offset-2 hover:underline line-clamp-1 break-all max-w-[65%] text-right"
@@ -487,7 +487,7 @@ export default function Campaigns() {
           {selectedHub && (
             <div className="p-4 sm:p-5 space-y-4">
               <DialogHeader className="space-y-1">
-                <DialogTitle>Hub Information</DialogTitle>
+                <DialogTitle>Project Information</DialogTitle>
                 <DialogDescription className="text-white/60">
                   Project details and socials.
                 </DialogDescription>
@@ -505,11 +505,11 @@ export default function Campaigns() {
                 </div>
 
                 <div className="min-w-0 space-y-3">
-                  <p className="text-lg sm:text-xl font-semibold break-words">{selectedHub.name || "Unknown Hub"}</p>
+                  <p className="text-lg sm:text-xl font-semibold break-words">{selectedHub.name || "Unknown Project"}</p>
                   <div className="rounded-xl border border-white/10 bg-black/20 p-3">
                     <p className="text-xs uppercase text-white/50 mb-1.5">Description</p>
                     <p className="text-sm text-white/85 leading-relaxed whitespace-pre-wrap break-words">
-                      {selectedHub.description?.trim() ? selectedHub.description : "No hub description provided."}
+                      {selectedHub.description?.trim() ? selectedHub.description : "No project description provided."}
                     </p>
                   </div>
                   <div className="pt-2 border-t border-white/10 space-y-2">
@@ -520,7 +520,7 @@ export default function Campaigns() {
                           href={websiteHref}
                           target="_blank"
                           rel="noreferrer"
-                          aria-label="Hub website"
+                          aria-label="Project website"
                           title="Website"
                           className="w-10 h-10 rounded-full border border-white/20 bg-white/5 hover:bg-white/10 flex items-center justify-center transition"
                         >
@@ -530,7 +530,7 @@ export default function Campaigns() {
                         <button
                           type="button"
                           disabled
-                          aria-label="Hub website not set"
+                          aria-label="Project website not set"
                           title="Website not set"
                           className="w-10 h-10 rounded-full border border-white/10 bg-white/5 opacity-40 cursor-not-allowed flex items-center justify-center"
                         >
@@ -543,7 +543,7 @@ export default function Campaigns() {
                           href={xHref}
                           target="_blank"
                           rel="noreferrer"
-                          aria-label="Hub X account"
+                          aria-label="Project X account"
                           title="X account"
                           className="w-10 h-10 rounded-full border border-white/20 bg-white/5 hover:bg-white/10 flex items-center justify-center transition"
                         >
@@ -553,7 +553,7 @@ export default function Campaigns() {
                         <button
                           type="button"
                           disabled
-                          aria-label="Hub X account not set"
+                          aria-label="Project X account not set"
                           title="X account not set"
                           className="w-10 h-10 rounded-full border border-white/10 bg-white/5 opacity-40 cursor-not-allowed flex items-center justify-center"
                         >
@@ -566,7 +566,7 @@ export default function Campaigns() {
                           href={discordHref}
                           target="_blank"
                           rel="noreferrer"
-                          aria-label="Hub Discord server"
+                          aria-label="Project Discord server"
                           title="Discord server"
                           className="w-10 h-10 rounded-full border border-white/20 bg-white/5 hover:bg-white/10 flex items-center justify-center transition"
                         >
@@ -576,7 +576,7 @@ export default function Campaigns() {
                         <button
                           type="button"
                           disabled
-                          aria-label="Hub Discord not set"
+                          aria-label="Project Discord not set"
                           title="Discord not set"
                           className="w-10 h-10 rounded-full border border-white/10 bg-white/5 opacity-40 cursor-not-allowed flex items-center justify-center"
                         >

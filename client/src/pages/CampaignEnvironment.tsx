@@ -119,7 +119,7 @@ export default function CampaignEnvironment() {
       setTitle(res.title || "");
       setSubTitle(res.sub_title || "");
       const nextHubInfo: HubInfo = res.hubInfo ?? {
-        name: res.project_name || "Unknown Hub",
+        name: res.project_name || "Unknown Project",
         description: res.hubDescription || "",
         logo: res.project_image || "",
         website: "",
@@ -345,7 +345,7 @@ export default function CampaignEnvironment() {
     : 0;
   const hasTrustReward = Number(reward.pool ?? totalTrustAvailable ?? 0) > 0;
   const activeHubInfo: HubInfo = hubInfo ?? {
-    name: projectName || "Unknown Hub",
+    name: projectName || "Unknown Project",
     description: "",
     logo: projectImage || "",
     website: "",
@@ -372,15 +372,15 @@ export default function CampaignEnvironment() {
                 {activeHubInfo.logo ? (
                   <img
                     src={activeHubInfo.logo}
-                    alt={activeHubInfo.name || "Hub image"}
+                    alt={activeHubInfo.name || "Project image"}
                     className="w-full h-full object-cover"
                   />
                 ) : null}
               </div>
               <div className="min-w-0">
-                <p className="uppercase text-[0.6rem] sm:text-xs opacity-60">Hub</p>
-                <p className="text-lg sm:text-xl font-semibold truncate">{activeHubInfo.name || "Unknown Hub"}</p>
-                <p className="text-xs opacity-70 mt-1">View hub info</p>
+                <p className="uppercase text-[0.6rem] sm:text-xs opacity-60">Project</p>
+                <p className="text-lg sm:text-xl font-semibold truncate">{activeHubInfo.name || "Unknown Project"}</p>
+                <p className="text-xs opacity-70 mt-1">View project info</p>
               </div>
             </button>
 
@@ -582,7 +582,7 @@ export default function CampaignEnvironment() {
         <DialogContent className="w-[94vw] max-w-3xl bg-[#0d1117] border-white/10 text-white p-0 overflow-hidden">
           <div className="p-4 sm:p-5 space-y-4">
             <DialogHeader className="space-y-1">
-              <DialogTitle>Hub Information</DialogTitle>
+              <DialogTitle>Project Information</DialogTitle>
               <DialogDescription className="text-white/60">
                 Project details and socials.
               </DialogDescription>
@@ -600,11 +600,11 @@ export default function CampaignEnvironment() {
               </div>
 
               <div className="min-w-0 space-y-3">
-                <p className="text-lg sm:text-xl font-semibold break-words">{activeHubInfo.name || "Unknown Hub"}</p>
+                <p className="text-lg sm:text-xl font-semibold break-words">{activeHubInfo.name || "Unknown Project"}</p>
                 <div className="rounded-xl border border-white/10 bg-black/20 p-3">
                   <p className="text-xs uppercase text-white/50 mb-1.5">Description</p>
                   <p className="text-sm text-white/85 leading-relaxed whitespace-pre-wrap break-words">
-                    {activeHubInfo.description?.trim() ? activeHubInfo.description : "No hub description provided."}
+                    {activeHubInfo.description?.trim() ? activeHubInfo.description : "No project description provided."}
                   </p>
                 </div>
                 <div className="pt-2 border-t border-white/10 space-y-1.5">

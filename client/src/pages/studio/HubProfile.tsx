@@ -48,7 +48,7 @@ export default function HubProfile() {
         }
       })
       .catch(() => {
-        toast({ title: "Error", description: "Failed to load hub info.", variant: "destructive" });
+        toast({ title: "Error", description: "Failed to load project info.", variant: "destructive" });
       })
       .finally(() => setLoading(false));
   }, []);
@@ -68,7 +68,7 @@ export default function HubProfile() {
 
   const handleSave = async () => {
     if (!name.trim()) {
-      toast({ title: "Missing name", description: "Hub name is required.", variant: "destructive" });
+      toast({ title: "Missing name", description: "Project name is required.", variant: "destructive" });
       return;
     }
     if (description.length > 0 && description.length < 150) {
@@ -103,10 +103,10 @@ export default function HubProfile() {
         });
       }
 
-      toast({ title: "Hub updated", description: "Your hub profile has been saved." });
+      toast({ title: "Project updated", description: "Your project profile has been saved." });
       setLocation("/studio-dashboard");
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to update hub.";
+      const msg = err instanceof Error ? err.message : "Failed to update project.";
       toast({ title: "Error", description: msg, variant: "destructive" });
     } finally {
       setSaving(false);
@@ -135,7 +135,7 @@ export default function HubProfile() {
         >
           <ArrowLeft className="w-5 h-5" />
         </Button>
-        <h2 className="text-2xl font-bold text-white">Hub Profile</h2>
+        <h2 className="text-2xl font-bold text-white">Project Profile</h2>
       </div>
 
       <Card className="w-full max-w-2xl bg-white/[0.04] border border-white/10 backdrop-blur-xl rounded-2xl p-8 sm:p-10 shadow-[0_8px_40px_rgba(138,63,252,0.08)]">
@@ -143,7 +143,7 @@ export default function HubProfile() {
         <div className="flex flex-col items-center gap-4 pb-8 border-b border-white/10">
           <div className="relative group">
             <div className="w-32 h-32 rounded-2xl overflow-hidden border-2 border-purple-500/60 shadow-lg shadow-purple-500/10">
-              <img src={displayLogo} alt="Hub Logo" className="w-full h-full object-cover" />
+              <img src={displayLogo} alt="Project Logo" className="w-full h-full object-cover" />
             </div>
             {isSuperAdmin && (
               <label className="absolute inset-0 flex items-center justify-center rounded-2xl bg-black/60 opacity-0 group-hover:opacity-100 transition-all duration-200 cursor-pointer">
@@ -156,7 +156,7 @@ export default function HubProfile() {
             )}
           </div>
           <div className="text-center">
-            <h3 className="text-lg font-semibold text-white">{name || "Untitled Hub"}</h3>
+            <h3 className="text-lg font-semibold text-white">{name || "Untitled Project"}</h3>
             {isSuperAdmin && (
               <p className="text-xs text-white/40 mt-1">Click the logo to upload a new image</p>
             )}
@@ -167,12 +167,12 @@ export default function HubProfile() {
         <div className="space-y-6 pt-8">
           {/* Name */}
           <div className="space-y-2">
-            <label className="text-sm text-white/60 font-medium block">Hub Name</label>
+            <label className="text-sm text-white/60 font-medium block">Project Name</label>
             {isSuperAdmin ? (
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Enter hub name"
+                placeholder="Enter project name"
                 className="bg-white/[0.06] border-white/15 text-white placeholder:text-white/30 focus:border-purple-500/60 transition-colors"
               />
             ) : (
@@ -195,7 +195,7 @@ export default function HubProfile() {
                 <Textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Describe your hub or project (150–300 characters)"
+                  placeholder="Describe your project (150–300 characters)"
                   maxLength={300}
                   className="bg-white/[0.06] border-white/15 text-white placeholder:text-white/30 resize-none h-32 focus:border-purple-500/60 transition-colors"
                 />

@@ -101,7 +101,7 @@ export default function TheHub() {
             Welcome to Nexura Studio
           </h1>
           <p className="text-white/60 max-w-2xl mx-auto">
-            Setup a dedicated hub for your project or community on Nexura
+            Set up a dedicated project space for your project or community on Nexura
           </p>
         </div>
 
@@ -129,7 +129,7 @@ export default function TheHub() {
               </CardTitle>
 
               <CardDescription className="text-white/60 max-w-xs">
-                Perfect for building a centralized community hub for your dApp or protocol
+                Perfect for building a centralized project space for your dApp or protocol
               </CardDescription>
             </Card>
 
@@ -264,7 +264,7 @@ export default function TheHub() {
               onClick={handleSubmit}
               disabled={loading}
             >
-              {loading ? "Creating Hub..." : "Create Hub"}
+              {loading ? "Creating Project..." : "Create Project"}
             </Button>
           </div>
         </Card>
