@@ -10,6 +10,7 @@ import { Textarea } from "../../components/ui/textarea";
 import { projectApiRequest, storeProjectSession, getStoredProjectToken, getStoredProjectInfo, base64ToBlob } from "../../lib/projectApi";
 import { useToast } from "../../hooks/use-toast";
 import { Globe, Twitter } from "lucide-react";
+import { setStudioDiscordReturnPath } from "../../lib/studioDiscord";
 
 export default function TheHub() {
   const [hubName, setHubName] = useState("");
@@ -77,7 +78,8 @@ export default function TheHub() {
         });
       }
 
-      setLocation("/connect-discord");
+      setStudioDiscordReturnPath("/studio-dashboard");
+      setLocation("/studio-dashboard/connect-discord");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Sign-up failed. Please try again.";
       toast({ title: "Sign up failed", description: msg, variant: "destructive" });

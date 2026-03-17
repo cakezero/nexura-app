@@ -100,8 +100,6 @@ function Router() {
       <Route path="/projects/create/create-hub" component={CreateHub} />
       <Route path="/projects/create/signin-to-hub" component={SignInToHub} />
       <Route path="/projects/create/the-hub" component={TheHub} />
-      <Route path="/connect-discord" component={ConnectDiscord} />
-      <Route path="/project/connected-discord" component={ConnectedDiscord} />
       <Route path="/studio-dashboard">
         <StudioDashboard onLogout={handleLogout} />
       </Route>
@@ -131,6 +129,26 @@ function Router() {
       <Route path="/studio-dashboard/hub-profile">
         <StudioLayout title="Project Profile" onLogout={handleLogout}>
           <HubProfile />
+        </StudioLayout>
+      </Route>
+      <Route path="/studio-dashboard/connect-discord">
+        <StudioLayout title="Connect Discord" onLogout={handleLogout}>
+          <ConnectDiscord />
+        </StudioLayout>
+      </Route>
+      <Route path="/studio-dashboard/connected-discord">
+        <StudioLayout title="Connect Discord" onLogout={handleLogout}>
+          <ConnectedDiscord />
+        </StudioLayout>
+      </Route>
+      <Route path="/connect-discord">
+        <StudioLayout title="Connect Discord" onLogout={handleLogout}>
+          <ConnectDiscord />
+        </StudioLayout>
+      </Route>
+      <Route path="/project/connected-discord">
+        <StudioLayout title="Connect Discord" onLogout={handleLogout}>
+          <ConnectedDiscord />
         </StudioLayout>
       </Route>
       <Route path="/studio/register" component={AdminSignUp} />
@@ -186,6 +204,8 @@ function App() {
                 const isStudio =
                   location === "/studio" ||
                   location.startsWith("/studio-dashboard") ||
+                  location.startsWith("/connect-discord") ||
+                  location.startsWith("/project/connected-discord") ||
                   location.startsWith("/studio/register");
                 const isProject = location.startsWith("/project/");
                 const isProjectCreate = location.startsWith("/projects/create");

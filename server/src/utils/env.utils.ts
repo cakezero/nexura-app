@@ -68,7 +68,7 @@ const deriveHubRedirect = (value: string | undefined, fallback: string) =>
   withFallback(value, fallback).replace("/api/auth/discord/callback", "/api/hub/discord/callback");
 
 const deriveHubClientRedirect = (value: string | undefined, fallback: string) =>
-  withFallback(value, fallback).replace("/discord/callback", "/project/connected-discord");
+  withFallback(value, fallback).replace("/discord/callback", "/studio-dashboard/connected-discord");
 
 const DEV_DISCORD_HUB_CLIENT_REDIRECT_URI = deriveHubClientRedirect(
   process.env.DEV_DISCORD_HUB_CLIENT_REDIRECT_URI,

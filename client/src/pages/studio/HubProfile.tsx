@@ -15,6 +15,7 @@ import {
   storeProjectSession,
   base64ToBlob,
 } from "../../lib/projectApi";
+import { beginStudioDiscordConnect } from "../../lib/studioDiscord";
 
 export default function HubProfile() {
   const [, setLocation] = useLocation();
@@ -262,7 +263,7 @@ export default function HubProfile() {
               <label className="text-sm text-white/60 font-medium block">Discord Verification</label>
               <Button
                 type="button"
-                onClick={() => setLocation("/connect-discord")}
+                onClick={() => beginStudioDiscordConnect("/studio-dashboard/hub-profile")}
                 className="bg-[#8B3EFE] hover:bg-[#7b35e6] text-white"
               >
                 {discordConnected ? "Reconnect Discord" : "Connect Discord"}

@@ -35,6 +35,7 @@ export function clearProjectSession() {
   localStorage.removeItem("nexura:proj-token");
   localStorage.removeItem("nexura:studio-wallet");
   localStorage.removeItem("nexura:studio-step");
+  localStorage.removeItem("nexura:studio-discord-return");
   localStorage.removeItem("hubData");
   localStorage.removeItem("twitterData");
   // NOTE: nexura:wallet is intentionally NOT cleared here.
