@@ -354,6 +354,10 @@ export default function HubProfile() {
                     ? "Disconnect Discord"
                     : "Connect Discord"}
               </Button>
+              <p className="text-xs leading-relaxed text-white/55">
+                To enable auto validation of Discord tasks, add the Nexura Guide Bot and grant it Admin permission.
+                Nexura does not have access to or control over your server. The bot is used only to validate tasks and requires these permissions, just like other Discord bots.
+              </p>
             </div>
           )}
         </div>
