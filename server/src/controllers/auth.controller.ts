@@ -199,29 +199,29 @@ export const disconnectDiscord = async (req: GlobalRequest, res: GlobalResponse)
 }
 
 export const signIn = async (req: GlobalRequest, res: GlobalResponse) => {
+	const { address, referrer }: { address: string; referrer?: string } =
+		req.body;
+
+	if (!address) {
+		res
+			.status(BAD_REQUEST)
+			.json({ error: "address cannot be empty" });
+		return;
+  }
+
+	const lowerCaseAddress = address.toLowerCase();
+
+  const slicedAddress = lowerCaseAddress.slice(0, 4) + "..." + lowerCaseAddress.slice(-4);
+
 	try {
 
-		const { address, referrer }: { address: string; referrer?: string } =
-			req.body;
-
-		// const ipAddress = req.ip?.replace("::ffff:", "");
-
-		if (!address) {
-			res
-				.status(BAD_REQUEST)
-				.json({ error: "address cannot be empty" });
-			return;
-		}
-
-		const slicedAddress = address.slice(0, 4) + "..." + address.slice(-4);
-
-		const userBanned = await bannedUser.findOne({ walletAddress: address });
+		const userBanned = await bannedUser.findOne({ walletAddress: lowerCaseAddress });
 		if (userBanned) {
 			res.status(BAD_REQUEST).json({ error: "user is banned" });
 			return;
 		}
 
-		const userExists = await user.findOne({ address });
+		const userExists = await user.findOne({ address: lowerCaseAddress });
 		if (!userExists) {
 
 			// const ipAddressExists = await REDIS.get(`ip:${ipAddress}`);
@@ -244,20 +244,15 @@ export const signIn = async (req: GlobalRequest, res: GlobalResponse) => {
 			const userReferrer = await user.findOne({ "referral.code": referrer });
 
 			// Use clean truncated address; if it's already taken, append a random suffix
-			let username = slicedAddress;
-			const usernameTaken = await user.findOne({ username });
-			if (usernameTaken) {
-				username = `${slicedAddress}_${cryptoRandomString({ length: 4, type: "alphanumeric" })}`;
-			}
 
-			const newUser = new user({ address, username, referral, dateJoined });
+			const newUser = new user({ address: lowerCaseAddress, username: slicedAddress, referral, dateJoined });
 
 			const id = newUser._id;
 
 			if (userReferrer) {
 				const signedUp = formatDate(new Date(), "MMM dd, y");
 
-				await referredUsers.create({ user: userReferrer._id, newUser: id, signedUp, username });
+				await referredUsers.create({ user: userReferrer._id, newUser: id, signedUp, username: slicedAddress });
 			}
 
 			await newUser.save();
@@ -297,8 +292,7 @@ export const signIn = async (req: GlobalRequest, res: GlobalResponse) => {
 		// Duplicate key — either address already exists (sign them in) or username collision (retry)
 		if (error?.code === 11000) {
 			try {
-				const { address } = req.body;
-				const existingUser = await user.findOne({ address });
+			 const existingUser = await user.findOne({ address: lowerCaseAddress });
 				if (existingUser) {
 					// Address already registered — treat as sign-in
 					const accessToken = JWT.sign(existingUser._id);
