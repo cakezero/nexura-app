@@ -45,7 +45,7 @@ export const getStudioPaymentConfig = async (_req: GlobalRequest, res: GlobalRes
     network: "testnet",
     contractAddress: STUDIO_FEE_CONTRACT,
     chainId: "0x350b",
-    amount: "1000",
+    amount: "2",
   });
 };
 
