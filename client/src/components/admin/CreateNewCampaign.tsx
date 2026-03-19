@@ -88,6 +88,8 @@ const DISCORD_JOIN_TASK_TYPE = "Join Us On Discord";
 const DISCORD_ROLE_TASK_TYPE = "Acquire a Role (Discord)";
 const DISCORD_MESSAGE_TASK_TYPE = "Send Message in Channel (Discord)";
 
+const VIEW_ONLY_CAMPAIGN_MESSAGE = "Closed or ended campaigns are view-only. You can still inspect details and tasks, but editing and review are disabled.";
+
 const isDiscordRoleTaskType = (type: string) => type === DISCORD_ROLE_TASK_TYPE;
 const isDiscordMessageTaskType = (type: string) => type === DISCORD_MESSAGE_TASK_TYPE;
 const isDiscordFixedTaskType = (type: string) =>
@@ -166,6 +168,13 @@ const [discordChannels, setDiscordChannels] = useState<DiscordChannelOption[]>([
 const [discordRolesError, setDiscordRolesError] = useState("");
 const [discordChannelsError, setDiscordChannelsError] = useState("");
 const [discordOptionsLoading, setDiscordOptionsLoading] = useState(false);
+const showViewOnlyToast = () => {
+  toast({
+    title: "Campaign closed",
+    description: VIEW_ONLY_CAMPAIGN_MESSAGE,
+    variant: "destructive",
+  });
+};
 
 // Pre-fill from existing draft when ?edit=<id> is in the URL
 const parseDateTime = (isoStr: string) => {
@@ -247,7 +256,11 @@ useEffect(() => {
       setCampaignId(editId);
       setIsEditMode(true);
       setIsPublished(found.status !== "Save");
-      setIsEnded(found.status === "Ended" || (found.ends_at ? new Date(found.ends_at) <= new Date() : false));
+      setIsEnded(
+        found.status === "Closed" ||
+        found.status === "Ended" ||
+        (found.ends_at ? new Date(found.ends_at) <= new Date() : false)
+      );
       setCampaignTitle(found.title ?? "");
       setCampaignName(found.description ?? found.nameOfProject ?? "");
       const s = parseDateTime(found.starts_at ?? "");
@@ -375,6 +388,16 @@ useEffect(() => {
     } catch { /* ignore – user will fill in manually */ }
   })();
 }, []);
+
+useEffect(() => {
+  if (!isEnded) return;
+  if (activeTab === "review") {
+    setActiveTab("details");
+  }
+  if (showModal) {
+    setShowModal(false);
+  }
+}, [activeTab, isEnded, showModal]);
 
 useEffect(() => {
   (async () => {
@@ -678,6 +701,10 @@ const handleSaveDraft = async (
   thenNavigate?: string,
   options?: { skipPublishedRewardsGuard?: boolean }
 ): Promise<string | null> => {
+  if (isEnded) {
+    showViewOnlyToast();
+    return null;
+  }
   if (!campaignTitle) {
     toast({ title: "Missing description", description: "Please enter a campaign description.", variant: "destructive" });
     return null;
@@ -736,6 +763,10 @@ const convertToBase64 = (file: File): Promise<string> => {
 
 
 const handleSaveTask = () => {
+  if (isEnded) {
+    showViewOnlyToast();
+    return;
+  }
   const requiresPlatform = newTask.type !== "Check Out the Portal Claims" && newTask.type !== "others" && newTask.type !== "Give Feedback";
   const requiresDiscordConnection = newTask.platform === "Discord" || isDiscordFixedTaskType(newTask.type);
   const requiresRole = isDiscordRoleTaskType(newTask.type);
@@ -788,6 +819,10 @@ const handleCoverImage = (e: React.ChangeEvent<HTMLInputElement>) => {
 
 const handleSubmit = (e: React.FormEvent) => {
   e.preventDefault();
+  if (isEnded) {
+    showViewOnlyToast();
+    return;
+  }
   handleSaveDraft("tasks");
 };
 
@@ -1402,8 +1437,15 @@ const isActive =
 
   {/* Review */}
   <button
-    onClick={() => setActiveTab("review")}
-    className="flex-1 flex flex-col items-start justify-start gap-2 py-5 text-lg font-semibold transition"
+    onClick={() => {
+      if (isEnded) {
+        showViewOnlyToast();
+        return;
+      }
+      setActiveTab("review");
+    }}
+    className={`flex-1 flex flex-col items-start justify-start gap-2 py-5 text-lg font-semibold transition ${isEnded ? "opacity-40 cursor-not-allowed" : ""}`}
+    disabled={isEnded}
   >
     {/* Underline on top */}
     <span
@@ -1426,7 +1468,13 @@ const isActive =
                 <h2 className="text-xl font-semibold">Campaign Details</h2>
                 <Card className="bg-purple/10 backdrop-blur-md p-8 space-y-8">
 
-                  <form onSubmit={handleSubmit} className="space-y-8">
+                  {isEnded && (
+                    <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+                      {VIEW_ONLY_CAMPAIGN_MESSAGE}
+                    </div>
+                  )}
+
+                  <form onSubmit={handleSubmit} className={`space-y-8 ${isEnded ? "pointer-events-none opacity-60" : ""}`}>
 
                     {/* Campaign Name */}
                     <div>
@@ -1437,6 +1485,7 @@ const isActive =
   placeholder="Enter campaign name..."
   className="bg-white/5 border-white/10"
   required
+  disabled={isEnded}
   value={campaignName}
   onChange={(e) => handleCampaignNameChange(e.target.value)}
 />
@@ -1451,6 +1500,7 @@ const isActive =
   placeholder="Enter campaign description..."
   className="bg-white/5 border-white/10"
   required
+  disabled={isEnded}
   value={campaignTitle}
   onChange={(e) => setCampaignTitle(e.target.value)}
 />
@@ -1469,6 +1519,7 @@ const isActive =
                         <input
                           type="datetime-local"
                           className="w-full rounded-md bg-white/5 border border-white/10 text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 [color-scheme:dark]"
+                          disabled={isEnded}
                           value={startDate && startTime ? `${startDate}T${startTime}` : startDate ? `${startDate}T00:00` : ""}
                           onChange={(e) => handleStartDateTimeChange(e.target.value)}
                         />
@@ -1482,6 +1533,7 @@ const isActive =
                         <input
                           type="datetime-local"
                           className="w-full rounded-md bg-white/5 border border-white/10 text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 [color-scheme:dark]"
+                          disabled={isEnded}
                           value={endDate && endTime ? `${endDate}T${endTime}` : endDate ? `${endDate}T00:00` : ""}
                           onChange={(e) => handleEndDateTimeChange(e.target.value)}
                         />
@@ -1497,11 +1549,12 @@ const isActive =
                         <ImageIcon className="w-4 h-4" />
                         Cover Image
                       </label>
-<label className="w-full border-2 border-dashed border-purple-500 rounded-2xl p-8 bg-black hover:border-[#8B3EFE] transition cursor-pointer block">
+<label className={`w-full border-2 border-dashed border-purple-500 rounded-2xl p-8 bg-black transition block ${isEnded ? "cursor-not-allowed opacity-60" : "hover:border-[#8B3EFE] cursor-pointer"}`}>
   <input
     id="coverInput"
     type="file"
     accept="image/*"
+    disabled={isEnded}
     onChange={handleCoverImage}
     className="hidden"
   />
@@ -1536,7 +1589,7 @@ const isActive =
     </div>
     <Switch
       checked={hasRewards}
-      disabled={isPublished}
+      disabled={isPublished || isEnded}
       onCheckedChange={(checked) => {
         setHasRewards(checked);
         if (!checked) {
@@ -1569,7 +1622,8 @@ const isActive =
   placeholder="0"
   value={rewardPool}
   onChange={(e) => handleRewardPoolChange(e.target.value)}
-  readOnly={!hasRewards || (isPublished && !rewardContractAddress.trim())}
+  readOnly={isEnded || !hasRewards || (isPublished && !rewardContractAddress.trim())}
+  disabled={isEnded}
 />
   </div>
   <p className="text-[11px] text-white/50 mt-2">
@@ -1609,7 +1663,8 @@ const isActive =
   className={`bg-white/5 border-white/10 pl-10 ${(isPublished && (!hasRewards || !rewardContractAddress.trim())) ? "cursor-not-allowed opacity-60" : ""}`}
   value={participants}
   onChange={(e) => handleParticipantsChange(e.target.value)}
-  readOnly={isPublished && (!hasRewards || !rewardContractAddress.trim())}
+  readOnly={isEnded || (isPublished && (!hasRewards || !rewardContractAddress.trim()))}
+  disabled={isEnded}
 />
   </div>
 </div>
@@ -1625,7 +1680,7 @@ const isActive =
       className={`bg-white/5 border-white/10 pr-10 cursor-not-allowed opacity-60 ${!hasRewards ? "opacity-40" : ""}`}
       value={xpRewards}
       readOnly
-      disabled={!hasRewards}
+      disabled={!hasRewards || isEnded}
     />
     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 text-xs font-medium select-none">Fixed</span>
   </div>
@@ -1656,6 +1711,7 @@ const isActive =
                         type="button"
                         variant="ghost"
                         className="text-white/60 hover:text-white"
+                        disabled={isEnded}
                         onClick={() => setLocation("/studio-dashboard")}
                       >
                         ← Back
@@ -1664,7 +1720,7 @@ const isActive =
                       <Button
                         type="submit"
                         className="bg-[#8B3EFE] hover:bg-[#7b35e6]"
-                        disabled={loading || saveLoading}
+                        disabled={loading || saveLoading || isEnded}
                       >
                         {loading || saveLoading ? "Saving..." : "Next →"}
                       </Button>
@@ -1679,10 +1735,23 @@ const isActive =
 {activeTab === "tasks" && (
   <div className="relative">
 
+    {isEnded && (
+      <div className="mb-6 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+        {VIEW_ONLY_CAMPAIGN_MESSAGE}
+      </div>
+    )}
+
     {/* Small Add Task Button - Top Right */}
     <button
-      onClick={() => setShowModal(true)}
+      onClick={() => {
+        if (isEnded) {
+          showViewOnlyToast();
+          return;
+        }
+        setShowModal(true);
+      }}
       className="absolute -top-10 right-0 px-3 py-1 bg-[#8B3EFE] text-purple-300 hover:bg-[#7b35e6] rounded-lg text-sm font-semibold flex items-center gap-2 transition"
+      disabled={isEnded}
     >
       <span className="flex items-center justify-center w-3 h-3 pb-1 bg-[#8B3EFE] text-purple-900 rounded-full text-xs font-bold">
         +
@@ -1693,7 +1762,13 @@ const isActive =
     {tasks.length === 0 ? (
       <div
         className="w-full border-2 border-dashed border-purple-500 rounded-2xl p-8 bg-gray-900 hover:border-[#8B3EFE] transition cursor-pointer mt-8"
-        onClick={() => setShowModal(true)}
+        onClick={() => {
+          if (isEnded) {
+            showViewOnlyToast();
+            return;
+          }
+          setShowModal(true);
+        }}
       >
         <div className="flex flex-col items-center justify-center text-center gap-2">
           <img src="/upload-icon.png" alt="Upload icon" className="w-16 h-16" />
@@ -1702,8 +1777,15 @@ const isActive =
             To create a campaign, you need to add at least one task.
           </p>
           <button
-            onClick={() => setShowModal(true)}
+            onClick={() => {
+              if (isEnded) {
+                showViewOnlyToast();
+                return;
+              }
+              setShowModal(true);
+            }}
             className="mt-4 flex items-center justify-center gap-2 px-4 py-1 bg-purple-900 text-purple-400 hover:bg-[#7b35e6] font-semibold rounded-lg transition"
+            disabled={isEnded}
           >
             <span className="flex items-center justify-center w-3 h-3 pb-1 bg-[#8B3EFE] text-purple-900 rounded-full text-lg font-bold">
               +
@@ -1713,7 +1795,7 @@ const isActive =
         </div>
       </div>
     ) : (
-      <div className="space-y-4 mt-8">
+      <div className={`space-y-4 mt-8 ${isEnded ? "pointer-events-none opacity-60" : ""}`}>
         {tasks.map((task, index) => (
           <div
             key={index}
@@ -1761,14 +1843,19 @@ const isActive =
     <div className="flex justify-between items-center mt-6">
       <button
         className="px-4 py-2 bg-gray-700 text-white rounded-lg text-sm hover:bg-gray-600 transition"
+        disabled={isEnded}
         onClick={() => setActiveTab("details")}
       >
         ← Back
       </button>
       <button
         className="px-6 py-2 bg-[#8B3EFE] text-white rounded-lg text-sm font-semibold hover:bg-[#7b35e6] transition flex items-center gap-2 disabled:opacity-60"
-        disabled={saveLoading}
+        disabled={saveLoading || isEnded}
         onClick={() => {
+          if (isEnded) {
+            showViewOnlyToast();
+            return;
+          }
           if (tasks.length === 0) {
             toast({ title: "No tasks", description: "Please add at least one task before reviewing.", variant: "destructive" });
             return;
