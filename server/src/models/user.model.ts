@@ -10,6 +10,10 @@ const userSchema = new Schema({
 		type: String,
 		required: true,
 		unique: true
+  },
+  isApproved: {
+    type: Boolean,
+    default: false
 	},
 	profilePic: {
 		type: String,

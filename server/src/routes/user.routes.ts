@@ -6,7 +6,8 @@ import {
   claimDepositXp,
 	claimReferreralReward,
 	updateBadge,
-	performDailySignIn
+	performDailySignIn,
+	setApproved
 } from "@/controllers/app.controller";
 import { signIn, logout } from "@/controllers/auth.controller";
 import { authenticateUser } from "@/middlewares/auth.middleware";
@@ -19,6 +20,7 @@ router
 	.post("/claim-referral-reward", authenticateUser, claimReferreralReward)
   .patch("/update-badge", authenticateUser, updateBadge)
 	.post("/claim-deposit-xp", authenticateUser, claimDepositXp)
+	.post("/set-approved", authenticateUser, setApproved)
 	.get("/referral-info", authenticateUser, referralInfo)
 	.post("/logout", authenticateUser, logout)
 	.post("/sign-in", signIn)

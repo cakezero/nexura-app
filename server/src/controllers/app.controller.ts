@@ -75,6 +75,17 @@ export const allowNexonsMint = async (req: GlobalRequest, res: GlobalResponse) =
   }
 }
 
+export const setApproved = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    await user.updateOne({ _id: req.id }, { isApproved: true });
+
+    res.status(OK).json({ message: "user approved" });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "Internal Server Error" });
+  }
+}
+
 export const updateUser = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
     const profilePicBuffer = req.file?.buffer;
