@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
-import AnimatedBackground from "../components/AnimatedBackground";
+// import AnimatedBackground from "../components/AnimatedBackground";
 import { Layers, Megaphone, BarChart3, Users, Zap, Shield, ArrowRight, ArrowLeft } from "lucide-react";
 import { isProjectSignedIn } from "../lib/projectApi";
 import { useWallet } from "../hooks/use-wallet";
@@ -18,6 +18,13 @@ export default function NexuraStudio() {
   const [, setLocation] = useLocation();
   const [redirecting] = useState(() => isProjectSignedIn());
   const { isConnected, address, connectWallet } = useWallet();
+  const text = "Nexura Studio";
+  const [toggle, setToggle] = useState(false);
+
+  useEffect(() => {
+  const interval = setInterval(() => setToggle(prev => !prev), 2500)
+  return () => clearInterval(interval);
+}, []);
 
   useEffect(() => {
     if (isProjectSignedIn()) {
@@ -29,19 +36,19 @@ export default function NexuraStudio() {
 
   return (
     <div className="min-h-screen bg-black text-white overflow-auto relative">
-      <AnimatedBackground />
+      <div className="relative flex flex-col min-h-screen overflow-hidden">
+  {/* Video background */}
+  <video
+    className="absolute top-0 left-0 w-full h-screen object-cover z-0 opacity-30"
+    src="/studio-animated.mp4"
+    autoPlay
+    loop
+    muted
+    playsInline
+  />
 
       {/* Hero Section */}
-      <div
-        className="relative z-10 flex flex-col min-h-screen"
-        style={{
-          backgroundImage: "url('/animated-studio-img.png')",
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          backgroundRepeat: "no-repeat",
-          height: "100vh",
-        }}
-      >
+<div className="relative flex flex-col min-h-screen overflow-hidden">
         <div className="w-full flex items-center justify-between px-4 sm:px-6 pt-4">
           <button
             onClick={() => setLocation("/discover")}
@@ -80,16 +87,35 @@ export default function NexuraStudio() {
 </div>
 
 
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold mb-2 leading-tight">
-            <span className="bg-gradient-to-r from-white via-purple-200 to-purple-400 bg-clip-text text-transparent">
-              Nexura Studio
-            </span>
-          </h1>
+<h1 className="text-5xl sm:text-6xl md:text-7xl font-extrabold mb-4 leading-tight text-gray-100 flex justify-center">
+  {text.split("").map((letter, index) => {
+    const startX = Math.floor(Math.random() * 300 - 150);
+    const startY = Math.floor(Math.random() * 300 - 150);
+    const rotate = Math.floor(Math.random() * 720 - 360);
+    const scale = Math.random() * 1.8 + 0.5;
+    const delay = index * 0.05 + Math.random() * 0.1; // small stagger for natural effect
 
-          <p className="text-white/50 text-xs sm:text-sm max-w-lg leading-relaxed mb-5">
-            The all-in-one platform for builders to launch campaigns, distribute rewards,
-            and grow their community on the Intuition network.
-          </p>
+    return (
+      <span
+        key={index}
+        className="inline-block text-white"
+        style={{
+          transform: `translate(${startX}px, ${startY}px) rotate(${rotate}deg) scale(${scale})`,
+          opacity: 0,
+          animation: `flyIn 0.8s forwards`,
+          animationDelay: `${delay}s`,
+        }}
+      >
+        {letter === " " ? "\u00A0" : letter}
+      </span>
+    );
+  })}
+</h1>
+
+<p className="text-sm sm:text-base max-w-lg leading-relaxed mb-5 font-semibold">
+  The all-in-one platform for builders to launch campaigns, distribute rewards,
+  and grow their community on the Intuition network.
+</p>
 
           {/* CTA */}
           <div className="flex flex-col items-center gap-2 mb-2">
@@ -161,6 +187,7 @@ export default function NexuraStudio() {
         </div>
       </div>
 
+    </div>
     </div>
   );
 }
