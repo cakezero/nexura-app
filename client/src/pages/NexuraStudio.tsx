@@ -186,7 +186,6 @@ export default function NexuraStudio() {
           </p>
         </div>
       </div>
-
     </div>
     </div>
   );
