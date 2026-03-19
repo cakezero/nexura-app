@@ -879,18 +879,45 @@ const handleParticipantsChange = (value: string) => {
   setParticipants(value);
 };
 
-const getCampaignStartTimestamp = () => {
-  const startIso = startDate && startTime ? `${startDate}T${startTime}` : startDate ? `${startDate}T00:00` : "";
-  if (!startIso) {
+const getUtcTimestampFromFormDateTime = (date: string, time: string) => {
+  if (!date) {
     throw new Error("Set a campaign start date and time before deploying rewards.");
   }
 
-  const startTimestampMs = new Date(startIso).getTime();
-  if (Number.isNaN(startTimestampMs)) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+  if (!match) {
     throw new Error("Campaign start date is invalid.");
   }
 
-  return Math.floor(startTimestampMs / 1000);
+  const [, yearRaw, monthRaw, dayRaw] = match;
+  const [hoursRaw = "00", minutesRaw = "00"] = (time || "00:00").split(":");
+
+  const year = Number(yearRaw);
+  const month = Number(monthRaw);
+  const day = Number(dayRaw);
+  const hours = Number(hoursRaw);
+  const minutes = Number(minutesRaw);
+
+  if (
+    !Number.isInteger(year) ||
+    !Number.isInteger(month) ||
+    !Number.isInteger(day) ||
+    !Number.isInteger(hours) ||
+    !Number.isInteger(minutes)
+  ) {
+    throw new Error("Campaign start date is invalid.");
+  }
+
+  const timestampMs = Date.UTC(year, month - 1, day, hours, minutes, 0, 0);
+  if (Number.isNaN(timestampMs)) {
+    throw new Error("Campaign start date is invalid.");
+  }
+
+  return Math.floor(timestampMs / 1000);
+};
+
+const getCampaignStartTimestamp = () => {
+  return getUtcTimestampFromFormDateTime(startDate, startTime);
 };
 
 const getRewardDeploymentConfig = () => {
