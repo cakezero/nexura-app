@@ -1,17 +1,24 @@
 import { redeem, getMultiVaultAddressFromChainId } from "@0xintuition/sdk";
 import { Address, parseEther} from "viem";
 import { getWalletClient, getPublicClient } from "../lib/viem";
+import { apiRequestV2 } from "../lib/queryClient";
 import chain from "../lib/chain";
 import { PROXY_CONTRACT_ABI, PROXY_FEE_CONTRACT } from "../lib/constants";
+import { allowToDeposit } from "../lib/utils";
 
 // --- Deposit / Support or Oppose function ---
-export const buyShares = async (amountTrust: string, termId: Address, curveId: bigint) => {
+export const buyShares = async ({ buyAmount, termId, curveId, isApproved }: { buyAmount: string; termId: Address; isApproved: boolean; curveId: bigint }) => {
   const walletClient = await getWalletClient();
   const publicClient = getPublicClient();
 
   await walletClient.switchChain({ id: chain.id });
 
   const account = walletClient?.account?.address as "0x";
+
+  if (!isApproved) {
+    await allowToDeposit(walletClient, account);
+    await apiRequestV2("POST", "/api/user/set-approved");
+  }
 
   const { request } = await publicClient.simulateContract({
     address: PROXY_FEE_CONTRACT,
@@ -24,7 +31,7 @@ export const buyShares = async (amountTrust: string, termId: Address, curveId: b
       curveId,
       0n,
     ],
-    value: parseEther(amountTrust)
+    value: parseEther(buyAmount)
   });
 
   const transactionHash = await walletClient.writeContract(request);

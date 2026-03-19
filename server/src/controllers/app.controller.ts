@@ -45,7 +45,7 @@ export const getStudioPaymentConfig = async (_req: GlobalRequest, res: GlobalRes
     network: "testnet",
     contractAddress: STUDIO_FEE_CONTRACT,
     chainId: "0x350b",
-    amount: "1000",
+    amount: "2",
   });
 };
 
@@ -72,6 +72,17 @@ export const allowNexonsMint = async (req: GlobalRequest, res: GlobalResponse) =
   } catch (error) {
     logger.error(error);
     res.status(INTERNAL_SERVER_ERROR).json({ error: "internal server error" });
+  }
+}
+
+export const setApproved = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    await user.updateOne({ _id: req.id }, { isApproved: true });
+
+    res.status(OK).json({ message: "user approved" });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "Internal Server Error" });
   }
 }
 

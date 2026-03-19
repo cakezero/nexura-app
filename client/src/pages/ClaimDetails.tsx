@@ -129,6 +129,8 @@ export default function ClaimDetails() {
       const walletClient = await getWalletClient();
 
       await walletClient.switchChain({ id: chain.id });
+      
+      const address = getMultiVaultAddressFromChainId(chain.id!);
 
       let sharesAmount = 0n;
 
@@ -136,14 +138,14 @@ export default function ClaimDetails() {
 
       if (isBuy && buyAmount) {
         const [shares] = await multiVaultPreviewDeposit(
-          { address: PROXY_FEE_CONTRACT, walletClient, publicClient },
+          { address, walletClient, publicClient },
           { args: [termId as "0x", curveId, parseEther(buyAmount)] }
         );
         sharesAmount = shares;
 
       } else if (!isBuy && sellAmount) {
         const [shares] = await multiVaultPreviewRedeem(
-          { address: PROXY_FEE_CONTRACT, walletClient, publicClient },
+          { address, walletClient, publicClient },
           { args: [termId as "0x", curveId, parseEther(sellAmount)] }
         );
         sharesAmount = shares;
@@ -352,15 +354,17 @@ export default function ClaimDetails() {
     const exponentialCurve = 2n;
 
     let totalShares = 0n;
+    
+    const address = getMultiVaultAddressFromChainId(chain.id!);
 
     // sum across all vaults for both term and counterTerm
     for (const curveId of [linearCurve, exponentialCurve]) {
       const [userSupportShares] = await multiVaultPreviewRedeem(
-        { walletClient, publicClient, address: PROXY_FEE_CONTRACT },
+        { walletClient, publicClient, address },
         { args: [term.id as Address, curveId, 0n] }
       );
       const [userOpposeShares] = await multiVaultPreviewRedeem(
-        { walletClient, publicClient, address: PROXY_FEE_CONTRACT },
+        { walletClient, publicClient, address },
         { args: [counterTerm.id as Address, curveId, 0n] }
       );
       totalShares += userSupportShares + userOpposeShares;
@@ -407,7 +411,7 @@ export default function ClaimDetails() {
 
       // -------------------- Execute transaction --------------------
       if (isBuy) {
-        transactionHash = await buyShares(buyAmount, termId as Address, curveId);
+        transactionHash = await buyShares({ buyAmount, termId: termId as Address, curveId, isApproved: user.isApproved});
       } else {
         await sellShares(sellAmount, termId as Address, curveId);
       }
@@ -417,7 +421,10 @@ export default function ClaimDetails() {
 
       if (isBuy && amountNum >= 200) {
         const { success } = await apiRequestV2("POST", "/api/user/claim-deposit-xp", { transactionHash });
-        if (!success) return;
+        if (!success) {
+          toast({ title: "Error", description: "Error rewarding user with xp" });
+          return
+        };
       }
 
       toast({

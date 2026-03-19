@@ -360,15 +360,22 @@ export default function PortalClaims() {
 
       const addressTermId = termId as Address;
 
-      let txHash: string = "";
+      let transactionHash: string = "";
 
       if (action === "deposit") {
-        txHash = await buyShares(transactionAmount, addressTermId, isToggled ? 2n : 1n);
+        transactionHash = await buyShares({ buyAmount: transactionAmount, termId: addressTermId, curveId: isToggled ? 2n : 1n, isApproved: user.isApproved });
+        if (parseFloat(transactionAmount) >= 200) {
+          const { success } = await apiRequestV2("POST", "/api/user/claim-deposit-xp", { transactionHash });
+          if (!success) {
+            toast({ title: "Error", description: "Error rewarding user with xp" });
+            return
+          };
+        }
       } else {
-        txHash = await sellShares(transactionAmount, addressTermId, isToggled ? 2n : 1n);
+        transactionHash = await sellShares(transactionAmount, addressTermId, isToggled ? 2n : 1n);
       }
 
-      setTransactionLink(`${explorer}/tx/${txHash}`);
+      setTransactionLink(`${explorer}/tx/${transactionHash}`);
 
       // Refresh wallet balance after transaction
       const balance = await fetchWalletBalance(user.address);
