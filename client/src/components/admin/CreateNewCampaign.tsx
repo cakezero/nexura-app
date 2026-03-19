@@ -1216,12 +1216,22 @@ const handleUpdateCampaign = async () => {
     : Number.NaN;
   const startDateChanged =
     Boolean(onchainBaseline) &&
-    (startDate !== onchainBaseline.startDate || startTime !== onchainBaseline.startTime);
+    (startDate !== onchainBaseline!.startDate || startTime !== onchainBaseline!.startTime);
   const movesStartEarlier =
     startDateChanged &&
     Number.isFinite(publishedCampaignStartMs) &&
     Number.isFinite(nextCampaignStartMs) &&
     nextCampaignStartMs < publishedCampaignStartMs;
+
+  console.log("[handleUpdateCampaign] Decision vars:", {
+    hasRewards, hasDeployedRewardsContract, isEnded, isPublished,
+    startDateChanged, movesStartEarlier, publishedCampaignHasStarted,
+    formStart: `${startDate}T${startTime}`,
+    onchainBaselineStart: onchainBaseline ? `${onchainBaseline.startDate}T${onchainBaseline.startTime}` : "N/A",
+    publishedCampaignStartMs, nextCampaignStartMs,
+    rewardContractAddress: rewardContractAddress.trim(),
+    rewardsDeployment: !!rewardsDeployment,
+  });
 
   if (hasRewards) {
     try {
@@ -1232,6 +1242,16 @@ const handleUpdateCampaign = async () => {
         const reducedPool = rewardConfig.totalPoolWei < deployed.fundedAmountWei;
         const reducedParticipants = rewardConfig.participantCount < deployed.maxClaimableParticipants;
 
+        console.log("[handleUpdateCampaign] Reward comparison:", {
+          configPerParticipantWei: rewardConfig.rewardPerParticipantWei.toString(),
+          deployedPerParticipantWei: deployed.rewardPerParticipantWei.toString(),
+          perParticipantTrustChanged, reducedPool, reducedParticipants,
+          configTotalPoolWei: rewardConfig.totalPoolWei.toString(),
+          deployedFundedAmountWei: deployed.fundedAmountWei.toString(),
+          configParticipants: rewardConfig.participantCount,
+          deployedParticipants: deployed.maxClaimableParticipants,
+        });
+
         if (!publishedCampaignHasStarted && (perParticipantTrustChanged || reducedPool || reducedParticipants || movesStartEarlier)) {
           shouldReplaceScheduledRewardsContract = true;
         } else {
@@ -1240,10 +1260,13 @@ const handleUpdateCampaign = async () => {
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Invalid rewards configuration.";
+      console.error("[handleUpdateCampaign] Blocked by reward validation:", message);
       toast({ title: "Update blocked", description: message, variant: "destructive" });
       return;
     }
   }
+
+  console.log("[handleUpdateCampaign] Past reward validation. shouldReplace:", shouldReplaceScheduledRewardsContract);
 
   setLoading(true);
   try {
@@ -1259,7 +1282,9 @@ const handleUpdateCampaign = async () => {
       await syncPublishedRewardIncrease(savedCampaignId, rewardConfig);
     }
 
-    if (hasDeployedRewardsContract && !isEnded && startDateChanged && !shouldReplaceScheduledRewardsContract) {
+    const willSyncStartDate = hasDeployedRewardsContract && !isEnded && startDateChanged && !shouldReplaceScheduledRewardsContract;
+    console.log("[handleUpdateCampaign] Will sync start date?", willSyncStartDate);
+    if (willSyncStartDate) {
       await syncPublishedRewardStart();
     }
 
