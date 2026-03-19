@@ -1224,6 +1224,10 @@ const handleDeployRewardsContract = async () => {
 };
 
 const handleUpdateCampaign = async () => {
+  if (isEnded) {
+    toast({ title: "Campaign closed", description: "Closed or ended campaigns are view-only and cannot be republished.", variant: "destructive" });
+    return;
+  }
   if (!campaignTitle || !campaignName) {
     toast({ title: "Incomplete details", description: "Please fill in campaign name and description.", variant: "destructive" });
     return;
@@ -1308,6 +1312,10 @@ const handleUpdateCampaign = async () => {
 };
 
 const handlePublishButtonClick = () => {
+  if (isEnded) {
+    toast({ title: "Campaign closed", description: "Closed or ended campaigns are view-only and cannot be published.", variant: "destructive" });
+    return;
+  }
   if (Number(rewardPool) > 0 && !rewardContractAddress.trim()) {
     toast({
       title: "Rewards contract required",
@@ -2307,9 +2315,9 @@ const isActive =
   <button
     onClick={() => handleUpdateCampaign()}
     className="px-4 py-2 bg-[#8B3EFE] text-white rounded-lg text-sm hover:bg-[#7b35e6] transition disabled:opacity-50 disabled:cursor-not-allowed"
-    disabled={loading || saveLoading}
+    disabled={loading || saveLoading || isEnded}
   >
-    {updateCampaignButtonLabel}
+    {isEnded ? "View Only" : updateCampaignButtonLabel}
   </button>
 ) : (
   <button

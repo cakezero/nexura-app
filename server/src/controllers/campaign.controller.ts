@@ -740,6 +740,9 @@ export const reopenCampaign = async (
 	res: GlobalResponse
 ) => {
 	try {
+		res.status(FORBIDDEN).json({ error: "closed or ended campaigns cannot be republished" });
+		return;
+
 		const id = req.query.id as string;
 		if (!id) {
 			res.status(BAD_REQUEST).json({ error: "send campaign id" });

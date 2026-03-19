@@ -43,7 +43,7 @@ interface Campaign {
   reward?: { xp?: number; pool?: number; trust?: number };
 }
 
-type PendingAction = { type: "delete" | "close" | "reopen"; id: string; title: string } | null;
+type PendingAction = { type: "delete" | "close"; id: string; title: string } | null;
 
 export default function CampaignsTab() {
   const [activeTab, setActiveTab] = useState<"all" | "active" | "upcoming" | "drafts" | "completed">("all");
@@ -51,7 +51,6 @@ export default function CampaignsTab() {
   const [loading, setLoading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [closingId, setClosingId] = useState<string | null>(null);
-  const [reopeningId, setReopeningId] = useState<string | null>(null);
   const [withdrawingId, setWithdrawingId] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const [serverOffset, setServerOffset] = useState<number>(0);
@@ -107,8 +106,6 @@ export default function CampaignsTab() {
   const isCompleted = (c: Campaign) => isEnded(c) || (!!c.ends_at && new Date(c.ends_at) <= now);
   const isScheduled = (c: Campaign) => !isDraft(c) && !isCompleted(c) && !!c.starts_at && new Date(c.starts_at) > now;
   const isActiveCampaign = (c: Campaign) => !isDraft(c) && !isScheduled(c) && !isCompleted(c);
-  const isReopenable = (c: Campaign) => isEnded(c) && (!!c.ends_at ? new Date(c.ends_at) > now : true);
-
   useEffect(() => {
     const currentNow = new Date(Date.now() + serverOffset);
     const completedRewardCampaigns = campaigns.filter((campaign) => {
@@ -180,42 +177,6 @@ export default function CampaignsTab() {
       toast({ title: "Error", description: msg, variant: "destructive" });
     } finally {
       setClosingId(null);
-    }
-  };
-
-  const handleReopen = async (campaign: Campaign) => {
-    const id = campaign._id;
-    const rewardsContractSettled = Boolean(campaign.rewardsDeployment?.remainderWithdrawalTxHash);
-
-    if (rewardsContractSettled) {
-      toast({
-        title: "Reopen blocked",
-        description: "This rewards campaign cannot be reopened because its remaining funds have already been withdrawn.",
-        variant: "destructive",
-      });
-      setPendingAction(null);
-      return;
-    }
-
-    setReopeningId(id);
-    setPendingAction(null);
-    try {
-      if (campaign.contractAddress && Number(campaign.reward?.pool ?? 0) > 0) {
-        const contractStartTimestamp = Math.floor(new Date(campaign.starts_at).getTime() / 1000);
-
-        if (Number.isFinite(contractStartTimestamp) && contractStartTimestamp > 0) {
-          await syncRewardContractStartDate(campaign.contractAddress, contractStartTimestamp);
-        }
-      }
-
-      await projectApiRequest({ method: "PATCH", endpoint: "/hub/reopen-campaign", params: { id } });
-      toast({ title: "Campaign reopened", description: "The campaign has been reopened successfully." });
-      fetchCampaigns();
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to reopen campaign.";
-      toast({ title: "Error", description: msg, variant: "destructive" });
-    } finally {
-      setReopeningId(null);
     }
   };
 
@@ -306,13 +267,6 @@ export default function CampaignsTab() {
       handleClose(pendingAction.id);
       return;
     }
-    const campaignToReopen = campaigns.find((campaign) => campaign._id === pendingAction.id);
-    if (!campaignToReopen) {
-      toast({ title: "Error", description: "Campaign not found.", variant: "destructive" });
-      setPendingAction(null);
-      return;
-    }
-    void handleReopen(campaignToReopen);
   };
 
   useEffect(() => {
@@ -369,7 +323,6 @@ export default function CampaignsTab() {
     const scheduled = isScheduled(campaign);
     const completed = isCompleted(campaign);
     const rewardsContractSettled = Boolean(campaign.rewardsDeployment?.remainderWithdrawalTxHash);
-    const canReopen = isReopenable(campaign) && !rewardsContractSettled;
     const rewardBalance = rewardBalances[campaign._id];
     const rewardBalanceKnown = rewardBalance !== undefined;
     const hasRewardsContract = !!campaign.contractAddress && Number(campaign.reward?.pool ?? 0) > 0;
@@ -384,7 +337,7 @@ export default function CampaignsTab() {
       status = "Upcoming";
       statusColor = "bg-blue-500";
     } else if (completed) {
-      status = canReopen ? "Closed" : "Completed";
+      status = rewardsContractSettled ? "Completed" : "Closed";
       statusColor = "bg-gray-500";
     }
 
@@ -437,7 +390,7 @@ export default function CampaignsTab() {
                   title="Close campaign"
                   className="px-2 py-1.5 text-xs bg-yellow-600/20 text-yellow-400 rounded-lg hover:bg-yellow-600/30 transition disabled:opacity-50 disabled:cursor-not-allowed"
                   onClick={() => setPendingAction({ type: "close", id: campaign._id, title: campaign.description || campaign.title })}
-                  disabled={closingId === campaign._id || deletingId === campaign._id || reopeningId === campaign._id}
+                  disabled={closingId === campaign._id || deletingId === campaign._id}
                 >
                   {closingId === campaign._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
                 </button>
@@ -451,8 +404,7 @@ export default function CampaignsTab() {
                   disabled={
                     withdrawingId === campaign._id ||
                     deletingId === campaign._id ||
-                    closingId === campaign._id ||
-                    reopeningId === campaign._id
+                    closingId === campaign._id
                   }
                 >
                   {withdrawingId === campaign._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowDownToLine className="w-4 h-4" />}
@@ -465,7 +417,7 @@ export default function CampaignsTab() {
                   title="Delete campaign"
                   className="px-2 py-1.5 text-xs bg-red-600/20 text-red-400 rounded-lg hover:bg-red-600/30 transition disabled:opacity-50 disabled:cursor-not-allowed"
                   onClick={() => setPendingAction({ type: "delete", id: campaign._id, title: campaign.description || campaign.title })}
-                  disabled={deletingId === campaign._id || closingId === campaign._id || reopeningId === campaign._id}
+                  disabled={deletingId === campaign._id || closingId === campaign._id}
                 >
                   {deletingId === campaign._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                 </button>
@@ -553,19 +505,15 @@ export default function CampaignsTab() {
               className={
                 pendingAction?.type === "delete"
                   ? "text-red-400"
-                  : pendingAction?.type === "reopen"
-                    ? "text-blue-400"
-                    : "text-yellow-400"
+                  : "text-yellow-400"
               }
             >
-              {pendingAction?.type === "delete" ? "Delete Campaign" : pendingAction?.type === "reopen" ? "Reopen Campaign" : "Close Campaign"}
+              {pendingAction?.type === "delete" ? "Delete Campaign" : "Close Campaign"}
             </DialogTitle>
             <DialogDescription className="text-white/60 pt-1">
               {pendingAction?.type === "delete"
                 ? (<>This will <span className="text-red-400 font-semibold">permanently delete</span> <span className="text-white font-medium">"{pendingAction?.title}"</span>. This action cannot be undone.</>)
-                : pendingAction?.type === "reopen"
-                  ? (<>This will reopen <span className="text-white font-medium">"{pendingAction?.title}"</span> and move it back to active or upcoming campaigns.</>)
-                  : (<>This will close <span className="text-white font-medium">"{pendingAction?.title}"</span>. It will no longer accept submissions.</>)
+                : (<>This will close <span className="text-white font-medium">\"{pendingAction?.title}\"</span>. It will no longer accept submissions.</>)
               }
             </DialogDescription>
           </DialogHeader>
@@ -577,13 +525,11 @@ export default function CampaignsTab() {
               className={
                 pendingAction?.type === "delete"
                   ? "bg-red-600 hover:bg-red-700 text-white"
-                  : pendingAction?.type === "reopen"
-                    ? "bg-blue-600 hover:bg-blue-700 text-white"
-                    : "bg-yellow-600 hover:bg-yellow-700 text-white"
+                  : "bg-yellow-600 hover:bg-yellow-700 text-white"
               }
               onClick={confirmAction}
             >
-              {pendingAction?.type === "delete" ? "Delete" : pendingAction?.type === "reopen" ? "Reopen Campaign" : "Close Campaign"}
+              {pendingAction?.type === "delete" ? "Delete" : "Close Campaign"}
             </Button>
           </DialogFooter>
         </DialogContent>
