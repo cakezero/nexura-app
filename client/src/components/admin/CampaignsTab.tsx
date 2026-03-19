@@ -103,9 +103,17 @@ export default function CampaignsTab() {
 
   const isDraft = (c: Campaign) => c.status === "Save";
   const isEnded = (c: Campaign) => c.status === "Ended";
-  const isCompleted = (c: Campaign) => isEnded(c) || (!!c.ends_at && new Date(c.ends_at) <= now);
-  const isScheduled = (c: Campaign) => !isDraft(c) && !isCompleted(c) && !!c.starts_at && new Date(c.starts_at) > now;
-  const isActiveCampaign = (c: Campaign) => !isDraft(c) && !isScheduled(c) && !isCompleted(c);
+  const isCompleted = (c: Campaign) => c.status === "Ended" || (!!c.ends_at && new Date(c.ends_at) <= now);
+  const isScheduled = (c: Campaign) => {
+    if (c.status === "Scheduled") return true;
+    if (isDraft(c) || isCompleted(c)) return false;
+    return !!c.starts_at && new Date(c.starts_at) > now;
+  };
+  const isActiveCampaign = (c: Campaign) => {
+    if (c.status === "Active") return true;
+    if (isDraft(c) || isScheduled(c) || isCompleted(c)) return false;
+    return true;
+  };
   useEffect(() => {
     const currentNow = new Date(Date.now() + serverOffset);
     const completedRewardCampaigns = campaigns.filter((campaign) => {
