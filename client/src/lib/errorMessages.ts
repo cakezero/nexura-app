@@ -10,6 +10,7 @@ const RULES: Array<{ pattern: RegExp; message: string }> = [
   { pattern: /(failed to fetch|networkerror|network request failed|econnrefused|load failed)/i, message: "Network error. Please try again." },
   { pattern: /(campaign has ended)/i, message: "This campaign has ended." },
   { pattern: /(campaignisalreadyclosed|campaign is already closed)/i, message: "The rewards contract has already been closed." },
+  { pattern: /(cannotcloseanendedcampaign|cannot close an ended campaign)/i, message: "This campaign has ended on-chain. Please contact support to recover the remaining funds." },
   { pattern: /(onlythecampaigncreatorcancallthis|only the campaign creator can call this)/i, message: "Only the campaign creator can withdraw the remaining rewards." },
   { pattern: /(newdateissupposedtobegreaterthanolddate|new date is supposed to be greater than old date)/i, message: "Set a later campaign start date before updating the rewards contract." },
   { pattern: /(cannot be reopened because its remaining funds have already been withdrawn|cannot be extended because its remaining funds have already been withdrawn)/i, message: "This rewards contract has already been settled and cannot be reopened." },

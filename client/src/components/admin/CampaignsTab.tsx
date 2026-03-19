@@ -131,7 +131,7 @@ export default function CampaignsTab() {
             return [campaign._id, balance] as const;
           } catch (error) {
             console.error(`Failed to load rewards contract balance for campaign ${campaign._id}:`, error);
-            return [campaign._id, 0n] as const;
+            return [campaign._id, undefined] as const;
           }
         })
       );
@@ -140,7 +140,7 @@ export default function CampaignsTab() {
 
       setRewardBalances(
         entries.reduce<Record<string, bigint>>((acc, [campaignId, balance]) => {
-          acc[campaignId] = balance;
+          if (balance !== undefined) acc[campaignId] = balance;
           return acc;
         }, {})
       );
@@ -240,10 +240,15 @@ export default function CampaignsTab() {
         throw new Error(`Switch to the contract creator wallet ${campaignCreator.slice(0, 6)}...${campaignCreator.slice(-4)} to withdraw the remainder.`);
       }
 
-      const currentBalance = await getRewardContractBalance(campaign.contractAddress);
+      let currentBalance: bigint | null = null;
+      try {
+        currentBalance = await getRewardContractBalance(campaign.contractAddress);
+      } catch {
+        // Balance check is best-effort; withdrawal can proceed without it
+      }
 
       const txHash = await closeRewardCampaign(campaign.contractAddress);
-      const withdrawnAmount = Number(formatEther(currentBalance));
+      const withdrawnAmount = currentBalance !== null ? Number(formatEther(currentBalance)) : 0;
 
       const syncResults = await Promise.allSettled([
         campaign.status !== "Ended"
@@ -269,7 +274,9 @@ export default function CampaignsTab() {
         console.error("Campaign withdrawal sync failed:", syncFailure.reason);
         toast({
           title: "Remainder withdrawn",
-          description: `${formatTrustAmount(currentBalance)} TRUST was withdrawn on-chain, but the studio metadata needs a refresh.`,
+          description: currentBalance !== null
+            ? `${formatTrustAmount(currentBalance)} TRUST was withdrawn on-chain, but the studio metadata needs a refresh.`
+            : "TRUST was withdrawn on-chain, but the studio metadata needs a refresh.",
           variant: "destructive",
         });
         return;
@@ -277,7 +284,9 @@ export default function CampaignsTab() {
 
       toast({
         title: "Remainder withdrawn",
-        description: `${formatTrustAmount(currentBalance)} TRUST was returned from the rewards contract.`,
+        description: currentBalance !== null
+          ? `${formatTrustAmount(currentBalance)} TRUST was returned from the rewards contract.`
+          : "Remaining TRUST was returned from the rewards contract.",
       });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to withdraw the remaining rewards.";
