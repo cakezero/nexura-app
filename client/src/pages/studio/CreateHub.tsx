@@ -92,29 +92,26 @@ export default function SharedAccessCredentials() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white overflow-auto p-2 sm:p-3 relative">
+    <div className="min-h-screen bg-black text-white overflow-auto p-4 sm:p-6 relative">
       <AnimatedBackground />
 
-      {/* Outer container */}
-      <div className="max-w-2xl mx-auto relative z-10 p-2 sm:p-8 border-2 border-purple-500 rounded-3xl space-y-3">
-
-        <div className="max-w-2xl mx-auto relative z-10 space-y-2">
+      <div className="max-w-md mx-auto relative z-10 space-y-6">
           {/* Header */}
-          <div className="text-center py-2 sm:py-2 px-2 sm:px-0">
-            <h1 className="text-2xl sm:text-2xl font-bold text-white mb-2 sm:mb-4">
+          <div className="text-center py-4 sm:py-6 px-2 sm:px-0">
+            <h1 className="text-xl sm:text-2xl font-bold text-white mb-2">
               Shared Access Credentials
             </h1>
-            <p className="text-base sm:text-xs text-white/60 leading-relaxed">
+            <p className="text-sm sm:text-base text-white/60 leading-relaxed">
               Set up credentials that will allow your team members to access your project on Nexura Studio
             </p>
           </div>
 
           {/* Credentials Card */}
-          <Card className="border-2 border-purple-500 rounded-3xl p-6 space-y-3 bg-gray-900">
-            <div className="space-y-2">
+          <Card className="border-2 border-purple-500 rounded-3xl p-6 space-y-6 bg-gray-900">
+            <div className="space-y-6">
               {/* name */}
               <div>
-                <CardTitle className="text-white text-xs sm:text-xs">Super Admin Name</CardTitle>
+                <CardTitle className="text-white text-lg sm:text-xl">Super Admin Name</CardTitle>
                 <Input
                   type="text"
                   placeholder="Enter super admin name"
@@ -126,7 +123,7 @@ export default function SharedAccessCredentials() {
 
               {/* Email */}
               <div>
-                <CardTitle className="text-white text-xs sm:text-xs">Email Address</CardTitle>
+                <CardTitle className="text-white text-lg sm:text-xl">Email Address</CardTitle>
                 <Input
                   type="email"
                   placeholder="Enter email address"
@@ -138,7 +135,7 @@ export default function SharedAccessCredentials() {
 
               {/* Wallet Address */}
               <div>
-                <CardTitle className="text-white text-xs sm:text-xs">Project Wallet Address</CardTitle>
+                <CardTitle className="text-white text-lg sm:text-xl">Project Wallet Address</CardTitle>
                 <Input
                   type="text"
                   placeholder="0x..."
@@ -155,8 +152,8 @@ export default function SharedAccessCredentials() {
 
               {/* Password */}
               <div>
-                <CardTitle className="text-white text-xs sm:text-xs">Password</CardTitle>
-                <div className="relative">
+                <CardTitle className="text-white text-lg sm:text-xl">Password</CardTitle>
+                <div className="relative mt-2">
                   <Input
                     type={showPassword ? "text" : "password"}
                     placeholder="*   *   *   *   *   *   *   *"
@@ -169,12 +166,12 @@ export default function SharedAccessCredentials() {
                       setHasSpecialChar(/[!@#$%^&*()_+[\]{};':"\\|,.<>/?]/.test(value));
                       setIsLongEnough(value.length >= 8);
                     }}
-                    className="mt-2 w-full bg-gray-800 text-white border-purple-500 pr-10"
+                    className="w-full bg-gray-800 text-white border-purple-500 pr-10"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-2 top-4 text-gray-400 hover:text-white"
+                    className="absolute right-2 top-2 text-gray-400 hover:text-white"
                   >
                     {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </button>
@@ -190,7 +187,7 @@ export default function SharedAccessCredentials() {
 
               {/* Confirm Password */}
               <div className="relative">
-                <CardTitle className="text-white text-xs sm:text-xs">Confirm Password</CardTitle>
+                <CardTitle className="text-white text-lg sm:text-xl">Confirm Password</CardTitle>
                 <div className="relative mt-2">
                   <Input
                     type={showConfirmPassword ? "text" : "password"}
@@ -226,13 +223,13 @@ export default function SharedAccessCredentials() {
               <Button
                 disabled={creating}
                 onClick={handleSignUp}
-                className="w-full bg-purple-400 hover:bg-purple-600 hover:shadow-[0_0_28px_rgba(131,58,253,0.7)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 text-xs"
+                className="w-full bg-[#8B3EFE] border-0 text-white hover:bg-[#8B3EFE] hover:shadow-[0_0_28px_rgba(131,58,253,0.7)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2"
               >
                 {creating ? "Creating Super Admin..." : "Create Super Admin"}
+                <ArrowRight className="h-5 w-5" />
               </Button>
             </CardFooter>
           </Card>
-        </div>
       </div>
     </div>
   );
