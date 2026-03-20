@@ -2,8 +2,25 @@
 const normalizedNetwork = ((import.meta as any).env?.VITE_NETWORK as string | undefined)?.trim().toLowerCase();
 export const network: "testnet" | "mainnet" = normalizedNetwork === "mainnet" ? "mainnet" : "testnet";
 
+const DEFAULT_BACKEND_URL = "https://api-nexura.intuition.box";
+
+function normalizeBackendUrl(value: string | undefined) {
+	const trimmed = value?.trim();
+	const candidate = trimmed && trimmed.length > 0 ? trimmed : DEFAULT_BACKEND_URL;
+
+	if (/^https?:\/\//i.test(candidate)) {
+		return candidate.replace(/\/+$/g, "");
+	}
+
+	if (candidate.startsWith("//")) {
+		return `https:${candidate}`.replace(/\/+$/g, "");
+	}
+
+	return `https://${candidate}`.replace(/\/+$/g, "");
+}
+
 const rawBackendUrl = ((import.meta as any).env?.VITE_BACKEND_URL as string | undefined)?.trim();
-export const BACKEND_URL = (rawBackendUrl && rawBackendUrl.length > 0 ? rawBackendUrl : "http://localhost:5600").replace(/\/+$/g, "");
+export const BACKEND_URL = normalizeBackendUrl(rawBackendUrl);
 
 export const AUTHORIZED_ADDRESS = "0x4167E3Afdc91c8b15A16041F813E2a19EAaEcAE0";
 
