@@ -5,10 +5,11 @@ import { Card } from "../ui/card";
 import { Link, useLocation } from "wouter";
 import { projectApiRequest, getStoredProjectInfo } from "../../lib/projectApi";
 import { useToast } from "../../hooks/use-toast";
-import { ArrowDownToLine, RefreshCw, Trash2, XCircle, Loader2, Clock, RotateCcw } from "lucide-react";
+import { useWallet } from "../../hooks/use-wallet";
+import { ArrowDownToLine, RefreshCw, Trash2, XCircle, Loader2, Clock } from "lucide-react";
 import { Button } from "../ui/button";
 import { apiRequestV2 } from "../../lib/queryClient";
-import { closeRewardCampaign, getRewardContractBalance } from "../../lib/performOnchainAction";
+import { closeRewardCampaign, getRewardCampaignCreator, getRewardContractBalance, syncRewardContractStartDate } from "../../lib/performOnchainAction";
 import { formatEther } from "viem";
 import {
   Dialog,
@@ -42,7 +43,7 @@ interface Campaign {
   reward?: { xp?: number; pool?: number; trust?: number };
 }
 
-type PendingAction = { type: "delete" | "close" | "reopen"; id: string; title: string } | null;
+type PendingAction = { type: "delete" | "close"; id: string; title: string } | null;
 
 export default function CampaignsTab() {
   const [activeTab, setActiveTab] = useState<"all" | "active" | "upcoming" | "drafts" | "completed">("all");
@@ -50,7 +51,6 @@ export default function CampaignsTab() {
   const [loading, setLoading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [closingId, setClosingId] = useState<string | null>(null);
-  const [reopeningId, setReopeningId] = useState<string | null>(null);
   const [withdrawingId, setWithdrawingId] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const [serverOffset, setServerOffset] = useState<number>(0);
@@ -58,9 +58,11 @@ export default function CampaignsTab() {
   const [rewardBalances, setRewardBalances] = useState<Record<string, bigint>>({});
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { address, isConnected, connectWallet } = useWallet();
 
   const info = getStoredProjectInfo();
   const isSuperAdmin = (info?.role as string) === "superadmin";
+  const isHubAdmin = isSuperAdmin || (info?.role as string) === "admin";
   const formatTrustAmount = (amountWei: bigint) => {
     const formatted = formatEther(amountWei);
     const numeric = Number(formatted);
@@ -101,11 +103,17 @@ export default function CampaignsTab() {
 
   const isDraft = (c: Campaign) => c.status === "Save";
   const isEnded = (c: Campaign) => c.status === "Ended";
-  const isCompleted = (c: Campaign) => isEnded(c) || (!!c.ends_at && new Date(c.ends_at) <= now);
-  const isScheduled = (c: Campaign) => !isDraft(c) && !isCompleted(c) && !!c.starts_at && new Date(c.starts_at) > now;
-  const isActiveCampaign = (c: Campaign) => !isDraft(c) && !isScheduled(c) && !isCompleted(c);
-  const isReopenable = (c: Campaign) => isEnded(c) && (!!c.ends_at ? new Date(c.ends_at) > now : true);
-
+  const isCompleted = (c: Campaign) => c.status === "Ended" || (!!c.ends_at && new Date(c.ends_at) <= now);
+  const isScheduled = (c: Campaign) => {
+    if (c.status === "Scheduled") return true;
+    if (isDraft(c) || isCompleted(c)) return false;
+    return !!c.starts_at && new Date(c.starts_at) > now;
+  };
+  const isActiveCampaign = (c: Campaign) => {
+    if (c.status === "Active") return true;
+    if (isDraft(c) || isScheduled(c) || isCompleted(c)) return false;
+    return true;
+  };
   useEffect(() => {
     const currentNow = new Date(Date.now() + serverOffset);
     const completedRewardCampaigns = campaigns.filter((campaign) => {
@@ -128,7 +136,7 @@ export default function CampaignsTab() {
             return [campaign._id, balance] as const;
           } catch (error) {
             console.error(`Failed to load rewards contract balance for campaign ${campaign._id}:`, error);
-            return [campaign._id, 0n] as const;
+            return [campaign._id, undefined] as const;
           }
         })
       );
@@ -137,7 +145,7 @@ export default function CampaignsTab() {
 
       setRewardBalances(
         entries.reduce<Record<string, bigint>>((acc, [campaignId, balance]) => {
-          acc[campaignId] = balance;
+          if (balance !== undefined) acc[campaignId] = balance;
           return acc;
         }, {})
       );
@@ -180,21 +188,6 @@ export default function CampaignsTab() {
     }
   };
 
-  const handleReopen = async (id: string) => {
-    setReopeningId(id);
-    setPendingAction(null);
-    try {
-      await projectApiRequest({ method: "PATCH", endpoint: "/hub/reopen-campaign", params: { id } });
-      toast({ title: "Campaign reopened", description: "The campaign has been reopened successfully." });
-      fetchCampaigns();
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to reopen campaign.";
-      toast({ title: "Error", description: msg, variant: "destructive" });
-    } finally {
-      setReopeningId(null);
-    }
-  };
-
   const handleWithdrawRemainder = async (campaign: Campaign) => {
     if (!campaign.contractAddress) {
       toast({ title: "No rewards contract", description: "This campaign does not have a rewards contract attached.", variant: "destructive" });
@@ -203,15 +196,28 @@ export default function CampaignsTab() {
 
     setWithdrawingId(campaign._id);
     try {
-      const currentBalance = await getRewardContractBalance(campaign.contractAddress);
-      if (currentBalance <= 0n) {
-        setRewardBalances((prev) => ({ ...prev, [campaign._id]: 0n }));
-        toast({ title: "No remainder found", description: "This rewards contract no longer holds any TRUST.", variant: "destructive" });
-        return;
+      let connectedAddress: string | null = address;
+      if (!isConnected || !connectedAddress) {
+        connectedAddress = await connectWallet({ noReload: true });
+      }
+      if (!connectedAddress) {
+        throw new Error("Connect the wallet that deployed this rewards contract to withdraw the remainder.");
+      }
+
+      const campaignCreator = await getRewardCampaignCreator(campaign.contractAddress);
+      if (campaignCreator.toLowerCase() !== connectedAddress.toLowerCase()) {
+        throw new Error(`Switch to the contract creator wallet ${campaignCreator.slice(0, 6)}...${campaignCreator.slice(-4)} to withdraw the remainder.`);
+      }
+
+      let currentBalance: bigint | null = null;
+      try {
+        currentBalance = await getRewardContractBalance(campaign.contractAddress);
+      } catch {
+        // Balance check is best-effort; withdrawal can proceed without it
       }
 
       const txHash = await closeRewardCampaign(campaign.contractAddress);
-      const withdrawnAmount = Number(formatEther(currentBalance));
+      const withdrawnAmount = currentBalance !== null ? Number(formatEther(currentBalance)) : 0;
 
       const syncResults = await Promise.allSettled([
         campaign.status !== "Ended"
@@ -237,7 +243,9 @@ export default function CampaignsTab() {
         console.error("Campaign withdrawal sync failed:", syncFailure.reason);
         toast({
           title: "Remainder withdrawn",
-          description: `${formatTrustAmount(currentBalance)} TRUST was withdrawn on-chain, but the studio metadata needs a refresh.`,
+          description: currentBalance !== null
+            ? `${formatTrustAmount(currentBalance)} TRUST was withdrawn on-chain, but the studio metadata needs a refresh.`
+            : "TRUST was withdrawn on-chain, but the studio metadata needs a refresh.",
           variant: "destructive",
         });
         return;
@@ -245,7 +253,9 @@ export default function CampaignsTab() {
 
       toast({
         title: "Remainder withdrawn",
-        description: `${formatTrustAmount(currentBalance)} TRUST was returned from the rewards contract.`,
+        description: currentBalance !== null
+          ? `${formatTrustAmount(currentBalance)} TRUST was returned from the rewards contract.`
+          : "Remaining TRUST was returned from the rewards contract.",
       });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to withdraw the remaining rewards.";
@@ -265,7 +275,6 @@ export default function CampaignsTab() {
       handleClose(pendingAction.id);
       return;
     }
-    handleReopen(pendingAction.id);
   };
 
   useEffect(() => {
@@ -321,7 +330,7 @@ export default function CampaignsTab() {
     const draft = isDraft(campaign);
     const scheduled = isScheduled(campaign);
     const completed = isCompleted(campaign);
-    const canReopen = isReopenable(campaign);
+    const rewardsContractSettled = Boolean(campaign.rewardsDeployment?.remainderWithdrawalTxHash);
     const rewardBalance = rewardBalances[campaign._id];
     const rewardBalanceKnown = rewardBalance !== undefined;
     const hasRewardsContract = !!campaign.contractAddress && Number(campaign.reward?.pool ?? 0) > 0;
@@ -336,7 +345,7 @@ export default function CampaignsTab() {
       status = "Upcoming";
       statusColor = "bg-blue-500";
     } else if (completed) {
-      status = canReopen ? "Closed" : "Completed";
+      status = rewardsContractSettled ? "Completed" : "Closed";
       statusColor = "bg-gray-500";
     }
 
@@ -389,24 +398,13 @@ export default function CampaignsTab() {
                   title="Close campaign"
                   className="px-2 py-1.5 text-xs bg-yellow-600/20 text-yellow-400 rounded-lg hover:bg-yellow-600/30 transition disabled:opacity-50 disabled:cursor-not-allowed"
                   onClick={() => setPendingAction({ type: "close", id: campaign._id, title: campaign.description || campaign.title })}
-                  disabled={closingId === campaign._id || deletingId === campaign._id || reopeningId === campaign._id}
+                  disabled={closingId === campaign._id || deletingId === campaign._id}
                 >
                   {closingId === campaign._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
                 </button>
               )}
 
-              {isSuperAdmin && completed && canReopen && (
-                <button
-                  title="Reopen campaign"
-                  className="px-2 py-1.5 text-xs bg-blue-600/20 text-blue-400 rounded-lg hover:bg-blue-600/30 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                  onClick={() => setPendingAction({ type: "reopen", id: campaign._id, title: campaign.description || campaign.title })}
-                  disabled={reopeningId === campaign._id || deletingId === campaign._id || closingId === campaign._id}
-                >
-                  {reopeningId === campaign._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
-                </button>
-              )}
-
-              {isSuperAdmin && hasWithdrawableRemainder && (
+              {isHubAdmin && completed && hasRewardsContract && !rewardsContractSettled && (
                 <button
                   title="Withdraw contract remainder"
                   className="px-3 py-1.5 text-xs bg-emerald-600/20 text-emerald-300 rounded-lg hover:bg-emerald-600/30 transition disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1.5"
@@ -414,8 +412,7 @@ export default function CampaignsTab() {
                   disabled={
                     withdrawingId === campaign._id ||
                     deletingId === campaign._id ||
-                    closingId === campaign._id ||
-                    reopeningId === campaign._id
+                    closingId === campaign._id
                   }
                 >
                   {withdrawingId === campaign._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowDownToLine className="w-4 h-4" />}
@@ -428,7 +425,7 @@ export default function CampaignsTab() {
                   title="Delete campaign"
                   className="px-2 py-1.5 text-xs bg-red-600/20 text-red-400 rounded-lg hover:bg-red-600/30 transition disabled:opacity-50 disabled:cursor-not-allowed"
                   onClick={() => setPendingAction({ type: "delete", id: campaign._id, title: campaign.description || campaign.title })}
-                  disabled={deletingId === campaign._id || closingId === campaign._id || reopeningId === campaign._id}
+                  disabled={deletingId === campaign._id || closingId === campaign._id}
                 >
                   {deletingId === campaign._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                 </button>
@@ -516,19 +513,15 @@ export default function CampaignsTab() {
               className={
                 pendingAction?.type === "delete"
                   ? "text-red-400"
-                  : pendingAction?.type === "reopen"
-                    ? "text-blue-400"
-                    : "text-yellow-400"
+                  : "text-yellow-400"
               }
             >
-              {pendingAction?.type === "delete" ? "Delete Campaign" : pendingAction?.type === "reopen" ? "Reopen Campaign" : "Close Campaign"}
+              {pendingAction?.type === "delete" ? "Delete Campaign" : "Close Campaign"}
             </DialogTitle>
             <DialogDescription className="text-white/60 pt-1">
               {pendingAction?.type === "delete"
                 ? (<>This will <span className="text-red-400 font-semibold">permanently delete</span> <span className="text-white font-medium">"{pendingAction?.title}"</span>. This action cannot be undone.</>)
-                : pendingAction?.type === "reopen"
-                  ? (<>This will reopen <span className="text-white font-medium">"{pendingAction?.title}"</span> and move it back to active or upcoming campaigns.</>)
-                  : (<>This will close <span className="text-white font-medium">"{pendingAction?.title}"</span>. It will no longer accept submissions.</>)
+                : (<>This will close <span className="text-white font-medium">\"{pendingAction?.title}\"</span>. It will no longer accept submissions.</>)
               }
             </DialogDescription>
           </DialogHeader>
@@ -540,13 +533,11 @@ export default function CampaignsTab() {
               className={
                 pendingAction?.type === "delete"
                   ? "bg-red-600 hover:bg-red-700 text-white"
-                  : pendingAction?.type === "reopen"
-                    ? "bg-blue-600 hover:bg-blue-700 text-white"
-                    : "bg-yellow-600 hover:bg-yellow-700 text-white"
+                  : "bg-yellow-600 hover:bg-yellow-700 text-white"
               }
               onClick={confirmAction}
             >
-              {pendingAction?.type === "delete" ? "Delete" : pendingAction?.type === "reopen" ? "Reopen Campaign" : "Close Campaign"}
+              {pendingAction?.type === "delete" ? "Delete" : "Close Campaign"}
             </Button>
           </DialogFooter>
         </DialogContent>

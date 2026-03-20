@@ -1,6 +1,6 @@
 import chain from "./chain";
-import { getWalletClient, getPublicClient} from "./viem";
-import { network, NEXONS, NEXONS_ABI, REWARD_ABI, REWARD_BYTECODE, AUTHORIZED_ADDRESS } from "./constants";
+import { getWalletClient, getPublicClient } from "./viem";
+import { network, NEXONS, NEXONS_ABI, REWARD_ABI, REWARD_BYTECODE } from "./constants";
 import { ethers } from "ethers";
 import { createPublicClient, http, parseAbi, type Address, parseEther, formatEther } from "viem";
 import { getIntuitionNetworkParams } from "./utils";
@@ -17,6 +17,7 @@ type StudioPaymentConfig = {
   contractAddress?: string;
   chainId: string;
   amount: string;
+  authorizedAddress?: string;
 };
 
 const mainnet = network === "mainnet";
@@ -49,6 +50,16 @@ const getReadonlyPublicClient = () => {
   return readonlyPublicClient;
 };
 
+const normalizeUnixTimestamp = (value: number, fieldName: string): number => {
+  const normalized = Math.floor(Number(value));
+
+  if (!Number.isFinite(normalized) || normalized <= 0) {
+    throw new Error(`${fieldName} is invalid.`);
+  }
+
+  return normalized;
+};
+
 const getStudioPaymentConfig = async (): Promise<StudioPaymentConfig> => {
   const response = await fetch(buildUrl("/api/studio-payment-config"));
 
@@ -58,6 +69,11 @@ const getStudioPaymentConfig = async (): Promise<StudioPaymentConfig> => {
   }
 
   return response.json();
+};
+
+export const getServerAuthorizedAddress = async (): Promise<string> => {
+  const config = await getStudioPaymentConfig();
+  return requireContractAddress(config.authorizedAddress, "Server authorized address", config.network ?? "the server");
 };
 
 const ensureSwitch = async (targetChainId: string) => {
@@ -143,6 +159,8 @@ export const createRewardsContract = async ({ nameOfCampaign, totalRewards, rewa
 
     await ensureSwitch(chainId);
 
+    const authorizedAddress = await getServerAuthorizedAddress();
+
     const totalRewardsWei = toWeiAmount(totalRewards, "Total rewards");
     const rewardTokenWei = toWeiAmount(rewardToken, "Reward per participant");
 
@@ -158,7 +176,7 @@ export const createRewardsContract = async ({ nameOfCampaign, totalRewards, rewa
     const hash = await walletClient.deployContract({
       abi: REWARD_ABI,
       bytecode: REWARD_BYTECODE,
-      args: [nameOfCampaign, totalRewardsWei, rewardTokenWei, AUTHORIZED_ADDRESS, startDate],
+      args: [nameOfCampaign, totalRewardsWei, rewardTokenWei, authorizedAddress, startDate],
       account,
       chain,
       value: totalRewardsWei
@@ -193,6 +211,7 @@ export const createRewardsContract = async ({ nameOfCampaign, totalRewards, rewa
     return {
       txHash: receipt.transactionHash,
       contractAddress: receipt.contractAddress,
+      authorizedAddress,
       fundedAmount: formatEther(tx.value),
       rewardPerParticipant: formatEther(rewardTokenWei),
       maxClaimableParticipants,
@@ -207,39 +226,6 @@ export const createRewardsContract = async ({ nameOfCampaign, totalRewards, rewa
 
     console.error(error);
     throw toUserFriendlyError(error, "Failed to deploy rewards contract.");
-  }
-}
-
-export const updateRewardStartTime = async (contractAddress: string, newDate: number) => {
-  try {
-    const walletClient = await getWalletClient();
-    const publicClient = getPublicClient();
-    if (!walletClient) throw new Error("No wallet provider available. Connect a wallet with RainbowKit first.");
-
-    await ensureSwitch(chainId);
-
-    const [account] = await walletClient.getAddresses();
-
-    const { request } = await publicClient.simulateContract({
-      abi: REWARD_ABI,
-      address: contractAddress as "0x",
-      functionName: "updateDate",
-      args: [newDate],
-      chain,
-      account
-    });
-
-    await walletClient.writeContract(request);
-  } catch (error: any) {
-    if (error.data) {
-      const iface = new ethers.Interface(REWARD_ABI);
-      const decoded = iface.parseError(error.data);
-
-      throw toUserFriendlyError(decoded?.name ?? error, "Failed to update reward start time.");
-    }
-
-    console.error(error);
-    throw toUserFriendlyError(error, "Failed to update reward start time.");
   }
 }
 
@@ -286,6 +272,96 @@ export const getRewardContractBalance = async (contractAddress: string): Promise
   const publicClient = getReadonlyPublicClient();
 
   return publicClient.getBalance({ address: validatedCampaignAddress as Address });
+};
+
+export const getRewardContractStartDate = async (contractAddress: string): Promise<number> => {
+  const validatedCampaignAddress = requireContractAddress(contractAddress, "Campaign contract");
+  const publicClient = getReadonlyPublicClient();
+
+  const startDate = await publicClient.readContract({
+    abi: REWARD_ABI,
+    address: validatedCampaignAddress as Address,
+    functionName: "startDate",
+  }) as bigint;
+
+  return Number(startDate);
+};
+
+export const getRewardCampaignCreator = async (contractAddress: string): Promise<string> => {
+  const validatedCampaignAddress = requireContractAddress(contractAddress, "Campaign contract");
+  const publicClient = getReadonlyPublicClient();
+
+  const creator = await publicClient.readContract({
+    abi: REWARD_ABI,
+    address: validatedCampaignAddress as Address,
+    functionName: "campaignCreator",
+  }) as Address;
+
+  return String(creator);
+};
+
+export const updateRewardStartTime = async (contractAddress: string, newDate: number): Promise<string> => {
+  try {
+    const walletClient = await getWalletClient();
+    const publicClient = getPublicClient();
+    if (!walletClient) throw new Error("No wallet provider available. Connect a wallet with RainbowKit first.");
+
+    await ensureSwitch(chainId);
+
+    const [account] = await walletClient.getAddresses();
+    const validatedCampaignAddress = requireContractAddress(contractAddress, "Campaign contract");
+    const normalizedDate = normalizeUnixTimestamp(newDate, "Campaign start date");
+
+    const { request } = await publicClient.simulateContract({
+      abi: REWARD_ABI,
+      address: validatedCampaignAddress as Address,
+      functionName: "updateDate",
+      args: [normalizedDate],
+      chain,
+      account,
+    });
+
+    const hash = await walletClient.writeContract(request);
+    await publicClient.waitForTransactionReceipt({ hash });
+    return hash;
+  } catch (error: any) {
+    if (error.code === 4902) {
+      throw new Error("Please switch to the required network and try again.");
+    }
+
+    if (error.data) {
+      const iface = new ethers.Interface(REWARD_ABI);
+      const decoded = iface.parseError(error.data);
+
+      throw toUserFriendlyError(decoded?.name ?? error, "Failed to update reward start time.");
+    }
+
+    console.error(error);
+    throw toUserFriendlyError(error, "Failed to update reward start time.");
+  }
+}
+
+export const syncRewardContractStartDate = async (contractAddress: string, newDate: number) => {
+  const normalizedDate = normalizeUnixTimestamp(newDate, "Campaign start date");
+  const currentStartDate = await getRewardContractStartDate(contractAddress);
+
+  if (normalizedDate <= currentStartDate) {
+    return {
+      updated: false,
+      currentStartDate,
+      nextStartDate: normalizedDate,
+      txHash: null,
+    };
+  }
+
+  const txHash = await updateRewardStartTime(contractAddress, normalizedDate);
+
+  return {
+    updated: true,
+    currentStartDate,
+    nextStartDate: normalizedDate,
+    txHash,
+  };
 };
 
 export const closeRewardCampaign = async (contractAddress: string): Promise<string> => {

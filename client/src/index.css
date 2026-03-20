@@ -3551,3 +3551,10 @@ body {
 .animate-slideIn {
   animation: slideIn 0.25s ease-out forwards;
 }
+
+@keyframes flyIn {
+  to {
+    transform: translate(0,0) rotate(0deg) scale(1);
+    opacity: 1;
+  }
+}

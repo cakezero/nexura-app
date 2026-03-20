@@ -9,7 +9,7 @@ import { Button } from "../../components/ui/button";
 import { Switch } from "../../components/ui/switch";
 
 import { projectApiRequest, getStoredProjectInfo } from "../../lib/projectApi";
-import { addReward, createRewardsContract, payStudioHubFee } from "../../lib/performOnchainAction";
+import { addReward, closeRewardCampaign, createRewardsContract, getRewardContractStartDate, getServerAuthorizedAddress, payStudioHubFee, syncRewardContractStartDate } from "../../lib/performOnchainAction";
 import { useToast } from "../../hooks/use-toast";
 import { formatEther, parseEther } from "viem";
 import {
@@ -41,6 +41,8 @@ type RewardsDeploymentState = {
   fundedAmount: string;
   rewardPerParticipant: string;
   maxClaimableParticipants: number;
+  authorizedAddress?: string;
+  remainderWithdrawalTxHash?: string;
 };
 
 type EditBaseline = {
@@ -85,6 +87,8 @@ type DiscordChannelOption = {
 const DISCORD_JOIN_TASK_TYPE = "Join Us On Discord";
 const DISCORD_ROLE_TASK_TYPE = "Acquire a Role (Discord)";
 const DISCORD_MESSAGE_TASK_TYPE = "Send Message in Channel (Discord)";
+
+const VIEW_ONLY_CAMPAIGN_MESSAGE = "Closed or ended campaigns are view-only. You can still inspect details and tasks, but editing and review are disabled.";
 
 const isDiscordRoleTaskType = (type: string) => type === DISCORD_ROLE_TASK_TYPE;
 const isDiscordMessageTaskType = (type: string) => type === DISCORD_MESSAGE_TASK_TYPE;
@@ -150,10 +154,12 @@ const [paymentTxHash, setPaymentTxHash] = useState("");
 const [paymentLoading, setPaymentLoading] = useState(false);
 const [isEditMode, setIsEditMode] = useState(false);
 const [isPublished, setIsPublished] = useState(false);
+const [isEnded, setIsEnded] = useState(false);
 const [deployLoading, setDeployLoading] = useState(false);
 const [rewardContractAddress, setRewardContractAddress] = useState("");
 const [rewardsDeployment, setRewardsDeployment] = useState<RewardsDeploymentState | null>(null);
 const [editBaseline, setEditBaseline] = useState<EditBaseline | null>(null);
+const [onchainBaseline, setOnchainBaseline] = useState<EditBaseline | null>(null);
 const [hubGuildId, setHubGuildId] = useState("");
 const [hubDiscordConnected, setHubDiscordConnected] = useState(false);
 const [discordSessionId, setDiscordSessionId] = useState(initialDiscordSessionId);
@@ -162,13 +168,54 @@ const [discordChannels, setDiscordChannels] = useState<DiscordChannelOption[]>([
 const [discordRolesError, setDiscordRolesError] = useState("");
 const [discordChannelsError, setDiscordChannelsError] = useState("");
 const [discordOptionsLoading, setDiscordOptionsLoading] = useState(false);
+const showViewOnlyToast = () => {
+  toast({
+    title: "Campaign closed",
+    description: VIEW_ONLY_CAMPAIGN_MESSAGE,
+    variant: "destructive",
+  });
+};
 
 // Pre-fill from existing draft when ?edit=<id> is in the URL
 const parseDateTime = (isoStr: string) => {
   if (!isoStr) return { date: "", time: "" };
+  const trimmed = isoStr.trim();
+  if (!trimmed) return { date: "", time: "" };
+
+  const hasExplicitTimezone = /(?:Z|[+-]\d{2}:\d{2})$/i.test(trimmed);
+  if (!hasExplicitTimezone) {
+    const idx = trimmed.indexOf("T");
+    if (idx === -1) return { date: trimmed, time: "" };
+    return { date: trimmed.slice(0, idx), time: trimmed.slice(idx + 1, idx + 6) };
+  }
+
+  const parsed = new Date(isoStr);
+  if (!Number.isNaN(parsed.getTime())) {
+    const pad = (value: number) => value.toString().padStart(2, "0");
+    return {
+      date: `${parsed.getUTCFullYear()}-${pad(parsed.getUTCMonth() + 1)}-${pad(parsed.getUTCDate())}`,
+      time: `${pad(parsed.getUTCHours())}:${pad(parsed.getUTCMinutes())}`,
+    };
+  }
   const idx = isoStr.indexOf("T");
   if (idx === -1) return { date: isoStr, time: "" };
   return { date: isoStr.slice(0, idx), time: isoStr.slice(idx + 1, idx + 6) };
+};
+
+const toIsoDateTime = (date: string, time: string) => {
+  if (!date) return "";
+  const normalizedTime = time || "00:00";
+  return `${date}T${normalizedTime}:00.000Z`;
+};
+
+const toLocalInputDateTime = (unixSeconds: number) => {
+  const date = new Date(unixSeconds * 1000);
+  const pad = (value: number) => value.toString().padStart(2, "0");
+
+  return {
+    date: `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`,
+    time: `${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}`,
+  };
 };
 
 const toWeiString = (value: string) => {
@@ -217,6 +264,11 @@ useEffect(() => {
       setCampaignId(editId);
       setIsEditMode(true);
       setIsPublished(found.status !== "Save");
+      setIsEnded(
+        found.status === "Closed" ||
+        found.status === "Ended" ||
+        (found.ends_at ? new Date(found.ends_at) <= new Date() : false)
+      );
       setCampaignTitle(found.title ?? "");
       setCampaignName(found.description ?? found.nameOfProject ?? "");
       const s = parseDateTime(found.starts_at ?? "");
@@ -245,6 +297,8 @@ useEffect(() => {
           fundedAmount: String(found.rewardsDeployment?.fundedAmount ?? existingRewardPool),
           rewardPerParticipant: String(found.rewardsDeployment?.rewardPerParticipant ?? trustPerParticipant),
           maxClaimableParticipants: Number(found.rewardsDeployment?.maxClaimableParticipants ?? participantCount),
+          authorizedAddress: found.rewardsDeployment?.authorizedAddress ?? "",
+          remainderWithdrawalTxHash: found.rewardsDeployment?.remainderWithdrawalTxHash ?? "",
         });
       } else {
         setRewardsDeployment(null);
@@ -311,9 +365,47 @@ useEffect(() => {
         coverImagePreview: found.projectCoverImage ?? "",
         tasksSignature: buildTaskSignature(loadedTasks),
       });
+      if (found.contractAddress) {
+        let onchainStart = { date: s.date, time: s.time };
+        try {
+          const onchainStartTimestamp = await getRewardContractStartDate(found.contractAddress);
+          onchainStart = toLocalInputDateTime(onchainStartTimestamp);
+        } catch {
+          // Fall back to the saved date if the on-chain read fails.
+        }
+
+        const onchainFundedAmount = String(found.rewardsDeployment?.fundedAmount ?? found.reward?.pool ?? 0);
+        const onchainParticipants = String(found.rewardsDeployment?.maxClaimableParticipants ?? existingParticipants);
+
+        setOnchainBaseline({
+          campaignTitle: found.title ?? "",
+          campaignName: found.description ?? found.nameOfProject ?? "",
+          startDate: onchainStart.date,
+          startTime: onchainStart.time,
+          endDate: e.date,
+          endTime: e.time,
+          hasRewards: existingRewardPool > 0,
+          rewardPoolWei: existingRewardPool > 0 ? toWeiString(onchainFundedAmount) : "0",
+          participants: onchainParticipants,
+          coverImagePreview: found.projectCoverImage ?? "",
+          tasksSignature: buildTaskSignature(loadedTasks),
+        });
+      } else {
+        setOnchainBaseline(null);
+      }
     } catch { /* ignore – user will fill in manually */ }
   })();
 }, []);
+
+useEffect(() => {
+  if (!isEnded) return;
+  if (activeTab === "review") {
+    setActiveTab("details");
+  }
+  if (showModal) {
+    setShowModal(false);
+  }
+}, [activeTab, isEnded, showModal]);
 
 useEffect(() => {
   (async () => {
@@ -443,6 +535,7 @@ const platformToCategory = (platform: string) => {
 
 const normalizedParticipants = String(Number(participants || 0));
 const normalizedBaselineParticipants = String(Number(editBaseline?.participants || 0));
+const normalizedOnchainParticipants = String(Number(onchainBaseline?.participants || 0));
 const currentRewardPoolWei = hasRewards ? toWeiString(rewardPool || "0") : "0";
 const currentTaskSignature = useMemo(() => buildTaskSignature(tasks), [tasks]);
 
@@ -474,17 +567,17 @@ const draftRewardFieldsChanged = useMemo(() => {
 ]);
 
 const rewardFieldsChanged = useMemo(() => {
-  if (!editBaseline || !isEditMode || !isPublished || !hasRewards || !rewardContractAddress.trim()) return false;
-  return currentRewardPoolWei !== editBaseline.rewardPoolWei || normalizedParticipants !== normalizedBaselineParticipants;
+  if (!onchainBaseline || !isEditMode || !isPublished || !hasRewards || !rewardContractAddress.trim()) return false;
+  return currentRewardPoolWei !== onchainBaseline.rewardPoolWei || normalizedParticipants !== normalizedOnchainParticipants;
 }, [
-  editBaseline,
+  onchainBaseline,
   isEditMode,
   isPublished,
   hasRewards,
   rewardContractAddress,
   currentRewardPoolWei,
   normalizedParticipants,
-  normalizedBaselineParticipants,
+  normalizedOnchainParticipants,
 ]);
 
 const otherDetailsChanged = useMemo(() => {
@@ -514,6 +607,17 @@ const otherDetailsChanged = useMemo(() => {
   coverImage,
   currentTaskSignature,
 ]);
+
+const hasDeployedRewardsContract = Boolean(
+  isPublished &&
+  hasRewards &&
+  rewardContractAddress.trim() &&
+  rewardsDeployment
+);
+const publishedCampaignStartMs = onchainBaseline
+  ? new Date(`${onchainBaseline.startDate}T${onchainBaseline.startTime || "00:00"}`).getTime()
+  : Number.NaN;
+const publishedCampaignHasStarted = Number.isFinite(publishedCampaignStartMs) && publishedCampaignStartMs <= Date.now();
 
 const updateCampaignButtonLabel =
   rewardFieldsChanged && !otherDetailsChanged ? "Update Rewards Contract" : "Update Campaign Details";
@@ -560,8 +664,8 @@ const buildCampaignFormData = (isDraft: boolean): FormData => {
   fd.append("title", campaignTitle);
   fd.append("description", campaignName);
   fd.append("nameOfProject", campaignName);
-  fd.append("starts_at", startDate && startTime ? `${startDate}T${startTime}` : startDate);
-  fd.append("ends_at", endDate && endTime ? `${endDate}T${endTime}` : endDate);
+  fd.append("starts_at", toIsoDateTime(startDate, startTime));
+  fd.append("ends_at", toIsoDateTime(endDate, endTime));
   fd.append("maxParticipants", participants);
   fd.append("reward", JSON.stringify({
     xp: Number(xpRewards) || 0,
@@ -601,11 +705,19 @@ const buildCampaignFormData = (isDraft: boolean): FormData => {
   return fd;
 };
 
-const handleSaveDraft = async (thenNavigate?: string): Promise<string | null> => {
+const handleSaveDraft = async (
+  thenNavigate?: string,
+  options?: { skipPublishedRewardsGuard?: boolean }
+): Promise<string | null> => {
+  if (isEnded) {
+    showViewOnlyToast();
+    return null;
+  }
   if (!campaignTitle) {
     toast({ title: "Missing description", description: "Please enter a campaign description.", variant: "destructive" });
     return null;
   }
+
   setSaveLoading(true);
   try {
     const fd = buildCampaignFormData(true);
@@ -659,6 +771,10 @@ const convertToBase64 = (file: File): Promise<string> => {
 
 
 const handleSaveTask = () => {
+  if (isEnded) {
+    showViewOnlyToast();
+    return;
+  }
   const requiresPlatform = newTask.type !== "Check Out the Portal Claims" && newTask.type !== "others" && newTask.type !== "Give Feedback";
   const requiresDiscordConnection = newTask.platform === "Discord" || isDiscordFixedTaskType(newTask.type);
   const requiresRole = isDiscordRoleTaskType(newTask.type);
@@ -711,6 +827,10 @@ const handleCoverImage = (e: React.ChangeEvent<HTMLInputElement>) => {
 
 const handleSubmit = (e: React.FormEvent) => {
   e.preventDefault();
+  if (isEnded) {
+    showViewOnlyToast();
+    return;
+  }
   handleSaveDraft("tasks");
 };
 
@@ -719,6 +839,7 @@ const clearRewardsDeployment = (reason: string) => {
 
   setRewardContractAddress("");
   setRewardsDeployment(null);
+  setOnchainBaseline(null);
   toast({
     title: "Redeploy required",
     description: `${reason} Redeploy the rewards contract to keep on-chain funding in sync.`,
@@ -758,18 +879,45 @@ const handleParticipantsChange = (value: string) => {
   setParticipants(value);
 };
 
-const getCampaignClaimStartTimestamp = () => {
-  const endIso = endDate && endTime ? `${endDate}T${endTime}` : endDate ? `${endDate}T00:00` : "";
-  if (!endIso) {
-    throw new Error("Set a campaign end date and time before deploying rewards.");
+const getUtcTimestampFromFormDateTime = (date: string, time: string) => {
+  if (!date) {
+    throw new Error("Set a campaign start date and time before deploying rewards.");
   }
 
-  const endTimestampMs = new Date(endIso).getTime();
-  if (Number.isNaN(endTimestampMs)) {
-    throw new Error("Campaign end date is invalid.");
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+  if (!match) {
+    throw new Error("Campaign start date is invalid.");
   }
 
-  return Math.floor(endTimestampMs / 1000);
+  const [, yearRaw, monthRaw, dayRaw] = match;
+  const [hoursRaw = "00", minutesRaw = "00"] = (time || "00:00").split(":");
+
+  const year = Number(yearRaw);
+  const month = Number(monthRaw);
+  const day = Number(dayRaw);
+  const hours = Number(hoursRaw);
+  const minutes = Number(minutesRaw);
+
+  if (
+    !Number.isInteger(year) ||
+    !Number.isInteger(month) ||
+    !Number.isInteger(day) ||
+    !Number.isInteger(hours) ||
+    !Number.isInteger(minutes)
+  ) {
+    throw new Error("Campaign start date is invalid.");
+  }
+
+  const timestampMs = Date.UTC(year, month - 1, day, hours, minutes, 0, 0);
+  if (Number.isNaN(timestampMs)) {
+    throw new Error("Campaign start date is invalid.");
+  }
+
+  return Math.floor(timestampMs / 1000);
+};
+
+const getCampaignStartTimestamp = () => {
+  return getUtcTimestampFromFormDateTime(startDate, startTime);
 };
 
 const getRewardDeploymentConfig = () => {
@@ -932,6 +1080,7 @@ const syncPublishedRewardIncrease = async (
       fundedAmount: Number(config.totalPoolRaw),
       rewardPerParticipant: Number(config.rewardPerParticipantRaw),
       maxClaimableParticipants: config.participantCount,
+      authorizedAddress: rewardsDeployment?.authorizedAddress,
     },
   });
 
@@ -940,11 +1089,101 @@ const syncPublishedRewardIncrease = async (
     fundedAmount: config.totalPoolRaw,
     rewardPerParticipant: config.rewardPerParticipantRaw,
     maxClaimableParticipants: config.participantCount,
+    authorizedAddress: rewardsDeployment?.authorizedAddress,
   });
+  setOnchainBaseline(captureCurrentEditBaseline());
 
   toast({
     title: "Rewards contract updated",
     description: `Added ${formatEther(delta.addedPoolWei)} TRUST on-chain for ${delta.addedParticipants} additional participants.`,
+  });
+};
+
+const syncPublishedRewardStart = async () => {
+  if (!isPublished || !hasRewards || !rewardContractAddress.trim()) return;
+
+  const contractStartTimestamp = getCampaignStartTimestamp();
+  const syncResult = await syncRewardContractStartDate(rewardContractAddress.trim(), contractStartTimestamp);
+
+  if (!syncResult.updated && syncResult.currentStartDate !== syncResult.nextStartDate) {
+    throw new Error("Published rewards campaigns can only move the on-chain start date later.");
+  }
+
+  if (!syncResult.updated) return;
+
+  setOnchainBaseline(captureCurrentEditBaseline());
+
+  toast({
+    title: "Rewards contract updated",
+    description: "Updated the on-chain start date to match the latest campaign start date.",
+  });
+};
+
+const replaceScheduledRewardsContract = async (
+  savedCampaignId: string,
+  config: {
+    totalPool: number;
+    totalPoolWei: bigint;
+    totalPoolRaw: string;
+    participantCount: number;
+    rewardPerParticipant: number;
+    rewardPerParticipantWei: bigint;
+    rewardPerParticipantRaw: string;
+  }
+) => {
+  if (!rewardContractAddress.trim()) {
+    throw new Error("Rewards contract is required for published rewards campaigns.");
+  }
+
+  const contractStartTimestamp = getCampaignStartTimestamp();
+  await closeRewardCampaign(rewardContractAddress.trim());
+
+  const deployment = await createRewardsContract({
+    nameOfCampaign: campaignName.trim(),
+    totalRewards: config.totalPoolRaw,
+    rewardToken: config.rewardPerParticipantRaw,
+    startDate: contractStartTimestamp,
+  });
+
+  const deployedParticipantCap = Number(deployment.maxClaimableParticipants ?? 0);
+  if (!Number.isInteger(deployedParticipantCap) || deployedParticipantCap <= 0) {
+    throw new Error("Unable to verify participant withdrawal limit from the replaced contract.");
+  }
+  if (deployedParticipantCap !== config.participantCount) {
+    throw new Error(
+      `Replacement mismatch. Contract allows ${deployedParticipantCap} participants, expected ${config.participantCount}.`
+    );
+  }
+
+  await projectApiRequest({
+    method: "PATCH",
+    endpoint: "/hub/add-campaign-address",
+    data: {
+      id: savedCampaignId,
+      contractAddress: deployment.contractAddress,
+      deploymentTxHash: deployment.txHash,
+      fundedAmount: Number(deployment.fundedAmount),
+      rewardPerParticipant: Number(deployment.rewardPerParticipant),
+      maxClaimableParticipants: deployedParticipantCap,
+      authorizedAddress: deployment.authorizedAddress,
+    },
+  });
+
+  setRewardContractAddress(deployment.contractAddress);
+  setRewardPool(deployment.fundedAmount);
+  setParticipants(String(deployedParticipantCap));
+  setRewardsDeployment({
+    txHash: deployment.txHash,
+    fundedAmount: deployment.fundedAmount,
+    rewardPerParticipant: deployment.rewardPerParticipant,
+    maxClaimableParticipants: deployedParticipantCap,
+    authorizedAddress: deployment.authorizedAddress,
+  });
+  setOnchainBaseline(captureCurrentEditBaseline());
+
+  toast({
+    title: "Rewards contract replaced",
+    description: `Replaced the scheduled rewards contract with ${deployment.fundedAmount} TRUST funded at ${deployment.rewardPerParticipant} TRUST per participant.`,
   });
 };
 
@@ -962,13 +1201,13 @@ const handleDeployRewardsContract = async () => {
     return;
   }
 
-  let claimStartTimestamp = 0;
+  let contractStartTimestamp = 0;
   let totalPool = 0;
   let totalPoolRaw = "";
   let participantCount = 0;
   let rewardPerParticipantRaw = "";
   try {
-    claimStartTimestamp = getCampaignClaimStartTimestamp();
+    contractStartTimestamp = getCampaignStartTimestamp();
     ({
       totalPool,
       totalPoolRaw,
@@ -990,7 +1229,7 @@ const handleDeployRewardsContract = async () => {
       nameOfCampaign: campaignName.trim(),
       totalRewards: totalPoolRaw,
       rewardToken: rewardPerParticipantRaw,
-      startDate: claimStartTimestamp,
+      startDate: contractStartTimestamp,
     });
     const deployedParticipantCap = Number(deployment.maxClaimableParticipants ?? 0);
     if (!Number.isInteger(deployedParticipantCap) || deployedParticipantCap <= 0) {
@@ -1012,6 +1251,7 @@ const handleDeployRewardsContract = async () => {
         fundedAmount: Number(deployment.fundedAmount),
         rewardPerParticipant: Number(deployment.rewardPerParticipant),
         maxClaimableParticipants: deployedParticipantCap,
+        authorizedAddress: deployment.authorizedAddress,
       },
     });
 
@@ -1024,7 +1264,9 @@ const handleDeployRewardsContract = async () => {
       fundedAmount: deployment.fundedAmount,
       rewardPerParticipant: deployment.rewardPerParticipant,
       maxClaimableParticipants: deployedParticipantCap,
+      authorizedAddress: deployment.authorizedAddress,
     });
+    setOnchainBaseline(captureCurrentEditBaseline());
     setEditBaseline({
       campaignTitle,
       campaignName,
@@ -1052,6 +1294,10 @@ const handleDeployRewardsContract = async () => {
 };
 
 const handleUpdateCampaign = async () => {
+  if (isEnded) {
+    toast({ title: "Campaign closed", description: "Closed or ended campaigns are view-only and cannot be republished.", variant: "destructive" });
+    return;
+  }
   if (!campaignTitle || !campaignName) {
     toast({ title: "Incomplete details", description: "Please fill in campaign name and description.", variant: "destructive" });
     return;
@@ -1062,11 +1308,38 @@ const handleUpdateCampaign = async () => {
   }
 
   let rewardConfig: ReturnType<typeof getRewardDeploymentConfig> | null = null;
+  let shouldReplaceScheduledRewardsContract = false;
+  const nextCampaignStartMs = startDate
+    ? new Date(`${startDate}T${startTime || "00:00"}`).getTime()
+    : Number.NaN;
+  const startDateChanged =
+    Boolean(onchainBaseline) &&
+    (startDate !== onchainBaseline!.startDate || startTime !== onchainBaseline!.startTime);
+  const movesStartEarlier =
+    startDateChanged &&
+    Number.isFinite(publishedCampaignStartMs) &&
+    Number.isFinite(nextCampaignStartMs) &&
+    nextCampaignStartMs < publishedCampaignStartMs;
+
   if (hasRewards) {
     try {
       rewardConfig = getRewardDeploymentConfig();
-      if (isPublished) {
-        getPublishedRewardIncreaseDelta(rewardConfig);
+      if (hasDeployedRewardsContract && !isEnded) {
+        const serverAuthorizedAddress = (await getServerAuthorizedAddress()).toLowerCase();
+        const deploymentAuthorizedAddress = rewardsDeployment?.authorizedAddress?.trim().toLowerCase();
+        const authorizedAddressMismatch = !deploymentAuthorizedAddress || deploymentAuthorizedAddress !== serverAuthorizedAddress;
+        const deployed = getPublishedDeploymentSnapshot();
+        const perParticipantTrustChanged = rewardConfig.rewardPerParticipantWei !== deployed.rewardPerParticipantWei;
+        const reducedPool = rewardConfig.totalPoolWei < deployed.fundedAmountWei;
+        const reducedParticipants = rewardConfig.participantCount < deployed.maxClaimableParticipants;
+
+        if (authorizedAddressMismatch) {
+          shouldReplaceScheduledRewardsContract = true;
+        } else if (!publishedCampaignHasStarted && (perParticipantTrustChanged || reducedPool || reducedParticipants || movesStartEarlier)) {
+          shouldReplaceScheduledRewardsContract = true;
+        } else {
+          getPublishedRewardIncreaseDelta(rewardConfig);
+        }
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Invalid rewards configuration.";
@@ -1077,14 +1350,27 @@ const handleUpdateCampaign = async () => {
 
   setLoading(true);
   try {
-    const savedCampaignId = campaignId ?? await handleSaveDraft();
-    if (!savedCampaignId) return;
+    const savedCampaignId = campaignId;
+    if (!savedCampaignId) {
+      toast({ title: "Update failed", description: "Campaign id is missing.", variant: "destructive" });
+      return;
+    }
 
-    if (hasRewards && isPublished && rewardConfig) {
+    if (shouldReplaceScheduledRewardsContract && rewardConfig) {
+      await replaceScheduledRewardsContract(savedCampaignId, rewardConfig);
+    } else if (hasDeployedRewardsContract && !isEnded && rewardConfig) {
       await syncPublishedRewardIncrease(savedCampaignId, rewardConfig);
     }
 
-    setCampaignId(savedCampaignId);
+    const willSyncStartDate = hasDeployedRewardsContract && !isEnded && startDateChanged && !shouldReplaceScheduledRewardsContract;
+    if (willSyncStartDate) {
+      await syncPublishedRewardStart();
+    }
+
+    const persistedCampaignId = await handleSaveDraft(undefined, { skipPublishedRewardsGuard: true });
+    if (!persistedCampaignId) return;
+
+    setCampaignId(persistedCampaignId);
     toast({ title: "Campaign updated!", description: "Your campaign changes have been saved." });
     setLocation("/studio-dashboard/campaigns-tab");
   } catch (err: unknown) {
@@ -1096,6 +1382,10 @@ const handleUpdateCampaign = async () => {
 };
 
 const handlePublishButtonClick = () => {
+  if (isEnded) {
+    toast({ title: "Campaign closed", description: "Closed or ended campaigns are view-only and cannot be published.", variant: "destructive" });
+    return;
+  }
   if (Number(rewardPool) > 0 && !rewardContractAddress.trim()) {
     toast({
       title: "Rewards contract required",
@@ -1182,8 +1472,15 @@ const isActive =
 
   {/* Review */}
   <button
-    onClick={() => setActiveTab("review")}
-    className="flex-1 flex flex-col items-start justify-start gap-2 py-5 text-lg font-semibold transition"
+    onClick={() => {
+      if (isEnded) {
+        showViewOnlyToast();
+        return;
+      }
+      setActiveTab("review");
+    }}
+    className={`flex-1 flex flex-col items-start justify-start gap-2 py-5 text-lg font-semibold transition ${isEnded ? "opacity-40 cursor-not-allowed" : ""}`}
+    disabled={isEnded}
   >
     {/* Underline on top */}
     <span
@@ -1206,7 +1503,13 @@ const isActive =
                 <h2 className="text-xl font-semibold">Campaign Details</h2>
                 <Card className="bg-purple/10 backdrop-blur-md p-8 space-y-8">
 
-                  <form onSubmit={handleSubmit} className="space-y-8">
+                  {isEnded && (
+                    <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+                      {VIEW_ONLY_CAMPAIGN_MESSAGE}
+                    </div>
+                  )}
+
+                  <form onSubmit={handleSubmit} className={`space-y-8 ${isEnded ? "pointer-events-none opacity-60" : ""}`}>
 
                     {/* Campaign Name */}
                     <div>
@@ -1217,6 +1520,7 @@ const isActive =
   placeholder="Enter campaign name..."
   className="bg-white/5 border-white/10"
   required
+  disabled={isEnded}
   value={campaignName}
   onChange={(e) => handleCampaignNameChange(e.target.value)}
 />
@@ -1231,6 +1535,7 @@ const isActive =
   placeholder="Enter campaign description..."
   className="bg-white/5 border-white/10"
   required
+  disabled={isEnded}
   value={campaignTitle}
   onChange={(e) => setCampaignTitle(e.target.value)}
 />
@@ -1249,6 +1554,7 @@ const isActive =
                         <input
                           type="datetime-local"
                           className="w-full rounded-md bg-white/5 border border-white/10 text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 [color-scheme:dark]"
+                          disabled={isEnded}
                           value={startDate && startTime ? `${startDate}T${startTime}` : startDate ? `${startDate}T00:00` : ""}
                           onChange={(e) => handleStartDateTimeChange(e.target.value)}
                         />
@@ -1262,13 +1568,14 @@ const isActive =
                         <input
                           type="datetime-local"
                           className="w-full rounded-md bg-white/5 border border-white/10 text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 [color-scheme:dark]"
+                          disabled={isEnded}
                           value={endDate && endTime ? `${endDate}T${endTime}` : endDate ? `${endDate}T00:00` : ""}
                           onChange={(e) => handleEndDateTimeChange(e.target.value)}
                         />
                       </div>
-                      <p className="text-xs text-white/50 -mt-2 col-span-full">
-                        Set the start and end date &amp; time of the campaign.
-                      </p>
+                        <p className="text-xs text-white/50 -mt-2 col-span-full">
+                          Set the start and end date &amp; time of the campaign in UTC.
+                        </p>
                     </div>
 
                     {/* Cover Image */}
@@ -1277,11 +1584,12 @@ const isActive =
                         <ImageIcon className="w-4 h-4" />
                         Cover Image
                       </label>
-<label className="w-full border-2 border-dashed border-purple-500 rounded-2xl p-8 bg-black hover:border-[#8B3EFE] transition cursor-pointer block">
+<label className={`w-full border-2 border-dashed border-purple-500 rounded-2xl p-8 bg-black transition block ${isEnded ? "cursor-not-allowed opacity-60" : "hover:border-[#8B3EFE] cursor-pointer"}`}>
   <input
     id="coverInput"
     type="file"
     accept="image/*"
+    disabled={isEnded}
     onChange={handleCoverImage}
     className="hidden"
   />
@@ -1316,7 +1624,7 @@ const isActive =
     </div>
     <Switch
       checked={hasRewards}
-      disabled={isPublished}
+      disabled={isPublished || isEnded}
       onCheckedChange={(checked) => {
         setHasRewards(checked);
         if (!checked) {
@@ -1349,7 +1657,8 @@ const isActive =
   placeholder="0"
   value={rewardPool}
   onChange={(e) => handleRewardPoolChange(e.target.value)}
-  readOnly={!hasRewards || (isPublished && !rewardContractAddress.trim())}
+  readOnly={isEnded || !hasRewards || (isPublished && !rewardContractAddress.trim())}
+  disabled={isEnded}
 />
   </div>
   <p className="text-[11px] text-white/50 mt-2">
@@ -1389,7 +1698,8 @@ const isActive =
   className={`bg-white/5 border-white/10 pl-10 ${(isPublished && (!hasRewards || !rewardContractAddress.trim())) ? "cursor-not-allowed opacity-60" : ""}`}
   value={participants}
   onChange={(e) => handleParticipantsChange(e.target.value)}
-  readOnly={isPublished && (!hasRewards || !rewardContractAddress.trim())}
+  readOnly={isEnded || (isPublished && (!hasRewards || !rewardContractAddress.trim()))}
+  disabled={isEnded}
 />
   </div>
 </div>
@@ -1402,9 +1712,10 @@ const isActive =
     <Input
       type="number"
       placeholder="200 XP per participant"
-      className={`bg-white/5 border-white/10 pr-16 cursor-not-allowed opacity-60 ${!hasRewards ? "opacity-40" : ""}`}
+      className={`bg-white/5 border-white/10 pr-10 cursor-not-allowed opacity-60 ${!hasRewards ? "opacity-40" : ""}`}
       value={xpRewards}
       readOnly
+      disabled={!hasRewards || isEnded}
     />
     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 text-xs font-medium select-none">Fixed</span>
   </div>
@@ -1435,6 +1746,7 @@ const isActive =
                         type="button"
                         variant="ghost"
                         className="text-white/60 hover:text-white"
+                        disabled={isEnded}
                         onClick={() => setLocation("/studio-dashboard")}
                       >
                         ← Back
@@ -1443,7 +1755,7 @@ const isActive =
                       <Button
                         type="submit"
                         className="bg-[#8B3EFE] hover:bg-[#7b35e6]"
-                        disabled={loading || saveLoading}
+                        disabled={loading || saveLoading || isEnded}
                       >
                         {loading || saveLoading ? "Saving..." : "Next →"}
                       </Button>
@@ -1458,10 +1770,23 @@ const isActive =
 {activeTab === "tasks" && (
   <div className="relative">
 
+    {isEnded && (
+      <div className="mb-6 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+        {VIEW_ONLY_CAMPAIGN_MESSAGE}
+      </div>
+    )}
+
     {/* Small Add Task Button - Top Right */}
     <button
-      onClick={() => setShowModal(true)}
+      onClick={() => {
+        if (isEnded) {
+          showViewOnlyToast();
+          return;
+        }
+        setShowModal(true);
+      }}
       className="absolute -top-10 right-0 px-3 py-1 bg-[#8B3EFE] text-purple-300 hover:bg-[#7b35e6] rounded-lg text-sm font-semibold flex items-center gap-2 transition"
+      disabled={isEnded}
     >
       <span className="flex items-center justify-center w-3 h-3 pb-1 bg-[#8B3EFE] text-purple-900 rounded-full text-xs font-bold">
         +
@@ -1472,7 +1797,13 @@ const isActive =
     {tasks.length === 0 ? (
       <div
         className="w-full border-2 border-dashed border-purple-500 rounded-2xl p-8 bg-gray-900 hover:border-[#8B3EFE] transition cursor-pointer mt-8"
-        onClick={() => setShowModal(true)}
+        onClick={() => {
+          if (isEnded) {
+            showViewOnlyToast();
+            return;
+          }
+          setShowModal(true);
+        }}
       >
         <div className="flex flex-col items-center justify-center text-center gap-2">
           <img src="/upload-icon.png" alt="Upload icon" className="w-16 h-16" />
@@ -1481,8 +1812,15 @@ const isActive =
             To create a campaign, you need to add at least one task.
           </p>
           <button
-            onClick={() => setShowModal(true)}
+            onClick={() => {
+              if (isEnded) {
+                showViewOnlyToast();
+                return;
+              }
+              setShowModal(true);
+            }}
             className="mt-4 flex items-center justify-center gap-2 px-4 py-1 bg-purple-900 text-purple-400 hover:bg-[#7b35e6] font-semibold rounded-lg transition"
+            disabled={isEnded}
           >
             <span className="flex items-center justify-center w-3 h-3 pb-1 bg-[#8B3EFE] text-purple-900 rounded-full text-lg font-bold">
               +
@@ -1492,7 +1830,7 @@ const isActive =
         </div>
       </div>
     ) : (
-      <div className="space-y-4 mt-8">
+      <div className={`space-y-4 mt-8 ${isEnded ? "pointer-events-none opacity-60" : ""}`}>
         {tasks.map((task, index) => (
           <div
             key={index}
@@ -1540,14 +1878,19 @@ const isActive =
     <div className="flex justify-between items-center mt-6">
       <button
         className="px-4 py-2 bg-gray-700 text-white rounded-lg text-sm hover:bg-gray-600 transition"
+        disabled={isEnded}
         onClick={() => setActiveTab("details")}
       >
         ← Back
       </button>
       <button
         className="px-6 py-2 bg-[#8B3EFE] text-white rounded-lg text-sm font-semibold hover:bg-[#7b35e6] transition flex items-center gap-2 disabled:opacity-60"
-        disabled={saveLoading}
+        disabled={saveLoading || isEnded}
         onClick={() => {
+          if (isEnded) {
+            showViewOnlyToast();
+            return;
+          }
           if (tasks.length === 0) {
             toast({ title: "No tasks", description: "Please add at least one task before reviewing.", variant: "destructive" });
             return;
@@ -2094,9 +2437,9 @@ const isActive =
   <button
     onClick={() => handleUpdateCampaign()}
     className="px-4 py-2 bg-[#8B3EFE] text-white rounded-lg text-sm hover:bg-[#7b35e6] transition disabled:opacity-50 disabled:cursor-not-allowed"
-    disabled={loading || saveLoading}
+    disabled={loading || saveLoading || isEnded}
   >
-    {updateCampaignButtonLabel}
+    {isEnded ? "View Only" : updateCampaignButtonLabel}
   </button>
 ) : (
   <button

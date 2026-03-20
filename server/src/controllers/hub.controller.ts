@@ -10,6 +10,7 @@ import { miniQuestCompleted, campaignQuestCompleted } from '@/models/questsCompl
 import { campaign } from '@/models/campaign.model';
 import { campaignQuest } from '@/models/quests.model';
 import { uploadImg } from "@/utils/img.utils";
+import { normalizeCampaignDateInput, normalizeCampaignDatesForResponse, parseCampaignDate } from "@/utils/campaignDates";
 
 const DISCORD_CAMPAIGN_TAGS = new Set([
   "discord",
@@ -583,7 +584,7 @@ export const getCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
 
     const campaignQuests = await campaignQuest.find({ campaign: id }).lean();
 
-    res.status(OK).json({ campaignQuests, campaignFound });
+    res.status(OK).json({ campaignQuests, campaignFound: normalizeCampaignDatesForResponse(campaignFound) });
   } catch (error) {
     logger.error(error);
     res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching campaign" });
@@ -596,6 +597,9 @@ export const saveCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
     if (typeof req.body.reward === "string") {
       try { req.body.reward = JSON.parse(req.body.reward); } catch { /* leave as-is */ }
     }
+
+    req.body.starts_at = normalizeCampaignDateInput(req.body.starts_at);
+    req.body.ends_at = normalizeCampaignDateInput(req.body.ends_at);
 
     const hubFound = await hub.findById(req.admin.hub).lean();
     if (!hubFound) {
@@ -696,17 +700,22 @@ export const saveCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
       : "";
     const discordGuildIdForCampaign = lockedDiscordGuildId || String(hubFound.guildId ?? "").trim();
 
+    const incomingNameOfProject = typeof req.body.nameOfProject === "string"
+      ? req.body.nameOfProject.trim()
+      : "";
     const { campaignQuests: _cq, isDraft: _d, existingCoverImage: _e, hubCoverImage: _h, nameOfProject: _n, ...updateFields } = req.body;
 
     if (updateFields.reward && typeof updateFields.reward === "object") {
       const rewardUpdate = updateFields.reward as Record<string, unknown>;
       const pool = Number(rewardUpdate.pool ?? 0);
+      const xp = Number(rewardUpdate.xp ?? 0);
       const trustTokens = Number(rewardUpdate.trust ?? rewardUpdate.trustTokens ?? 0);
       updateFields.reward = {
-        xp: Number(rewardUpdate.xp ?? 0),
+        xp,
         pool,
         trustTokens,
       };
+      updateFields.totalXpAvailable = xp;
       updateFields.totalTrustAvailable = pool;
     }
 
@@ -714,63 +723,74 @@ export const saveCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
       updateFields.maxParticipants = Number(updateFields.maxParticipants ?? 0);
     }
 
+    if (updateFields.description !== undefined) {
+      updateFields.sub_title = String(updateFields.description ?? "").trim();
+    }
+
+    if (req.body.nameOfProject !== undefined || campaignFound.project_name) {
+      updateFields.project_name = hubFound.name ?? incomingNameOfProject ?? campaignFound.project_name;
+    }
+
     const existingPool = Number(campaignFound.reward?.pool ?? 0);
     const existingMaxParticipants = Number((campaignFound as any).maxParticipants ?? campaignFound.participants ?? 0);
+    const existingStartsAt = parseCampaignDate(campaignFound.starts_at);
+    const existingEndsAt = parseCampaignDate(campaignFound.ends_at);
     const incomingPool = updateFields.reward
       ? Number((updateFields.reward as Record<string, unknown>).pool ?? existingPool)
       : existingPool;
     const incomingMaxParticipants = updateFields.maxParticipants !== undefined
       ? Number(updateFields.maxParticipants ?? existingMaxParticipants)
       : existingMaxParticipants;
+    const incomingEndsAt = updateFields.ends_at ? parseCampaignDate(updateFields.ends_at) : existingEndsAt;
+    const rewardsContractSettled = Boolean((campaignFound as any).rewardsDeployment?.remainderWithdrawalTxHash);
+    const campaignHasStarted = existingStartsAt ? existingStartsAt.getTime() <= Date.now() : false;
 
     if (campaignFound.status !== "Save" && campaignFound.contractAddress && existingPool > 0) {
-      if (incomingPool < existingPool) {
-        res.status(BAD_REQUEST).json({ error: "reward pool cannot be reduced after publishing" });
-        return;
-      }
-      if (incomingMaxParticipants < existingMaxParticipants) {
-        res.status(BAD_REQUEST).json({ error: "participant limit cannot be reduced after publishing" });
+      if (
+        rewardsContractSettled &&
+        existingEndsAt &&
+        incomingEndsAt &&
+        incomingEndsAt.getTime() > existingEndsAt.getTime()
+      ) {
+        res.status(BAD_REQUEST).json({
+          error: "this rewards campaign cannot be extended because its remaining funds have already been withdrawn",
+        });
         return;
       }
 
-      if (incomingPool > existingPool || incomingMaxParticipants > existingMaxParticipants) {
-        const existingRewardPerParticipant = Number(campaignFound.reward?.trustTokens ?? 0);
-        if (existingRewardPerParticipant > 0) {
-          const expectedParticipants = incomingPool / existingRewardPerParticipant;
-          const roundedExpectedParticipants = Math.round(expectedParticipants);
-          if (!Number.isFinite(expectedParticipants) || Math.abs(expectedParticipants - roundedExpectedParticipants) > 1e-9) {
-            res.status(BAD_REQUEST).json({
-              error: "reward pool increase must map to a whole number of participants at the existing per-participant reward",
-            });
-            return;
-          }
-          if (roundedExpectedParticipants !== incomingMaxParticipants) {
-            res.status(BAD_REQUEST).json({
-              error: "for published reward campaigns, participants must scale with reward pool at the deployed per-participant reward",
-            });
-            return;
-          }
+      if (campaignHasStarted) {
+        if (incomingPool < existingPool) {
+          res.status(BAD_REQUEST).json({ error: "reward pool cannot be reduced after publishing" });
+          return;
         }
+        if (incomingMaxParticipants < existingMaxParticipants) {
+          res.status(BAD_REQUEST).json({ error: "participant limit cannot be reduced after publishing" });
+          return;
+        }
+      }
+
+    }
+
+    // Recalculate status atomically when dates change on a published campaign
+    if (campaignFound.status !== "Save") {
+      const now = new Date();
+      const newStartsAt = updateFields.starts_at
+        ? parseCampaignDate(updateFields.starts_at)
+        : parseCampaignDate(campaignFound.starts_at);
+      const newEndsAt = updateFields.ends_at
+        ? parseCampaignDate(updateFields.ends_at)
+        : parseCampaignDate(campaignFound.ends_at);
+
+      if (newEndsAt && newEndsAt <= now) {
+        updateFields.status = "Ended";
+      } else if (newStartsAt && newStartsAt > now) {
+        updateFields.status = "Scheduled";
+      } else {
+        updateFields.status = "Active";
       }
     }
 
     const updatedCampaign = await campaign.findByIdAndUpdate(id, updateFields, { new: true });
-
-    // Recalculate status when dates change on a live/scheduled campaign
-    if (updatedCampaign && (updatedCampaign.status === "Active" || updatedCampaign.status === "Scheduled")) {
-      const now = new Date();
-      const startsAt = updatedCampaign.starts_at ? new Date(updatedCampaign.starts_at) : null;
-      const endsAt = updatedCampaign.ends_at ? new Date(updatedCampaign.ends_at) : null;
-
-      if (endsAt && endsAt <= now) {
-        updatedCampaign.status = "Ended";
-      } else if (startsAt && startsAt > now) {
-        updatedCampaign.status = "Scheduled";
-      } else {
-        updatedCampaign.status = "Active";
-      }
-      await updatedCampaign.save();
-    }
 
     // Update quests without destroying existing IDs/submissions
     if (questsToSave !== null) {
