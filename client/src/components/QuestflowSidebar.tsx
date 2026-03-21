@@ -149,7 +149,7 @@ export default function NexuraSidebar() {
 
   {/* Docs */}
   <a
-    href="https://docsnexura.vercel.app"
+    href="/docs"
     target="_blank"
     rel="noopener noreferrer"
     className="flex items-center gap-1 min-h-[28px] group-data-[collapsible=icon]:justify-center hover:bg-gray-700 rounded px-1 transition-colors"
