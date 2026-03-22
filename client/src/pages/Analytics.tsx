@@ -389,6 +389,8 @@ export default function Analytics() {
   return (
     <div className="min-h-screen bg-black text-white overflow-x-hidden overflow-y-auto p-3 sm:p-6 relative pb-28 sm:pb-6">
       <AnimatedBackground />
+
+      {/*
       <div className="max-w-6xl mx-auto relative z-10 space-y-2">
         <div className="space-y-1">
           <div className="flex items-center gap-2 mb-3">
@@ -401,10 +403,7 @@ export default function Analytics() {
           <p className="text-sm text-white/50 animate-slide-up delay-200">Live overview of your ecosystem activity</p>
         </div>
 
-        {/* â”€â”€ Stat Cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 pb-6 sm:pb-12">
-
-          {/* Total Users */}
           <Card className="glass glass-hover rounded-2xl sm:rounded-3xl p-4 sm:p-6 flex-1 animate-slide-up delay-300 flex flex-col group cursor-default">
             <CardHeader className="p-0">
               <CardTitle className="text-sm font-medium text-white/60 mb-1 uppercase tracking-widest">
@@ -412,7 +411,7 @@ export default function Analytics() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0 mt-auto pt-4">
-                <div className="flex items-end w-full gap-2">
+              <div className="flex items-end w-full gap-2">
                 <div className="flex flex-col min-w-0">
                   <div className="flex items-baseline gap-2 flex-wrap">
                     <p className="text-3xl sm:text-5xl font-semibold text-white group-hover:text-purple-300 transition-colors duration-300">{totalUsers}</p>
@@ -426,7 +425,6 @@ export default function Analytics() {
             </CardContent>
           </Card>
 
-          {/* New Users */}
           <Card className="glass glass-hover rounded-2xl sm:rounded-3xl p-4 sm:p-6 flex flex-col flex-1 animate-slide-up delay-400 group cursor-default">
             <CardHeader className="p-0 mb-2 w-full">
               <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -463,7 +461,6 @@ export default function Analytics() {
             </CardContent>
           </Card>
 
-          {/* Active Users */}
           <Card className="glass glass-hover rounded-2xl sm:rounded-3xl p-4 sm:p-6 flex-1 animate-slide-up delay-500 group cursor-default">
             <CardHeader className="p-0 mb-2 w-full">
               <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -503,11 +500,9 @@ export default function Analytics() {
           </Card>
         </div>
 
-        {/* â”€â”€ Bar Chart â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <Card className="relative glass rounded-2xl sm:rounded-3xl p-3 sm:p-8 animate-slide-up delay-600 mt-4 sm:mt-8 mb-8 sm:mb-12 overflow-hidden">
           <CardHeader className="relative w-full mb-4 sm:mb-8 p-0">
             <div className="grid grid-cols-3 items-center gap-2">
-              {/* Left: title + subtitle */}
               <div className="flex flex-col gap-0.5 min-w-0">
                 <CardTitle className="text-base sm:text-2xl font-bold text-white tracking-wide">
                   New User Growth Trend
@@ -515,7 +510,6 @@ export default function Analytics() {
                 <p className="text-[10px] sm:text-sm text-white/50 truncate">{chartSubtitle}</p>
               </div>
 
-              {/* Center: scale dropdown */}
               <div className="flex justify-center">
                 <select
                   value={chartScale}
@@ -531,7 +525,6 @@ export default function Analytics() {
                 </select>
               </div>
 
-              {/* Right: total badge */}
               <div className="flex justify-end">
                 <div className="relative w-9 h-9 sm:w-14 sm:h-14 shrink-0">
                   <img src="/trend-icon.png" alt="Trend" className="w-full h-full opacity-80" />
@@ -546,7 +539,6 @@ export default function Analytics() {
           <CardContent className="p-0">
             <BarChart bars={chartBars} scale={chartScale} currentBucket={currentBarIndex} />
 
-            {/* legend */}
             <div className="mt-4 flex items-center gap-2 text-white/30 text-xs">
               <span className="inline-block w-3 h-3 rounded-sm" style={{ background: "linear-gradient(180deg,#c084fc,#833AFD)" }} />
               <span>New signups</span>
@@ -577,6 +569,26 @@ export default function Analytics() {
             totalOnchainClaims={totalOnchainClaims}
           />
         )}
+      </div>
+      */}
+
+      <div className="relative z-10 mx-auto flex min-h-[calc(100vh-6rem)] max-w-3xl items-center justify-center">
+        <Card className="glass w-full rounded-3xl border border-white/10 bg-white/5 shadow-[0_0_50px_rgba(124,58,237,0.12)] backdrop-blur-xl">
+          <CardHeader className="space-y-3 p-8 sm:p-10">
+            <div className="flex items-center gap-3">
+              <div className="h-3 w-3 rounded-full bg-amber-400 shadow-[0_0_16px_rgba(251,191,36,0.75)]" />
+              <span className="text-xs font-semibold uppercase tracking-[0.35em] text-amber-300/90">
+                Analytics
+              </span>
+            </div>
+            <CardTitle className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+              This feature is coming soon
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-8 pb-8 pt-0 text-sm leading-7 text-white/65 sm:px-10 sm:pb-10 sm:text-base">
+            The analytics feature is coming soon.
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
