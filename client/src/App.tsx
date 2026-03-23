@@ -51,6 +51,7 @@ import AdminSignUp from "./pages/studio/AdminSignUp.tsx";
 import HubProfile from "./pages/studio/HubProfile.tsx";
 import ClaimDetails from "./pages/ClaimDetails";
 import ConnectDiscord from "./pages/studio/ConnectDiscord.tsx";
+import Docs from "./pages/Docs.tsx"
 
 function Router() {
    const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -74,6 +75,7 @@ function Router() {
       <Route path="/home" component={Home} />
       <Route path="/discover" component={Discover} />
       <Route path="/levels" component={Levels} />
+      <Route path="/docs" component={Docs} />
       {/* NEXURA pages */}
       <Route path="/learn" component={Learn} />
       <Route path="/quests" component={Quests} />
@@ -86,7 +88,7 @@ function Router() {
       <Route path="/x/callback" component={XCallback} />
       <Route path="/campaigns/tasks" component={CampaignEnvironment} />
       <Route path="/quests/tasks-card" component={QuestEnvironment} />
-      <Route path="/analytics" component={Analytics} />
+      {/*<Route path="/analytics" component={Analytics} />*/}
       <Route path="/portal-claims" component={PortalClaims} />
       <Route path="/portal-claims/:id" component={ClaimDetails} />
       <Route path="/studio" component={NexuraStudio} />
@@ -209,6 +211,7 @@ function App() {
                   location.startsWith("/studio/register");
                 const isProject = location.startsWith("/project/");
                 const isProjectCreate = location.startsWith("/projects/create");
+                const isDocs = location.startsWith("/docs")
                 return (
                   <div className="flex h-screen w-full text-white selection:bg-blue-500/30 relative">
 
@@ -216,22 +219,42 @@ function App() {
                     <AnimatedBackground />
 
                     {/* Sidebar */}
-                    {!isHome && !isStudio && !isProjectCreate && <NexuraSidebar />}
+                    {!isHome && !isStudio && !isDocs && !isProjectCreate && <NexuraSidebar />}
 
                     {/* Main content */}
-                    <div className="flex-1 flex flex-col relative z-10">
-                      {!isHome && !isStudio && !isProjectCreate &&(
-                        <header className="flex items-center p-4 app-header">
-                          <SidebarTrigger data-testid="button-sidebar-toggle" className="md:hidden" />
-                          <div className="ml-auto">
-                            <ProfileBar />
-                          </div>
-                        </header>
-                      )}
-                      <main ref={mainRef} className="flex-1 overflow-y-auto">
-                        <Router />
-                      </main>
-                    </div>
+<div className="flex-1 flex flex-col relative z-10">
+  
+  {!isHome && !isStudio && !isProjectCreate && (
+    <header className="flex items-center p-4 app-header">
+      
+      {/* LEFT: Logo (only for docs) */}
+      {isDocs && (
+        <div className="flex items-center">
+          <img
+            src="/nexura-logo.png"
+            alt="Nexura"
+            className="h-8 w-auto"
+          />
+        </div>
+      )}
+
+      {/* RIGHT: Controls */}
+      <div className="ml-auto flex items-center gap-4">
+        <SidebarTrigger
+          data-testid="button-sidebar-toggle"
+          className="md:hidden"
+        />
+        <ProfileBar />
+      </div>
+
+    </header>
+  )}
+
+  <main ref={mainRef} className="flex-1 overflow-y-auto">
+    <Router />
+  </main>
+
+</div>
 
                     {/* {!isHome && !isStudio && !isProject && <OrgSignInButton />} */}
                     {isProject && <ProjectLogoutButton />}
