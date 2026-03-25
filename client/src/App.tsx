@@ -52,6 +52,7 @@ import HubProfile from "./pages/studio/HubProfile.tsx";
 import ClaimDetails from "./pages/ClaimDetails";
 import ConnectDiscord from "./pages/studio/ConnectDiscord.tsx";
 import Docs from "./pages/Docs.tsx"
+import LessonPage from "./pages/LessonPage";
 
 function Router() {
    const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -78,6 +79,7 @@ function Router() {
       {/*<Route path="/docs" component={Docs} />*/}
       {/* NEXURA pages */}
       <Route path="/learn" component={Learn} />
+      <Route path="/learn/:id" component={LessonPage } />
       <Route path="/quests" component={Quests} />
       <Route path="/campaigns" component={Campaigns} />
       <Route path="/ecosystem-dapps" component={EcosystemDapps} />
