@@ -361,3 +361,30 @@ export const getAmountPaid = async (txHash: string) => {
 
 	return { from: tx.from, value: formatEther(tx.value) };
 }
+
+export const validateCreateLesson = (reqData: any) => {
+	const lessonSchema = z.object({
+		title: z.string().trim(),
+		description: z.string().trim(),
+		reward: z.number(),
+	});
+
+	const parseData = lessonSchema.safeParse(reqData);
+
+	return parseData;
+}
+
+export const validateCreateQuestion = (reqData: any) => {
+	const questionSchema = z.object({
+		question: z.string().trim(),
+		options: z.array(z.string()),
+		lesson: z.string().trim(),
+    solution: z.string().trim(),
+	});
+
+	const parseData = questionSchema.safeParse(reqData);
+
+	return parseData;
+}
+
+

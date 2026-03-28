@@ -7,6 +7,7 @@ import hubRoutes from "./hub.routes.ts";
 import questRoutes from "./quest.routes.ts";
 import userRoutes from "./user.routes.ts";
 import appRoutes from "./app.routes.ts";
+import lessonRoutes from "./lesson.routes.ts";
 import {
 	fetchEcosystemDapps,
 	fetchQuests,
@@ -33,6 +34,7 @@ router
 	.get("/leaderboard", authenticateUser2, getLeaderboard)
 	.use("/hub", hubRoutes)
 	.use("/quest", questRoutes)
+	.use("/lesson", lessonRoutes)
 	.use("/user", authenticateUser, userRoutes);
 
 export default router;
