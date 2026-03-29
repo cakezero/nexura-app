@@ -13,6 +13,7 @@ import {
   removeAdmin,
   manageAdmin
 } from "@/controllers/admin.controller";
+import { createLesson, createQuestion, createMiniLesson } from "@/controllers/lesson.controller";
 
 const router = Router();
 
