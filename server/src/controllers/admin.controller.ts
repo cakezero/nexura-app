@@ -119,7 +119,7 @@ export const rewardXp = async (req: GlobalRequest, res: GlobalResponse) => {
 			return;
 		}
 
-		await user.updateOne({ address: address.toLowerCase() }, { $inc: { xp: parseInt(xp, 10) } });
+		await user.updateOne({ address: address.toLowerCase() }, { $inc: { xp: parseInt(xp, 10), eventsWon: 1 } });
 
 		res.status(OK).json({ message: "xp rewarded" });
 	} catch (error) {

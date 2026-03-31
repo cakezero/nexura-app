@@ -11,6 +11,14 @@ const userSchema = new Schema({
 		required: true,
 		unique: true
   },
+	eventsWon: {
+		type: Number,
+		default: 0,
+	},
+	lessonsCompleted: {
+		type: Number,
+		default: 0,
+	},
   isApproved: {
     type: Boolean,
     default: false
