@@ -553,16 +553,16 @@ export const updateSubmission = async (req: GlobalRequest, res: GlobalResponse) 
 
 export const getLeaderboard = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
-    const top200 = await user
+    const top500 = await user
       .find()
       .sort({ xp: -1, trustClaimed: -1 })
-      .limit(200)
-      .select("username xp profilePic _id level questsCompleted campaignsCompleted")
+      .limit(500)
+      .select("username xp profilePic _id level eventsWon lessonsCompleted questsCompleted campaignsCompleted")
       .lean();
 
     let rank: number | null = null;
 
-    const me = await user.findById(req.id).lean();
+    const me = await user.findById(req.id).lean().select("eventsWon questsCompleted campaignsCompleted");
 
     if (!me) {
       rank = null;
@@ -579,7 +579,7 @@ export const getLeaderboard = async (req: GlobalRequest, res: GlobalResponse) =>
         })) + 1;
     }
 
-    res.status(OK).json({ message: "leaderboard info fetched", leaderboardInfo: top200, rank });
+    res.status(OK).json({ message: "leaderboard info fetched", leaderboardInfo: top500, rank, me });
   } catch(error) {
     logger.error(error);
     res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching leaderboard data" })
