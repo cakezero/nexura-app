@@ -550,14 +550,12 @@ export const getAdminLeaderboard = async (req: GlobalRequest, res: GlobalRespons
 		const items = await user
 			.find()
 			.sort({ xp: -1, trustClaimed: -1, _id: 1 })
-			.skip(skip)
-			.limit(limit)
-			.select("_id address username profilePic xp level questsCompleted campaignsCompleted")
+			.select("_id address username profilePic eventsWon lessonsCompleted xp level questsCompleted campaignsCompleted")
 			.lean();
 
 		const leaderboardItems = items.map((entry, index) => ({
 			...entry,
-			rank: skip + index + 1,
+			rank: index + 1,
 		}));
 
 		res.status(OK).json({
