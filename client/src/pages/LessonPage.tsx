@@ -31,6 +31,11 @@ type LessonQuestion = {
   answer?: string;
 };
 
+type LessonStep =
+  | { kind: "mini"; key: string; text: string }
+  | { kind: "question"; key: string; question: LessonQuestion }
+  | { kind: "claim"; key: string };
+
 const normalizeApiMessage = (error: unknown, fallback: string) => {
   if (error instanceof Error && error.message) return error.message;
   return fallback;
@@ -54,6 +59,8 @@ export default function LessonPage() {
   const [miniLessons, setMiniLessons] = useState<MiniLesson[]>([]);
   const [questions, setQuestions] = useState<LessonQuestion[]>([]);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
+  const [feedbackByQuestion, setFeedbackByQuestion] = useState<Record<string, "correct" | "wrong" | null>>({});
+  const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
   const [claiming, setClaiming] = useState(false);
@@ -63,13 +70,25 @@ export default function LessonPage() {
   const [showXPModal, setShowXPModal] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
+  const [didInitStep, setDidInitStep] = useState(false);
 
-  const completedQuestions = useMemo(
-    () => questions.filter((question) => question.done).length,
-    [questions]
+  const lessonSteps = useMemo<LessonStep[]>(
+    () => [
+      ...miniLessons.map((entry) => ({ kind: "mini" as const, key: `mini-${entry._id}`, text: entry.text })),
+      ...questions.map((entry) => ({ kind: "question" as const, key: `question-${entry._id}`, question: entry })),
+      { kind: "claim" as const, key: "claim" },
+    ],
+    [miniLessons, questions]
   );
+
+  const activeStep = lessonSteps[currentStep];
+  const currentQuestion = activeStep?.kind === "question" ? activeStep.question : null;
+  const currentSelection = currentQuestion ? selectedAnswers[currentQuestion._id] ?? currentQuestion.answer ?? "" : "";
+  const currentFeedback = currentQuestion ? feedbackByQuestion[currentQuestion._id] : null;
+  const completedQuestions = useMemo(() => questions.filter((question) => question.done).length, [questions]);
   const allQuestionsDone = questions.length > 0 && completedQuestions === questions.length;
-  const progressPercent = questions.length > 0 ? (completedQuestions / questions.length) * 100 : 0;
+  const progress = lessonSteps.length ? ((currentStep + 1) / lessonSteps.length) * 100 : 0;
+  const currentStepLabel = lessonSteps.length ? `STEP ${currentStep + 1}/${lessonSteps.length}` : "STEP 0/0";
 
   useEffect(() => {
     const updateSize = () => setWindowSize({ width: window.innerWidth, height: window.innerHeight });
@@ -82,11 +101,14 @@ export default function LessonPage() {
     if (!lessonId) return;
 
     const data = JSON.parse(localStorage.getItem(storageKey) || "{}");
+    const maxStepIndex = Math.max(nextQuestions.length + miniLessons.length, 0);
     data[lessonId] = {
+      ...(data[lessonId] || {}),
       progress: nextLesson?.done ? nextQuestions.length : nextQuestions.filter((entry) => entry.done).length,
       totalQuestions: nextQuestions.length,
       quizCompleted: Boolean(nextLesson?.done),
       claimedReward: Number(nextLesson?.reward || 0),
+      stepIndex: Math.min(currentStep, maxStepIndex),
     };
     localStorage.setItem(storageKey, JSON.stringify(data));
     window.dispatchEvent(new Event("progress-update"));
@@ -106,12 +128,24 @@ export default function LessonPage() {
 
       const lessonMatch =
         (lessonsResponse.lessons || []).find((entry: LessonSummary) => entry._id === lessonId) || null;
+      const nextMiniLessons = detailsResponse.miniLessons || [];
       const nextQuestions = detailsResponse.questions || [];
+      const nextSelectedAnswers = nextQuestions.reduce((acc: Record<string, string>, entry: LessonQuestion) => {
+        acc[entry._id] = entry.answer || "";
+        return acc;
+      }, {});
 
       setLesson(lessonMatch);
-      setMiniLessons(detailsResponse.miniLessons || []);
+      setMiniLessons(nextMiniLessons);
       setQuestions(nextQuestions);
-      setSelectedAnswers({});
+      setSelectedAnswers((current) => ({ ...current, ...nextSelectedAnswers }));
+      setFeedbackByQuestion((current) => {
+        const next = { ...current };
+        for (const entry of nextQuestions) {
+          if (entry.done) next[entry._id] = "correct";
+        }
+        return next;
+      });
       syncLocalProgress(lessonMatch, nextQuestions);
     } catch (error) {
       setPageError(normalizeApiMessage(error, "Failed to load lesson"));
@@ -125,6 +159,30 @@ export default function LessonPage() {
       void loadLesson();
     }
   }, [authLoading, lessonId]);
+
+  useEffect(() => {
+    if (!lessonSteps.length || didInitStep) return;
+
+    const data = JSON.parse(localStorage.getItem(storageKey) || "{}");
+    const savedStepIndex = Number(data[lessonId]?.stepIndex || 0);
+    const nextIndex = isReview ? 0 : Math.min(Math.max(savedStepIndex, 0), lessonSteps.length - 1);
+    setCurrentStep(nextIndex);
+    setDidInitStep(true);
+  }, [didInitStep, isReview, lessonId, lessonSteps.length, storageKey]);
+
+  useEffect(() => {
+    if (!lessonId || !lessonSteps.length) return;
+    const data = JSON.parse(localStorage.getItem(storageKey) || "{}");
+    data[lessonId] = {
+      ...(data[lessonId] || {}),
+      stepIndex: currentStep,
+      progress: data[lessonId]?.progress || 0,
+      totalQuestions: questions.length,
+      quizCompleted: Boolean(lesson?.done),
+      claimedReward: Number(lesson?.reward || 0),
+    };
+    localStorage.setItem(storageKey, JSON.stringify(data));
+  }, [currentStep, lesson?.done, lesson?.reward, lessonId, lessonSteps.length, questions.length, storageKey]);
 
   useEffect(() => {
     if (!showXPModal) return;
@@ -161,39 +219,48 @@ export default function LessonPage() {
       return true;
     } catch (error) {
       const message = normalizeApiMessage(error, "Unable to start lesson");
-
       if (!message.toLowerCase().includes("already started") && !message.toLowerCase().includes("already completed")) {
         setActionMessage(message);
         return false;
       }
-
       return true;
     } finally {
       setStarting(false);
     }
   };
 
-  const submitAnswer = async (questionId: string) => {
-    const answer = selectedAnswers[questionId];
-    if (!answer || !lessonId) return;
+  const submitAnswer = async () => {
+    if (!currentQuestion || !lessonId) return;
+    const answer = currentSelection;
+    if (!answer) return;
 
     const started = await startLesson();
     if (!started) return;
 
-    setSubmittingQuestionId(questionId);
+    setSubmittingQuestionId(currentQuestion._id);
     setActionMessage("");
 
     try {
       const response = await apiRequestV2("POST", "/api/lesson/answer-question", {
-        question: questionId,
+        question: currentQuestion._id,
         lesson: lessonId,
         answer,
       });
 
+      setFeedbackByQuestion((current) => ({ ...current, [currentQuestion._id]: "correct" }));
       setActionMessage(response.message || "Correct answer saved.");
       await loadLesson();
     } catch (error) {
-      setActionMessage(normalizeApiMessage(error, "Unable to submit answer"));
+      const message = normalizeApiMessage(error, "Unable to submit answer");
+      setFeedbackByQuestion((current) => ({ ...current, [currentQuestion._id]: "wrong" }));
+      setActionMessage(message);
+      if (
+        message.toLowerCase().includes("wrong answer") ||
+        message.toLowerCase().includes("correct answer") ||
+        message.toLowerCase().includes("already answered")
+      ) {
+        await loadLesson();
+      }
     } finally {
       setSubmittingQuestionId(null);
     }
@@ -216,13 +283,55 @@ export default function LessonPage() {
     } catch (error) {
       const message = normalizeApiMessage(error, "Unable to claim XP");
       setActionMessage(message);
-      if (message.toLowerCase().includes("already been claimed")) {
+      if (message.toLowerCase().includes("already")) {
         await loadLesson();
         setShowXPModal(true);
       }
     } finally {
       setClaiming(false);
     }
+  };
+
+  const goPrev = () => {
+    if (currentStep <= 0) return;
+    setActionMessage("");
+    setCurrentStep((prev) => Math.max(prev - 1, 0));
+  };
+
+  const goNext = async () => {
+    if (!activeStep) return;
+
+    if (activeStep.kind === "question") {
+      if (!activeStep.question.done) {
+        if (!currentSelection) return;
+        await submitAnswer();
+        return;
+      }
+
+      if (currentStep < lessonSteps.length - 1) {
+        setActionMessage("");
+        setCurrentStep((prev) => Math.min(prev + 1, lessonSteps.length - 1));
+      }
+      return;
+    }
+
+    if (activeStep.kind === "claim") {
+      if (!lesson?.done && allQuestionsDone) {
+        await claimXp();
+      }
+      return;
+    }
+
+    if (currentStep < lessonSteps.length - 1) {
+      setActionMessage("");
+      setCurrentStep((prev) => Math.min(prev + 1, lessonSteps.length - 1));
+    }
+  };
+
+  const resetLessonView = () => {
+    setShowXPModal(false);
+    setCurrentStep(0);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   if (loading) {
@@ -249,177 +358,210 @@ export default function LessonPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black p-6 text-white">
+    <div className="min-h-screen bg-black text-white space-y-3 flex flex-col items-center px-4 py-6">
       {showConfetti ? (
         <Confetti width={windowSize.width} height={windowSize.height} numberOfPieces={180} recycle={false} />
       ) : null}
 
-      <div className="mx-auto max-w-4xl space-y-8">
-        <div className="space-y-3">
-          <button onClick={() => setLocation("/learn")} className="text-sm text-purple-300 hover:text-white">
-            Back to lessons
+      <div className="w-full max-w-3xl space-y-1">
+        <button onClick={() => setLocation("/learn")} className="text-sm text-purple-300 hover:text-white">
+          Back to lessons
+        </button>
+        <div className="flex items-center gap-1.5">
+          <div className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
+          <span className="text-purple-400 text-xs font-semibold uppercase tracking-widest">Learn</span>
+        </div>
+      </div>
+
+      <h1 className="w-full max-w-3xl text-3xl sm:text-4xl font-extrabold bg-gradient-to-r from-white via-purple-200 to-purple-400 bg-clip-text text-transparent">
+        {lesson?.title || "Lesson"}
+      </h1>
+
+      <div className="w-full max-w-3xl mt-1">
+        <div className="w-full h-2 rounded-full overflow-hidden bg-white/20">
+          <div
+            className="h-full"
+            style={{
+              width: `${progress}%`,
+              background: "linear-gradient(90deg, #94E2FF, #8A3FFC)",
+            }}
+          />
+        </div>
+
+        <div className="flex justify-between text-[10px] text-white/60 mt-1">
+          <span style={{ color: "#94E2FF" }}>{(lesson?.title || "LESSON").toUpperCase()}</span>
+          <span>{currentStepLabel}</span>
+        </div>
+      </div>
+
+      <div className="w-full max-w-3xl space-y-3">
+        <div
+          className="relative rounded-2xl min-h-[320px] flex items-center justify-between gap-4 px-2 py-6 sm:p-6 text-center"
+          style={{
+            background: "linear-gradient(135deg, #8B3EFE, #532598)",
+          }}
+        >
+          <button
+            onClick={goPrev}
+            disabled={currentStep === 0}
+            className="px-2 disabled:opacity-30 transition hover:scale-110"
+          >
+            <img src="/prev-arrow.png" alt="Previous" className="w-12 h-14 object-contain" />
           </button>
-          <div className="flex items-center gap-2">
-            <div className="h-1.5 w-1.5 rounded-full bg-purple-400 animate-pulse" />
-            <span className="text-xs font-semibold uppercase tracking-widest text-purple-400">Learn</span>
-          </div>
-          <h1 className="bg-gradient-to-r from-white via-purple-200 to-purple-400 bg-clip-text text-3xl font-extrabold text-transparent sm:text-4xl">
-            {lesson?.title || "Lesson"}
-          </h1>
-          <p className="max-w-2xl text-white/70">
-            {lesson?.description || "Complete each section and answer every question to unlock your XP reward."}
-          </p>
-          {isReview ? <p className="text-sm text-purple-200">Review mode is on for this completed lesson.</p> : null}
-        </div>
 
-        <div className="space-y-4 rounded-3xl border border-white/10 bg-white/5 p-5">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm text-white/50">Progress</p>
-              <p className="text-lg font-semibold">
-                {completedQuestions}/{questions.length} questions completed
-              </p>
-            </div>
-            <div className="text-left sm:text-right">
-              <p className="text-sm text-white/50">Reward</p>
-              <p className="text-lg font-semibold text-yellow-400">+{lesson?.reward ?? 0} XP</p>
-            </div>
-          </div>
-          <div className="h-2 overflow-hidden rounded-full bg-white/10">
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-cyan-300 via-sky-400 to-purple-500 transition-all duration-300"
-              style={{ width: `${progressPercent}%` }}
-            />
-          </div>
-          {actionMessage ? <p className="text-sm text-purple-200">{actionMessage}</p> : null}
-        </div>
+          <div className="flex-1 px-2 pb-12 sm:pb-10">
+            {activeStep?.kind === "mini" ? (
+              <p className="text-lg sm:text-xl leading-relaxed whitespace-pre-wrap">{activeStep.text}</p>
+            ) : activeStep?.kind === "question" ? (
+              <div className="flex flex-col space-y-4 text-left">
+                <h2 className="text-xl sm:text-2xl font-bold text-center">
+                  {activeStep.question.question.toUpperCase()}
+                </h2>
 
-        <section className="space-y-4">
-          <div className="flex items-center gap-4">
-            <h2 className="whitespace-nowrap text-xl font-semibold">Lesson Content</h2>
-            <div className="h-px flex-1 bg-white/10" />
-          </div>
+                <div className="space-y-3">
+                  {activeStep.question.options.map((option, index) => {
+                    let style =
+                      "flex justify-between items-center px-4 py-3 rounded-lg cursor-pointer border bg-[#181C2180]";
 
-          {miniLessons.length === 0 ? (
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-white/60">
-              No lesson content has been added yet.
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {miniLessons.map((entry, index) => (
-                <article key={entry._id} className="rounded-2xl border border-white/10 bg-[#1C0E3480] p-5">
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-purple-300">
-                    Section {index + 1}
-                  </p>
-                  <p className="mt-3 whitespace-pre-wrap leading-7 text-white/85">{entry.text}</p>
-                </article>
-              ))}
-            </div>
-          )}
-        </section>
+                    if (currentSelection === option) {
+                      if (activeStep.question.done || currentFeedback === "correct") {
+                        style =
+                          "flex justify-between items-center px-4 py-3 rounded-lg border bg-[#00E1A233] border-[#00E1A2E5]";
+                      } else if (currentFeedback === "wrong") {
+                        style =
+                          "flex justify-between items-center px-4 py-3 rounded-lg border bg-[#F43F5E33] border-[#F43F5E]";
+                      }
+                    }
 
-        <section className="space-y-4">
-          <div className="flex items-center gap-4">
-            <h2 className="whitespace-nowrap text-xl font-semibold">Knowledge Check</h2>
-            <div className="h-px flex-1 bg-white/10" />
-          </div>
-
-          {questions.length === 0 ? (
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-white/60">
-              No questions have been added to this lesson yet.
-            </div>
-          ) : (
-            <div className="space-y-5">
-              {questions.map((question, index) => {
-                const currentAnswer = selectedAnswers[question._id] ?? question.answer ?? "";
-                const isSubmitting = submittingQuestionId === question._id;
-
-                return (
-                  <div key={question._id} className="space-y-4 rounded-2xl border border-white/10 bg-[#120B20] p-5">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-purple-300">
-                          Question {index + 1}
-                        </p>
-                        <h3 className="mt-2 text-lg font-semibold">{question.question}</h3>
-                      </div>
-                      <span
-                        className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
-                          question.done ? "bg-emerald-500/15 text-emerald-300" : "bg-white/10 text-white/60"
-                        }`}
+                    return (
+                      <div
+                        key={`${activeStep.question._id}-${option}`}
+                        onClick={() => {
+                          if (activeStep.question.done) return;
+                          setFeedbackByQuestion((current) => ({ ...current, [activeStep.question._id]: null }));
+                          setSelectedAnswers((current) => ({
+                            ...current,
+                            [activeStep.question._id]: option,
+                          }));
+                        }}
+                        className={style}
                       >
-                        {question.done ? "Completed" : "Pending"}
-                      </span>
-                    </div>
+                        <span className="flex items-center gap-2">
+                          <span className="bg-[#31353B] px-2 py-1 rounded text-xs font-bold">
+                            {String.fromCharCode(65 + index)}
+                          </span>
+                          <span className="capitalize">{option}</span>
+                        </span>
 
-                    <div className="grid gap-3">
-                      {question.options.map((option, optionIndex) => {
-                        const isSelected = currentAnswer === option;
-                        return (
-                          <button
-                            key={`${question._id}-${option}`}
-                            type="button"
-                            disabled={question.done}
-                            onClick={() =>
-                              setSelectedAnswers((current) => ({
-                                ...current,
-                                [question._id]: option,
-                              }))
-                            }
-                            className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-left transition ${
-                              isSelected
-                                ? "border-purple-400 bg-purple-500/15 text-white"
-                                : "border-white/10 bg-white/5 text-white/80 hover:border-white/20"
-                            } ${question.done ? "cursor-default opacity-80" : ""}`}
-                          >
-                            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-black/30 text-xs font-bold">
-                              {String.fromCharCode(65 + optionIndex)}
-                            </span>
-                            <span>{option}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    {!question.done ? (
-                      <div className="flex justify-end">
-                        <button
-                          type="button"
-                          disabled={!selectedAnswers[question._id] || isSubmitting || starting}
-                          onClick={() => submitAnswer(question._id)}
-                          className="rounded-full bg-[#8B3EFE] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#7A2FE0] disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          {isSubmitting ? "Checking..." : "Submit answer"}
-                        </button>
+                        {currentSelection === option && (activeStep.question.done || currentFeedback === "correct") ? (
+                          <span className="w-5 h-5 flex items-center justify-center rounded-full bg-[#00E1A2] text-black font-bold">
+                            ✓
+                          </span>
+                        ) : null}
+                        {currentSelection === option && currentFeedback === "wrong" && !activeStep.question.done ? (
+                          <span className="w-5 h-5 flex items-center justify-center rounded-full bg-[#F43F5E] text-black font-bold">
+                            ✕
+                          </span>
+                        ) : null}
                       </div>
-                    ) : (
-                      <p className="text-sm text-emerald-300">Correct answer recorded.</p>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </section>
+                    );
+                  })}
+                </div>
 
-        <section className="space-y-4 rounded-3xl border border-white/10 bg-gradient-to-br from-[#22103F] to-[#12081F] p-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-xl font-semibold">Claim your reward</h2>
-              <p className="text-white/65">
-                Finish every question, then claim the lesson reward through the backend lesson API.
-              </p>
-            </div>
-            <button
-              type="button"
-              disabled={!allQuestionsDone || claiming || lesson?.done}
-              onClick={claimXp}
-              className="rounded-full bg-yellow-400 px-5 py-2 text-sm font-semibold text-black transition hover:bg-yellow-300 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {lesson?.done ? "XP Claimed" : claiming ? "Claiming..." : `Claim +${lesson?.reward ?? 0} XP`}
-            </button>
+                <p className="text-center text-sm text-white/70 mt-2">
+                  Question {questions.findIndex((entry) => entry._id === activeStep.question._id) + 1} of {questions.length}
+                </p>
+              </div>
+            ) : (
+              <div className="relative flex flex-col items-center space-y-4 text-center">
+                <img src="/nexura-gold.png" className="w-20 h-20 animate-bounce-slow" />
+                <h2 className="text-xl sm:text-2xl font-bold">Lesson Completed</h2>
+                <p className="text-sm sm:text-base text-white/80 max-w-sm text-center">
+                  {allQuestionsDone
+                    ? "You have reached the end of this lesson. Claim your XP reward to finish."
+                    : "Finish every question to unlock the lesson reward."}
+                </p>
+
+                <button
+                  onClick={() => void claimXp()}
+                  disabled={!allQuestionsDone || claiming || lesson?.done}
+                  className={`mt-3 px-5 py-2 rounded-md text-white ${
+                    !allQuestionsDone || claiming || lesson?.done
+                      ? "bg-gray-500 cursor-not-allowed"
+                      : "bg-[#8B3EFE] hover:bg-[#7A2FE0]"
+                  }`}
+                >
+                  {lesson?.done ? "XP Claimed" : claiming ? "Claiming..." : `Claim +${lesson?.reward ?? 0} XP`}
+                </button>
+              </div>
+            )}
           </div>
-        </section>
+
+          <button
+            onClick={() => void goNext()}
+            disabled={
+              currentStep >= lessonSteps.length - 1 ||
+              (activeStep?.kind === "question" && !activeStep.question.done && !currentSelection) ||
+              submittingQuestionId === currentQuestion?._id
+            }
+            className="px-2 disabled:opacity-30 transition hover:scale-110"
+          >
+            <img src="/next-arrow.png" alt="Next" className="w-12 h-14 object-contain" />
+          </button>
+
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex max-w-[70%] flex-wrap justify-center gap-2">
+            {lessonSteps.map((step, index) => (
+              <button
+                key={step.key}
+                onClick={() => setCurrentStep(index)}
+                className={`w-2 h-2 rounded-full transition ${index === currentStep ? "bg-white" : "bg-white/40"}`}
+              />
+            ))}
+          </div>
+
+          {activeStep?.kind !== "claim" ? (
+            <button
+              onClick={() => void goNext()}
+              disabled={
+                (activeStep?.kind === "question" && !activeStep.question.done && !currentSelection) ||
+                submittingQuestionId === currentQuestion?._id
+              }
+              className={`absolute bottom-4 right-4 px-4 py-1.5 rounded-3xl text-sm text-white transition-all duration-200 ${
+                activeStep?.kind === "question" && !activeStep.question.done && !currentSelection
+                  ? "bg-gray-500/50 blur-[1px] cursor-not-allowed opacity-60"
+                  : "bg-[#8B3EFE] hover:bg-[#7A2FE0]"
+              }`}
+            >
+              {activeStep?.kind === "question"
+                ? activeStep.question.done
+                  ? "Continue"
+                  : submittingQuestionId === activeStep.question._id
+                    ? "Checking..."
+                    : "Submit"
+                : "Continue"}
+            </button>
+          ) : null}
+        </div>
+
+        <button
+          className="flex items-center gap-2 px-4 py-3 rounded-lg border"
+          style={{
+            background: "#1D182E80",
+            borderColor: "#D4BBFF1A",
+            borderWidth: "1px",
+          }}
+          type="button"
+        >
+          <img src="/xp-icon.png" alt="XP Icon" className="w-12 h-12 object-contain" />
+          <div className="flex flex-col leading-none">
+            <span className="text-[15px] font-bold" style={{ color: "#94E2FF" }}>
+              XP REWARDS
+            </span>
+            <span className="text-xl font-bold text-white">{lesson?.reward ?? 0}</span>
+          </div>
+        </button>
+
+        {actionMessage ? <p className="text-sm text-center text-purple-200">{actionMessage}</p> : null}
       </div>
 
       {showXPModal ? (
@@ -450,10 +592,7 @@ export default function LessonPage() {
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  setShowXPModal(false);
-                  window.scrollTo({ top: 0, behavior: "smooth" });
-                }}
+                onClick={resetLessonView}
                 className="w-full rounded-full bg-black px-4 py-3 text-sm font-semibold text-white transition hover:bg-black/85"
               >
                 Retake Lesson
