@@ -23,6 +23,7 @@ import { fetchChannels, fetchRoles, fetchServers } from "@/controllers/hub.auth.
 import { getCampaign, getHub, saveCampaign, saveCampaignWithQuests } from "@/controllers/hub.controller";
 import {
   createLesson,
+  deleteLesson,
   createQuestion,
   createMiniLesson,
   getAllLessons,
@@ -62,6 +63,7 @@ router
   .patch("/reopen-campaign", requireAdminSuperadmin, attachAdminCampaignHub, reopenCampaign)
   .patch("/record-campaign-rewards-withdrawal", requireAdminSuperadmin, attachAdminCampaignHub, recordCampaignRewardsWithdrawal)
   .post("/create-lesson", upload.fields([{ name: "coverImage", maxCount: 1 }, { name: "profileImage", maxCount: 1 }]), createLesson)
+  .delete("/delete-lesson", deleteLesson)
   .patch("/update-lesson", upload.fields([{ name: "coverImage", maxCount: 1 }, { name: "profileImage", maxCount: 1 }]), updateLesson)
   .post("/create-mini-lesson", createMiniLesson)
   .patch("/update-mini-lesson", updateMiniLesson)

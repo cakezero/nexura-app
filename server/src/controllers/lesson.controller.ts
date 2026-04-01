@@ -228,32 +228,31 @@ export const rewardLessonXp = async (req: GlobalRequest, res: GlobalResponse) =>
       return;
     }
 
-    const questionsAnswered = await questionCompleted.countDocuments({ done: true, user: id, lesson: lessonId });
+    const existingLessonProgress = await lessonCompleted.findOne({ lesson: lessonId, user: id });
+    if (!existingLessonProgress) {
+      res.status(BAD_REQUEST).json({ error: "lesson has not been started" });
+      return;
+    }
 
+    if (existingLessonProgress.done) {
+      res.status(BAD_REQUEST).json({ error: "xp has already been claimed for this lesson" });
+      return;
+    }
+
+    const questionsAnswered = await questionCompleted.countDocuments({ done: true, user: id, lesson: lessonId });
     if (lessonExists.noOfQuestions !== questionsAnswered) {
       res.status(FORBIDDEN).json({ error: "answer all questions before reward can be claimed" });
       return;
     }
 
-    const notCompletedLesson = await lessonCompleted.findOne({ status: "in-progress", lesson: lessonId, user: id });
-    if (!notCompletedLesson) {
-      res.status(BAD_REQUEST).json({ error: "lesson has been completed or does not exist" });
-      return;
-    }
+    const rewardAmount = Number(lessonExists.reward || 0);
 
-    if (notCompletedLesson.done) {
-      res.status(BAD_REQUEST).json({ error: "lesson reward already claimed" });
-      return;
-    }
+    existingLessonProgress.status = "completed";
+    existingLessonProgress.done = true;
 
-    notCompletedLesson.status = "completed";
-    notCompletedLesson.done = true;
-
-    await user.updateOne({ _id: id }, { $inc: { xp: lessonExists.reward, lessonsCompleted: 1 } });
-
-    await notCompletedLesson.save();
-
-    res.status(OK).json({ message: "xp reward claimed" });
+    await user.updateOne({ _id: id }, { $inc: { xp: rewardAmount, lessonsCompleted: 1 } });
+    await existingLessonProgress.save();
+    res.status(OK).json({ message: "xp reward claimed", reward: rewardAmount });
   } catch (error) {
     logger.error(error);
     res.status(INTERNAL_SERVER_ERROR).json({ error: "error rewarding lesson xp" });
@@ -430,7 +429,6 @@ export const startLesson = async (req: GlobalRequest, res: GlobalResponse) => {
       res.status(NOT_FOUND).json({ error: "lesson id in invalid" });
       return;
     }
-
     const lessonStarted = await lessonCompleted.exists({ user: id, lesson: lessonId });
     if (lessonStarted) {
       res.status(BAD_REQUEST).json({ error: "lesson already started or completed" });
@@ -445,4 +443,64 @@ export const startLesson = async (req: GlobalRequest, res: GlobalResponse) => {
     res.status(INTERNAL_SERVER_ERROR).json({ error: "error starting lesson" });
   }
 }
+
+export const deleteLesson = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const { id: lessonId } = req.query as { id: string };
+
+    if (!lessonId) {
+      res.status(BAD_REQUEST).json({ error: "lesson id is required" });
+      return;
+    }
+
+    const lessonExists = await lesson.exists({ _id: lessonId });
+    if (!lessonExists) {
+      res.status(NOT_FOUND).json({ error: "lesson does not exist" });
+      return;
+    }
+
+    await Promise.all([
+      lesson.deleteOne({ _id: lessonId }),
+      miniLesson.deleteMany({ lesson: lessonId }),
+      question.deleteMany({ lesson: lessonId }),
+      lessonCompleted.deleteMany({ lesson: lessonId }),
+      questionCompleted.deleteMany({ lesson: lessonId }),
+    ]);
+
+    res.status(OK).json({ message: "lesson deleted" });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error deleting lesson" });
+  }
+};
+
+export const deleteLesson = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const { id: lessonId } = req.query as { id: string };
+
+    if (!lessonId) {
+      res.status(BAD_REQUEST).json({ error: "lesson id is required" });
+      return;
+    }
+
+    const lessonExists = await lesson.exists({ _id: lessonId });
+    if (!lessonExists) {
+      res.status(NOT_FOUND).json({ error: "lesson does not exist" });
+      return;
+    }
+
+    await Promise.all([
+      lesson.deleteOne({ _id: lessonId }),
+      miniLesson.deleteMany({ lesson: lessonId }),
+      question.deleteMany({ lesson: lessonId }),
+      lessonCompleted.deleteMany({ lesson: lessonId }),
+      questionCompleted.deleteMany({ lesson: lessonId }),
+    ]);
+
+    res.status(OK).json({ message: "lesson deleted" });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error deleting lesson" });
+  }
+};
 
