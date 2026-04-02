@@ -132,6 +132,12 @@ export default function LessonPage() {
   const progress = lessonSteps.length ? ((currentStep + 1) / lessonSteps.length) * 100 : 0;
   const currentStepLabel = lessonSteps.length ? `STEP ${currentStep + 1}/${lessonSteps.length}` : "STEP 0/0";
 
+  const DOTS_WINDOW = 7;
+  const dotsWinStart = lessonSteps.length > DOTS_WINDOW
+    ? Math.min(Math.max(currentStep - Math.floor(DOTS_WINDOW / 2), 0), lessonSteps.length - DOTS_WINDOW)
+    : 0;
+  const dotsWinEnd = lessonSteps.length > DOTS_WINDOW ? dotsWinStart + DOTS_WINDOW : lessonSteps.length;
+
   useEffect(() => {
     const updateSize = () => setWindowSize({ width: window.innerWidth, height: window.innerHeight });
     updateSize();
@@ -626,57 +632,57 @@ export default function LessonPage() {
             </button>
           </div>
 
-          {/* Bottom bar: dots + Continue — in normal flow, no overlap possible */}
-          <div className="flex items-center px-3 sm:px-5 pb-6 sm:pb-5 pt-2 gap-2 sm:gap-3">
-            {/* Invisible mirror spacer keeps dots centered */}
-            {activeStep?.kind !== "claim" ? (
-              <span className="shrink-0 invisible px-4 py-2.5 sm:py-2 text-sm font-semibold" aria-hidden>Continue</span>
-            ) : null}
-
-            {/* Step dots */}
-            <div className="flex-1 flex flex-wrap justify-center gap-0.5 sm:gap-1">
-              {lessonSteps.map((step, index) => (
-                <button
-                  key={step.key}
-                  onClick={() => {
-                    direction.current = index > currentStep ? 1 : -1;
-                    setCurrentStep(index);
-                  }}
-                  className="w-5 h-5 flex items-center justify-center shrink-0"
-                >
-                  <span
-                    className={`block rounded-full transition-all duration-200 ${
-                      index === currentStep
-                        ? "w-4 h-1.5 bg-white"
-                        : "w-1.5 h-1.5 bg-white/35 hover:bg-white/60"
-                    }`}
-                  />
-                </button>
-              ))}
+          {/* Bottom bar: dots centered, Continue right-aligned below */}
+          <div className="px-4 sm:px-5 pb-6 sm:pb-5 pt-3">
+            {/* Step dots — sliding window of max 7, outer dots shrink to hint at more */}
+            <div className="flex items-center justify-center gap-1">
+              {lessonSteps.slice(dotsWinStart, dotsWinEnd).map((step, wi) => {
+                const gi = dotsWinStart + wi;
+                const dist = Math.abs(gi - currentStep);
+                const dotClass =
+                  dist === 0 ? "w-4 h-2 bg-white" :
+                  dist === 1 ? "w-2 h-2 bg-white/65" :
+                  dist === 2 ? "w-1.5 h-1.5 bg-white/45" :
+                               "w-1 h-1 bg-white/25";
+                return (
+                  <button
+                    key={step.key}
+                    onClick={() => {
+                      direction.current = gi > currentStep ? 1 : -1;
+                      setCurrentStep(gi);
+                    }}
+                    className="w-5 h-5 flex items-center justify-center shrink-0"
+                  >
+                    <span className={`block rounded-full transition-all duration-300 ${dotClass}`} />
+                  </button>
+                );
+              })}
             </div>
 
-            {/* Continue button */}
+            {/* Continue — right-aligned on its own row */}
             {activeStep?.kind !== "claim" ? (
-              <button
-                onClick={() => void goNext()}
-                disabled={
-                  (activeStep?.kind === "question" &&
+              <div className="flex justify-end mt-2.5">
+                <button
+                  onClick={() => void goNext()}
+                  disabled={
+                    (activeStep?.kind === "question" &&
+                      !activeStep.question.done &&
+                      (!currentSelection || currentFeedback === "wrong")) ||
+                    submittingQuestionId === currentQuestion?._id
+                  }
+                  className={`px-5 py-2.5 rounded-full text-sm font-semibold text-white transition-all duration-200 ${
+                    activeStep?.kind === "question" &&
                     !activeStep.question.done &&
-                    (!currentSelection || currentFeedback === "wrong")) ||
-                  submittingQuestionId === currentQuestion?._id
-                }
-                className={`shrink-0 px-4 py-2.5 sm:py-2 rounded-full text-sm font-semibold text-white transition-all duration-200 ${
-                  activeStep?.kind === "question" &&
-                  !activeStep.question.done &&
-                  (!currentSelection || currentFeedback === "wrong")
-                    ? "bg-white/15 cursor-not-allowed opacity-50"
-                    : "bg-[#8B3EFE] hover:bg-[#7A2FE0] active:scale-95"
-                }`}
-              >
-                {activeStep?.kind === "question" && submittingQuestionId === activeStep.question._id
-                  ? "Saving…"
-                  : "Continue"}
-              </button>
+                    (!currentSelection || currentFeedback === "wrong")
+                      ? "bg-white/15 cursor-not-allowed opacity-50"
+                      : "bg-[#8B3EFE] hover:bg-[#7A2FE0] active:scale-95"
+                  }`}
+                >
+                  {activeStep?.kind === "question" && submittingQuestionId === activeStep.question._id
+                    ? "Saving…"
+                    : "Continue"}
+                </button>
+              </div>
             ) : null}
           </div>
         </div>
