@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useLocation, useParams } from "wouter";
-import { Loader2, Trophy } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import Confetti from "react-confetti";
 import { useAuth } from "../lib/auth";
 import { apiRequestV2 } from "../lib/queryClient";
@@ -667,36 +667,37 @@ export default function LessonPage() {
 
       {showXPModal ? (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 px-4">
-          <div className="w-full max-w-sm rounded-[28px] border border-white/10 bg-[#8B3EFE] p-6 text-center shadow-[0_24px_80px_rgba(0,0,0,0.55)]">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white/15 text-white shadow-lg">
-              <Trophy className="h-8 w-8" />
+          <div className="w-full max-w-sm rounded-[28px] bg-[#2D1B6B] p-8 text-center shadow-[0_24px_80px_rgba(0,0,0,0.6)]">
+            <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-2xl bg-[#3D2080]">
+              <img src="/nexura-gold.png" alt="Gold Trophy" className="h-16 w-16 object-contain" />
             </div>
 
-            <h2 className="mt-5 text-2xl font-extrabold text-white">Lesson Completed</h2>
-            <p className="mt-2 text-sm text-white/80">You have successfully completed this lesson.</p>
+            <h2 className="mt-6 text-3xl font-extrabold text-white">Lesson Complete!</h2>
+            <p className="mt-2 text-sm text-white/70 leading-relaxed">
+              {lesson?.description || "You've successfully completed this lesson."}
+            </p>
 
-            <div className="mt-5 rounded-2xl border border-white/15 bg-white/10 px-4 py-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-white/65">XP Earned</p>
-              <div className="mt-2 flex items-center justify-center gap-2 text-2xl font-extrabold text-white">
-                <span>+{lesson?.reward ?? 0} XP</span>
-                <img src="/claimed.png" className="h-5 w-12 object-contain" />
-              </div>
+            <div className="mt-6 flex items-center justify-center gap-3">
+              <span className="text-4xl font-extrabold text-white">+{lesson?.reward ?? 0} XP</span>
+              <span className="rounded-full border border-white/30 px-3 py-1 text-xs font-bold uppercase tracking-widest text-white/80">
+                Earned
+              </span>
             </div>
 
-            <div className="mt-6 space-y-3">
+            <div className="mt-8 space-y-3">
               <button
                 type="button"
                 onClick={() => setLocation("/learn")}
-                className="w-full rounded-full bg-white px-4 py-3 text-sm font-semibold text-black transition hover:bg-white/90"
+                className="w-full rounded-xl bg-[#7C3AED] px-4 py-3.5 text-sm font-bold uppercase tracking-widest text-white transition hover:bg-[#6D28D9]"
               >
-                Back to Lessons
+                Return to Lessons
               </button>
               <button
                 type="button"
                 onClick={resetLessonView}
-                className="w-full rounded-full bg-black px-4 py-3 text-sm font-semibold text-white transition hover:bg-black/85"
+                className="w-full rounded-xl border border-[#7C3AED] bg-transparent px-4 py-3.5 text-sm font-bold uppercase tracking-widest text-white transition hover:bg-[#7C3AED]/20"
               >
-                Retake Lesson
+                Take Lesson Again
               </button>
             </div>
           </div>
