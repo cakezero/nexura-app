@@ -18,8 +18,11 @@ type LessonCard = {
   reward: number;
   noOfQuestions: number;
   done?: boolean;
+  status?: "draft" | "published";
+  order?: number;
   coverImage?: string;
   profileImage?: string;
+  createdAt?: string;
 };
 
 type StoredLessonProgress = {
@@ -36,6 +39,13 @@ const getStatusLabel = (isCompleted: boolean, progress: number) => {
   if (progress > 0) return "IN PROGRESS";
   return "NOT STARTED";
 };
+
+const sortLessons = (items: LessonCard[]) =>
+  [...items].sort(
+    (a, b) =>
+      (Number(a.order) || 0) - (Number(b.order) || 0) ||
+      (a.createdAt || "").localeCompare(b.createdAt || "")
+  );
 
 export default function Learn() {
   const { address, isConnected, connectWallet } = useWallet();
@@ -66,7 +76,10 @@ export default function Learn() {
 
       try {
         const response = await apiRequestV2("GET", "/api/lesson/get-lessons");
-        setLessons(response?.lessons || []);
+        const normalizedLessons = sortLessons(
+          (response?.lessons || []).filter((lesson: LessonCard) => lesson.status === "published")
+        );
+        setLessons(normalizedLessons);
       } catch (error) {
         setPageError(error?.message || "Failed to load lessons.");
         setLessons([]);
