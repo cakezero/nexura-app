@@ -25,6 +25,20 @@ const getUploadedLessonImage = async (
   });
 };
 
+const getNextLessonContentOrder = async (lessonId: string) => {
+  const [maxMiniLesson, maxQuestion] = await Promise.all([
+    miniLesson.findOne({ lesson: lessonId }).sort({ order: -1 }).select("order").lean(),
+    question.findOne({ lesson: lessonId }).sort({ order: -1 }).select("order").lean(),
+  ]);
+
+  const maxOrder = Math.max(
+    Number(maxMiniLesson?.order ?? -1),
+    Number(maxQuestion?.order ?? -1),
+  );
+
+  return maxOrder + 1;
+};
+
 export const createLesson = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
     const coverImage = await getUploadedLessonImage(req, "coverImage", "lesson-covers");
@@ -113,8 +127,7 @@ export const createQuestion = async (req: GlobalRequest, res: GlobalResponse) =>
       return;
     }
 
-    const maxOrderDoc = await question.findOne({ lesson: req.body.lesson }).sort({ order: -1 }).select("order").lean();
-    const nextOrder = maxOrderDoc ? (Number(maxOrderDoc.order) || 0) + 1 : 0;
+    const nextOrder = await getNextLessonContentOrder(req.body.lesson);
 
     await question.create({ ...req.body, order: nextOrder });
 
@@ -191,8 +204,7 @@ export const createMiniLesson = async (req: GlobalRequest, res: GlobalResponse) 
       return;
     }
 
-    const maxOrderDoc = await miniLesson.findOne({ lesson: lessonId }).sort({ order: -1 }).select("order").lean();
-    const nextOrder = maxOrderDoc ? (Number(maxOrderDoc.order) || 0) + 1 : 0;
+    const nextOrder = await getNextLessonContentOrder(lessonId);
 
     await miniLesson.create({ ...req.body, order: nextOrder });
 
