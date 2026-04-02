@@ -19,7 +19,6 @@ type LessonCard = {
   noOfQuestions: number;
   done?: boolean;
   status?: "draft" | "published";
-  order?: number;
   coverImage?: string;
   profileImage?: string;
   createdAt?: string;
@@ -40,12 +39,7 @@ const getStatusLabel = (isCompleted: boolean, progress: number) => {
   return "NOT STARTED";
 };
 
-const sortLessons = (items: LessonCard[]) =>
-  [...items].sort(
-    (a, b) =>
-      (Number(a.order) || 0) - (Number(b.order) || 0) ||
-      (a.createdAt || "").localeCompare(b.createdAt || "")
-  );
+const sortLessons = (items: LessonCard[]) => [...items].sort((a, b) => (a.createdAt || "").localeCompare(b.createdAt || ""));
 
 export default function Learn() {
   const { address, isConnected, connectWallet } = useWallet();

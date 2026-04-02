@@ -39,10 +39,7 @@ export const createLesson = async (req: GlobalRequest, res: GlobalResponse) => {
       return;
     }
 
-    const maxOrderDoc = await lesson.findOne().sort({ order: -1, createdAt: -1 }).select("order").lean();
-    const nextOrder = maxOrderDoc ? (Number(maxOrderDoc.order) || 0) + 1 : 0;
-
-    await lesson.create({ ...req.body, order: nextOrder });
+    await lesson.create(req.body);
 
     res.status(CREATED).json({ message: "lesson created" });
   } catch (error) {
@@ -277,7 +274,7 @@ export const rewardLessonXp = async (req: GlobalRequest, res: GlobalResponse) =>
 
 export const getLessons = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
-    const lessons = await lesson.find({ status: "published" }).sort({ order: 1, createdAt: 1 }).lean();
+    const lessons = await lesson.find({ status: "published" }).sort({ createdAt: 1 }).lean();
     const lessonsCompleted = await lessonCompleted.find({ user: req.id }).lean();
 
     const mergedLessons: any[] = [];
@@ -303,7 +300,7 @@ export const getLessons = async (req: GlobalRequest, res: GlobalResponse) => {
 
 export const getAllLessons = async (_req: GlobalRequest, res: GlobalResponse) => {
   try {
-    const lessons = await lesson.find().sort({ order: 1, createdAt: 1 }).lean();
+    const lessons = await lesson.find().sort({ createdAt: 1 }).lean();
     res.status(OK).json({ message: "lessons fetched!", lessons });
   } catch (error) {
     logger.error(error);
@@ -628,25 +625,4 @@ export const reorderLessonContent = async (req: GlobalRequest, res: GlobalRespon
   }
 };
 
-export const reorderLessons = async (req: GlobalRequest, res: GlobalResponse) => {
-  try {
-    const { items } = req.body as {
-      items?: Array<{ id: string; order: number }>;
-    };
-
-    if (!Array.isArray(items) || items.length === 0) {
-      res.status(BAD_REQUEST).json({ error: "items array is required" });
-      return;
-    }
-
-    await Promise.all(
-      items.map((item) => lesson.updateOne({ _id: item.id }, { $set: { order: item.order } }))
-    );
-
-    res.status(OK).json({ message: "lesson order updated" });
-  } catch (error) {
-    logger.error(error);
-    res.status(INTERNAL_SERVER_ERROR).json({ error: "error reordering lessons" });
-  }
-};
 
