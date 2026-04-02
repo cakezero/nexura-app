@@ -566,26 +566,31 @@ export default function LessonPage() {
                 </p>
               </div>
             ) : (
-              <div className="relative flex flex-col items-center space-y-4 text-center">
-                <img src="/nexura-gold.png" className="w-20 h-20 animate-bounce-slow" />
-                <h2 className="text-xl sm:text-2xl font-bold">Lesson Completed</h2>
-                <p className="text-sm sm:text-base text-white/80 max-w-sm text-center">
+              <div className="flex flex-col items-center text-center w-full">
+                <img src="/nexura-gold.png" alt="Gold Trophy" className="w-36 h-36 object-contain mb-4" />
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-white">Congratulations</h2>
+                <p className="mt-3 text-sm sm:text-base text-white/80 max-w-xs leading-relaxed">
                   {allQuestionsDone
-                    ? "You have reached the end of this lesson. Claim your XP reward to finish."
-                    : "Finish every question to unlock the lesson reward."}
+                    ? `You have mastered the basics of ${lesson?.title ?? "this lesson"}. Your XP rewards are ready to be claimed.`
+                    : "Finish every question to unlock your XP reward."}
                 </p>
 
                 <button
                   onClick={() => void claimXp()}
                   disabled={!allQuestionsDone || claiming || lesson?.done}
-                  className={`mt-3 px-5 py-2 rounded-md text-white ${
-                    !allQuestionsDone || claiming || lesson?.done
-                      ? "bg-gray-500 cursor-not-allowed"
-                      : "bg-[#8B3EFE] hover:bg-[#7A2FE0]"
+                  className={`mt-6 px-8 py-2.5 rounded-full font-bold text-white text-sm transition ${
+                    !allQuestionsDone || lesson?.done
+                      ? "bg-white/20 cursor-not-allowed"
+                      : "bg-[#5B1BA0] hover:bg-[#4a1585]"
                   }`}
                 >
-                  {lesson?.done ? "XP Claimed" : claiming ? "Claiming..." : `Claim +${lesson?.reward ?? 0} XP`}
+                  {lesson?.done ? "XP Claimed" : claiming ? "Claiming..." : "Claim XP"}
                 </button>
+
+                <div className="mt-6 w-full border-t border-white/20" />
+                <p className="mt-3 text-xs text-yellow-300/80">
+                  Original Content by Nexura. Adapted by Nexura.
+                </p>
               </div>
             )}
             </motion.div>
