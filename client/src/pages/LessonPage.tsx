@@ -459,34 +459,36 @@ export default function LessonPage() {
 
       <div className="w-full max-w-3xl space-y-3">
         <div
-          className="relative rounded-2xl min-h-[340px] flex items-center justify-between gap-2 sm:gap-4 px-1 sm:px-2 py-6 sm:p-6 text-center"
+          className="rounded-2xl min-h-[340px] flex flex-col"
           style={{
             background: "linear-gradient(135deg, #8B3EFE, #532598)",
           }}
         >
-          <button
-            onClick={goPrev}
-            disabled={currentStep === 0}
-            className="shrink-0 px-1 sm:px-2 disabled:opacity-30 transition hover:scale-110"
-          >
-            <img src="/prev-arrow.png" alt="Previous" className="w-8 h-10 sm:w-12 sm:h-14 object-contain" />
-          </button>
-
-          <AnimatePresence mode="wait" initial={false} custom={direction.current}>
-            <motion.div
-              key={currentStep}
-              custom={direction.current}
-              variants={{
-                enter: (d) => ({ x: d * 60, opacity: 0 }),
-                center: { x: 0, opacity: 1 },
-                exit: (d) => ({ x: d * -60, opacity: 0 }),
-              }}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              transition={{ type: "spring", stiffness: 340, damping: 30, mass: 0.8 }}
-              className="flex-1 min-w-0 px-1 sm:px-2 pb-14 sm:pb-10"
+          {/* Content row: prev arrow | step content | next arrow */}
+          <div className="flex items-center gap-2 sm:gap-4 px-1 sm:px-2 pt-6 pb-2 flex-1">
+            <button
+              onClick={goPrev}
+              disabled={currentStep === 0}
+              className="shrink-0 px-1 sm:px-2 disabled:opacity-30 transition hover:scale-110"
             >
+              <img src="/prev-arrow.png" alt="Previous" className="w-8 h-10 sm:w-12 sm:h-14 object-contain" />
+            </button>
+
+            <AnimatePresence mode="wait" initial={false} custom={direction.current}>
+              <motion.div
+                key={currentStep}
+                custom={direction.current}
+                variants={{
+                  enter: (d) => ({ x: d * 60, opacity: 0 }),
+                  center: { x: 0, opacity: 1 },
+                  exit: (d) => ({ x: d * -60, opacity: 0 }),
+                }}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={{ type: "spring", stiffness: 340, damping: 30, mass: 0.8 }}
+                className="flex-1 min-w-0 px-1 sm:px-2 text-center"
+              >
             {(activeStep?.kind === "intro" || activeStep?.kind === "outro") ? (
               <div className="flex flex-col items-center space-y-3 text-center">
                 {activeStep.trophy && (
@@ -593,61 +595,69 @@ export default function LessonPage() {
                 </p>
               </div>
             )}
-            </motion.div>
-          </AnimatePresence>
+              </motion.div>
+            </AnimatePresence>
 
-          <button
-            onClick={() => void goNext()}
-            disabled={
-              currentStep >= lessonSteps.length - 1 ||
-              (activeStep?.kind === "question" && !activeStep.question.done && !currentSelection) ||
-              submittingQuestionId === currentQuestion?._id
-            }
-            className="shrink-0 px-1 sm:px-2 disabled:opacity-30 transition hover:scale-110"
-          >
-            <img src="/next-arrow.png" alt="Next" className="w-8 h-10 sm:w-12 sm:h-14 object-contain" />
-          </button>
-
-          {/* Dot indicators — capped at 50% width so they don't overlap the Continue button */}
-          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex max-w-[50%] flex-wrap justify-center gap-1.5">
-            {lessonSteps.map((step, index) => (
-              <button
-                key={step.key}
-                onClick={() => {
-                  direction.current = index > currentStep ? 1 : -1;
-                  setCurrentStep(index);
-                }}
-                className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full transition ${index === currentStep ? "bg-white" : "bg-white/40"}`}
-              />
-            ))}
-          </div>
-
-          {activeStep?.kind !== "claim" ? (
             <button
               onClick={() => void goNext()}
               disabled={
-                (activeStep?.kind === "question" &&
-                  !activeStep.question.done &&
-                  (!currentSelection || currentFeedback === "wrong")) ||
+                currentStep >= lessonSteps.length - 1 ||
+                (activeStep?.kind === "question" && !activeStep.question.done && !currentSelection) ||
                 submittingQuestionId === currentQuestion?._id
               }
-              className={`absolute bottom-3 right-3 z-10 px-3 sm:px-4 py-1.5 rounded-3xl text-xs sm:text-sm text-white transition-all duration-200 ${
-                activeStep?.kind === "question" &&
-                !activeStep.question.done &&
-                (!currentSelection || currentFeedback === "wrong")
-                  ? "bg-gray-500/50 blur-[1px] cursor-not-allowed opacity-60"
-                  : "bg-[#8B3EFE] hover:bg-[#7A2FE0]"
-              }`}
+              className="shrink-0 px-1 sm:px-2 disabled:opacity-30 transition hover:scale-110"
             >
-              {activeStep?.kind === "question"
-                ? activeStep.question.done
-                  ? "Continue"
-                  : submittingQuestionId === activeStep.question._id
-                    ? "Saving..."
-                    : "Continue"
-                : "Continue"}
+              <img src="/next-arrow.png" alt="Next" className="w-8 h-10 sm:w-12 sm:h-14 object-contain" />
             </button>
-          ) : null}
+          </div>
+
+          {/* Bottom bar: dots centered, Continue button right — all in normal flow, never overlaps */}
+          <div className="flex items-center px-3 sm:px-4 pb-4 pt-1 gap-2">
+            {/* Mirror spacer: invisible clone of Continue button keeps dots truly centered */}
+            {activeStep?.kind !== "claim" ? (
+              <span className="shrink-0 invisible px-3 sm:px-4 py-1.5 text-xs sm:text-sm font-medium" aria-hidden>
+                Continue
+              </span>
+            ) : null}
+
+            {/* Step dots */}
+            <div className="flex-1 flex flex-wrap justify-center gap-1.5">
+              {lessonSteps.map((step, index) => (
+                <button
+                  key={step.key}
+                  onClick={() => {
+                    direction.current = index > currentStep ? 1 : -1;
+                    setCurrentStep(index);
+                  }}
+                  className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full transition ${index === currentStep ? "bg-white" : "bg-white/40"}`}
+                />
+              ))}
+            </div>
+
+            {/* Continue button */}
+            {activeStep?.kind !== "claim" ? (
+              <button
+                onClick={() => void goNext()}
+                disabled={
+                  (activeStep?.kind === "question" &&
+                    !activeStep.question.done &&
+                    (!currentSelection || currentFeedback === "wrong")) ||
+                  submittingQuestionId === currentQuestion?._id
+                }
+                className={`shrink-0 px-3 sm:px-4 py-1.5 rounded-3xl text-xs sm:text-sm text-white transition-all duration-200 ${
+                  activeStep?.kind === "question" &&
+                  !activeStep.question.done &&
+                  (!currentSelection || currentFeedback === "wrong")
+                    ? "bg-gray-500/50 blur-[1px] cursor-not-allowed opacity-60"
+                    : "bg-[#8B3EFE] hover:bg-[#7A2FE0]"
+                }`}
+              >
+                {activeStep?.kind === "question" && submittingQuestionId === activeStep.question._id
+                  ? "Saving..."
+                  : "Continue"}
+              </button>
+            ) : null}
+          </div>
         </div>
 
         <button
