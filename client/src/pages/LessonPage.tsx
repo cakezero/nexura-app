@@ -250,7 +250,7 @@ export default function LessonPage() {
   }, [didInitStep, lessonId, lesson?.done, lesson?.reward, questions]);
 
   useEffect(() => {
-    if (!showXPModal && activeStep?.kind !== "claim") return;
+    if (!showXPModal && !(activeStep?.kind === "claim" && allQuestionsDone)) return;
     setShowConfetti(true);
     const timeout = window.setTimeout(() => setShowConfetti(false), 5000);
     return () => window.clearTimeout(timeout);
