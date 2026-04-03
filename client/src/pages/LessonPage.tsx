@@ -225,7 +225,7 @@ export default function LessonPage() {
   }, [didInitStep, isReview, lessonId, lessonSteps.length, storageKey]);
 
   useEffect(() => {
-    if (!lessonId || !lessonSteps.length) return;
+    if (!lessonId || !lessonSteps.length || !didInitStep) return;
     const data = JSON.parse(localStorage.getItem(storageKey) || "{}");
     data[lessonId] = {
       ...(data[lessonId] || {}),
@@ -454,7 +454,7 @@ export default function LessonPage() {
       ) : null}
 
       {/* Back link + breadcrumb */}
-      <div className="w-full max-w-5xl space-y-1">
+      <div className="w-full max-w-4xl space-y-1">
         <button onClick={() => setLocation("/learn")} className="text-sm text-purple-300 hover:text-white">
           ← Back to lessons
         </button>
@@ -465,12 +465,12 @@ export default function LessonPage() {
       </div>
 
       {/* Lesson title */}
-      <h1 className="w-full max-w-5xl text-2xl sm:text-4xl font-extrabold leading-tight bg-gradient-to-r from-white via-purple-200 to-purple-400 bg-clip-text text-transparent">
+      <h1 className="w-full max-w-4xl text-2xl sm:text-4xl font-extrabold leading-tight bg-gradient-to-r from-white via-purple-200 to-purple-400 bg-clip-text text-transparent">
         {lesson?.title || "Lesson"}
       </h1>
 
       {/* Progress bar */}
-      <div className="w-full max-w-5xl">
+      <div className="w-full max-w-4xl">
         <div className="w-full h-2 rounded-full overflow-hidden bg-white/20">
           <div
             className="h-full transition-all duration-300"
@@ -489,11 +489,11 @@ export default function LessonPage() {
       </div>
 
       {/* Card + XP widget */}
-      <div className="w-full max-w-5xl flex flex-col gap-3">
+      <div className="w-full max-w-4xl flex flex-col gap-3">
 
         {/* Step card */}
         <div
-          className="rounded-3xl h-[420px] sm:h-[360px] flex flex-col overflow-hidden relative"
+          className="rounded-3xl h-[380px] sm:h-[320px] flex flex-col overflow-hidden relative"
           style={{ background: "linear-gradient(145deg, #8B3EFE, #4A1B8A)" }}
         >
           {/* Content row: prev | content | next */}
@@ -528,32 +528,70 @@ export default function LessonPage() {
                 {(activeStep?.kind === "intro" || activeStep?.kind === "outro") ? (
                   <div className="flex flex-col items-center gap-4 sm:gap-5">
                     {activeStep.trophy && (
-                      <img
-                        src={`/nexura-${activeStep.trophy}.png`}
-                        alt={`${activeStep.trophy} trophy`}
-                        className="w-32 h-32 sm:w-44 sm:h-44 object-contain"
-                      />
+                      <motion.div
+                        initial={{ scale: 0, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ type: "spring", stiffness: 260, damping: 20, delay: 0 }}
+                        className="relative"
+                      >
+                        <img
+                          src={`/nexura-${activeStep.trophy}.png`}
+                          alt={`${activeStep.trophy} trophy`}
+                          className="w-32 h-32 sm:w-44 sm:h-44 object-contain relative z-10"
+                        />
+                        <div
+                          className="absolute inset-0 z-0 rounded-full animate-ping opacity-20"
+                          style={{
+                            background: activeStep.trophy === "gold" ? "radial-gradient(circle, #FFD700 0%, transparent 70%)"
+                              : activeStep.trophy === "silver" ? "radial-gradient(circle, #C0C0C0 0%, transparent 70%)"
+                              : "radial-gradient(circle, #CD7F32 0%, transparent 70%)",
+                            animationDuration: "2s",
+                            animationIterationCount: "3",
+                          }}
+                        />
+                        <div
+                          className="absolute inset-0 z-0 rounded-full opacity-30"
+                          style={{
+                            background: activeStep.trophy === "gold" ? "radial-gradient(circle, #FFD700 0%, transparent 60%)"
+                              : activeStep.trophy === "silver" ? "radial-gradient(circle, #C0C0C0 0%, transparent 60%)"
+                              : "radial-gradient(circle, #CD7F32 0%, transparent 60%)",
+                            animation: "pulse 1.5s ease-in-out infinite",
+                          }}
+                        />
+                      </motion.div>
                     )}
                     {activeStep.header && (
-                      <p className="text-2xl sm:text-3xl font-bold leading-snug">{activeStep.header}</p>
+                      <motion.p
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.5, duration: 0.4 }}
+                        className="text-xl sm:text-2xl font-bold leading-snug"
+                      >
+                        {activeStep.header}
+                      </motion.p>
                     )}
                     {activeStep.body && (
-                      <p className="text-base sm:text-lg leading-relaxed whitespace-pre-wrap text-white/80">
+                      <motion.p
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.6, duration: 0.4 }}
+                        className="text-sm sm:text-base leading-relaxed whitespace-pre-wrap text-white/80"
+                      >
                         {activeStep.body}
-                      </p>
+                      </motion.p>
                     )}
                   </div>
 
                 /* Mini lesson */
                 ) : activeStep?.kind === "mini" ? (
-                  <p className="text-lg sm:text-2xl leading-relaxed whitespace-pre-wrap py-2">
+                  <p className="text-base sm:text-lg leading-relaxed whitespace-pre-wrap py-2">
                     {activeStep.text}
                   </p>
 
                 /* Question */
                 ) : activeStep?.kind === "question" ? (
                   <div className="flex flex-col gap-3 sm:gap-4 text-left">
-                    <h2 className="text-base sm:text-2xl font-bold text-center leading-snug uppercase tracking-wide">
+                    <h2 className="text-sm sm:text-xl font-bold text-center leading-snug uppercase tracking-wide">
                       {activeStep.question.question}
                     </h2>
 
@@ -587,7 +625,7 @@ export default function LessonPage() {
                               <span className="shrink-0 w-6 h-6 flex items-center justify-center rounded-lg bg-white/15 text-xs font-bold">
                                 {String.fromCharCode(65 + index)}
                               </span>
-                              <span className="capitalize text-base sm:text-lg break-words leading-snug">{option}</span>
+                              <span className="capitalize text-sm sm:text-base break-words leading-snug">{option}</span>
                             </span>
                             {isCorrect ? (
                               <span className="shrink-0 ml-2 w-5 h-5 flex items-center justify-center rounded-full bg-[#00E1A2] text-black font-bold text-xs">✓</span>

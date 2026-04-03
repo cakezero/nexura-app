@@ -89,7 +89,7 @@ export default function Learn() {
     <div className="min-h-screen overflow-auto bg-black p-6 text-white relative">
       <AnimatedBackground />
 
-      <div className="relative z-10 mx-auto max-w-4xl space-y-12">
+      <div className="relative z-10 w-full space-y-12">
         <div className="space-y-1">
           <div className="mb-3 flex items-center gap-2">
             <div className="h-1.5 w-1.5 rounded-full bg-purple-400 animate-pulse" />
