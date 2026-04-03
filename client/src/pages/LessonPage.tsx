@@ -470,9 +470,13 @@ export default function LessonPage() {
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col items-center gap-3 px-3 sm:px-4 pt-4 sm:pt-6 pb-10">
-      {showConfetti ? (
-        <Confetti width={windowSize.width} height={windowSize.height} numberOfPieces={180} recycle={false} />
-      ) : null}
+      <Confetti
+        width={windowSize.width}
+        height={windowSize.height}
+        numberOfPieces={showConfetti ? 180 : 0}
+        recycle={false}
+        gravity={0.15}
+      />
 
       {/* Back link + breadcrumb */}
       <div className="w-full max-w-4xl space-y-1">
@@ -667,7 +671,7 @@ export default function LessonPage() {
 
                 /* Congratulations / Claim */
                 ) : (
-                  <div className="flex flex-col items-center justify-center w-full h-full">
+                  <div className="flex flex-col items-center justify-end w-full h-full pb-4">
                     <motion.div
                       className="relative"
                       initial={{ scale: 0, opacity: 0, rotate: -20 }}
