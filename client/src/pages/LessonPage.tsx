@@ -549,49 +549,51 @@ export default function LessonPage() {
               >
                 {/* Intro / Outro */}
                 {(activeStep?.kind === "intro" || activeStep?.kind === "outro") ? (
-                  <div className="flex flex-col items-center justify-center gap-3 sm:gap-4 w-full">
+                  <div className="flex flex-col items-center w-full pt-4 sm:pt-6">
                     {activeStep.trophy && (
                       <motion.div
                         initial={{ scale: 0, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
                         transition={{ type: "spring", stiffness: 260, damping: 20, delay: 0 }}
-                        className="relative"
+                        className="relative mt-4 sm:mt-6"
                       >
                         <img
                           src={`/nexura-${activeStep.trophy}.png`}
                           alt={`${activeStep.trophy} trophy`}
-                          className="w-20 h-20 sm:w-28 sm:h-28 object-contain relative z-10"
+                          className="w-28 h-28 sm:w-36 sm:h-36 object-contain relative z-10"
                         />
                         <div
-                          className="absolute inset-[-20%] z-0 opacity-40"
+                          className="absolute inset-[-30%] z-0 opacity-40"
                           style={{
-                            background: `conic-gradient(from 0deg, transparent 0deg, #C0C0C0 15deg, transparent 30deg, transparent 90deg, #C0C0C0 105deg, transparent 120deg, transparent 180deg, #C0C0C0 195deg, transparent 210deg, transparent 270deg, #C0C0C0 285deg, transparent 300deg)`,
+                            background: `conic-gradient(from 0deg, transparent 0deg, #C0C0C0 10deg, transparent 20deg, transparent 45deg, #C0C0C0 55deg, transparent 65deg, transparent 90deg, #C0C0C0 100deg, transparent 110deg, transparent 135deg, #C0C0C0 145deg, transparent 155deg, transparent 180deg, #C0C0C0 190deg, transparent 200deg, transparent 225deg, #C0C0C0 235deg, transparent 245deg, transparent 270deg, #C0C0C0 280deg, transparent 290deg, transparent 315deg, #C0C0C0 325deg, transparent 335deg)`,
                             animation: "spin 6s linear infinite",
                             filter: "blur(5px)",
                           }}
                         />
                       </motion.div>
                     )}
-                    {activeStep.header && (
-                      <motion.p
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.5, duration: 0.4 }}
-                        className="text-base sm:text-lg font-bold leading-snug text-center"
-                      >
-                        {activeStep.header}
-                      </motion.p>
-                    )}
-                    {activeStep.body && (
-                      <motion.p
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.6, duration: 0.4 }}
-                        className="text-xs sm:text-sm leading-relaxed whitespace-pre-wrap text-white/80 text-center"
-                      >
-                        {activeStep.body}
-                      </motion.p>
-                    )}
+                    <div className="mt-6 sm:mt-8 space-y-2">
+                      {activeStep.header && (
+                        <motion.p
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.5, duration: 0.4 }}
+                          className="text-base sm:text-lg font-bold leading-snug text-center"
+                        >
+                          {activeStep.header}
+                        </motion.p>
+                      )}
+                      {activeStep.body && (
+                        <motion.p
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.6, duration: 0.4 }}
+                          className="text-xs sm:text-sm leading-relaxed whitespace-pre-wrap text-white/80 text-center"
+                        >
+                          {activeStep.body}
+                        </motion.p>
+                      )}
+                    </div>
                   </div>
 
                 /* Mini lesson */
