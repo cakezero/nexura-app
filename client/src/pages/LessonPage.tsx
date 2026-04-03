@@ -491,11 +491,11 @@ export default function LessonPage() {
 
         {/* Step card */}
         <div
-          className="rounded-3xl h-[420px] sm:h-[360px] flex flex-col overflow-hidden"
+          className="rounded-3xl h-[420px] sm:h-[360px] flex flex-col overflow-hidden relative"
           style={{ background: "linear-gradient(145deg, #8B3EFE, #4A1B8A)" }}
         >
           {/* Content row: prev | content | next */}
-          <div className="flex items-center gap-1 sm:gap-3 px-1 sm:px-2 pt-4 sm:pt-5 pb-2 flex-1 min-h-0">
+          <div className="flex items-center gap-1 sm:gap-3 px-1 sm:px-2 pt-4 sm:pt-5 pb-2" style={{ height: "calc(100% - 90px)" }}>
 
             {/* Prev button */}
             <button
