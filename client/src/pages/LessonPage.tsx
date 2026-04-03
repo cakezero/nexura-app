@@ -241,7 +241,7 @@ export default function LessonPage() {
 
   useEffect(() => {
     if (!lessonId || !didInitStep) return;
-    syncLocalProgress(lesson, questions);
+    syncLocalProgress(lesson, questions, true);
   }, [didInitStep, lessonId, lesson?.done, lesson?.reward, questions]);
 
   useEffect(() => {
@@ -540,22 +540,19 @@ export default function LessonPage() {
                           className="w-20 h-20 sm:w-28 sm:h-28 object-contain relative z-10"
                         />
                         <div
-                          className="absolute inset-0 z-0 rounded-full animate-ping opacity-20"
+                          className="absolute inset-[-20%] z-0 opacity-40"
                           style={{
-                            background: activeStep.trophy === "gold" ? "radial-gradient(circle, #FFD700 0%, transparent 70%)"
-                              : activeStep.trophy === "silver" ? "radial-gradient(circle, #C0C0C0 0%, transparent 70%)"
-                              : "radial-gradient(circle, #CD7F32 0%, transparent 70%)",
-                            animationDuration: "2s",
-                            animationIterationCount: "3",
-                          }}
-                        />
-                        <div
-                          className="absolute inset-0 z-0 rounded-full opacity-30"
-                          style={{
-                            background: activeStep.trophy === "gold" ? "radial-gradient(circle, #FFD700 0%, transparent 60%)"
-                              : activeStep.trophy === "silver" ? "radial-gradient(circle, #C0C0C0 0%, transparent 60%)"
-                              : "radial-gradient(circle, #CD7F32 0%, transparent 60%)",
-                            animation: "pulse 1.5s ease-in-out infinite",
+                            background: `conic-gradient(from 0deg, transparent 0deg, ${
+                              activeStep.trophy === "gold" ? "#FFD700" : activeStep.trophy === "silver" ? "#C0C0C0" : "#CD7F32"
+                            } 15deg, transparent 30deg, transparent 90deg, ${
+                              activeStep.trophy === "gold" ? "#FFD700" : activeStep.trophy === "silver" ? "#C0C0C0" : "#CD7F32"
+                            } 105deg, transparent 120deg, transparent 180deg, ${
+                              activeStep.trophy === "gold" ? "#FFD700" : activeStep.trophy === "silver" ? "#C0C0C0" : "#CD7F32"
+                            } 195deg, transparent 210deg, transparent 270deg, ${
+                              activeStep.trophy === "gold" ? "#FFD700" : activeStep.trophy === "silver" ? "#C0C0C0" : "#CD7F32"
+                            } 285deg, transparent 300deg)`,
+                            animation: "spin 6s linear infinite",
+                            filter: "blur(5px)",
                           }}
                         />
                       </motion.div>
@@ -590,8 +587,8 @@ export default function LessonPage() {
 
                 /* Question */
                 ) : activeStep?.kind === "question" ? (
-                  <div className="flex flex-col gap-3 sm:gap-4 text-left">
-                    <h2 className="text-sm sm:text-xl font-bold text-center leading-snug uppercase tracking-wide">
+                  <div className="flex flex-col gap-2 sm:gap-3 text-left">
+                    <h2 className="text-xs sm:text-base font-bold text-center leading-snug uppercase tracking-wide">
                       {activeStep.question.question}
                     </h2>
 
@@ -601,7 +598,7 @@ export default function LessonPage() {
                         const isCorrect = isSelected && (activeStep.question.done || currentFeedback === "correct");
                         const isWrong = isSelected && currentFeedback === "wrong" && !activeStep.question.done;
 
-                        const base = "flex items-center justify-between px-3 sm:px-4 py-3 rounded-xl border transition-colors cursor-pointer";
+                        const base = "flex items-center justify-between px-2.5 sm:px-3 py-2 rounded-lg border transition-colors cursor-pointer";
                         const style = isCorrect
                           ? `${base} bg-[#00E1A220] border-[#00E1A2CC]`
                           : isWrong
@@ -621,11 +618,11 @@ export default function LessonPage() {
                             }}
                             className={style}
                           >
-                            <span className="flex items-center gap-2.5 min-w-0">
-                              <span className="shrink-0 w-6 h-6 flex items-center justify-center rounded-lg bg-white/15 text-xs font-bold">
+                            <span className="flex items-center gap-2 min-w-0">
+                              <span className="shrink-0 w-5 h-5 flex items-center justify-center rounded-md bg-white/15 text-[10px] font-bold">
                                 {String.fromCharCode(65 + index)}
                               </span>
-                              <span className="capitalize text-sm sm:text-base break-words leading-snug">{option}</span>
+                              <span className="capitalize text-xs sm:text-sm break-words leading-snug">{option}</span>
                             </span>
                             {isCorrect ? (
                               <span className="shrink-0 ml-2 w-5 h-5 flex items-center justify-center rounded-full bg-[#00E1A2] text-black font-bold text-xs">✓</span>
