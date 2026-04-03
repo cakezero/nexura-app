@@ -560,7 +560,7 @@ export default function LessonPage() {
                         />
                         {/* Rotating sun rays */}
                         <div
-                          className="absolute inset-[-40%] z-0 opacity-50 rounded-full"
+                          className="absolute inset-[-15%] z-0 opacity-50 rounded-full"
                           style={{
                             background: `conic-gradient(from 0deg, transparent 0deg, #C0C0C0 10deg, transparent 20deg, transparent 45deg, #C0C0C0 55deg, transparent 65deg, transparent 90deg, #C0C0C0 100deg, transparent 110deg, transparent 135deg, #C0C0C0 145deg, transparent 155deg, transparent 180deg, #C0C0C0 190deg, transparent 200deg, transparent 225deg, #C0C0C0 235deg, transparent 245deg, transparent 270deg, #C0C0C0 280deg, transparent 290deg, transparent 315deg, #C0C0C0 325deg, transparent 335deg)`,
                             animation: "spin 5s linear infinite",
