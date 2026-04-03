@@ -90,6 +90,8 @@ export default function LessonPage() {
   const [showConfetti, setShowConfetti] = useState(false);
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
   const [didInitStep, setDidInitStep] = useState(false);
+  const didInitStepRef = useRef(false);
+  const skipNextSave = useRef(false);
   const direction = useRef(1);
 
   const lessonSteps = useMemo<LessonStep[]>(() => {
@@ -215,17 +217,23 @@ export default function LessonPage() {
   }, [authLoading, lessonId]);
 
   useEffect(() => {
-    if (!lessonSteps.length || didInitStep) return;
+    if (!lessonSteps.length || didInitStepRef.current) return;
 
     const data = JSON.parse(localStorage.getItem(storageKey) || "{}");
     const savedStepIndex = Number(data[lessonId]?.stepIndex || 0);
     const nextIndex = isReview ? 0 : Math.min(Math.max(savedStepIndex, 0), lessonSteps.length - 1);
     setCurrentStep(nextIndex);
+    didInitStepRef.current = true;
+    skipNextSave.current = true;
     setDidInitStep(true);
-  }, [didInitStep, isReview, lessonId, lessonSteps.length, storageKey]);
+  }, [isReview, lessonId, lessonSteps.length, storageKey]);
 
   useEffect(() => {
-    if (!lessonId || !lessonSteps.length || !didInitStep) return;
+    if (!lessonId || !lessonSteps.length || !didInitStepRef.current) return;
+    if (skipNextSave.current) {
+      skipNextSave.current = false;
+      return;
+    }
     const data = JSON.parse(localStorage.getItem(storageKey) || "{}");
     data[lessonId] = {
       ...(data[lessonId] || {}),
