@@ -80,8 +80,16 @@ export default function LessonPage() {
   const [lesson, setLesson] = useState<LessonSummary | null>(null);
   const [miniLessons, setMiniLessons] = useState<MiniLesson[]>([]);
   const [questions, setQuestions] = useState<LessonQuestion[]>([]);
-  const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
-  const [currentStep, setCurrentStep] = useState(0);
+  const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>(() => {
+    if (!lessonId) return {};
+    const allSteps = JSON.parse(localStorage.getItem(LESSON_STEP_KEY) || "{}");
+    return allSteps[lessonId]?.selectedAnswers || {};
+  });
+  const [currentStep, setCurrentStep] = useState(() => {
+    if (!lessonId || isReview) return 0;
+    const allSteps = JSON.parse(localStorage.getItem(LESSON_STEP_KEY) || "{}");
+    return Number(allSteps[lessonId]?.stepIndex || 0);
+  });
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
   const [claiming, setClaiming] = useState(false);
@@ -195,14 +203,11 @@ export default function LessonPage() {
         return acc;
       }, {});
 
-      // Restore locally saved selections for incomplete questions
-      const localData = JSON.parse(localStorage.getItem(storageKey) || "{}");
-      const savedSelections = localData[lessonId]?.selectedAnswers || {};
-
       setLesson(lessonMatch);
       setMiniLessons(nextMiniLessons);
       setQuestions(nextQuestions);
-      setSelectedAnswers((current) => ({ ...savedSelections, ...current, ...nextSelectedAnswers }));
+      // Merge server answers (done questions) into existing state without overwriting local selections
+      setSelectedAnswers((current) => ({ ...current, ...nextSelectedAnswers }));
       syncLocalProgress(lessonMatch, nextQuestions, !didInitStep);
     } catch (error) {
       setPageError(normalizeApiMessage(error, "Failed to load lesson"));
@@ -217,24 +222,18 @@ export default function LessonPage() {
     }
   }, [authLoading, lessonId]);
 
-  // Restore step position from a wallet-independent key
+  // Clamp currentStep to valid range once lessonSteps are loaded
   useEffect(() => {
     if (!lessonSteps.length || didInitStepRef.current) return;
-
-    const allSteps = JSON.parse(localStorage.getItem(LESSON_STEP_KEY) || "{}");
-    const saved = allSteps[lessonId];
-    const savedStepIndex = Number(saved?.stepIndex || 0);
-    const nextIndex = isReview ? 0 : Math.min(Math.max(savedStepIndex, 0), lessonSteps.length - 1);
-
-    // Also restore selected answers from this key
-    if (saved?.selectedAnswers) {
-      setSelectedAnswers((current) => ({ ...saved.selectedAnswers, ...current }));
-    }
-
     didInitStepRef.current = true;
-    setCurrentStep(nextIndex);
+    // currentStep was already initialized from localStorage in useState
+    // Just clamp it to the valid range now that we know lessonSteps.length
+    const clamped = Math.min(currentStep, lessonSteps.length - 1);
+    if (clamped !== currentStep) {
+      setCurrentStep(clamped);
+    }
     setDidInitStep(true);
-  }, [isReview, lessonId, lessonSteps.length]);
+  }, [lessonSteps.length]);
 
   // Explicit save function — called directly from navigation and answer selection
   const saveProgress = (step: number, answers: Record<string, string>) => {
