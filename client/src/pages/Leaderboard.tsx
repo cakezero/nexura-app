@@ -163,7 +163,9 @@ return (
 <span className="font-bold text-white text-lg">
   {currentUser?.lessonsCompleted || 0}
 </span>
-    <span className="text-[#000] bg-[#FFF] px-1 rounded-3xl text-[9px]">LESSONS</span>
+    <span className="px-1 rounded-3xl text-[9px]" style={{ backgroundColor: "#E0BBE4", color: "#5A189A" }}>
+  LESSONS
+</span>
   </div>
 
     {/* Divider */}
@@ -452,7 +454,7 @@ const xp = entry?.xp ?? 0;
         {/* LESSONS */}
         <div className="flex flex-col items-center text-center">
           <span className="font-bold">{lessons}</span>
-          <span className="text-black bg-white px-1 rounded text-[9px]">LESSONS</span>
+          <span className="text-[#5A189A] bg-[#E0BBE4] px-1 rounded text-[9px]">LESSONS</span>
         </div>
 
         {/* XP */}
