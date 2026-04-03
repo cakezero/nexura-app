@@ -1,36 +1,132 @@
 ﻿import { useState } from "react";
 import Chart from "react-apexcharts";
 import AnimatedBackground from "../components/AnimatedBackground";
+import { ResponsivePie } from "@nivo/pie";
 
 export default function Analytics() {
   const ranges = ["Last 24 Hrs", "Last 7 days", "Last 30 days", "Last 3 months", "All Time"];
   const [activeRange, setActiveRange] = useState("Last 24 Hrs");
-  
+  const [usersJoined, setUsersJoined] = useState(500);
+  const [tasksCompleted, setTasksCompleted] = useState(400);
+  const [totalTransactions, setTotalTransactions] = useState(100);
 
-  const cards = [
-    { title: "Total Users", value: "200", rate: "+12.4%", description: "vs last 24hrs", icon: "referrals.png" },
-    { title: "Active Users", value: "120", rate: "+8.1%", description: "vs last 24hrs", icon: "approved.png" },
-    { title: "New Users", value: "10", rate: "+5.7%", description: "vs last 24hrs", icon: "new-users.png" },
-    { title: "Quests Created", value: "1", rate: "+9.2%", description: "vs last 24hrs", icon: "quest-iconx.png" },
-    { title: "Campaigns Created", value: "1", rate: "+3.8%", description: "vs last 24hrs", icon: "campaign_icon.png" },
-  ];
-
-  const chartData = {
-    "Last 24 Hrs": Array.from({ length: 6 }, () => Math.floor(Math.random() * 20)),
-    "Last 7 days": Array.from({ length: 7 }, () => Math.floor(Math.random() * 100)),
-    "Last 30 days": Array.from({ length: 4 }, () => Math.floor(Math.random() * 300)),
-    "Last 3 months": Array.from({ length: 12 }, () => Math.floor(Math.random() * 500)),
-    "All Time": Array.from({ length: 24 }, () => Math.floor(Math.random() * 1000)),
+  const transactionPercentages = {
+    Nexons: 0.3,   // 30%
+    Claims: 0.2,   // 20%
+    Payments: 0.38, // 38%
+    Others: 0.12,  // 12%
   };
+
+    const transactionsData = Object.entries(transactionPercentages).map(([id, pct]) => ({
+    id,
+    value: Math.round(pct * totalTransactions),
+    color:
+      id === "Claims"
+        ? "#00E1A2"
+        : id === "Nexons"
+        ? "#B65FC8"
+        : id === "Payments"
+        ? "#8A3FFD"
+        : "#FFFFFF",
+  }));
+
+  // Mock total users per range
+  const totalUsersData = {
+    "Last 24 Hrs": 500,
+    "Last 7 days": 700,
+    "Last 30 days": 1200,
+    "Last 3 months": 2200,
+    "All Time": 5400,
+  };
+
+  // New users = current total - previous total (or same as total for the first range)
+  const rangeOrder = ["Last 24 Hrs", "Last 7 days", "Last 30 days", "Last 3 months", "All Time"];
+  const newUsersData = {};
+  rangeOrder.forEach((range, idx) => {
+    if (idx === 0) {
+      newUsersData[range] = totalUsersData[range];
+    } else {
+      const prevRange = rangeOrder[idx - 1];
+      newUsersData[range] = totalUsersData[range] - totalUsersData[prevRange];
+    }
+  });
+
+  // Mock active users (can be dynamic later)
+  const activeUsersData = {
+    "Last 24 Hrs": 320,
+    "Last 7 days": 450,
+    "Last 30 days": 750,
+    "Last 3 months": 1400,
+    "All Time": 3800,
+  };
+
+  // Chart data per range
+  const chartData = {
+    "Last 24 Hrs": [5, 9, 14, 11, 18, 22],
+    "Last 7 days": [18, 24, 21, 30, 36, 41, 38],
+    "Last 30 days": [72, 110, 148, 193],
+    "Last 3 months": [45, 62, 58, 80, 95, 110, 128, 150, 172, 190, 215, 240],
+    "All Time": [12, 18, 24, 35, 42, 58, 71, 86, 102, 118, 135, 152, 174, 198, 224, 251, 279, 308, 340, 375, 412, 450, 492, 540],
+  };
+
+const cards = [
+  {
+    title: "Total Users",
+    value: totalUsersData[activeRange],
+    rate: (() => {
+      const idx = rangeOrder.indexOf(activeRange);
+      if (idx === 0) return null; // no previous period
+      const prev = totalUsersData[rangeOrder[idx - 1]];
+      return ((totalUsersData[activeRange] - prev) / prev) * 100;
+    })(),
+    description: `during ${activeRange.toLowerCase()}`,
+    icon: "referrals.png",
+  },
+  {
+    title: "New Users",
+    value: newUsersData[activeRange],
+    rate: (() => {
+      const idx = rangeOrder.indexOf(activeRange);
+      if (idx === 0) return null;
+      const prev = newUsersData[rangeOrder[idx - 1]];
+      return ((newUsersData[activeRange] - prev) / prev) * 100;
+    })(),
+    description: "vs last period",
+    icon: "new-users.png",
+  },
+  {
+    title: "Active Users",
+    value: activeUsersData[activeRange],
+    rate: (() => {
+      const idx = rangeOrder.indexOf(activeRange);
+      if (idx === 0) return null;
+      const prev = activeUsersData[rangeOrder[idx - 1]];
+      return ((activeUsersData[activeRange] - prev) / prev) * 100;
+    })(),
+    description: "vs last period",
+    icon: "approved.png",
+  },
+  {
+    title: "Quests Created",
+    value: 1, // if you have historical data, replace with dynamic
+    rate: null, // dynamic calculation if previous data exists
+    description: "vs last period",
+    icon: "quest-iconx.png",
+  },
+  {
+    title: "Campaigns Created",
+    value: 1, // dynamic if you track historical
+    rate: null,
+    description: "vs last period",
+    icon: "campaign_icon.png",
+  },
+];
 
   const chartCategories = {
     "Last 24 Hrs": ["12am", "4am", "8am", "12pm", "4pm", "8pm"],
     "Last 7 days": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
     "Last 30 days": ["Week 1", "Week 2", "Week 3", "Week 4"],
-    "Last 3 months": [
-      "Week 1","Week 2","Week 3","Week 4","Week 5","Week 6",
-      "Week 7","Week 8","Week 9","Week 10","Week 11","Week 12"
-    ],
+    "Last 3 months": ["Week 1","Week 2","Week 3","Week 4","Week 5","Week 6","Week 7","Week 8","Week 9","Week 10","Week 11","Week 12"],
     "All Time": Array.from({ length: 24 }, (_, i) => `M${i + 1}`),
   };
 
@@ -91,25 +187,32 @@ export default function Analytics() {
           ))}
         </div>
 
-        {/* Cards Row */}
-        <div className="mt-12 flex gap-4 w-full">
-          {cards.map((card, idx) => (
-            <div
-              key={idx}
-              className="flex-1 bg-[#170F1F] rounded-3xl p-4 flex flex-col justify-between border border-gray-700 mt-4"
-            >
-              <div className="flex justify-between items-start mb-2">
-                <span className="text-xs font-semibold uppercase text-white/70">{card.title}</span>
-                <img src={card.icon} alt="" className="w-5 h-5" />
-              </div>
-              <div className="text-2xl font-bold text-white mb-2">{card.value}</div>
-              <div className="flex items-center gap-1 text-xs text-white/50">
-                <img src="/rate.png" alt="" className="w-5 h-3" />
-                <span className="text-[#00E1A2]">{card.rate} {card.description}</span>
-              </div>
-            </div>
-          ))}
+{/* Cards Row */}
+<div className="mt-12 flex gap-4 w-full">
+  {cards.map((card, idx) => (
+    <div
+      key={idx}
+      className="flex-1 bg-[#170F1F] rounded-3xl p-4 flex flex-col justify-between border border-gray-700 mt-4"
+    >
+      <div className="flex justify-between items-start mb-2">
+        <span className="text-xs font-semibold uppercase text-white/70">{card.title}</span>
+        <img src={card.icon} alt="" className="w-5 h-5" />
+      </div>
+      <div className="text-2xl font-bold text-white mb-2">{card.value}</div>
+      {card.rate !== null && card.rate !== undefined ? (
+        <div className="flex items-center gap-1 text-xs">
+          <img src="/rate.png" alt="" className="w-5 h-3" />
+          <span className={card.rate >= 0 ? "text-[#00E1A2]" : "text-red-500"}>
+            {card.rate >= 0 ? "+" : ""}
+            {card.rate.toFixed(1)}% {card.description}
+          </span>
         </div>
+      ) : (
+        <div className="text-xs text-white/50">{card.description}</div>
+      )}
+    </div>
+  ))}
+</div>
 
         {/* Graph Section */}
         <div
@@ -152,77 +255,80 @@ export default function Analytics() {
   {/* Circle + Capsules */}
 <div className="flex items-center mt-2">
   {/* Circle with Joined vs Completed */}
-  <div className="w-28 h-28 relative">
-    <svg className="w-full h-full rotate-[-90deg]" viewBox="0 0 36 36">
-      {/* Background circle */}
-      <circle
-        cx="18"
-        cy="18"
-        r="16"
-        stroke="#833AFD" 
-        strokeWidth="4"
-        fill="none"
-        opacity="0.2"
-      />
-      {/* Completed segment */}
-      <circle
-        cx="18"
-        cy="18"
-        r="16"
-        stroke="#00E1A2"
-        strokeWidth="4"
-        fill="none"
-        strokeDasharray="56 100" 
-        strokeLinecap="round"
-      />
-      {/* Joined segment */}
-      <circle
-        cx="18"
-        cy="18"
-        r="16"
-        stroke="#FFFFFF"
-        strokeWidth="4"
-        fill="none"
-        strokeDasharray="44 100" 
-        strokeDashoffset="-56" 
-        strokeLinecap="butt"
-      />
-    </svg>
+        <div className="relative w-36 h-36">
+          <ResponsivePie
+            data={[
+              { id: 'Tasks Completed', value: Math.min(tasksCompleted, usersJoined) },
+              { id: 'Users Not Completed', value: Math.max(usersJoined - tasksCompleted, 0) },
+            ]}
+            margin={{ top: 10, right: 10, bottom: 10, left: 10 }}
+            innerRadius={0.7}
+            padAngle={0.7}
+            cornerRadius={3}
+            activeOuterRadiusOffset={8}
+            colors={["#00E1A2", "#FFFFFF"]}
+            borderWidth={1}
+            borderColor={{ from: 'color', modifiers: [['darker', 0.2]] }}
+            enableArcLinkLabels={false}
+            enableArcLabels={false}
+            animate={true}
+            theme={{
+              tooltip: {
+                container: {
+                  background: '#333333',
+                  color: '#FFFFFF',
+                  fontSize: '12px',
+                  padding: '6px 10px',
+                  borderRadius: '6px',
+                },
+              },
+            }}
+          />
 
-    {/* Center text */}
-    <div className="absolute inset-0 flex items-center justify-center text-white font-bold text-base">
-      100%
+          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+            <p className="text-white font-bold text-xl">
+              {usersJoined === 0
+                ? 0
+                : ((Math.min(tasksCompleted, usersJoined) / usersJoined) * 100).toFixed(2)}%
+            </p>
+            <span className="text-white text-xs">Completion</span>
+          </div>
+        </div>
+
+{/* Capsules container */}
+<div className="flex flex-col gap-3 flex-1 ml-6">
+  {/* Joined capsule */}
+  <div
+    className="flex items-center justify-between px-4 py-2 rounded-full border"
+    style={{ borderColor: "#FFFFFF66", backgroundColor: "#632DBB" }}
+  >
+    <div className="flex items-center gap-2">
+      <div className="w-3 h-3 rounded-full bg-white"></div>
+      <span className="text-xs font-semibold uppercase">Joined</span>
     </div>
+    <span className="text-sm font-bold">{usersJoined}</span>
   </div>
 
-  {/* Capsules container */}
-  <div className="flex flex-col gap-3 flex-1 ml-6">
-    {/* Joined capsule */}
-    <div className="flex items-center justify-between px-4 py-2 rounded-full border"
-         style={{ borderColor: "#FFFFFF66", backgroundColor: "#632DBB" }}>
-      <div className="flex items-center gap-2">
-        <div className="w-3 h-3 rounded-full bg-white"></div>
-        <span className="text-xs font-semibold uppercase">Joined</span>
-      </div>
-      <span className="text-sm font-bold">100</span>
-    </div>
-
-    {/* Completed capsule */}
-    <div className="flex items-center justify-between px-4 py-2 rounded-full border"
-         style={{ borderColor: "#FFFFFF66", backgroundColor: "#632DBB" }}>
-      <div className="flex items-center gap-2">
-        <div className="w-3 h-3 rounded-full bg-[#00E1A2]"></div>
-        <span className="text-xs font-semibold uppercase">Completed</span>
-      </div>
-      <span className="text-sm font-bold">90</span>
-    </div>
+{/* Completed capsule */}
+<div
+  className="flex items-center justify-between px-4 py-2 rounded-full border"
+  style={{ borderColor: "#FFFFFF66", backgroundColor: "#632DBB" }}
+>
+  <div className="flex items-center gap-2">
+    <div className="w-3 h-3 rounded-full bg-[#00E1A2]"></div>
+    <span className="text-xs font-semibold uppercase">Completed</span>
+  </div>
+  <span className="text-sm font-bold ml-2">{tasksCompleted}</span>
+</div>
   </div>
 </div>
 
-  {/* Drop-off text */}
-  <div className="mt-4 text-white/70 text-sm">
-    32% of users drop before completion
-  </div>
+{/* Drop-off text */}
+<div className="mt-4 text-white/70 text-sm">
+  {usersJoined
+    ? `${Math.round(((usersJoined - tasksCompleted) / usersJoined) * 100)}% of users drop before completion`
+    : "0% of users drop before completion"}
+</div>
 
   {/* Container with JOINED/COMPLETED legend */}
   <div className="mt-2 p-2 rounded-3xl border flex flex-col gap-2"
@@ -231,19 +337,19 @@ export default function Analytics() {
     {/* Joined legend */}
     <div className="flex items-center gap-2">
       <div className="w-3 h-3 rounded-full bg-white"></div>
-      <span className="text-white text-[10px]">JOINED (Total users who joined a quest, campaign & lesson)</span>
+      <span className="text-white text-[10px]">JOINED: Total users who joined a quest, campaign & lesson</span>
     </div>
 
     {/* Completed legend */}
     <div className="flex items-center gap-2">
       <div className="w-3 h-3 rounded-full bg-[#00E1A2]"></div>
-      <span className="text-white text-[10px]">COMPLETED (Total users who completed a quest, campaign & lesson)</span>
+      <span className="text-white text-[10px]">COMPLETED: Total users who completed a quest, campaign & lesson</span>
     </div>
   </div>
 </div>
 
   {/* Middle Card B */}
-<div className="col-span-5 row-span-2 p-4 rounded-3xl flex flex-col justify-between border"
+<div className="col-span-5 row-span-2 p-2 rounded-3xl flex flex-col border"
      style={{ backgroundColor: "#170F1F", borderColor: "#D4BBFF66" }}>
   
   {/* Title */}
@@ -257,63 +363,100 @@ export default function Analytics() {
   </p>
 
   {/* Main content: Left image + Right stats */}
-  <div className="flex items-start mt-4 gap-6">
-    {/* Left image */}
-    <div className="flex-shrink-0">
-      <img src="/onchain.png" alt="On-Chain" className="w-48 h-48 object-contain" />
+<div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1.5rem", marginTop: "-1rem" }}>
+  <div style={{ width: "100%", height: "12rem", marginLeft: "auto", cursor: "pointer", transform: "translateY(70px)" }}>
+<ResponsivePie
+  data={transactionsData}
+  margin={{ top: 20, right: 64, bottom: 20, left: 87 }}
+  innerRadius={0}
+  padAngle={0.7}
+  cornerRadius={3}
+  activeOuterRadiusOffset={8}
+  colors={(d) => d.data.color}
+  borderWidth={1}
+  borderColor={{ from: "color", modifiers: [["darker", 0.2]] }}
+  
+  enableArcLinkLabels={true}
+  arcLinkLabelsTextColor={(d) => d.data.color}
+  arcLinkLabelsThickness={2}
+  arcLinkLabelsColor={{ from: "color" }}
+  arcLinkLabelsStraightLength={20}
+  arcLinkLabelsDiagonalLength={15}
+  arcLinkLabelsSkipAngle={3}
+  arcLinkLabelsTextOffset={5}
+  arcLinkLabelsText={(d) => `${d.id} (${Math.round((d.value / totalTransactions) * 100)}%)`}
+  enableArcLabels={false}
+
+  tooltip={({ datum }) => (
+    <div className="bg-black text-white px-2 py-1 rounded text-xs">
+      {datum.id}: {datum.value} ({((datum.value / totalTransactions) * 100).toFixed(1)}%)
     </div>
+  )}
+/>
+  </div>
 
-    {/* Right stats */}
-    <div className="flex flex-col flex-1 gap-4">
-      {/* Transactions summary */}
-      <div className="text-center">
-        <div className="text-3xl font-bold text-white">1500</div>
-        <div className="text-xs font-semibold text-white/30 uppercase">TRANSACTIONS</div>
-      </div>
-
-      {/* Detailed breakdown container */}
-      <div className="flex flex-col gap-3 p-3 rounded-xl border"
-          style={{ borderColor: "#D4BBFF4D", backgroundColor: "#00000000" }}>
-        
-        {/* Claim */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full border border-white bg-[#00E1A2]"></div>
-            <span className="text-xs text-white/12 font-semibold uppercase">Claims</span>
-          </div>
-          <span className="text-xs text-white/12 font-bold">300</span>
-        </div>
-
-        {/* Nexons */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full border border-white bg-[#B65FC8]"></div>
-            <span className="text-xs text-white/12 font-semibold uppercase">Nexons</span>
-          </div>
-          <span className="text-xs text-white/12 font-bold">450</span>
-        </div>
-
-        {/* Payments */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full border border-white bg-[#8A3FFD]"></div>
-            <span className="text-xs text-white/12 font-semibold uppercase">Payments</span>
-          </div>
-          <span className="text-xs text-white/12 font-bold">570</span>
-        </div>
-
-        {/* Others */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full border border-white bg-white"></div>
-            <span className="text-xs text-white/12 font-semibold uppercase">Others</span>
-          </div>
-          <span className="text-xs text-white/12 font-bold">180</span>
-        </div>
-
-      </div>
+<div
+  style={{
+    marginTop: "2rem", 
+    marginLeft: "",
+    marginRight: "",
+    maxWidth: "100%",
+  }}
+>
+  <div style={{ textAlign: "center", marginBottom: "0.75rem" }}>
+    <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "white" }}>
+      {totalTransactions}
+    </div>
+    <div style={{ fontSize: "0.7rem", fontWeight: 600, color: "rgba(255,255,255,0.3)", textTransform: "uppercase" }}>
+      TRANSACTIONS
     </div>
   </div>
+
+  <div
+    style={{
+      display: "flex",
+      flexDirection: "column",
+      gap: "0.5rem",
+      padding: "0.75rem",
+      borderRadius: "0.75rem",
+      border: "1px solid rgba(212,187,255,0.3)",
+      backgroundColor: "transparent",
+    }}
+  >
+    {transactionsData.map((t) => (
+      <div
+        key={t.id}
+        style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
+      >
+        <div style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
+          <div
+            style={{
+              width: "0.75rem",
+              height: "0.75rem",
+              borderRadius: "50%",
+              border: "1px solid #fff",
+              backgroundColor: t.color,
+            }}
+          ></div>
+          <span
+            style={{
+              fontSize: "0.7rem",
+              fontWeight: 600,
+              color: "rgba(255,255,255,0.8)",
+              textTransform: "uppercase",
+            }}
+          >
+            {t.id}
+          </span>
+        </div>
+        <span style={{ fontSize: "0.7rem", fontWeight: "bold", color: "rgba(255,255,255,0.8)" }}>
+          {t.value}
+        </span>
+      </div>
+    ))}
+  </div>
+</div>
+</div>
 </div>
 
 {/* Top Right Card C with Blur */}
