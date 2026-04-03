@@ -667,18 +667,18 @@ export default function LessonPage() {
 
                 /* Congratulations / Claim */
                 ) : (
-                  <div className="flex flex-col items-center justify-center gap-2 sm:gap-3 w-full">
+                  <div className="flex flex-col items-center justify-center gap-1.5 sm:gap-2 w-full">
                     <motion.img
                       src="/nexura-gold.png"
                       alt="Gold Trophy"
-                      className="w-14 h-14 sm:w-18 sm:h-18 object-contain"
+                      className="w-12 h-12 sm:w-16 sm:h-16 object-contain"
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
                       transition={{ type: "spring", stiffness: 200, damping: 15 }}
                     />
                     <div className="space-y-1 text-center">
-                      <h2 className="text-base sm:text-lg font-extrabold text-white">Congratulations!</h2>
-                      <p className="text-xs sm:text-sm text-white/80 leading-relaxed max-w-[220px] sm:max-w-[280px] mx-auto">
+                      <h2 className="text-sm sm:text-base font-extrabold text-white">Congratulations!</h2>
+                      <p className="text-[11px] sm:text-xs text-white/80 leading-relaxed max-w-[200px] sm:max-w-[260px] mx-auto">
                         {allQuestionsDone
                           ? `You have mastered the basics of ${lesson?.title ?? "this lesson"}. Your XP rewards are ready to be claimed.`
                           : "Finish every question to unlock your XP reward."}
