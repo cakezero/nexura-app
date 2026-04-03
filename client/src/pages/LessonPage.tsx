@@ -667,34 +667,37 @@ export default function LessonPage() {
 
                 /* Congratulations / Claim */
                 ) : (
-                  <div className="flex flex-col items-center justify-center gap-2 sm:gap-3 w-full">
-                    <img
+                  <div className="flex flex-col items-center justify-center gap-4 sm:gap-5 w-full py-4">
+                    <motion.img
                       src="/nexura-gold.png"
                       alt="Gold Trophy"
-                      className="w-14 h-14 sm:w-20 sm:h-20 object-contain"
+                      className="w-24 h-24 sm:w-32 sm:h-32 object-contain drop-shadow-[0_0_20px_rgba(255,215,0,0.3)]"
+                      initial={{ scale: 0, rotate: -20 }}
+                      animate={{ scale: [0, 1.15, 1], rotate: 0, y: [0, -3, 0] }}
+                      transition={{ type: "spring", stiffness: 200, damping: 15 }}
                     />
-                    <h2 className="text-base sm:text-lg font-extrabold text-white text-center">Congratulations</h2>
-                    <p className="text-[11px] sm:text-xs text-white/80 leading-relaxed max-w-[200px] sm:max-w-[260px] text-center">
-                      {allQuestionsDone
-                        ? `You have mastered the basics of ${lesson?.title ?? "this lesson"}. Your XP rewards are ready to be claimed.`
-                        : "Finish every question to unlock your XP reward."}
-                    </p>
+                    <div className="space-y-2 text-center">
+                      <h2 className="text-xl sm:text-2xl font-extrabold text-white">Congratulations!</h2>
+                      <p className="text-sm sm:text-base text-white/80 leading-relaxed max-w-[280px] sm:max-w-sm mx-auto">
+                        {allQuestionsDone
+                          ? `You have mastered the basics of ${lesson?.title ?? "this lesson"}. Your XP rewards are ready to be claimed.`
+                          : "Finish every question to unlock your XP reward."}
+                      </p>
+                    </div>
                     <button
                       onClick={() => void claimXp()}
                       disabled={!allQuestionsDone || claiming || lesson?.done}
-                      className={`w-full sm:w-auto px-8 py-3.5 rounded-full font-bold text-sm text-white transition ${
+                      className={`px-10 py-3 rounded-full font-bold text-sm text-white transition-all duration-200 ${
                         !allQuestionsDone || lesson?.done
                           ? "bg-white/20 cursor-not-allowed opacity-60"
-                          : "bg-[#5B1BA0] hover:bg-[#4a1585] active:scale-95"
+                          : "bg-[#5B1BA0] hover:bg-[#4a1585] active:scale-95 shadow-[0_0_24px_rgba(91,27,160,0.4)]"
                       }`}
                     >
                       {lesson?.done ? "XP Claimed" : claiming ? "Claiming…" : "Claim XP"}
                     </button>
-                    <div className="w-full border-t border-white/15 pt-2">
-                      <p className="text-[11px] text-yellow-300/70">
-                        Original Content by Nexura. Adapted by Nexura.
-                      </p>
-                    </div>
+                    <p className="text-[10px] text-white/30 mt-1">
+                      Original Content by Nexura
+                    </p>
                   </div>
                 )}
               </motion.div>
