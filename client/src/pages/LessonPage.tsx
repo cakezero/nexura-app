@@ -491,7 +491,7 @@ export default function LessonPage() {
 
         {/* Step card */}
         <div
-          className="rounded-3xl min-h-[340px] sm:min-h-[280px] flex flex-col overflow-hidden"
+          className="rounded-3xl min-h-[340px] sm:min-h-[280px] flex flex-col justify-between overflow-hidden"
           style={{ background: "linear-gradient(145deg, #8B3EFE, #4A1B8A)" }}
         >
           {/* Content row: prev | content | next */}
@@ -652,7 +652,7 @@ export default function LessonPage() {
           </div>
 
           {/* Bottom bar: dots centered, Continue right-aligned below */}
-          <div className="px-4 sm:px-5 pb-6 sm:pb-5 pt-3 mt-auto">
+          <div className="px-4 sm:px-5 pb-6 sm:pb-5 pt-3">
             {/* Step dots — sliding window of max 7, outer dots shrink to hint at more */}
             <div className="flex items-center justify-center gap-1">
               {lessonSteps.slice(dotsWinStart, dotsWinEnd).map((step, wi) => {
