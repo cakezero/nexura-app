@@ -236,16 +236,13 @@ export default function LessonPage() {
     setDidInitStep(true);
   }, [isReview, lessonId, lessonSteps.length]);
 
-  // Save step position + selected answers (wallet-independent)
-  useEffect(() => {
-    if (!lessonId || !lessonSteps.length || !didInitStepRef.current) return;
+  // Explicit save function — called directly from navigation and answer selection
+  const saveProgress = (step: number, answers: Record<string, string>) => {
+    if (!lessonId) return;
     const allSteps = JSON.parse(localStorage.getItem(LESSON_STEP_KEY) || "{}");
-    allSteps[lessonId] = {
-      stepIndex: currentStep,
-      selectedAnswers: selectedAnswers,
-    };
+    allSteps[lessonId] = { stepIndex: step, selectedAnswers: answers };
     localStorage.setItem(LESSON_STEP_KEY, JSON.stringify(allSteps));
-  }, [currentStep, selectedAnswers, lessonId, lessonSteps.length]);
+  };
 
   useEffect(() => {
     if (!lessonId || !didInitStep) return;
@@ -392,7 +389,9 @@ export default function LessonPage() {
     if (currentStep <= 0) return;
     direction.current = -1;
     setActionMessage("");
-    setCurrentStep((prev) => Math.max(prev - 1, 0));
+    const nextStep = Math.max(currentStep - 1, 0);
+    setCurrentStep(nextStep);
+    saveProgress(nextStep, selectedAnswers);
   };
 
   const goNext = async () => {
@@ -403,7 +402,9 @@ export default function LessonPage() {
         if (!currentSelection) return;
         const saved = await submitAnswer();
         if (saved && currentStep < lessonSteps.length - 1) {
-          setCurrentStep((prev) => Math.min(prev + 1, lessonSteps.length - 1));
+          const nextStep = Math.min(currentStep + 1, lessonSteps.length - 1);
+          setCurrentStep(nextStep);
+          saveProgress(nextStep, selectedAnswers);
         }
         return;
       }
@@ -411,7 +412,9 @@ export default function LessonPage() {
       if (currentStep < lessonSteps.length - 1) {
         setActionMessage("");
         direction.current = 1;
-        setCurrentStep((prev) => Math.min(prev + 1, lessonSteps.length - 1));
+        const nextStep = Math.min(currentStep + 1, lessonSteps.length - 1);
+        setCurrentStep(nextStep);
+        saveProgress(nextStep, selectedAnswers);
       }
       return;
     }
@@ -426,7 +429,9 @@ export default function LessonPage() {
     if (currentStep < lessonSteps.length - 1) {
       setActionMessage("");
       direction.current = 1;
-      setCurrentStep((prev) => Math.min(prev + 1, lessonSteps.length - 1));
+      const nextStep = Math.min(currentStep + 1, lessonSteps.length - 1);
+      setCurrentStep(nextStep);
+      saveProgress(nextStep, selectedAnswers);
     }
   };
 
@@ -636,11 +641,10 @@ export default function LessonPage() {
                             key={`${activeStep.question._id}-${option}`}
                             onClick={() => {
                               if (lesson?.done) return;
-                              setSelectedAnswers((current) => ({
-                                ...current,
-                                [activeStep.question._id]: option,
-                              }));
+                              const newAnswers = { ...selectedAnswers, [activeStep.question._id]: option };
+                              setSelectedAnswers(newAnswers);
                               setActionMessage("");
+                              saveProgress(currentStep, newAnswers);
                             }}
                             className={style}
                           >
