@@ -126,7 +126,9 @@ export default function LessonPage() {
 
   const activeStep = lessonSteps[currentStep];
   const currentQuestion = activeStep?.kind === "question" ? activeStep.question : null;
-  const currentSelection = currentQuestion ? selectedAnswers[currentQuestion._id] ?? currentQuestion.answer ?? "" : "";
+  const currentSelection = currentQuestion
+    ? selectedAnswers[currentQuestion._id] ?? (currentQuestion.done ? currentQuestion.answer : "") ?? ""
+    : "";
   const completedQuestions = useMemo(() => questions.filter((question) => question.done).length, [questions]);
   const allQuestionsDone = questions.length > 0 && completedQuestions === questions.length;
   const progress = lessonSteps.length ? ((currentStep + 1) / lessonSteps.length) * 100 : 0;
@@ -149,7 +151,7 @@ export default function LessonPage() {
     if (!lessonId) return;
 
     const data = JSON.parse(localStorage.getItem(storageKey) || "{}");
-    const maxStepIndex = Math.max(nextQuestions.length + miniLessons.length, 0);
+    const maxStepIndex = Math.max(lessonSteps.length - 1, nextQuestions.length + miniLessons.length, 0);
     const updates: Record<string, unknown> = {
       progress: nextLesson?.done ? nextQuestions.length : nextQuestions.filter((entry) => entry.done).length,
       totalQuestions: nextQuestions.length,
