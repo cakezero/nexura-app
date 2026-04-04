@@ -186,7 +186,7 @@ export default function Learn() {
                 // Treat stepIndex > 0 as "started" even if no questions are completed yet
                 const hasStarted = progress > 0 || (storedProgress.stepIndex ?? 0) > 0;
                 const percent = totalQuestions > 0 ? (progress / totalQuestions) * 100 : 0;
-                const buttonLabel = isCompleted ? "REVIEW →" : hasStarted ? "CONTINUE →" : "START →";
+                const buttonLabel = isCompleted ? "LEARN →" : hasStarted ? "CONTINUE →" : "START →";
 
                 return (
                   <div
