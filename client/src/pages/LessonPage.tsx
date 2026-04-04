@@ -258,6 +258,14 @@ export default function LessonPage() {
     } catch {}
   }, [address, lessonId, lessonStepKey, isReview]);
 
+  // Force step 0 when entering review/learn mode for completed lessons
+  useEffect(() => {
+    if (isReview) {
+      setCurrentStep(0);
+      setSelectedAnswers({});
+    }
+  }, [isReview, lessonId]);
+
   // Explicit save function — called directly from navigation and answer selection
   // Accept optional latestQuestions to avoid reading stale React state after submitAnswer
   const saveProgress = useCallback((step: number, answers: Record<string, string>, latestQuestions?: LessonQuestion[]) => {
@@ -294,6 +302,14 @@ export default function LessonPage() {
     const timeout = window.setTimeout(() => setShowConfetti(false), 5000);
     return () => window.clearTimeout(timeout);
   }, [showXPModal, activeStep?.kind, allQuestionsDone]);
+
+  // Auto-show completion modal on subsequent completions (lesson already done) with 1s delay
+  useEffect(() => {
+    if (!lesson?.done || !allQuestionsDone || activeStep?.kind !== "claim") return;
+    if (showXPModal) return; // already showing
+    const timeout = window.setTimeout(() => setShowXPModal(true), 1000);
+    return () => window.clearTimeout(timeout);
+  }, [lesson?.done, allQuestionsDone, activeStep?.kind, showXPModal]);
 
   const ensureReadyForProtectedAction = async () => {
     if (!isConnected) {
