@@ -218,7 +218,7 @@ export default function LessonPage() {
       setMiniLessons(nextMiniLessons);
       setQuestions(nextQuestions);
       // Merge server answers (done questions) into existing state without overwriting local selections
-      if (!isRedoing.current) {
+      if (!isRedoing.current && !isReview) {
         setSelectedAnswers((current) => ({ ...current, ...nextSelectedAnswers }));
       }
       syncLocalProgress(lessonMatch, nextQuestions, !didInitStep);
@@ -304,9 +304,11 @@ export default function LessonPage() {
   }, [showXPModal, activeStep?.kind, allQuestionsDone]);
 
   // Auto-show completion modal on subsequent completions (lesson already done) with 1s delay
+  const autoModalFired = useRef(false);
   useEffect(() => {
     if (!lesson?.done || !allQuestionsDone || activeStep?.kind !== "claim") return;
-    if (showXPModal) return; // already showing
+    if (showXPModal || autoModalFired.current) return;
+    autoModalFired.current = true;
     const timeout = window.setTimeout(() => setShowXPModal(true), 1000);
     return () => window.clearTimeout(timeout);
   }, [lesson?.done, allQuestionsDone, activeStep?.kind, showXPModal]);
@@ -534,6 +536,7 @@ export default function LessonPage() {
   const resetLessonView = () => {
     setShowXPModal(false);
     confettiFired.current = false;
+    autoModalFired.current = false;
     isRedoing.current = true;
     setCurrentStep(0);
     setSelectedAnswers({});
