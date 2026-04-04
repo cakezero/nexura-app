@@ -518,11 +518,11 @@ export default function LessonPage() {
 
         {/* Step card */}
         <div
-          className="rounded-3xl h-[480px] sm:h-[420px] flex flex-col overflow-hidden relative"
+          className="rounded-3xl h-[320px] sm:h-[300px] flex flex-col overflow-hidden relative"
           style={{ background: "linear-gradient(145deg, #8B3EFE, #4A1B8A)" }}
         >
           {/* Content row: prev | content | next */}
-          <div className="flex items-center gap-1 sm:gap-3 px-1 sm:px-2 pt-4 sm:pt-5 pb-2" style={{ height: "calc(100% - 90px)" }}>
+          <div className="flex items-center justify-center gap-1 sm:gap-3 px-1 sm:px-2 pt-3 sm:pt-4 pb-1" style={{ height: "calc(100% - 70px)" }}>
 
             {/* Prev button */}
             <button
@@ -592,7 +592,7 @@ export default function LessonPage() {
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: 0.5, duration: 0.4 }}
-                          className="text-sm sm:text-base font-bold leading-snug text-center"
+                          className="text-base sm:text-lg font-bold leading-snug text-center"
                         >
                           {activeStep.header}
                         </motion.p>
@@ -602,7 +602,7 @@ export default function LessonPage() {
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: 0.6, duration: 0.4 }}
-                          className="text-xs sm:text-sm leading-relaxed whitespace-pre-wrap text-white/80 text-center"
+                          className="text-sm sm:text-base leading-relaxed whitespace-pre-wrap text-white/80 text-center"
                         >
                           {activeStep.body}
                         </motion.p>
@@ -612,14 +612,14 @@ export default function LessonPage() {
 
                 /* Mini lesson */
                 ) : activeStep?.kind === "mini" ? (
-                  <p className="text-xs sm:text-sm leading-relaxed whitespace-pre-wrap py-2 text-center">
+                  <p className="text-sm sm:text-base leading-relaxed whitespace-pre-wrap py-2 text-center">
                     {activeStep.text}
                   </p>
 
                 /* Question */
                 ) : activeStep?.kind === "question" ? (
                   <div className="flex flex-col gap-1.5 sm:gap-2 text-left">
-                    <h2 className="text-[11px] sm:text-sm font-bold text-center leading-snug uppercase tracking-wide">
+                    <h2 className="text-sm sm:text-base font-bold text-center leading-snug uppercase tracking-wide">
                       {activeStep.question.question}
                     </h2>
 
@@ -652,7 +652,7 @@ export default function LessonPage() {
                               <span className="shrink-0 w-4 h-4 flex items-center justify-center rounded bg-white/15 text-[9px] font-bold">
                                 {String.fromCharCode(65 + index)}
                               </span>
-                              <span className="capitalize text-[11px] sm:text-xs break-words leading-snug">{option}</span>
+                              <span className="capitalize text-xs sm:text-sm break-words leading-snug">{option}</span>
                             </span>
                             {isCorrect ? (
                               <span className="shrink-0 ml-1.5 w-4 h-4 flex items-center justify-center rounded-full bg-[#00E1A2] text-black font-bold text-[9px]">✓</span>
@@ -756,7 +756,7 @@ export default function LessonPage() {
           </div>
 
           {/* Bottom bar: Continue button */}
-          <div className="px-4 sm:px-5 pb-6 sm:pb-5 pt-3 flex items-center justify-end">
+          <div className="px-4 sm:px-5 pb-3 sm:pb-3 pt-2 flex items-center justify-end">
             {activeStep?.kind !== "claim" ? (
               <div className="flex shrink-0">
                 <button
