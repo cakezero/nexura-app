@@ -383,7 +383,7 @@ export default function LessonPage() {
       const allSteps = JSON.parse(localStorage.getItem(LESSON_STEP_KEY) || "{}");
       delete allSteps[lessonId];
       localStorage.setItem(LESSON_STEP_KEY, JSON.stringify(allSteps));
-      await loadLesson();
+      try { await loadLesson(); } catch {}  // don't block modal if reload fails
       setShowXPModal(true);
     } catch (error) {
       const message = normalizeApiMessage(error, "Unable to claim XP");
@@ -415,8 +415,9 @@ export default function LessonPage() {
         const saved = await submitAnswer();
         if (saved && currentStep < lessonSteps.length - 1) {
           const nextStep = Math.min(currentStep + 1, lessonSteps.length - 1);
+          direction.current = 1;
           setCurrentStep(nextStep);
-          // saveProgress already called by the answer onClick handler with fresh answers
+          saveProgress(nextStep, selectedAnswers);
         }
         return;
       }
@@ -450,11 +451,11 @@ export default function LessonPage() {
 
   const resetLessonView = () => {
     setShowXPModal(false);
-    confettiFired.current = false;
     setCurrentStep(0);
     setSelectedAnswers({});
     saveProgress(0, {});
     window.scrollTo({ top: 0, behavior: "smooth" });
+    void loadLesson();  // reload questions from server
   };
 
   if (loading) {
@@ -763,7 +764,8 @@ export default function LessonPage() {
               disabled={
                 currentStep >= lessonSteps.length - 1 ||
                 (activeStep?.kind === "question" && !activeStep.question.done && !currentSelection) ||
-                submittingQuestionId === currentQuestion?._id
+                submittingQuestionId === currentQuestion?._id ||
+                claiming
               }
               className="shrink-0 w-11 h-11 sm:w-auto sm:h-auto sm:p-2 flex items-center justify-center transition-opacity opacity-60 hover:opacity-90 disabled:opacity-20"
             >
