@@ -820,58 +820,92 @@ export default function LessonPage() {
         {null}
       </div>
 
-      {/* Lesson Complete modal */}
+      {/* Lesson Complete modal — matches Figma design */}
       {showXPModal ? (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/75 px-0 sm:px-4">
           <div
-            className="w-full sm:max-w-sm rounded-t-[32px] sm:rounded-[28px] bg-[#2D1B6B] px-5 pt-6 sm:p-8 text-center shadow-[0_-8px_40px_rgba(0,0,0,0.5)]"
-            style={{ paddingBottom: "max(2rem, env(safe-area-inset-bottom, 0px))" }}
+            className="w-full sm:max-w-[520px] rounded-t-[16px] sm:rounded-[16px] overflow-hidden relative text-center"
+            style={{
+              background: "radial-gradient(ellipse at center, rgba(139,62,254,1) 0%, rgba(111,50,203,0.94) 50%, rgba(83,37,152,0.88) 100%)",
+              paddingBottom: "max(2rem, env(safe-area-inset-bottom, 0px))",
+            }}
           >
-            {/* Drag handle (mobile sheet feel) */}
-            <div className="mx-auto w-10 h-1 rounded-full bg-white/20 mb-5 sm:hidden" />
+            {/* Decorative glows */}
+            <div className="absolute -top-24 -right-24 w-64 h-64 rounded-xl bg-[#D4BBFF]/10 blur-[40px]" />
+            <div className="absolute -bottom-36 -left-24 w-64 h-64 rounded-xl bg-[#94E2FF]/5 blur-[40px]" />
 
-            <div className="mx-auto flex h-20 w-20 sm:h-24 sm:w-24 items-center justify-center rounded-2xl bg-[#3D2080]">
-              <img src="/nexura-gold.png" alt="Gold Trophy" className="h-14 w-14 sm:h-16 sm:w-16 object-contain" />
-            </div>
+            {/* Drag handle (mobile) */}
+            <div className="mx-auto w-10 h-1 rounded-full bg-white/20 mt-3 mb-4 sm:hidden" />
 
-            <h2 className="mt-4 sm:mt-6 text-2xl sm:text-3xl font-extrabold text-white">Lesson Complete!</h2>
-            <p className="mt-2 text-sm text-white/65 leading-relaxed px-1">
-              {lesson?.description || "You've successfully completed this lesson."}
-            </p>
-
-            <div className="mt-4 sm:mt-6 flex items-center justify-center gap-2.5">
-              <span className="text-3xl sm:text-4xl font-extrabold text-white">+{lesson?.reward ?? 0} XP</span>
-              <span className="rounded-full border border-white/25 px-2.5 py-1 text-[10px] sm:text-xs font-bold uppercase tracking-wide text-white/75">
-                Earned
-              </span>
-            </div>
-
-            <div className="mt-5 sm:mt-7 flex flex-col gap-2.5">
-              <button
-                type="button"
-                onClick={() => setLocation("/learn")}
-                className="w-full rounded-xl bg-[#7C3AED] px-4 py-4 text-sm font-bold uppercase tracking-wide text-white transition hover:bg-[#6D28D9] active:scale-[0.98]"
+            <div className="relative px-6 sm:px-10 pt-6 sm:pt-10 pb-6 sm:pb-8 flex flex-col items-center">
+              {/* Trophy icon in gradient card */}
+              <div
+                className="w-[90px] h-[86px] sm:w-[115px] sm:h-[110px] rounded-2xl border border-white/40 overflow-hidden relative flex items-center justify-center shadow-[0_0_24px_rgba(255,255,255,0.2)]"
+                style={{ background: "linear-gradient(to bottom, #946ecd, #311162)" }}
               >
-                Return to Lessons
-              </button>
-              <button
-                type="button"
-                onClick={resetLessonView}
-                className="w-full rounded-xl border border-[#7C3AED] bg-transparent px-4 py-4 text-sm font-bold uppercase tracking-wide text-white transition hover:bg-[#7C3AED]/20 active:scale-[0.98]"
-              >
-                Take Lesson Again
-              </button>
+                <div className="absolute -top-24 -right-24 w-64 h-64 rounded-xl bg-[#D4BBFF]/10 blur-[40px]" />
+                <div className="absolute -bottom-24 -left-24 w-64 h-64 rounded-xl bg-[#94E2FF]/5 blur-[40px]" />
+                <img src="/nexura-gold.png" alt="Gold Trophy" className="w-[48px] h-[58px] sm:w-[62px] sm:h-[74px] object-contain relative z-10 drop-shadow-[0_0_20px_rgba(138,63,252,0.4)]" />
+              </div>
+
+              {/* Lesson Complete heading */}
+              <h2 className="mt-5 sm:mt-6 text-[24px] sm:text-[30px] font-semibold text-white" style={{ fontFamily: "'Geist', 'Inter', sans-serif" }}>
+                Lesson Complete!
+              </h2>
+
+              {/* Description */}
+              <p className="mt-2 text-[14px] sm:text-[16px] text-[#c3c6d3] leading-relaxed max-w-[380px] sm:max-w-[446px]" style={{ fontFamily: "'Inter', sans-serif" }}>
+                {lesson?.description || "You've successfully mastered the basics of web3 and blockchain"}
+              </p>
+
+              {/* XP amount */}
+              <div className="mt-5 flex flex-col items-center gap-1.5">
+                <span className="text-[30px] sm:text-[36px] font-bold text-white leading-tight" style={{ fontFamily: "'Space Grotesk', 'Inter', sans-serif" }}>
+                  +{lesson?.reward ?? 0} XP
+                </span>
+                <span
+                  className="rounded-full border border-white/30 bg-[#44227b] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[3px] text-[#94e2ff]"
+                >
+                  Earned
+                </span>
+              </div>
+
+              {/* Share on X button */}
               <a
                 href={`https://x.com/intent/tweet?text=${encodeURIComponent(
                   `I just completed the ${lesson?.title ?? "a lesson"} lesson on @NexuraXYZ ✅\n\n${lesson?.reward ?? 0} XP secured\n\nSign up here: ${window.location.origin}/ref/${user?.referral?.code ?? "nexura"} and check it out in the Learn tab.`
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full rounded-xl bg-black px-4 py-4 text-sm font-bold uppercase tracking-wide text-white transition hover:bg-black/80 active:scale-[0.98] flex items-center justify-center gap-2 border border-white/10"
+                className="mt-6 w-full sm:w-[460px] h-14 rounded-[20px] bg-black/30 border border-white/40 flex items-center justify-center gap-5 transition hover:bg-black/50 active:scale-[0.98]"
               >
-                <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-                Share on X
+                <svg viewBox="0 0 24 24" className="h-5 w-5 fill-white"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                <span className="text-[14px] sm:text-[16px] font-semibold uppercase tracking-[1.6px] text-[#bfe4f2]/90" style={{ fontFamily: "'Geist', 'Inter', sans-serif" }}>
+                  Share your achievement to X
+                </span>
               </a>
+
+              {/* Action buttons row */}
+              <div className="mt-3 flex flex-col sm:flex-row gap-2.5 w-full sm:w-[460px]">
+                <button
+                  type="button"
+                  onClick={resetLessonView}
+                  className="flex-1 h-14 rounded-[20px] border border-white/60 bg-transparent flex items-center justify-center transition hover:bg-white/10 active:scale-[0.98]"
+                >
+                  <span className="text-[14px] sm:text-[16px] font-semibold uppercase tracking-[1.6px] text-[#bfe4f2]" style={{ fontFamily: "'Geist', 'Inter', sans-serif" }}>
+                    Take lesson again
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLocation("/learn")}
+                  className="flex-1 h-14 rounded-[20px] bg-[#8b3efe] flex items-center justify-center transition hover:bg-[#7a2fe0] active:scale-[0.98] shadow-[0_0_20px_rgba(138,63,252,0.4)]"
+                >
+                  <span className="text-[14px] sm:text-[16px] font-bold uppercase tracking-[1.6px] text-white" style={{ fontFamily: "'Geist', 'Inter', sans-serif" }}>
+                    Return to Lessons
+                  </span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
