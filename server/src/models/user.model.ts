@@ -11,6 +11,10 @@ const userSchema = new Schema({
 		required: true,
 		unique: true
   },
+	noOfClaims: {
+		type: Number,
+		default: 0,
+	},
 	eventsWon: {
 		type: Number,
 		default: 0,

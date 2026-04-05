@@ -342,7 +342,7 @@ export const checkPayment = async (userAddress: string) => {
     address: feeContract as "0x",
     functionName: "getTotalCampaigns",
     args: [userAddress],
-  });
+  }) as bigint;
 
 	if (totalCampaigns <= 0n) {
 		throw new Error("Studio fee payment could not be verified from the transaction receipt");
