@@ -349,7 +349,7 @@ export default function Leaderboard() {
                   return (
                     <Card
                       key={entry._id}
-                      className="p-2 sm:p-1 rounded-2xl hover:brightness-110 overflow-hidden"
+                      className="p-1.5 sm:p-2 rounded-xl sm:rounded-2xl hover:brightness-110 overflow-hidden"
                       style={{
                         borderWidth: "2px",
                         borderStyle: "solid",
@@ -407,41 +407,35 @@ export default function Leaderboard() {
                         </div>
                       </div>
 
-                      {/* MOBILE LAYOUT (<md): compact card */}
-                      <div className="flex md:hidden items-center gap-2 min-h-[48px]">
+                      {/* MOBILE LAYOUT (<md): single tight row */}
+                      <div className="flex md:hidden items-center gap-1.5 py-0.5">
                         {/* Rank */}
-                        <div className={`w-7 h-7 flex items-center justify-center rounded-full font-bold text-[11px] shrink-0 ${rankBg}`}>
-                          #{rank}
+                        <div className={`w-6 h-6 flex items-center justify-center rounded-full font-bold text-[10px] shrink-0 ${rankBg}`}>
+                          {rank}
                         </div>
 
                         {/* Avatar */}
-                        <Avatar className="w-8 h-8 rounded-full overflow-hidden shrink-0">
+                        <Avatar className="w-6 h-6 rounded-full overflow-hidden shrink-0">
                           <AvatarImage
                             src={entry?.profilePic || `https://api.dicebear.com/7.x/identicon/png?seed=${encodeURIComponent(name)}`}
                             className="w-full h-full object-cover rounded-full"
                           />
-                          <AvatarFallback className="bg-white/10 text-white font-bold text-xs">{name.charAt(0)}</AvatarFallback>
+                          <AvatarFallback className="bg-white/10 text-white font-bold text-[9px]">{name.charAt(0)}</AvatarFallback>
                         </Avatar>
 
-                        {/* Name + stats row */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-1">
-                            <span className="text-xs font-semibold truncate max-w-[120px]">
-                              {truncateName(name, 14)}
-                            </span>
-                            <div className="flex items-center gap-0.5 shrink-0">
-                              <span className="font-bold text-white text-sm">{xp}</span>
-                              <img src={xpIcon} alt="XP" className="w-4 h-4" />
-                            </div>
-                          </div>
+                        {/* Name */}
+                        <span className="text-[11px] font-semibold truncate flex-1 min-w-0">
+                          {truncateName(name, 12)}
+                        </span>
 
-                          {/* Compact stats row */}
-                          <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                            <span className="text-[#00E1A2E5] bg-[#00E1A233] px-1.5 py-0.5 rounded text-[9px] leading-none">{events} EVT</span>
-                            <span className="text-[#8B3EFEE5] bg-[#8B3EFE33] px-1.5 py-0.5 rounded text-[9px] leading-none">{quests} QST</span>
-                            <span className="text-[#B65FC8E5] bg-[#B65FC833] px-1.5 py-0.5 rounded text-[9px] leading-none">{campaigns} CMP</span>
-                            <span className="text-[#5A189A] bg-[#E0BBE4] px-1.5 py-0.5 rounded text-[9px] leading-none">{lessons} LSN</span>
-                          </div>
+                        {/* Quests + Campaigns inline */}
+                        <span className="text-[#8B3EFEE5] text-[9px] shrink-0">{quests}Q</span>
+                        <span className="text-[#B65FC8E5] text-[9px] shrink-0">{campaigns}C</span>
+
+                        {/* XP */}
+                        <div className="flex items-center gap-0.5 shrink-0">
+                          <img src={xpIcon} alt="XP" className="w-3.5 h-3.5" />
+                          <span className="font-bold text-white text-[11px]">{xp}</span>
                         </div>
                       </div>
                     </Card>
