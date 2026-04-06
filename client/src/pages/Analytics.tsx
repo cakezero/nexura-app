@@ -71,7 +71,11 @@ interface MetricCardProps {
   periodLabel: string;
 }
 
-function MetricCard({ title, value, rateLabel, icon, periodLabel }: MetricCardProps) {
+function Skeleton({ className }: { className?: string }) {
+  return <div className={`animate-pulse rounded-md bg-white/10 ${className ?? ""}`} />;
+}
+
+function MetricCard({ title, value, rateLabel, icon, periodLabel, loading }: MetricCardProps & { loading: boolean }) {
   return (
     <div
       className="relative overflow-hidden rounded-[30px] border-2 flex-shrink-0 w-full md:w-[200px]"
@@ -95,14 +99,23 @@ function MetricCard({ title, value, rateLabel, icon, periodLabel }: MetricCardPr
 
       {/* Value + rate */}
       <div className="px-3 pt-2 pb-3 md:absolute md:bottom-0 md:left-0 md:pb-2 md:pt-0">
-        <p className="text-[24px] font-bold text-white tracking-[-0.6px] leading-none mb-2">{value}</p>
-        {rateLabel ? (
-          <div className="flex items-center gap-1">
-            <img src="/rate.png" alt="" className="w-[10px] h-[6px]" />
-            <span className="text-[10px] font-semibold text-[#00e1a2]">{rateLabel} {periodLabel}</span>
-          </div>
+        {loading ? (
+          <>
+            <Skeleton className="h-8 w-16 mb-2" />
+            <Skeleton className="h-3 w-24" />
+          </>
         ) : (
-          <span className="text-[10px] text-white/40">{periodLabel}</span>
+          <>
+            <p className="text-[24px] font-bold text-white tracking-[-0.6px] leading-none mb-2">{value}</p>
+            {rateLabel ? (
+              <div className="flex items-center gap-1">
+                <img src="/rate.png" alt="" className="w-[10px] h-[6px]" />
+                <span className="text-[10px] font-semibold text-[#00e1a2]">{rateLabel} {periodLabel}</span>
+              </div>
+            ) : (
+              <span className="text-[10px] text-white/40">{periodLabel}</span>
+            )}
+          </>
         )}
       </div>
     </div>
@@ -228,7 +241,7 @@ export default function Analytics() {
     ].filter((d) => d.value > 0);
   }, [analytics]);
 
-  const totalTxns = analytics ? analytics.totalOnchainInteractions : 0;
+  const totalTxns = analytics?.totalOnchainInteractions ?? 0;
 
   // ── Join vs Completion ──────────────────────────────────────────────────
   const joinCompletion = useMemo(() => {
@@ -246,22 +259,6 @@ export default function Analytics() {
     { id: "Completed", value: joinCompletion.pct,        color: "#00E1A2" },
     { id: "Remaining", value: 100 - joinCompletion.pct,  color: "rgba(255,255,255,0.2)" },
   ], [joinCompletion.pct]);
-
-  // ── Loading / Error ─────────────────────────────────────────────────────
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-white/50 text-sm">
-        Loading analytics...
-      </div>
-    );
-  }
-  if (error || !analytics) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-red-400 text-sm">
-        {error ?? "No analytics data"}
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen w-full text-white pb-24 md:pb-10 overflow-x-hidden font-geist">
@@ -321,7 +318,20 @@ export default function Analytics() {
 
         {/* ── Metric Cards ── */}
         <div className="flex flex-col md:flex-row gap-3">
-          {metrics?.map((card) => <MetricCard key={card.title} {...card} />)}
+          {loading
+            ? Array.from({ length: 5 }).map((_, i) => (
+                <MetricCard
+                  key={i}
+                  title=""
+                  value=""
+                  rateLabel={null}
+                  icon="/referrals.png"
+                  periodLabel=""
+                  loading={true}
+                />
+              ))
+            : metrics?.map((card) => <MetricCard key={card.title} {...card} loading={false} />)
+          }
         </div>
 
         {/* ── Growth Trend Chart ── */}
@@ -333,14 +343,18 @@ export default function Analytics() {
             <h2 className="text-[18px] md:text-[20px] font-bold text-white">New User Growth Trend</h2>
             <p className="text-[12px] text-[#a3adc2] mt-0.5">Monitor daily new user activity and growth patterns</p>
           </div>
-          <div className="h-[240px] md:h-[290px]">
-            <Chart
-              options={chartOptions}
-              series={[{ name: "New Users", data: chartConfig.data }]}
-              type="area"
-              height="100%"
-              width="100%"
-            />
+          <div className="h-[240px] md:h-[290px] px-4 pb-4">
+            {loading ? (
+              <Skeleton className="h-full w-full" />
+            ) : (
+              <Chart
+                options={chartOptions}
+                series={[{ name: "New Users", data: chartConfig.data }]}
+                type="area"
+                height="100%"
+                width="100%"
+              />
+            )}
           </div>
         </div>
 
@@ -363,7 +377,7 @@ export default function Analytics() {
                   <div className="w-2 h-2 rounded-full bg-white" />
                   <span className="text-[8px] font-semibold text-white uppercase">Joined</span>
                 </div>
-                <span className="text-[10px] font-bold text-white">{fmt(joinCompletion.joined)}</span>
+                {loading ? <Skeleton className="h-3 w-8" /> : <span className="text-[10px] font-bold text-white">{fmt(joinCompletion.joined)}</span>}
               </div>
               <div
                 className="flex items-center justify-between px-3 py-1.5 rounded-full border"
@@ -373,30 +387,40 @@ export default function Analytics() {
                   <div className="w-2 h-2 rounded-full bg-[#00e1a2]" />
                   <span className="text-[8px] font-semibold text-white uppercase">Completed</span>
                 </div>
-                <span className="text-[10px] font-bold text-white">{fmt(joinCompletion.completed)}</span>
+                {loading ? <Skeleton className="h-3 w-8" /> : <span className="text-[10px] font-bold text-white">{fmt(joinCompletion.completed)}</span>}
               </div>
             </div>
 
             <div className="relative h-[110px]">
-              <ResponsivePie
-                data={donutData}
-                margin={{ top: 5, right: 5, bottom: 5, left: 5 }}
-                innerRadius={0.72}
-                padAngle={0}
-                cornerRadius={0}
-                colors={(d: { data: { color: string } }) => d.data.color}
-                enableArcLabels={false}
-                enableArcLinkLabels={false}
-                isInteractive={false}
-              />
-              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <span className="text-[20px] font-bold text-white leading-none">{joinCompletion.pct}%</span>
-                <span className="text-[8px] text-white/80 uppercase">Completion</span>
-              </div>
+              {loading ? (
+                <Skeleton className="h-full w-full rounded-full" />
+              ) : (
+                <>
+                  <ResponsivePie
+                    data={donutData}
+                    margin={{ top: 5, right: 5, bottom: 5, left: 5 }}
+                    innerRadius={0.72}
+                    padAngle={0}
+                    cornerRadius={0}
+                    colors={(d: { data: { color: string } }) => d.data.color}
+                    enableArcLabels={false}
+                    enableArcLinkLabels={false}
+                    isInteractive={false}
+                  />
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                    <span className="text-[20px] font-bold text-white leading-none">{joinCompletion.pct}%</span>
+                    <span className="text-[8px] text-white/80 uppercase">Completion</span>
+                  </div>
+                </>
+              )}
             </div>
 
             <p className="text-[10px] text-white/70">
-              <span className="text-white font-semibold">{joinCompletion.dropCount} ({joinCompletion.dropPct}%)</span> users drop before completion
+              {loading ? (
+                <Skeleton className="h-3 w-40" />
+              ) : (
+                <><span className="text-white font-semibold">{joinCompletion.dropCount} ({joinCompletion.dropPct}%)</span> users drop before completion</>
+              )}
             </p>
 
             <div
@@ -425,7 +449,9 @@ export default function Analytics() {
             </div>
             <div className="flex flex-col sm:flex-row items-center gap-4 flex-1">
               <div className="relative h-[160px] w-full sm:w-[160px] flex-shrink-0">
-                {onChainData.length > 0 ? (
+                {loading ? (
+                  <Skeleton className="h-full w-full rounded-full" />
+                ) : onChainData.length > 0 ? (
                   <ResponsivePie
                     data={onChainData}
                     margin={{ top: 10, right: 30, bottom: 10, left: 30 }}
@@ -448,22 +474,39 @@ export default function Analytics() {
               </div>
               <div className="flex-1 w-full flex flex-col gap-3">
                 <div className="text-center">
-                  <p className="text-[24px] font-bold text-white leading-none">{fmt(totalTxns)}</p>
-                  <p className="text-[10px] text-white/50 uppercase">Transactions</p>
+                  {loading ? (
+                    <div className="flex flex-col items-center gap-1">
+                      <Skeleton className="h-7 w-16 mx-auto" />
+                      <Skeleton className="h-3 w-24 mx-auto" />
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-[24px] font-bold text-white leading-none">{fmt(totalTxns)}</p>
+                      <p className="text-[10px] text-white/50 uppercase">Transactions</p>
+                    </>
+                  )}
                 </div>
                 <div
                   className="rounded-[20px] border overflow-hidden"
                   style={{ background: "rgba(255,255,255,0.07)", borderColor: "rgba(212,187,255,0.3)" }}
                 >
-                  {onChainData.map((item) => (
-                    <div key={item.id} className="flex items-center justify-between px-4 h-[28px] border-b border-white/5 last:border-0">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: item.color }} />
-                        <span className="text-[10px] text-white">{item.id}</span>
-                      </div>
-                      <span className="text-[10px] font-semibold text-white">{fmt(item.value)}</span>
-                    </div>
-                  ))}
+                  {loading
+                    ? Array.from({ length: 2 }).map((_, i) => (
+                        <div key={i} className="flex items-center justify-between px-4 h-[28px] border-b border-white/5 last:border-0">
+                          <Skeleton className="h-3 w-16" />
+                          <Skeleton className="h-3 w-8" />
+                        </div>
+                      ))
+                    : onChainData.map((item) => (
+                        <div key={item.id} className="flex items-center justify-between px-4 h-[28px] border-b border-white/5 last:border-0">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: item.color }} />
+                            <span className="text-[10px] text-white">{item.id}</span>
+                          </div>
+                          <span className="text-[10px] font-semibold text-white">{fmt(item.value)}</span>
+                        </div>
+                      ))
+                  }
                 </div>
               </div>
             </div>
@@ -483,9 +526,13 @@ export default function Analytics() {
                 <img src="/campaign_icon.png" alt="" className="w-[30px] h-[30px] object-cover" />
               </div>
               <div className="flex items-center gap-2 relative z-10">
+                {loading ? (
+                  <Skeleton className="h-7 w-20" />
+                ) : (
                 <p className="text-[24px] font-bold text-white tracking-[-0.6px] leading-none">
-                  {fmt(Math.round(analytics.totalTrustDistributed))}
+                  {fmt(Math.round(analytics?.totalTrustDistributed ?? 0))}
                 </p>
+                )}
                 <div
                   className="h-[14px] px-2 rounded-[4px] border flex items-center"
                   style={{ background: "rgba(130,57,253,0.1)", borderColor: "rgba(131,58,253,0.5)" }}
@@ -505,9 +552,13 @@ export default function Analytics() {
                   <p className="text-[10px] uppercase tracking-[1px] text-[#968da1] leading-tight w-[90px]">Total Claims Created</p>
                   <img src="/campaign_icon.png" alt="" className="w-[30px] h-[30px] object-cover flex-shrink-0" />
                 </div>
-                <p className="text-[24px] font-bold text-white tracking-[-0.6px] leading-none">
-                  {fmt(analytics.totalOnchainClaims)}
-                </p>
+                {loading ? (
+                  <Skeleton className="h-7 w-16" />
+                ) : (
+                  <p className="text-[24px] font-bold text-white tracking-[-0.6px] leading-none">
+                    {fmt(analytics?.totalOnchainClaims ?? 0)}
+                  </p>
+                )}
               </div>
               <div
                 className="relative overflow-hidden rounded-[30px] border flex-1 h-[121px] p-3 flex flex-col justify-between"
@@ -517,9 +568,13 @@ export default function Analytics() {
                   <p className="text-[10px] uppercase tracking-[1px] text-[#968da1] leading-tight w-[80px]">Total Lessons Created</p>
                   <img src="/campaign_icon.png" alt="" className="w-[30px] h-[30px] object-cover flex-shrink-0" />
                 </div>
-                <p className="text-[24px] font-bold text-white tracking-[-0.6px] leading-none">
-                  {fmt(analytics.totalQuests)}
-                </p>
+                {loading ? (
+                  <Skeleton className="h-7 w-16" />
+                ) : (
+                  <p className="text-[24px] font-bold text-white tracking-[-0.6px] leading-none">
+                    {fmt(analytics?.totalQuests ?? 0)}
+                  </p>
+                )}
               </div>
             </div>
           </div>
