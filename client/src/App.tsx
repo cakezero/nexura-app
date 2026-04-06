@@ -244,12 +244,14 @@ function App() {
         </div>
       )}
 
-      {/* RIGHT: Controls */}
-      <div className="ml-auto flex items-center gap-4">
-        <SidebarTrigger
+      <SidebarTrigger
           data-testid="button-sidebar-toggle"
           className="md:hidden"
         />
+
+      {/* RIGHT: Controls */}
+      <div className="ml-auto flex items-center gap-4">
+        
         <ProfileBar />
       </div>
 
