@@ -228,7 +228,7 @@ function App() {
                     {!isHome && !isStudio && !isDocs && !isProjectCreate && <NexuraSidebar />}
 
                     {/* Main content */}
-<div className="flex-1 flex flex-col relative z-10 min-w-0 overflow-x-hidden">
+<div className="flex-1 flex flex-col relative z-10">
   
   {!isHome && !isStudio && !isProjectCreate && (
     <header className="flex items-center p-4 app-header">
@@ -244,14 +244,12 @@ function App() {
         </div>
       )}
 
-      <SidebarTrigger
+      {/* RIGHT: Controls */}
+      <div className="ml-auto flex items-center gap-4">
+        <SidebarTrigger
           data-testid="button-sidebar-toggle"
           className="md:hidden"
         />
-
-      {/* RIGHT: Controls */}
-      <div className="ml-auto flex items-center gap-4">
-        
         <ProfileBar />
       </div>
 
