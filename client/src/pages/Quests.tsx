@@ -130,7 +130,7 @@ export default function Quests() {
   const startQuest = async (quest: Quest) => {
     if (!quest.joined) {
       try {
-        await apiRequestV2("POST", "/api/quests/start-quest", {
+        await apiRequestV2("POST", "/api/quest/start-quest", {
           questId: quest._id,
           category: quest.category.toLowerCase(),
         });
@@ -144,10 +144,12 @@ export default function Quests() {
           description: "Failed to start the quest. Please try again.",
           variant: "destructive",
         });
+
+        return;
       }
     }
 
-    setLocation(`/quests/${quest._id}`);
+    setLocation(`/quest/${quest._id}`);
   }
 
   const renderQuestCard = (quest: Quest, isActive: boolean = true, index: number = 0) => {
