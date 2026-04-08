@@ -275,7 +275,7 @@ const podiumList =
         </header>
         
         {/* ------------------- PODIUM ------------------- */}
-{podiumList.length >= 3 && (
+{list.length >= 3 && (
   <div className="relative mt-10">
     {/* Background gradient */}
     <div className="absolute inset-x-0 top-0 h-64" />
@@ -470,7 +470,7 @@ const podiumList =
 
 {/* Leaderboard entries */}
 <div className="space-y-2 pt-0 sm:pt-[10px]">
-  {podiumList.map((entry, idx) => {
+  {list.map((entry, idx) => {
     const name = entry?.display_name || entry?.username || "Anonymous";
     const isCurrentUser = currentUserId && entry._id === currentUserId;
     const rank = idx + 1;
