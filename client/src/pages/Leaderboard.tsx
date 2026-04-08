@@ -27,17 +27,19 @@ type Entry = {
 export default function Leaderboard() {
   const { user } = useAuth();
   const [list, setList] = useState<Entry[]>([]);
+  const [userRank, setRank] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeRange, setActiveRange] = useState("All Time");
   // const ranges = ["Last 7 Days", "Last 30 Days", "Last 3 Months", "All Time"];
   // const [showRangeDropdown, setShowRangeDropdown] = useState(false);
-  
+
   useEffect(() => {
     const timer = setTimeout(async () => {
       try {
-        const { leaderboardInfo } = await apiRequestV2("GET", "/api/leaderboard");
+        const { leaderboardInfo, rank } = await apiRequestV2("GET", "/api/leaderboard");
         setList(leaderboardInfo || []);
+        setRank(rank || 1);
       } catch (err: any) {
         setError(err.message || "Failed to load leaderboard");
       } finally {
@@ -196,9 +198,7 @@ const podiumList =
 </span>
       <div className="mt-1 flex items-baseline gap-1">
         <span className="text-lg font-bold text-[#B65FC8]">
-          {list.findIndex((e) => e._id === currentUserId) !== -1
-            ? `#${list.findIndex((e) => e._id === currentUserId) + 1}`
-            : "-"}
+          {userRank ?? "-"}
         </span>
       </div>
     </div>

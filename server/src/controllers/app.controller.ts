@@ -33,6 +33,7 @@ import { checksumAddress } from "viem";
 import { campaign, campaignCompleted } from "@/models/campaign.model";
 import { dailySignIn } from "@/models/dailySignIn.model";
 import { startOfDayUTC, updateLevel, getAmountPaid } from "@/utils/utils";
+import { lessonCompleted } from "@/models/lesson.model";
 
 const client = new GraphQLClient(GRAPHQL_API_URL);
 
@@ -559,31 +560,30 @@ export const getLeaderboard = async (req: GlobalRequest, res: GlobalResponse) =>
   try {
     const top500 = await user
       .find()
-      .sort({ xp: -1, trustClaimed: -1 })
+      .sort({ xp: -1 })
       .limit(500)
       .select("username xp profilePic _id level eventsWon lessonsCompleted questsCompleted campaignsCompleted")
       .lean();
 
     let rank: number | null = null;
 
-    const me = await user.findById(req.id).lean().select("eventsWon questsCompleted campaignsCompleted");
+    const me = await user.findById(req.id).lean().select("eventsWon questsCompleted createdAt xp campaignsCompleted");
 
     if (!me) {
       rank = null;
     } else {
-      rank =
-        (await user.countDocuments({
-          $or: [
-            { xp: { $gt: me.xp } },
-            {
-              xp: me.xp,
-              updatedAt: { $lt: me.updatedAt },
-            },
-          ],
-        })) + 1;
+      rank = await user.countDocuments({
+        $or: [
+          { xp: { $gt: me.xp } },
+          {
+            xp: me.xp,
+            createdAt: { $lt: me.createdAt },
+          },
+        ],
+      }) + 1;
     }
 
-    res.status(OK).json({ message: "leaderboard info fetched", leaderboardInfo: top500, rank, me });
+    res.status(OK).json({ message: "leaderboard info fetched", rank, me, leaderboardInfo: top500 });
   } catch(error) {
     logger.error(error);
     res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching leaderboard data" })
@@ -828,11 +828,14 @@ export const updateClaims = async (req: GlobalRequest, res: GlobalResponse) => {
 
 export const getAnalytics = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
-    const userFound = await user.find().select("updatedAt createdAt refRewardClaimed badges status xp").lean();
+    const usersFound = await user.find().select("updatedAt createdAt refRewardClaimed badges status xp").lean();
     const totalReferrals = await referredUsers.countDocuments();
 
     const totalCampaigns = await campaign.countDocuments();
+
     const totalQuests = await quest.countDocuments({ category: "weekly" });
+
+    const totalQuestsJoined = await questCompleted.countDocuments();
 
     const totalQuestsCompleted = await questCompleted.countDocuments({
       done: true,
@@ -842,27 +845,39 @@ export const getAnalytics = async (req: GlobalRequest, res: GlobalResponse) => {
 
     const totalCampaignsCompleted = totalCampaignsCompletedFound.filter(c => c.campaignCompleted === true).length;
 
-    const joinRatio = (totalCampaignsCompleted / totalCampaignsCompletedFound.length) * 100;
+    const totalLessonJoined = await lessonCompleted.countDocuments();
 
-    const totalUsers = userFound.length;
-    const totalXpInCirculation = userFound.reduce((sum, current) => {
+    const totalLessonCompleted = await lessonCompleted.countDocuments({ done: true });
+
+    const totalJoined =
+      totalQuestsJoined + totalLessonJoined + totalCampaignsCompletedFound.length;
+
+    const totalCompleted =
+      totalQuestsCompleted +
+      totalLessonCompleted +
+      totalCampaignsCompleted;
+
+    const joinRatio = (totalCompleted / totalJoined) * 100;
+
+    const totalUsers = usersFound.length;
+    const totalXpInCirculation = usersFound.reduce((sum, current) => {
       return sum + Number(current.xp ?? 0);
     }, 0);
 
     const now = new Date();
 
-    const users24h = userFound.filter((u) => {
+    const users24h = usersFound.filter((u) => {
 
       const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
       return u.createdAt >= last24Hours;
     }).length;
 
-    const referralRewardsClaimed = userFound.filter((u: { refRewardClaimed?: boolean | null }) => {
+    const referralRewardsClaimed = usersFound.filter((u: { refRewardClaimed?: boolean | null }) => {
       return u.refRewardClaimed === true;
     }).length;
 
-    const nexonsMinted = userFound.filter((u: { badges: number[] }) => {
+    const nexonsMinted = usersFound.filter((u: { badges: number[] }) => {
       return u.badges.length > 0;
     }).length;
 
@@ -876,28 +891,28 @@ export const getAnalytics = async (req: GlobalRequest, res: GlobalResponse) => {
 
     const totalOnchainInteractions = totalOnchainClaims + referralRewardsClaimed + nexonsMinted;
 
-    const users7d = userFound.filter((u) => {
+    const users7d = usersFound.filter((u) => {
 
       const last7Days = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
       return u.createdAt >= last7Days;
     }).length;
 
-    const users30d = userFound.filter((u) => {
+    const users30d = usersFound.filter((u) => {
 
       const last30Days = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
       return u.createdAt >= last30Days;
     }).length;
 
-    const activeUsersWeekly = userFound.filter((u: { updatedAt: Date, status: string }) => {
+    const activeUsersWeekly = usersFound.filter((u: { updatedAt: Date, status: string }) => {
 
       const last7Days = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
       return u.status === "Active" && u.updatedAt >= last7Days;
     }).length;
 
-    const activeUsersMonthly = userFound.filter((u: { updatedAt: Date, status: string }) => {
+    const activeUsersMonthly = usersFound.filter((u: { updatedAt: Date, status: string }) => {
 
       const last30Days = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
@@ -913,7 +928,7 @@ export const getAnalytics = async (req: GlobalRequest, res: GlobalResponse) => {
       dayStart.setUTCDate(dayStart.getUTCDate() - (29 - i));
       const dayEnd = new Date(dayStart);
       dayEnd.setUTCDate(dayEnd.getUTCDate() + 1);
-      const count = userFound.filter((u) => u.createdAt >= dayStart && u.createdAt < dayEnd).length;
+      const count = usersFound.filter((u) => u.createdAt >= dayStart && u.createdAt < dayEnd).length;
       const dayName = DAY_NAMES[dayStart.getUTCDay()];
       const dateLabel = `${dayStart.getUTCMonth() + 1}/${dayStart.getUTCDate()}`;
       return { day: dayName, date: dateLabel, count };
@@ -925,7 +940,7 @@ export const getAnalytics = async (req: GlobalRequest, res: GlobalResponse) => {
     const usersByHour = Array.from({ length: 24 }, (_, h) => {
       const hourStart = new Date(todayMidnight.getTime() + h * 60 * 60 * 1000);
       const hourEnd = new Date(hourStart.getTime() + 60 * 60 * 1000);
-      const count = userFound.filter((u) => u.createdAt >= hourStart && u.createdAt < hourEnd).length;
+      const count = usersFound.filter((u) => u.createdAt >= hourStart && u.createdAt < hourEnd).length;
       const label = `${String(h).padStart(2, "0")}:00`;
       return { hour: h, label, count };
     });
@@ -940,20 +955,20 @@ export const getAnalytics = async (req: GlobalRequest, res: GlobalResponse) => {
     const prev30dStart = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
     const prev30dEnd   = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-    const prevUsers24h = userFound.filter((u) => u.createdAt >= prev24hStart && u.createdAt < prev24hEnd).length;
-    const prevUsers7d  = userFound.filter((u) => u.createdAt >= prev7dStart  && u.createdAt < prev7dEnd).length;
-    const prevUsers30d = userFound.filter((u) => u.createdAt >= prev30dStart && u.createdAt < prev30dEnd).length;
+    const prevUsers24h = usersFound.filter((u) => u.createdAt >= prev24hStart && u.createdAt < prev24hEnd).length;
+    const prevUsers7d  = usersFound.filter((u) => u.createdAt >= prev7dStart  && u.createdAt < prev7dEnd).length;
+    const prevUsers30d = usersFound.filter((u) => u.createdAt >= prev30dStart && u.createdAt < prev30dEnd).length;
 
-    const prevActiveWeekly  = userFound.filter((u: { updatedAt: Date; status: string }) => {
+    const prevActiveWeekly  = usersFound.filter((u: { updatedAt: Date; status: string }) => {
       return u.status === "Active" && u.updatedAt >= prev7dStart && u.updatedAt < prev7dEnd;
     }).length;
-    const prevActiveMonthly = userFound.filter((u: { updatedAt: Date; status: string }) => {
+    const prevActiveMonthly = usersFound.filter((u: { updatedAt: Date; status: string }) => {
       return u.status === "Active" && u.updatedAt >= prev30dStart && u.updatedAt < prev30dEnd;
     }).length;
 
     // Total users yesterday (for day-over-day % change)
     const yesterdayMidnight = new Date(todayMidnight.getTime() - 24 * 60 * 60 * 1000);
-    const totalUsersYesterday = userFound.filter((u) => u.createdAt < yesterdayMidnight).length;
+    const totalUsersYesterday = usersFound.filter((u) => u.createdAt < yesterdayMidnight).length;
 
     res.status(OK).json({
       message: "analytics data fetched",
