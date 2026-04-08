@@ -55,7 +55,7 @@ export const createLesson = async (req: GlobalRequest, res: GlobalResponse) => {
       return;
     }
 
-    await lesson.create(req.body);
+    await lesson.create({ ...req.body, status: "draft" });
 
     res.status(CREATED).json({ message: "lesson created" });
   } catch (error) {
