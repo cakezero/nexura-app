@@ -573,18 +573,12 @@ export const getLeaderboard = async (req: GlobalRequest, res: GlobalResponse) =>
       rank = null;
     } else {
       rank =
-        (await user.countDocuments({
-          $or: [
-            { xp: { $gt: me.xp } },
-            {
-              xp: me.xp,
-              updatedAt: { $lt: me.updatedAt },
-            },
-          ],
-        })) + 1;
+        (await user.countDocuments(
+          { xp: { $gt: me.xp } },
+        )) + 1;
     }
 
-    res.status(OK).json({ message: "leaderboard info fetched", leaderboardInfo: top500, rank, me });
+    res.status(OK).json({ message: "leaderboard info fetched", rank, me, leaderboardInfo: top500 });
   } catch(error) {
     logger.error(error);
     res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching leaderboard data" })
