@@ -580,7 +580,7 @@ export const getLeaderboard = async (req: GlobalRequest, res: GlobalResponse) =>
             createdAt: { $lt: me.createdAt },
           },
         ],
-      });
+      }) + 1;
     }
 
     res.status(OK).json({ message: "leaderboard info fetched", rank, me, leaderboardInfo: top500 });
