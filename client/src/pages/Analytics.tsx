@@ -12,6 +12,14 @@ export default function Analytics() {
   const [totalTransactions, setTotalTransactions] = useState(100);
   const [showRangeDropdown, setShowRangeDropdown] = useState(false);
 
+  const rangeDescriptions = {
+  "Last 24 Hrs": "Monitor daily new user activity and growth patterns",
+  "Last 7 days": "Monitor user activity and growth over the last 7 days",
+  "Last 30 days": "Monitor user activity and growth over the last 30 days",
+  "Last 3 months": "Monitor user activity and growth over the last 3 months",
+  "All Time": "Monitor overall user activity and growth since launch",
+};
+
   const transactionPercentages = {
     Nexons: 0.3,   // 30%
     Claims: 0.2,   // 20%
@@ -337,8 +345,8 @@ const cards = [
     </h2>
 
     <p className="mt-1 text-[11px] sm:text-sm text-white/50 leading-snug">
-      Monitor daily new user activity and growth patterns
-    </p>
+  {rangeDescriptions[activeRange]}
+</p>
   </div>
 
   <div className="w-full h-full pt-14 sm:pt-16">
