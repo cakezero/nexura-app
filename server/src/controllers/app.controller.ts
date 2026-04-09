@@ -33,7 +33,7 @@ import { checksumAddress } from "viem";
 import { campaign, campaignCompleted } from "@/models/campaign.model";
 import { dailySignIn } from "@/models/dailySignIn.model";
 import { startOfDayUTC, updateLevel, getAmountPaid } from "@/utils/utils";
-import { lessonCompleted } from "@/models/lesson.model";
+import { lesson, lessonCompleted } from "@/models/lesson.model";
 
 const client = new GraphQLClient(GRAPHQL_API_URL);
 
@@ -847,6 +847,8 @@ export const getAnalytics = async (req: GlobalRequest, res: GlobalResponse) => {
 
     const totalLessonJoined = await lessonCompleted.countDocuments();
 
+    const lessonsCreated = await lesson.countDocuments();
+
     const totalLessonCompleted = await lessonCompleted.countDocuments({ done: true });
 
     const totalJoined =
@@ -860,9 +862,23 @@ export const getAnalytics = async (req: GlobalRequest, res: GlobalResponse) => {
     const joinRatio = (totalCompleted / totalJoined) * 100;
 
     const totalUsers = usersFound.length;
-    const totalXpInCirculation = usersFound.reduce((sum, current) => {
-      return sum + Number(current.xp ?? 0);
-    }, 0);
+
+    const claimsCreated = 0;
+
+    const payments = (await campaign.countDocuments({
+      project_name: { $ne: "Nexura" },
+    }));
+
+    const aggregateResult = await user.aggregate([
+      {
+        $group: {
+          _id: null,
+          totalXp: { $sum: "$xp" },
+        },
+      },
+    ]);
+
+    const totalXpInCirculation = aggregateResult[0]?.totalXp ?? 0;
 
     const now = new Date();
 
@@ -991,6 +1007,9 @@ export const getAnalytics = async (req: GlobalRequest, res: GlobalResponse) => {
           totalUsersYesterday,
         },
         totalReferrals,
+        lessonsCreated,
+        claimsCreated,
+        payments,
         totalQuests,
         totalQuestsCompleted,
         totalCampaignsCompleted,
