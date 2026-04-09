@@ -899,13 +899,7 @@ export const getAnalytics = async (req: GlobalRequest, res: GlobalResponse) => {
 
     const totalTrustDistributed = (totalCampaignsCompleted * 16) + (referralRewardsClaimed * 16.2); // fix this later
 
-    const totalQuestClaims = totalQuestsCompleted * 3;
-
-    const totalCampaignClaims = totalCampaignsCompleted * 2;
-
-    const totalOnchainClaims = totalQuestClaims + totalCampaignClaims;
-
-    const totalOnchainInteractions = totalOnchainClaims + referralRewardsClaimed + nexonsMinted;
+    const totalOnchainInteractions = referralRewardsClaimed + nexonsMinted;
 
     const users7d = usersFound.filter((u) => {
 
@@ -990,7 +984,6 @@ export const getAnalytics = async (req: GlobalRequest, res: GlobalResponse) => {
       message: "analytics data fetched",
       analytics: {
         totalOnchainInteractions,
-        totalOnchainClaims,
         totalCampaigns,
         user: {
           totalUsers,
