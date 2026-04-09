@@ -115,7 +115,7 @@ export default function Analytics() {
     { id: "Nexons", value: nexonsMintedCount, color: "#B65FC8" },
     { id: "Referrals", value: referralCount, color: "#8A3FFD" },
     { id: "Others", value: othersCount, color: "#FFFFFF" },
-  ].filter((d) => d.value > 0);
+  ];
 
   // Build chart data from API buckets
   const chartDataForRange = (): number[] => {
