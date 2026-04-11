@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import Chart from "react-apexcharts";
 import AnimatedBackground from "../components/AnimatedBackground";
 import { ResponsivePie } from "@nivo/pie";
@@ -116,50 +116,55 @@ export default function Analytics() {
     { id: "Others", value: othersCount, color: "#FFFFFF" },
   ];
 
-  // Build chart data from API buckets
-  const chartDataForRange = (): number[] => {
-    if (!data) return [];
-    if (activeRange === "Last 24 Hrs") {
-      return data.usersByHour.map((h) => h.count);
-    }
-    if (activeRange === "Last 7 days") {
-      // Last 7 entries of usersByDay (6 days ago → today)
-      return data.usersByDay.slice(-7).map((d) => d.count);
-    }
-    if (activeRange === "Last 30 days") {
-      return data.usersByDay.map((d) => d.count);
-    }
-    // All Time — cumulative growth curve over the last 30 days
-    const totalSignups30d = data.usersByDay.reduce((s, d) => s + d.count, 0);
-    let cum = Math.max(0, data.user.totalUsers - totalSignups30d);
-    return data.usersByDay.map((d) => {
-      cum += d.count;
-      return cum;
-    });
-  };
+  const sortedDays = [...(data?.usersByDay ?? [])].sort(
+  (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+);
+
+const chartDataForRange = (): number[] => {
+  if (!data) return [];
+
+  const days = sortedDays;
+
+  if (activeRange === "Last 7 days") {
+    return days.slice(-7).map(d => d.count);
+  }
+
+  if (activeRange === "Last 30 days") {
+    return days.slice(-30).map(d => d.count);
+  }
+
+  if (activeRange === "Last 24 Hrs") {
+    return [...data.usersByHour]
+      .sort((a, b) => a.label.localeCompare(b.label))
+      .map(h => h.count);
+  }
+
+  return days.map(d => d.count);
+};
 
   const chartCategoriesForRange = (): string[] => {
-    if (!data) return [];
-    if (activeRange === "Last 24 Hrs") {
-      return data.usersByHour.map((h) => h.label);
-    }
-    if (activeRange === "Last 7 days") {
-      return data.usersByDay.slice(-7).map((d) => d.day);
-    }
-    if (activeRange === "Last 30 days") {
-      return data.usersByDay.map((d) => d.date);
-    }
-    return data.usersByDay.map((d) => d.date);
-  };
+  if (!data) return [];
+
+  const days = sortedDays;
+
+  if (activeRange === "Last 7 days") {
+    return days.slice(-7).map(d => d.day);
+  }
+
+  if (activeRange === "Last 30 days") {
+    return days.slice(-30).map(d => d.date);
+  }
+
+  if (activeRange === "Last 24 Hrs") {
+    return [...data.usersByHour]
+      .sort((a, b) => a.label.localeCompare(b.label))
+      .map(h => h.label);
+  }
+
+  return days.map(d => d.date);
+};
 
   const cards = [
-    {
-      title: "New Users",
-      value: totalUsersForRange[activeRange],
-      rate: pctChange(totalUsersForRange[activeRange], prevNewUsersForRange[activeRange]),
-      description: activeRange === "All Time" ? "total signups" : "vs previous period",
-      icon: "new-users.png",
-    },
     {
       title: "Total Users",
       value: data?.user.totalUsers ?? 0,
@@ -173,6 +178,13 @@ export default function Analytics() {
       rate: pctChange(activeUsersForRange[activeRange], prevActiveForRange[activeRange]),
       description: activeRange === "All Time" ? "all active users" : "vs previous period",
       icon: "approved.png",
+    },
+    {
+      title: "New Users",
+      value: totalUsersForRange[activeRange],
+      rate: pctChange(totalUsersForRange[activeRange], prevNewUsersForRange[activeRange]),
+      description: activeRange === "All Time" ? "total signups" : "vs previous period",
+      icon: "new-users.png",
     },
     {
       title: "Quests Created",
