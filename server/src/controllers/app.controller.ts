@@ -1022,7 +1022,7 @@ export const getAnalytics = async (req: GlobalRequest, res: GlobalResponse) => {
         },
         totalReferrals,
         lessonsCreated,
-        claimsBought,
+        claimsCreated: claimsBought,
         payments,
         totalQuests,
         totalQuestsCompleted,

@@ -171,6 +171,7 @@ const chartDataForRange = (): number[] => {
       rate: pctChange(data?.user.totalUsers ?? 0, data?.user.totalUsersYesterday ?? 0),
       description: "day-over-day growth",
       icon: "referrals.png",
+      fullNumber: true,
     },
     {
       title: "Active Users",
@@ -178,6 +179,7 @@ const chartDataForRange = (): number[] => {
       rate: pctChange(activeUsersForRange[activeRange], prevActiveForRange[activeRange]),
       description: activeRange === "All Time" ? "all active users" : "vs previous period",
       icon: "approved.png",
+      fullNumber: false,
     },
     {
       title: "New Users",
@@ -185,6 +187,7 @@ const chartDataForRange = (): number[] => {
       rate: pctChange(totalUsersForRange[activeRange], prevNewUsersForRange[activeRange]),
       description: activeRange === "All Time" ? "total signups" : "vs previous period",
       icon: "new-users.png",
+      fullNumber: false,
     },
     {
       title: "Quests Created",
@@ -192,6 +195,7 @@ const chartDataForRange = (): number[] => {
       rate: null,
       description: "total quests",
       icon: "quest-iconx.png",
+      fullNumber: false,
     },
     {
       title: "Campaigns Created",
@@ -199,6 +203,7 @@ const chartDataForRange = (): number[] => {
       rate: null,
       description: "total campaigns",
       icon: "campaign_icon.png",
+      fullNumber: false,
     },
   ];
 
@@ -337,7 +342,7 @@ const chartDataForRange = (): number[] => {
       </div>
 
       <div className="relative z-10 text-2xl font-bold text-white mb-2">
-        {formatNumber(card.value)}
+        {card.fullNumber ? card.value.toLocaleString() : formatNumber(card.value)}
       </div>
 
       {card.rate !== null && card.rate !== undefined ? (
