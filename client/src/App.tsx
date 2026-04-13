@@ -92,7 +92,7 @@ function Router() {
       <Route path="/x/callback" component={XCallback} />
       <Route path="/campaigns/tasks" component={CampaignEnvironment} />
       <Route path="/quests/tasks-card" component={QuestEnvironment} />
-      <Route path="/analytics" component={Analyticss} />
+      <Route path="/analytics" component={Analytics} />
       <Route path="/portal-claims" component={PortalClaims} />
       <Route path="/portal-claims/:id" component={ClaimDetails} />
       <Route path="/studio" component={NexuraStudio} />
