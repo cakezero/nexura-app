@@ -11,7 +11,7 @@ import AnimatedBackground from "../components/AnimatedBackground";
 
 type Referral = {
   username: string;
-  dateJoined: string;
+  signedUp: string;
   status: "Active" | "Inactive";
 };
 
@@ -263,7 +263,7 @@ export default function ReferralsPage() {
 
           {/* Table Rows */}
           {referralData.length > 0 ? (
-            displayedReferrals.map(({ username, dateJoined, status }) => (
+            displayedReferrals.map(({ username, signedUp, status }) => (
               <div
                 key={username}
                 className="flex items-center justify-between bg-[#2a223d] border border-white/[0.2] h-[62px] px-[23px]"
@@ -279,7 +279,7 @@ export default function ReferralsPage() {
                   </span>
                 </div>
                 <span className="text-[18px] font-semibold text-white/85 leading-[18.2px]">
-                  {dateJoined}
+                  {signedUp}
                 </span>
                 <span className="text-[18px] font-semibold text-white/85 leading-[18.2px]">
                   {status}
