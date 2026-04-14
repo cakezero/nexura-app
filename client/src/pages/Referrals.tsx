@@ -7,7 +7,6 @@ import { useAuth } from "../lib/auth";
 import { useToast } from "../hooks/use-toast";
 import { url } from "../lib/constants";
 import { claimReferralReward } from "../lib/performOnchainAction";
-import { InviteIcon, RegisterIcon, EarnIcon, UsersIcon, ActiveIcon, TrustIcon } from "../svgs/icons";
 import AnimatedBackground from "../components/AnimatedBackground";
 
 type Referral = {
@@ -47,18 +46,13 @@ export default function ReferralsPage() {
 
   const referralLink = `${url}/ref/${user ? user.referral.code : "referral-noobmaster"}`;
 
-  // Milestone logic
   const currentMilestoneIdx = MILESTONES.findIndex(m => activeUsers < m.target);
   const allMilestonesComplete = currentMilestoneIdx === -1;
   const milestone = allMilestonesComplete ? MILESTONES[MILESTONES.length - 1] : MILESTONES[currentMilestoneIdx];
   const prevTarget = currentMilestoneIdx > 0 ? MILESTONES[currentMilestoneIdx - 1].target : 0;
   const progressInMilestone = allMilestonesComplete ? 10 : Math.min(activeUsers - prevTarget, 10);
   const progressPercent = (progressInMilestone / 10) * 100;
-
-  // XP earned from completed milestones
   const xpEarned = MILESTONES.reduce((sum, m) => activeUsers >= m.target ? sum + m.reward : sum, 0);
-
-  // Can claim current milestone?
   const canClaimCurrent = !allMilestonesComplete && activeUsers >= milestone.target;
 
   const handleCopy = async () => {
@@ -87,72 +81,105 @@ export default function ReferralsPage() {
   const displayedReferrals = showAll ? referralData : referralData.slice(0, 7);
 
   return (
-    <div className="min-h-screen w-full bg-black text-white p-6 relative overflow-x-hidden">
+    <div
+      className="min-h-screen w-full bg-black text-white relative overflow-x-hidden"
+      style={{ fontFamily: "'Geist', sans-serif" }}
+    >
       <AnimatedBackground />
 
-      <div className="relative z-10 max-w-[900px] mx-auto space-y-8">
+      <div className="relative z-10 w-full max-w-[811px] mx-auto px-4 pt-8 pb-16 space-y-10">
 
         {/* HEADER */}
         <div>
-          <h1 className="text-[40px] font-semibold text-white" style={{ fontFamily: "'Geist', sans-serif" }}>
+          <h1 className="text-[40px] font-semibold leading-[33.2px] text-white">
             Referrals
           </h1>
-          <p className="text-[18px] text-[#a3adc2] mt-2">
+          <p className="text-[18px] text-[#a3adc2] mt-5 leading-[28px] text-justify">
             Invite your friends to Nexura and you can earn up to {TOTAL_XP.toLocaleString()} XP
           </p>
         </div>
 
         {/* 3 STEPS */}
-        <div className="flex items-start justify-between px-4 sm:px-8 relative">
-          {/* Dashed connector lines */}
-          <div className="absolute top-[50px] left-[calc(16.67%+50px)] right-[calc(83.33%-50px)] hidden sm:block">
-            <svg width="100%" height="20" className="overflow-visible">
-              <path d="M 0 10 Q 60 -15 120 10" stroke="rgba(138,63,252,0.3)" strokeWidth="2" strokeDasharray="6 4" fill="none" />
-            </svg>
-          </div>
-          <div className="absolute top-[50px] left-[calc(50%-60px)] right-[calc(50%-60px)] hidden sm:block">
-            <svg width="100%" height="20" className="overflow-visible">
-              <path d="M 0 10 Q 60 -15 120 10" stroke="rgba(138,63,252,0.3)" strokeWidth="2" strokeDasharray="6 4" fill="none" />
-            </svg>
+        <div className="flex flex-col sm:flex-row justify-between relative items-start">
+          {/* Arc connectors */}
+          <img
+            src="/referral-icons/arc-right.png"
+            alt=""
+            className="absolute hidden sm:block pointer-events-none"
+            style={{ top: 22, left: '19%', width: '17%', transform: 'scaleX(-1)' }}
+          />
+          <img
+            src="/referral-icons/arc-left.png"
+            alt=""
+            className="absolute hidden sm:block pointer-events-none"
+            style={{ top: 22, left: '57%', width: '17%', transform: 'rotate(180deg)' }}
+          />
+
+          {/* Step 1: Send an invitation */}
+          <div className="flex flex-col items-center w-full sm:w-[207px] gap-5">
+            <div className="w-[100px] h-[100px] rounded-full bg-[#0d0719] flex items-center justify-center overflow-hidden shrink-0">
+              <img src="/referral-icons/referral-icon.png" alt="" className="w-[60px] h-[60px] object-cover" />
+            </div>
+            <div className="flex flex-col items-center gap-5 w-full">
+              <p className="text-[24px] font-semibold text-white/70 leading-[18.2px]">Send an invitation</p>
+              <p className="text-[14px] font-normal text-[#a3adc2] text-center leading-[23px]">
+                Send your referral link to friends and tell them how cool Nexura is!
+              </p>
+            </div>
           </div>
 
-          {[
-            { icon: InviteIcon, title: "Send an invitation", desc: "Send your referral link to friends and tell them how cool Nexura is!" },
-            { icon: RegisterIcon, title: "Registration", desc: "Let them register to our platform using your referral link." },
-            { icon: EarnIcon, title: "Earn", desc: `You can earn up to ${TOTAL_XP.toLocaleString()} XP referring your friends after they complete a Quest or Campaign` },
-          ].map(({ icon: Icon, title, desc }) => (
-            <div key={title} className="flex flex-col items-center text-center w-[207px] gap-4">
-              <div className="w-[100px] h-[100px] rounded-full bg-[#0d0719] flex items-center justify-center">
-                <Icon className="w-[40px] h-[40px] text-purple-300" />
-              </div>
-              <div className="space-y-3">
-                <p className="text-[20px] sm:text-[24px] font-semibold text-white/70">{title}</p>
-                <p className="text-[14px] text-[#a3adc2] leading-[23px]">{desc}</p>
-              </div>
+          {/* Step 2: Registration */}
+          <div className="flex flex-col items-center w-full sm:w-[207px] gap-[17px] mt-6 sm:mt-0">
+            <div className="w-[100px] h-[100px] rounded-full bg-[#0d0719] flex items-center justify-center overflow-hidden shrink-0">
+              <img src="/referral-icons/registration-icon.png" alt="" className="w-[60px] h-[60px] object-cover" />
             </div>
-          ))}
+            <div className="flex flex-col items-center gap-5 w-full">
+              <p className="text-[24px] font-semibold text-white/70 leading-[18.2px]">Registration</p>
+              <p className="text-[14px] font-normal text-[#a3adc2] text-center leading-[23px]">
+                Let them register to our platform using your referral link.
+              </p>
+            </div>
+          </div>
+
+          {/* Step 3: Earn */}
+          <div className="flex flex-col items-center w-full sm:w-[207px] gap-4 mt-6 sm:mt-0">
+            <div className="w-[100px] h-[100px] rounded-full bg-[#0d0719] flex items-center justify-center overflow-hidden shrink-0">
+              <img src="/referral-icons/reward-icon.png" alt="" className="w-[60px] h-[60px] object-cover" />
+            </div>
+            <div className="flex flex-col items-center justify-between w-full">
+              <p className="text-[24px] font-semibold text-white/70 leading-[18.2px]">Earn</p>
+              <p className="text-[14px] font-normal text-[#a3adc2] text-center leading-[23px] mt-5">
+                You can earn up to {TOTAL_XP.toLocaleString()} XP referring your friends after they complete a Quest or Campaign
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* SHARE REFERRAL LINK */}
-        <div className="space-y-4">
-          <div>
-            <h2 className="text-[28px] sm:text-[30px] font-semibold text-white">Share your referral link</h2>
-            <p className="text-[14px] text-[#a3adc2] mt-2 leading-[23px]">
+        <div className="space-y-6">
+          <div className="w-full max-w-[578px]">
+            <h2 className="text-[30px] font-semibold text-white leading-[18.2px]">
+              Share your referral link
+            </h2>
+            <p className="text-[14px] font-normal text-[#a3adc2] text-center leading-[23px] mt-6">
               You can share your referral link by copying and sending it or sharing it on your social media
             </p>
           </div>
           <div className="flex items-center gap-4">
-            <div className="flex items-center justify-between bg-[rgba(201,170,255,0.2)] rounded-[26px] h-[57px] px-[27px] flex-1">
-              <span className="text-[14px] font-semibold text-white/60 truncate mr-4">
+            <div className="flex items-center justify-between bg-[rgba(201,170,255,0.2)] rounded-[26px] h-[57px] flex-1 px-[27px]">
+              <span className="text-[14px] font-semibold text-white/60 truncate">
                 {referralLink}
               </span>
-              <button onClick={handleCopy} className="text-[16px] font-bold text-[#8a3ffc] flex-shrink-0 hover:opacity-80 transition-opacity">
+              <button
+                onClick={handleCopy}
+                className="text-[16px] font-bold text-[#8a3ffc] shrink-0 ml-4 hover:opacity-80 transition-opacity"
+              >
                 {copied ? "Copied!" : "Copy Link"}
               </button>
             </div>
             <button
               onClick={handleShareX}
-              className="w-[57px] h-[57px] rounded-full bg-[rgba(201,170,255,0.2)] flex items-center justify-center flex-shrink-0 hover:opacity-80 transition-opacity"
+              className="w-[57px] h-[57px] rounded-full bg-[rgba(201,170,255,0.2)] flex items-center justify-center shrink-0 hover:opacity-80 transition-opacity"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
                 <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
@@ -162,32 +189,63 @@ export default function ReferralsPage() {
         </div>
 
         {/* STAT CARDS */}
-        <div className="flex gap-5 flex-col sm:flex-row">
-          {[
-            { icon: UsersIcon, label: "Total Referrals", value: totalReferrals },
-            { icon: ActiveIcon, label: "Active", value: activeUsers },
-            { icon: TrustIcon, label: "XP Earned", value: xpEarned.toLocaleString() },
-          ].map(({ icon: Icon, label, value }) => (
-            <div key={label} className="flex items-center justify-between bg-[rgba(201,170,255,0.2)] rounded-[26px] h-[108px] px-[30px] flex-1">
-              <div>
-                <p className="text-[18px] font-medium text-[#a3adc2] leading-[23px]">{label}</p>
-                <p className="text-[30px] font-medium text-white mt-2 leading-[23px]">{value}</p>
-              </div>
-              <div className="w-[60px] h-[60px] flex items-center justify-center">
-                <Icon className="w-[40px] h-[40px] text-purple-300/70" />
-              </div>
-            </div>
-          ))}
+        <div className="flex flex-col sm:flex-row gap-5">
+          {/* Total Referrals */}
+          <div className="bg-[rgba(201,170,255,0.2)] rounded-[26px] h-[108px] sm:w-[257px] w-full relative overflow-hidden">
+            <p className="absolute left-[30px] top-[18px] text-[18px] font-medium text-[#a3adc2] leading-[23px]">
+              Total Referrals
+            </p>
+            <p className="absolute left-[30px] top-[57px] text-[30px] font-medium text-white leading-[23px]">
+              {totalReferrals}
+            </p>
+            <img
+              src="/referral-icons/referral-icon.png"
+              alt=""
+              className="absolute top-1/2 -translate-y-1/2 w-[60px] h-[60px] object-cover right-[27px] sm:left-[170px] sm:right-auto"
+            />
+          </div>
+
+          {/* Active */}
+          <div className="bg-[rgba(201,170,255,0.2)] rounded-[26px] h-[108px] sm:w-[257px] w-full relative overflow-hidden">
+            <p className="absolute left-[30px] top-[18px] text-[18px] font-medium text-[#a3adc2] leading-[23px]">
+              Active
+            </p>
+            <p className="absolute left-[30px] top-[57px] text-[30px] font-medium text-white leading-[23px]">
+              {activeUsers}
+            </p>
+            <img
+              src="/referral-icons/active-icon.png"
+              alt=""
+              className="absolute top-1/2 -translate-y-1/2 w-[60px] h-[60px] object-cover right-[27px] sm:left-[170px] sm:right-auto"
+            />
+          </div>
+
+          {/* XP Earned */}
+          <div className="bg-[rgba(201,170,255,0.2)] rounded-[26px] h-[108px] sm:w-[257px] w-full relative overflow-hidden">
+            <p className="absolute left-[30px] top-[18px] text-[18px] font-medium text-[#a3adc2] leading-[23px]">
+              XP Earned
+            </p>
+            <p className="absolute left-[30px] top-[57px] text-[30px] font-medium text-white leading-[23px]">
+              {xpEarned.toLocaleString()}
+            </p>
+            <img
+              src="/referral-icons/reward-icon.png"
+              alt=""
+              className="absolute top-1/2 -translate-y-1/2 w-[60px] h-[60px] object-cover right-[27px] sm:left-[172px] sm:right-auto"
+            />
+          </div>
         </div>
 
         {/* REFERRAL HISTORY */}
-        <div className="bg-[rgba(201,170,255,0.2)] rounded-[26px] overflow-hidden">
-          <div className="flex items-center justify-between px-6 py-5">
-            <h3 className="text-[20px] font-semibold text-white">Referral History</h3>
+        <div className="bg-[rgba(201,170,255,0.2)] rounded-[26px] overflow-hidden w-full">
+          <div className="flex items-center justify-between px-[23px] py-5">
+            <h3 className="text-[20px] font-semibold text-white leading-[18.2px]">
+              Referral History
+            </h3>
             {referralData.length > 7 && (
               <button
                 onClick={() => setShowAll(!showAll)}
-                className="text-[20px] font-semibold text-[#8a3ffc] hover:opacity-80 transition-opacity"
+                className="text-[20px] font-semibold text-[#8a3ffc] leading-[18.2px] hover:opacity-80 transition-opacity"
               >
                 {showAll ? "Show less" : "View all"}
               </button>
@@ -195,7 +253,7 @@ export default function ReferralsPage() {
           </div>
 
           {/* Table Header */}
-          <div className="flex items-center justify-between px-[55px] py-[13px] bg-[#100923] border-y border-white/[0.16] text-[14px] font-semibold text-white/85">
+          <div className="flex items-center justify-between px-[55px] py-[13px] bg-[#100923] border border-white/[0.16] text-[14px] font-semibold text-white/85 leading-[18.2px]">
             <span>User</span>
             <span>Signed Up</span>
             <span>Status</span>
@@ -204,101 +262,97 @@ export default function ReferralsPage() {
           {/* Table Rows */}
           {referralData.length > 0 ? (
             displayedReferrals.map(({ username, dateJoined, status }) => (
-              <div key={username} className="flex items-center justify-between px-6 h-[62px] bg-[#2a223d] border-b border-white/[0.2] last:border-b-0">
-                <div className="flex items-center gap-[13px] min-w-[150px]">
-                  <Avatar className="w-[34px] h-[34px] ring-1 ring-black rounded-full">
+              <div
+                key={username}
+                className="flex items-center justify-between bg-[#2a223d] border border-white/[0.2] h-[62px] px-[23px]"
+              >
+                <div className="flex items-center gap-[13px] min-w-[180px]">
+                  <Avatar className="w-[34px] h-[34px] ring-1 ring-black rounded-full shrink-0">
                     <AvatarFallback className="bg-purple-800/60 text-purple-200 text-xs rounded-full">
                       {username[0]}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="text-[18px] font-semibold text-white/85">{username}</span>
+                  <span className="text-[18px] font-semibold text-white/85 leading-[18.2px]">
+                    {username}
+                  </span>
                 </div>
-                <span className="text-[18px] font-semibold text-white/85">{dateJoined}</span>
-                <span className="text-[18px] font-semibold text-white/85">{status}</span>
+                <span className="text-[18px] font-semibold text-white/85 leading-[18.2px]">
+                  {dateJoined}
+                </span>
+                <span className="text-[18px] font-semibold text-white/85 leading-[18.2px]">
+                  {status}
+                </span>
               </div>
             ))
           ) : (
-            <div className="px-6 py-8 text-center text-white/50">No referrals yet</div>
+            <div className="px-6 py-8 text-center text-white/50 bg-[#2a223d]">
+              No referrals yet
+            </div>
           )}
         </div>
 
-        {/* MILESTONE INDICATORS */}
-        <div className="flex gap-3 justify-center">
-          {MILESTONES.map((m, i) => {
-            const completed = activeUsers >= m.target;
-            const isCurrent = i === currentMilestoneIdx;
-            return (
-              <div key={m.tier} className={`flex items-center gap-2 px-4 py-2 rounded-full text-[13px] font-semibold transition-all ${
-                completed ? "bg-[#8a3ffc]/30 text-[#8a3ffc] border border-[#8a3ffc]/50" :
-                isCurrent ? "bg-white/10 text-white border border-white/20" :
-                "bg-white/5 text-white/30 border border-white/10"
-              }`}>
-                {completed && (
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.2 4.8 12 3.4 13.4 9 19l12-12-1.4-1.4Z" /></svg>
-                )}
-                {m.label}: {m.reward.toLocaleString()} XP
-              </div>
-            );
-          })}
-        </div>
-
         {/* BOTTOM CARDS */}
-        <div className="flex gap-5 flex-col lg:flex-row">
+        <div className="flex flex-col lg:flex-row gap-5">
           {/* Milestone Progress */}
-          <div className="bg-[rgba(201,170,255,0.2)] rounded-[26px] p-6 flex-1 space-y-4">
-            <h3 className="text-[20px] font-semibold text-white">
-              {allMilestonesComplete ? "All Milestones Complete!" : `${milestone.label} Progress`}
+          <div className="bg-[rgba(201,170,255,0.2)] rounded-[26px] h-[222px] flex-1 relative overflow-hidden">
+            <h3 className="absolute left-[26px] top-[31px] text-[20px] font-semibold text-white leading-[18.2px]">
+              Milestone Progress
             </h3>
-            <div className="flex items-center justify-between">
-              <p className="text-[18px] font-medium text-[#a3adc2]">
-                {allMilestonesComplete
-                  ? <span className="font-bold text-[#8a3ffc]">{TOTAL_XP.toLocaleString()} XP Earned</span>
-                  : <>Next Reward: <span className="font-bold text-[#8a3ffc]">+{milestone.reward.toLocaleString()} XP</span></>
-                }
-              </p>
-              <div className="bg-white/20 rounded-[6px] px-2 py-0.5">
-                <span className="text-[16px] font-semibold text-white/85">{progressInMilestone}/10</span>
-              </div>
+            <p className="absolute left-[26px] top-[66px] text-[18px] font-medium text-[#a3adc2] leading-[23px]">
+              {allMilestonesComplete ? (
+                <span className="font-bold text-[#8a3ffc]">{TOTAL_XP.toLocaleString()} XP Earned</span>
+              ) : (
+                <>
+                  Next Reward:{" "}
+                  <span className="font-bold text-[#8a3ffc]">
+                    +{milestone.reward.toLocaleString()} XP
+                  </span>
+                </>
+              )}
+            </p>
+            <div className="absolute right-[27px] top-[63px] bg-white/20 rounded-[6px] w-[52px] h-[26px] flex items-center justify-center">
+              <span className="text-[16px] font-semibold text-white/85 leading-[23px]">
+                {progressInMilestone}/10
+              </span>
             </div>
-            {/* Progress bar */}
-            <div className="w-full h-[20px] bg-white/[0.23] rounded-[6px] overflow-hidden">
+            <div className="absolute left-[26px] top-[95px] right-[23px] h-[20px] bg-white/[0.23] rounded-[6px] overflow-hidden">
               <div
                 className="h-full bg-[#8a3ffc] rounded-r-[6px] transition-all duration-500"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
-            <p className="text-[14px] text-[#a3adc2] leading-[18px]">
+            <p className="absolute left-[26px] top-[125px] text-[14px] font-normal text-[#a3adc2] leading-[18px] right-[26px]">
               {allMilestonesComplete
                 ? "You've completed all referral milestones. Thank you!"
-                : `Refer ${10 - progressInMilestone} more friends who complete a quest or campaign to unlock ${milestone.label}`
-              }
+                : `Refer ${10 - progressInMilestone} more friends who complete a quest or campaign to unlock remaining bonus`}
             </p>
-            <div className="flex justify-center">
-              <button
-                onClick={handleClaim}
-                disabled={!canClaimCurrent || rewardClaimed}
-                className="border border-[#8a3ffc] rounded-full px-8 py-1.5 text-[14px] font-bold text-white hover:bg-[#8a3ffc]/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                {allMilestonesComplete && rewardClaimed ? "All Claimed" : rewardClaimed ? "Claimed" : "Claim Reward"}
-              </button>
-            </div>
+            <button
+              onClick={handleClaim}
+              disabled={!canClaimCurrent || rewardClaimed}
+              className="absolute left-1/2 -translate-x-1/2 top-[171px] border border-[#8a3ffc] rounded-[33px] w-[217px] h-[30px] text-[14px] font-bold text-white leading-[18px] hover:bg-[#8a3ffc]/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {allMilestonesComplete && rewardClaimed ? "All Claimed" : rewardClaimed ? "Claimed" : "Claim Reward"}
+            </button>
           </div>
 
           {/* Important Rule */}
-          <div className="bg-[rgba(201,170,255,0.2)] rounded-[26px] p-6 flex-1 space-y-4">
-            <div className="flex items-center gap-1.5">
-              <svg width="40" height="40" viewBox="0 0 24 24" fill="#8a3ffc">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" />
-              </svg>
-              <h3 className="text-[20px] font-semibold text-white">Important Rule</h3>
+          <div className="bg-[rgba(201,170,255,0.2)] rounded-[26px] h-[222px] flex-1 relative overflow-hidden">
+            <div className="absolute left-[12px] top-[25px] flex items-center gap-[5px]">
+              <img src="/referral-icons/info-icon.png" alt="" className="w-[40px] h-[40px]" />
+              <span className="text-[20px] font-semibold text-white leading-[18.2px]">
+                Important Rule
+              </span>
             </div>
-            <p className="text-[16px] font-medium text-[#a3adc2] leading-[23px] pl-[45px]">
-              Referrals only count as "Active" after they{" "}
-              <span className="font-bold text-white/85">complete their first quest or campaign</span>{" "}
+            <p className="absolute left-[57px] top-[75px] text-[16px] font-medium text-[#a3adc2] leading-[23px] right-[20px]">
+              Referrals only count as &ldquo;Active&rdquo; after they{" "}
+              <span className="font-bold text-white/85">
+                complete their first quest or campaign
+              </span>{" "}
               on the platform
             </p>
-            <p className="text-[16px] font-medium text-[#a3adc2] leading-[23px] pl-[45px]">
-              You can refer up to <span className="font-bold text-white/85">{MAX_REFERRALS} people</span>{" "}
+            <p className="absolute left-[57px] top-[148px] text-[16px] font-medium text-[#a3adc2] leading-[23px] right-[20px]">
+              You can refer up to{" "}
+              <span className="font-bold text-white/85">{MAX_REFERRALS} people</span>{" "}
               <span className="font-semibold">max</span> and only active referrals qualify for rewards.
             </p>
           </div>
