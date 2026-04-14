@@ -83,10 +83,10 @@ export default function ReferralsPage() {
   const displayedReferrals = showAll ? referralData : referralData.slice(0, 7);
 
   return (
-    <div className="min-h-screen bg-black text-white p-4 sm:p-6 relative overflow-x-hidden">
+    <div className="min-h-screen w-full bg-black text-white p-3 sm:p-6 relative overflow-hidden">
       <AnimatedBackground />
 
-      <div className="max-w-6xl mx-auto space-y-5 sm:space-y-8 relative z-10">
+      <div className="w-full max-w-6xl mx-auto space-y-5 sm:space-y-8 relative z-10">
 
         {/* HEADER */}
         <div className="space-y-1 mb-6">
@@ -103,7 +103,7 @@ export default function ReferralsPage() {
         </div>
 
         {/* 3 STEPS */}
-        <div className="flex flex-col sm:flex-row justify-between relative items-start gap-6 sm:gap-0">
+        <div className="flex flex-col sm:flex-row justify-between relative items-start gap-4 sm:gap-0">
           {/* Arc connectors */}
           <img
             src="/referral-icons/arc-right.png"
@@ -119,40 +119,40 @@ export default function ReferralsPage() {
           />
 
           {/* Step 1: Send an invitation */}
-          <div className="flex flex-row sm:flex-col items-center w-full sm:w-[207px] gap-4 sm:gap-5">
-            <div className="w-[72px] h-[72px] sm:w-[100px] sm:h-[100px] rounded-full bg-[#0d0719] flex items-center justify-center overflow-hidden shrink-0">
-              <img src="/referral-icons/referral-icon.png" alt="" className="w-[44px] h-[44px] sm:w-[60px] sm:h-[60px] object-cover" />
+          <div className="flex flex-row sm:flex-col items-center w-full sm:w-[207px] gap-3 sm:gap-5">
+            <div className="w-[56px] h-[56px] sm:w-[100px] sm:h-[100px] rounded-full bg-[#0d0719] flex items-center justify-center overflow-hidden shrink-0">
+              <img src="/referral-icons/referral-icon.png" alt="" className="w-[34px] h-[34px] sm:w-[60px] sm:h-[60px] object-cover" />
             </div>
-            <div className="flex flex-col sm:items-center gap-2 sm:gap-5">
-              <p className="text-[18px] sm:text-[24px] font-semibold text-white/70 leading-tight">Send an invitation</p>
-              <p className="text-[13px] sm:text-[14px] font-normal text-[#a3adc2] sm:text-center leading-[20px] sm:leading-[23px]">
+            <div className="flex flex-col sm:items-center gap-1 sm:gap-5 min-w-0">
+              <p className="text-[15px] sm:text-[24px] font-semibold text-white/70 leading-tight">Send an invitation</p>
+              <p className="text-[12px] sm:text-[14px] font-normal text-[#a3adc2] sm:text-center leading-[18px] sm:leading-[23px]">
                 Send your referral link to friends and tell them how cool Nexura is!
               </p>
             </div>
           </div>
 
           {/* Step 2: Registration */}
-          <div className="flex flex-row sm:flex-col items-center w-full sm:w-[207px] gap-4 sm:gap-[17px]">
-            <div className="w-[72px] h-[72px] sm:w-[100px] sm:h-[100px] rounded-full bg-[#0d0719] flex items-center justify-center overflow-hidden shrink-0">
-              <img src="/referral-icons/registration-icon.png" alt="" className="w-[44px] h-[44px] sm:w-[60px] sm:h-[60px] object-cover" />
+          <div className="flex flex-row sm:flex-col items-center w-full sm:w-[207px] gap-3 sm:gap-[17px]">
+            <div className="w-[56px] h-[56px] sm:w-[100px] sm:h-[100px] rounded-full bg-[#0d0719] flex items-center justify-center overflow-hidden shrink-0">
+              <img src="/referral-icons/registration-icon.png" alt="" className="w-[34px] h-[34px] sm:w-[60px] sm:h-[60px] object-cover" />
             </div>
-            <div className="flex flex-col sm:items-center gap-2 sm:gap-5">
-              <p className="text-[18px] sm:text-[24px] font-semibold text-white/70 leading-tight">Registration</p>
-              <p className="text-[13px] sm:text-[14px] font-normal text-[#a3adc2] sm:text-center leading-[20px] sm:leading-[23px]">
+            <div className="flex flex-col sm:items-center gap-1 sm:gap-5 min-w-0">
+              <p className="text-[15px] sm:text-[24px] font-semibold text-white/70 leading-tight">Registration</p>
+              <p className="text-[12px] sm:text-[14px] font-normal text-[#a3adc2] sm:text-center leading-[18px] sm:leading-[23px]">
                 Let them register to our platform using your referral link.
               </p>
             </div>
           </div>
 
           {/* Step 3: Earn */}
-          <div className="flex flex-row sm:flex-col items-center w-full sm:w-[207px] gap-4">
-            <div className="w-[72px] h-[72px] sm:w-[100px] sm:h-[100px] rounded-full bg-[#0d0719] flex items-center justify-center overflow-hidden shrink-0">
-              <img src="/referral-icons/reward-icon.png" alt="" className="w-[44px] h-[44px] sm:w-[60px] sm:h-[60px] object-cover" />
+          <div className="flex flex-row sm:flex-col items-center w-full sm:w-[207px] gap-3">
+            <div className="w-[56px] h-[56px] sm:w-[100px] sm:h-[100px] rounded-full bg-[#0d0719] flex items-center justify-center overflow-hidden shrink-0">
+              <img src="/referral-icons/reward-icon.png" alt="" className="w-[34px] h-[34px] sm:w-[60px] sm:h-[60px] object-cover" />
             </div>
-            <div className="flex flex-col sm:items-center gap-2 sm:gap-0">
-              <p className="text-[18px] sm:text-[24px] font-semibold text-white/70 leading-tight">Earn</p>
-              <p className="text-[13px] sm:text-[14px] font-normal text-[#a3adc2] sm:text-center leading-[20px] sm:leading-[23px] sm:mt-5">
-                You can earn up to {TOTAL_XP.toLocaleString()} XP referring your friends after they complete a Quest or Campaign
+            <div className="flex flex-col sm:items-center gap-1 sm:gap-0 min-w-0">
+              <p className="text-[15px] sm:text-[24px] font-semibold text-white/70 leading-tight">Earn</p>
+              <p className="text-[12px] sm:text-[14px] font-normal text-[#a3adc2] sm:text-center leading-[18px] sm:leading-[23px] sm:mt-5">
+                Earn up to {TOTAL_XP.toLocaleString()} XP when your friends complete a Quest or Campaign
               </p>
             </div>
           </div>
@@ -160,32 +160,32 @@ export default function ReferralsPage() {
 
         {/* SHARE REFERRAL LINK */}
         <div className="space-y-4 sm:space-y-6">
-          <div className="flex items-center gap-4">
-            <h2 className="whitespace-nowrap text-lg sm:text-2xl font-semibold text-white">
+          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+            <h2 className="text-base sm:text-2xl font-semibold text-white shrink-0">
               Share your referral link
             </h2>
             <div className="h-[1px] flex-1 bg-[#FFFFFF33]" />
           </div>
-          <p className="text-sm text-white/50 leading-relaxed">
-            You can share your referral link by copying and sending it or sharing it on your social media
+          <p className="text-xs sm:text-sm text-white/50 leading-relaxed">
+            Share your referral link by copying it or posting on social media
           </p>
-          <div className="flex items-center gap-3 sm:gap-4">
-            <div className="flex items-center justify-between glass rounded-2xl h-[48px] sm:h-[57px] flex-1 min-w-0 px-3 sm:px-[27px]">
-              <span className="text-[12px] sm:text-[14px] font-semibold text-white/60 truncate">
+          <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+            <div className="flex items-center justify-between glass rounded-xl sm:rounded-2xl h-[44px] sm:h-[57px] flex-1 min-w-0 px-3 sm:px-[27px]">
+              <span className="text-[11px] sm:text-[14px] font-semibold text-white/60 truncate min-w-0">
                 {referralLink}
               </span>
               <button
                 onClick={handleCopy}
-                className="text-[14px] sm:text-[16px] font-bold text-[#8a3ffc] shrink-0 ml-3 sm:ml-4 hover:opacity-80 transition-opacity"
+                className="text-[13px] sm:text-[16px] font-bold text-[#8a3ffc] shrink-0 ml-2 sm:ml-4 hover:opacity-80 transition-opacity"
               >
                 {copied ? "Copied!" : "Copy"}
               </button>
             </div>
             <button
               onClick={handleShareX}
-              className="w-[48px] h-[48px] sm:w-[57px] sm:h-[57px] rounded-full glass flex items-center justify-center shrink-0 hover:opacity-80 transition-opacity"
+              className="w-[44px] h-[44px] sm:w-[57px] sm:h-[57px] rounded-full glass flex items-center justify-center shrink-0 hover:opacity-80 transition-opacity"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="white" className="sm:w-4 sm:h-4">
                 <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
               </svg>
             </button>
@@ -193,69 +193,69 @@ export default function ReferralsPage() {
         </div>
 
         {/* STAT CARDS */}
-        <div className="flex flex-col sm:flex-row gap-4 sm:gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-5">
           {/* Total Referrals */}
-          <div className="glass glass-hover rounded-2xl h-[90px] sm:h-[108px] flex-1 flex items-center justify-between px-5 sm:px-[30px] overflow-hidden">
-            <div>
-              <p className="text-[14px] sm:text-[18px] font-medium text-[#a3adc2] leading-[23px]">
+          <div className="glass glass-hover rounded-2xl h-[80px] sm:h-[108px] flex items-center justify-between px-4 sm:px-[30px] overflow-hidden">
+            <div className="min-w-0">
+              <p className="text-[13px] sm:text-[18px] font-medium text-[#a3adc2] leading-[23px]">
                 Total Referrals
               </p>
-              <p className="text-[24px] sm:text-[30px] font-medium text-white leading-[23px] mt-3">
+              <p className="text-[22px] sm:text-[30px] font-medium text-white leading-[23px] mt-2 sm:mt-3">
                 {totalReferrals}
               </p>
             </div>
             <img
               src="/referral-icons/referral-icon.png"
               alt=""
-              className="w-[48px] h-[48px] sm:w-[60px] sm:h-[60px] object-cover shrink-0"
+              className="w-[40px] h-[40px] sm:w-[60px] sm:h-[60px] object-cover shrink-0"
             />
           </div>
 
           {/* Active */}
-          <div className="glass glass-hover rounded-2xl h-[90px] sm:h-[108px] flex-1 flex items-center justify-between px-5 sm:px-[30px] overflow-hidden">
-            <div>
-              <p className="text-[14px] sm:text-[18px] font-medium text-[#a3adc2] leading-[23px]">
+          <div className="glass glass-hover rounded-2xl h-[80px] sm:h-[108px] flex items-center justify-between px-4 sm:px-[30px] overflow-hidden">
+            <div className="min-w-0">
+              <p className="text-[13px] sm:text-[18px] font-medium text-[#a3adc2] leading-[23px]">
                 Active
               </p>
-              <p className="text-[24px] sm:text-[30px] font-medium text-white leading-[23px] mt-3">
+              <p className="text-[22px] sm:text-[30px] font-medium text-white leading-[23px] mt-2 sm:mt-3">
                 {activeUsers}
               </p>
             </div>
             <img
               src="/referral-icons/active-icon.png"
               alt=""
-              className="w-[48px] h-[48px] sm:w-[60px] sm:h-[60px] object-cover shrink-0"
+              className="w-[40px] h-[40px] sm:w-[60px] sm:h-[60px] object-cover shrink-0"
             />
           </div>
 
           {/* XP Earned */}
-          <div className="glass glass-hover rounded-2xl h-[90px] sm:h-[108px] flex-1 flex items-center justify-between px-5 sm:px-[30px] overflow-hidden">
-            <div>
-              <p className="text-[14px] sm:text-[18px] font-medium text-[#a3adc2] leading-[23px]">
+          <div className="glass glass-hover rounded-2xl h-[80px] sm:h-[108px] flex items-center justify-between px-4 sm:px-[30px] overflow-hidden">
+            <div className="min-w-0">
+              <p className="text-[13px] sm:text-[18px] font-medium text-[#a3adc2] leading-[23px]">
                 XP Earned
               </p>
-              <p className="text-[24px] sm:text-[30px] font-medium text-white leading-[23px] mt-3">
+              <p className="text-[22px] sm:text-[30px] font-medium text-white leading-[23px] mt-2 sm:mt-3">
                 {xpEarned.toLocaleString()}
               </p>
             </div>
             <img
               src="/nexura-xp.png"
               alt=""
-              className="w-[48px] h-[48px] sm:w-[60px] sm:h-[60px] object-contain shrink-0"
+              className="w-[40px] h-[40px] sm:w-[60px] sm:h-[60px] object-contain shrink-0"
             />
           </div>
         </div>
 
         {/* REFERRAL HISTORY */}
         <div className="glass rounded-2xl overflow-hidden w-full">
-          <div className="flex items-center justify-between px-4 sm:px-[23px] py-4 sm:py-5">
-            <h3 className="text-[16px] sm:text-[20px] font-semibold text-white leading-[18.2px]">
+          <div className="flex items-center justify-between px-3 sm:px-[23px] py-3 sm:py-5">
+            <h3 className="text-[14px] sm:text-[20px] font-semibold text-white leading-[18.2px]">
               Referral History
             </h3>
             {referralData.length > 7 && (
               <button
                 onClick={() => setShowAll(!showAll)}
-                className="text-[14px] sm:text-[20px] font-semibold text-[#8a3ffc] leading-[18.2px] hover:opacity-80 transition-opacity"
+                className="text-[13px] sm:text-[20px] font-semibold text-[#8a3ffc] leading-[18.2px] hover:opacity-80 transition-opacity"
               >
                 {showAll ? "Show less" : "View all"}
               </button>
@@ -263,7 +263,7 @@ export default function ReferralsPage() {
           </div>
 
           {/* Table Header */}
-          <div className="grid grid-cols-[1fr_auto] sm:grid-cols-3 px-4 sm:px-[55px] py-[13px] bg-[#100923] border border-white/[0.16] text-[13px] sm:text-[14px] font-semibold text-white/85 leading-[18.2px]">
+          <div className="grid grid-cols-[1fr_auto] sm:grid-cols-3 px-3 sm:px-[55px] py-[10px] sm:py-[13px] bg-[#100923] border border-white/[0.16] text-[12px] sm:text-[14px] font-semibold text-white/85 leading-[18.2px]">
             <span>User</span>
             <span className="hidden sm:block text-center">Signed Up</span>
             <span className="text-right">Status</span>
@@ -274,28 +274,28 @@ export default function ReferralsPage() {
             displayedReferrals.map(({ username, signedUp, status }) => (
               <div
                 key={username}
-                className="grid grid-cols-[1fr_auto] sm:grid-cols-3 items-center bg-[#2a223d] border border-white/[0.2] h-[54px] sm:h-[62px] px-4 sm:px-[23px]"
+                className="grid grid-cols-[1fr_auto] sm:grid-cols-3 items-center bg-[#2a223d] border border-white/[0.2] h-[48px] sm:h-[62px] px-3 sm:px-[23px]"
               >
                 <div className="flex items-center gap-2 sm:gap-[13px] min-w-0">
-                  <Avatar className="w-[30px] h-[30px] sm:w-[34px] sm:h-[34px] ring-1 ring-black rounded-full shrink-0">
-                    <AvatarFallback className="bg-purple-800/60 text-purple-200 text-xs rounded-full">
+                  <Avatar className="w-[28px] h-[28px] sm:w-[34px] sm:h-[34px] ring-1 ring-black rounded-full shrink-0">
+                    <AvatarFallback className="bg-purple-800/60 text-purple-200 text-[10px] sm:text-xs rounded-full">
                       {username[0]}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="text-[14px] sm:text-[18px] font-semibold text-white/85 leading-[18.2px] truncate">
+                  <span className="text-[13px] sm:text-[18px] font-semibold text-white/85 leading-[18.2px] truncate">
                     {username}
                   </span>
                 </div>
                 <span className="hidden sm:block text-[18px] font-semibold text-white/85 leading-[18.2px] text-center">
                   {signedUp}
                 </span>
-                <span className="text-[13px] sm:text-[18px] font-semibold text-white/85 leading-[18.2px] text-right">
+                <span className="text-[12px] sm:text-[18px] font-semibold text-white/85 leading-[18.2px] text-right shrink-0 ml-2">
                   {status}
                 </span>
               </div>
             ))
           ) : (
-            <div className="px-4 sm:px-6 py-8 text-center text-white/50 bg-[#2a223d]">
+            <div className="px-3 sm:px-6 py-6 sm:py-8 text-center text-white/50 text-sm bg-[#2a223d]">
               No referrals yet
             </div>
           )}
@@ -304,9 +304,9 @@ export default function ReferralsPage() {
         {/* BOTTOM CARDS */}
         <div className="flex flex-col lg:flex-row gap-4 sm:gap-5">
           {/* Milestone Progress */}
-          <div className="glass glass-hover rounded-2xl flex-1 overflow-hidden p-5 sm:p-[26px] space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-[16px] sm:text-[20px] font-semibold text-white leading-[18.2px]">
+          <div className="glass glass-hover rounded-2xl flex-1 overflow-hidden p-4 sm:p-[26px] space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-[14px] sm:text-[20px] font-semibold text-white leading-[18.2px]">
                 Milestone Progress
               </h3>
               <div className="bg-white/20 rounded-[6px] px-2 h-[26px] flex items-center justify-center">
@@ -350,14 +350,14 @@ export default function ReferralsPage() {
           </div>
 
           {/* Important Rule */}
-          <div className="glass glass-hover rounded-2xl flex-1 overflow-hidden p-5 sm:p-[26px]">
-            <div className="flex items-center gap-[5px] mb-4">
-              <img src="/referral-icons/info-icon.svg" alt="" className="w-[36px] h-[36px] sm:w-[40px] sm:h-[40px]" />
-              <span className="text-[16px] sm:text-[20px] font-semibold text-white leading-[18.2px]">
+          <div className="glass glass-hover rounded-2xl flex-1 overflow-hidden p-4 sm:p-[26px]">
+            <div className="flex items-center gap-2 mb-3 sm:mb-4">
+              <img src="/referral-icons/info-icon.svg" alt="" className="w-[30px] h-[30px] sm:w-[40px] sm:h-[40px] shrink-0" />
+              <span className="text-[14px] sm:text-[20px] font-semibold text-white leading-[18.2px]">
                 Important Rule
               </span>
             </div>
-            <p className="text-[14px] sm:text-[16px] font-medium text-[#a3adc2] leading-[22px] sm:leading-[23px] pl-[41px] sm:pl-[45px]">
+            <p className="text-[13px] sm:text-[16px] font-medium text-[#a3adc2] leading-[20px] sm:leading-[23px] pl-[38px] sm:pl-[45px]">
               Referrals only count as &ldquo;Active&rdquo; after they{" "}
               <span className="font-bold text-white/85">
                 complete their first quest or campaign
