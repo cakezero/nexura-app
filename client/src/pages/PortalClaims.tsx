@@ -152,35 +152,38 @@ const isFetchingRef = useRef(false);
 
 const loadMore = async () => {
   if (isFetchingRef.current || !hasMore) return;
-
-  // 🔥 HARD LOCK FIRST (before async gap)
-  isFetchingRef.current = true;
+isFetchingRef.current = true;
   setLoading(true);
 
   try {
-    const currentOffset = offset;
 
     const { claims } = await apiRequestV2(
       "GET",
-      `/api/get-claims?filter=${sortOption}&offset=${currentOffset}`
+      `/api/get-claims?filter=${sortOption}&offset=${offset}`
     );
 
-    if (!Array.isArray(claims) || claims.length === 0) {
+    if (!claims || claims.length === 0) {
       setHasMore(false);
       return;
     }
 
-    const isValidClaim = (claim: Claim) =>
-      claim?.term?.triple?.subject?.label &&
-      claim?.term?.triple?.predicate?.label &&
-      claim?.term?.triple?.object?.label;
+const isValidClaim = (claim: Claim) => {
+  return (
+    claim?.term?.triple?.subject?.label &&
+    claim?.term?.triple?.predicate?.label &&
+    claim?.term?.triple?.object?.label
+  );
+};
 
-    const validClaims = claims.filter(isValidClaim);
+setVisibleClaims(prev => [
+  ...prev,
+  ...claims.filter(isValidClaim),
+]);
 
-    setVisibleClaims(prev => [...prev, ...validClaims]);
-
+    // move offset forward correctly
     setOffset(prev => prev + claims.length);
 
+    // stop if less than LIMIT
     if (claims.length < LIMIT) {
       setHasMore(false);
     }
@@ -189,11 +192,7 @@ const loadMore = async () => {
     console.error("Failed to load claims:", err);
   } finally {
     setLoading(false);
-
-    // 🔥 delayed unlock (important)
-    setTimeout(() => {
-      isFetchingRef.current = false;
-    }, 50);
+    isFetchingRef.current = false;
   }
 };
 

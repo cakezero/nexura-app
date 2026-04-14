@@ -164,6 +164,15 @@ const chartDataForRange = (): number[] => {
   return days.map(d => d.date);
 };
 
+const formatNumber = (num: number) => {
+  if (num >= 1000000)
+    return `${(num / 1000000).toFixed(num % 1000000 === 0 ? 0 : 1)}M`;
+
+  if (num >= 1000)
+    return `${(num / 1000).toFixed(num % 1000 === 0 ? 0 : 1)}k`;
+
+  return num.toString();
+};
 
   const cards = [
   {
