@@ -103,7 +103,7 @@ export default function ReferralsPage() {
         </div>
 
         {/* 3 STEPS */}
-        <div className="flex flex-col sm:flex-row justify-center relative items-start gap-4 sm:gap-20">
+        <div className="flex flex-col sm:flex-row justify-center relative items-start gap-4 sm:gap-28">
           {/* Arc connectors */}
           <img
             src="/referral-icons/arc-right.png"
