@@ -58,6 +58,10 @@ const hubSchema = new Schema({
     type: Number,
     default: 0
   },
+  noOfPayments: {
+    type: Number,
+    default: 0
+  },
   xpAllocated: {
     type: Number,
     default: 200

@@ -736,6 +736,7 @@ export const updateBadge = async (req: GlobalRequest, res: GlobalResponse) => {
 
     if (!userToUpdate.badges.includes(level)) {
       userToUpdate.badges.push(level);
+      userToUpdate.noOfMints = (userToUpdate.noOfMints ?? 0) + 1;
 
       await userToUpdate.save();
 
@@ -1016,20 +1017,29 @@ export const getAnalytics = async (req: GlobalRequest, res: GlobalResponse) => {
 
     const totalUsers = usersFound.length;
 
-    const claimsAggregateResult = await user.aggregate([
+    const userOnchainAggregate = await user.aggregate([
       {
         $group: {
           _id: null,
           totalClaims: { $sum: "$noOfClaims" },
+          totalMintsCounter: { $sum: "$noOfMints" },
         },
       },
     ]);
 
-    const claimsBought = claimsAggregateResult[0]?.totalClaims ?? 0;
+    const claimsBought = userOnchainAggregate[0]?.totalClaims ?? 0;
+    const mintsFromCounter = userOnchainAggregate[0]?.totalMintsCounter ?? 0;
 
-    const payments = await campaign.countDocuments({
-      project_name: { $ne: "Nexura" },
-    });
+    const paymentsAggregate = await hub.aggregate([
+      {
+        $group: {
+          _id: null,
+          totalPayments: { $sum: "$noOfPayments" },
+        },
+      },
+    ]);
+
+    const payments = paymentsAggregate[0]?.totalPayments ?? 0;
 
     const aggregateResult = await user.aggregate([
       {
@@ -1056,9 +1066,11 @@ export const getAnalytics = async (req: GlobalRequest, res: GlobalResponse) => {
       },
     ).length;
 
-    const nexonsMinted = usersFound.reduce((sum, u: { badges?: number[] }) => {
+    const mintsFromBadges = usersFound.reduce((sum, u: { badges?: number[] }) => {
       return sum + (u.badges?.length ?? 0);
     }, 0);
+
+    const nexonsMinted = Math.max(mintsFromCounter, mintsFromBadges);
 
     const rewardCampaignsTrust = await campaign.aggregate([
       {
@@ -1080,38 +1092,7 @@ export const getAnalytics = async (req: GlobalRequest, res: GlobalResponse) => {
     const totalTrustDistributed =
       rewardCampaignsTrust[0]?.totalTrustDistributed ?? 0;
 
-    const rewardCampaignClaimInteractions = await campaignCompleted.aggregate([
-      {
-        $match: {
-          campaignCompleted: true,
-        },
-      },
-      {
-        $lookup: {
-          from: "campaigns",
-          localField: "campaign",
-          foreignField: "_id",
-          as: "campaign",
-        },
-      },
-      {
-        $unwind: "$campaign",
-      },
-      {
-        $match: {
-          $or: [
-            { "campaign.reward.pool": { $gt: 0 } },
-            { "campaign.totalTrustAvailable": { $gt: 0 } },
-          ],
-        },
-      },
-      {
-        $count: "count",
-      },
-    ]);
-
-    const totalOnchainInteractions =
-      rewardCampaignClaimInteractions[0]?.count ?? 0;
+    const totalOnchainInteractions = claimsBought + payments + nexonsMinted;
 
     const users7d = usersFound.filter((u) => {
       const last7Days = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -1247,6 +1228,7 @@ export const getAnalytics = async (req: GlobalRequest, res: GlobalResponse) => {
         lessonsCreated,
         claimsCreated: claimsBought,
         payments,
+        nexonsMinted,
         totalQuests,
         totalQuestsCompleted,
         totalCampaignsCompleted,
@@ -1599,6 +1581,8 @@ export const claimReferreralReward = async (req: GlobalRequest, res: GlobalRespo
     if (tier === 3) {
       referrer.refRewardClaimed = true;
     }
+
+    referrer.noOfClaims = (referrer.noOfClaims ?? 0) + 1;
 
     await referrer.save();
 
