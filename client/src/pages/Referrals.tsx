@@ -306,7 +306,7 @@ export default function ReferralsPage() {
         {/* BOTTOM CARDS */}
         <div className="flex flex-col lg:flex-row gap-4 sm:gap-5">
           {/* Milestone Progress */}
-          <div className="glass glass-hover rounded-2xl flex-1 overflow-hidden p-4 sm:p-[26px] space-y-3">
+          <div className="glass glass-hover rounded-3xl flex-1 overflow-hidden p-4 sm:p-[26px] space-y-3">
             <h3 className="text-[14px] sm:text-[20px] font-semibold text-white leading-[18.2px]">
               Milestone Progress
             </h3>
@@ -358,7 +358,7 @@ export default function ReferralsPage() {
           </div>
 
           {/* Important Rule */}
-          <div className="glass glass-hover rounded-2xl flex-1 overflow-hidden p-4 sm:p-[26px]">
+          <div className="glass glass-hover rounded-3xl flex-1 overflow-hidden p-4 sm:p-[26px]">
             <div className="flex items-center gap-2 mb-3 sm:mb-4">
               <img src="/referral-icons/info-icon.svg" alt="" className="w-[30px] h-[30px] sm:w-[40px] sm:h-[40px] shrink-0" />
               <span className="text-[14px] sm:text-[20px] font-semibold text-white leading-[18.2px]">
