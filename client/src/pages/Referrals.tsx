@@ -16,11 +16,11 @@ type Referral = {
 };
 
 const MILESTONES = [
-  { tier: 1, target: 10, reward: 1500, label: "Milestone 1" },
-  { tier: 2, target: 20, reward: 2000, label: "Milestone 2" },
-  { tier: 3, target: 30, reward: 2500, label: "Milestone 3" },
+  { tier: 1, target: 10, reward: 2000, label: "Milestone 1" },
+  { tier: 2, target: 20, reward: 3000, label: "Milestone 2" },
+  { tier: 3, target: 30, reward: 5000, label: "Milestone 3" },
 ];
-const TOTAL_XP = 6000;
+const TOTAL_XP = 10000;
 
 export default function ReferralsPage() {
   const [copied, setCopied] = useState(false);
