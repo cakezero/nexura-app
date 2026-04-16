@@ -945,7 +945,7 @@ export const updateClaims = async (req: GlobalRequest, res: GlobalResponse) => {
 
     const { from } = await getAmountPaid(transactionHash);
 
-    if (from.toLowerCase() !== userToUpdate.address) {
+    if (from.toLowerCase() !== (userToUpdate.address ?? "").toLowerCase()) {
       res
         .status(FORBIDDEN)
         .json({ error: "transaction must be from the user's address" });
@@ -1023,42 +1023,12 @@ export const getAnalytics = async (req: GlobalRequest, res: GlobalResponse) => {
           _id: null,
           totalClaims: { $sum: "$noOfClaims" },
           totalMintsCounter: { $sum: "$noOfMints" },
-          totalRefTierClaims: { $sum: "$tier" },
         },
       },
     ]);
 
-    const claimsFromCounter = userOnchainAggregate[0]?.totalClaims ?? 0;
+    const claimsBought = userOnchainAggregate[0]?.totalClaims ?? 0;
     const mintsFromCounter = userOnchainAggregate[0]?.totalMintsCounter ?? 0;
-    const historicalRefClaims = userOnchainAggregate[0]?.totalRefTierClaims ?? 0;
-
-    const historicalCampaignClaimsAgg = await campaignCompleted.aggregate([
-      { $match: { campaignCompleted: true } },
-      {
-        $lookup: {
-          from: "campaigns",
-          localField: "campaign",
-          foreignField: "_id",
-          as: "campaign",
-        },
-      },
-      { $unwind: "$campaign" },
-      {
-        $match: {
-          $or: [
-            { "campaign.reward.pool": { $gt: 0 } },
-            { "campaign.totalTrustAvailable": { $gt: 0 } },
-          ],
-        },
-      },
-      { $count: "count" },
-    ]);
-    const historicalCampaignClaims = historicalCampaignClaimsAgg[0]?.count ?? 0;
-
-    const claimsBought = Math.max(
-      claimsFromCounter,
-      historicalCampaignClaims + historicalRefClaims,
-    );
 
     const paymentsAggregate = await hub.aggregate([
       {
@@ -1613,8 +1583,6 @@ export const claimReferreralReward = async (req: GlobalRequest, res: GlobalRespo
     if (tier === 3) {
       referrer.refRewardClaimed = true;
     }
-
-    referrer.noOfClaims = (referrer.noOfClaims ?? 0) + 1;
 
     await referrer.save();
 

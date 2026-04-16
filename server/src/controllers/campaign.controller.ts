@@ -868,7 +868,6 @@ export const claimCampaignRewards = async (
 		if (campaignToClaimRewards.trustClaimed < campaignToClaimRewards.totalTrustAvailable) {
 			userToReward.trustEarned += trustTokens;
 			campaignToClaimRewards.trustClaimed += trustTokens;
-			userToReward.noOfClaims = (userToReward.noOfClaims ?? 0) + 1;
 		}
 
 		userToReward.xp += xp;
