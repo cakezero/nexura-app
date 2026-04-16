@@ -106,19 +106,35 @@ export default function ReferralsPage() {
 
         {/* 3 STEPS */}
         <div className="flex flex-col sm:flex-row justify-center relative items-start gap-4 sm:gap-28">
-          {/* Arc connectors */}
-          <img
-            src="/referral-icons/arc-right.png"
-            alt=""
+          {/* Wave arc connectors */}
+          <svg
             className="absolute hidden sm:block pointer-events-none"
-            style={{ top: 22, left: '25%', width: '14%', transform: 'scaleX(-1)' }}
-          />
-          <img
-            src="/referral-icons/arc-left.png"
-            alt=""
+            style={{ top: 6, left: '24%', width: '16%', height: 60 }}
+            viewBox="0 0 100 60"
+            preserveAspectRatio="none"
+            fill="none"
+          >
+            <path
+              d="M 2 40 Q 50 -8 98 40"
+              stroke="#8a3ffc"
+              strokeWidth="6"
+              strokeLinecap="round"
+            />
+          </svg>
+          <svg
             className="absolute hidden sm:block pointer-events-none"
-            style={{ top: 22, left: '56%', width: '14%', transform: 'rotate(180deg)' }}
-          />
+            style={{ top: 36, left: '56%', width: '16%', height: 60 }}
+            viewBox="0 0 100 60"
+            preserveAspectRatio="none"
+            fill="none"
+          >
+            <path
+              d="M 2 20 Q 50 68 98 20"
+              stroke="#8a3ffc"
+              strokeWidth="6"
+              strokeLinecap="round"
+            />
+          </svg>
 
           {/* Step 1: Send an invitation */}
           <div className="flex flex-row sm:flex-col items-center w-full sm:w-[207px] gap-3 sm:gap-5">
