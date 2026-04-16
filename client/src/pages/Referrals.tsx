@@ -109,12 +109,12 @@ export default function ReferralsPage() {
           {/* Wave arc connectors — geometry: step=207px, gap=112px, icon=100px centered in step → gap-between-icons=219px, arc1 center offset from container center = -159.5px, arc2 = +159.5px */}
           <svg
             className="absolute hidden sm:block pointer-events-none"
-            style={{ top: 30, left: 'calc(50% - 269px)', width: 219, height: 40, opacity: 0.5 }}
-            viewBox="0 0 219 40"
+            style={{ top: 10, left: 'calc(50% - 269px)', width: 219, height: 80, opacity: 0.5 }}
+            viewBox="0 0 219 80"
             fill="none"
           >
             <path
-              d="M 0 20 Q 109.5 0 219 20"
+              d="M 0 40 Q 109.5 -40 219 40"
               stroke="#8a3ffc"
               strokeWidth="2"
               strokeLinecap="round"
@@ -122,12 +122,12 @@ export default function ReferralsPage() {
           </svg>
           <svg
             className="absolute hidden sm:block pointer-events-none"
-            style={{ top: 30, left: 'calc(50% + 50px)', width: 219, height: 40, opacity: 0.5 }}
-            viewBox="0 0 219 40"
+            style={{ top: 10, left: 'calc(50% + 50px)', width: 219, height: 80, opacity: 0.5 }}
+            viewBox="0 0 219 80"
             fill="none"
           >
             <path
-              d="M 0 20 Q 109.5 40 219 20"
+              d="M 0 40 Q 109.5 120 219 40"
               stroke="#8a3ffc"
               strokeWidth="2"
               strokeLinecap="round"
