@@ -195,7 +195,7 @@ useEffect(() => {
 
   if (isSearching) return;
 
-  resetLockRef.current = true; 
+  requestLockRef.current = true; 
 
   offsetRef.current = 0;
   setOffset(0);
@@ -204,7 +204,7 @@ useEffect(() => {
 
   // release lock after render settles
   setTimeout(() => {
-    resetLockRef.current = false;
+    requestLockRef.current = false;
   }, 0);
 
 }, [user, sortOption]);
@@ -349,6 +349,8 @@ useEffect(() => {
             return
           };
         }
+
+        await apiRequestV2("POST", "/api/user/update-claims", { transactionHash });
       } else {
         transactionHash = await sellShares(transactionAmount, addressTermId, isToggled ? 2n : 1n);
       }
