@@ -68,7 +68,7 @@ export default function PortalClaims() {
   >("review");
   // Example state to store totals
   const [userShares, setUserShares] = useState<{ support: bigint; oppose: bigint }>({ support: 0n, oppose: 0n });
-  
+  const [searchLoading, setSearchLoading] = useState(false);
 
     useEffect(() => {
     setShowPopup(true);
@@ -107,11 +107,15 @@ export default function PortalClaims() {
 
   
 useEffect(() => {
+  let cancelled = false;
+
   const run = async () => {
-    if (!searchTerm.trim()) {
+    if (searchTerm.trim().length < 2) {
       setSearchResults([]);
       return;
     }
+
+    setSearchLoading(true);
 
     try {
       const res = await apiRequestV2(
@@ -120,28 +124,47 @@ useEffect(() => {
         { keyword: searchTerm }
       );
 
-      setSearchResults(res.claims || []);
+      if (!cancelled) {
+        setSearchResults(Array.isArray(res) ? res : []);
+      }
     } catch (err) {
-      console.error("Search failed:", err);
-      setSearchResults([]);
+      if (!cancelled) {
+        console.error("Search failed:", err);
+        setSearchResults([]);
+      }
+    } finally {
+      if (!cancelled) {
+        setSearchLoading(false);
+      }
     }
   };
 
-  const t = setTimeout(run, 300);
-  return () => clearTimeout(t);
+  const t = setTimeout(run, 500);
+
+  return () => {
+    cancelled = true;
+    clearTimeout(t);
+  };
 }, [searchTerm]);
 
-  const highlightMatch = (text: string, term: string) => {
-    if (!term) return text;
-    const regex = new RegExp(`(${term})`, "gi");
-    return text.split(regex).map((part, i) =>
-      regex.test(part) ? (
-        <span key={i} className="bg-yellow-400 text-black px-0.5 rounded">{part}</span>
-      ) : (
-        part
-      )
-    );
-  };
+const highlightMatch = (text: string, term: string) => {
+  if (!term) return text;
+
+  // escape special regex characters
+  const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+  const regex = new RegExp(`(${escaped})`, "gi");
+
+  return text.split(regex).map((part, i) =>
+    part.toLowerCase() === term.toLowerCase() ? (
+      <span key={i} className="bg-yellow-400 text-black px-0.5 rounded">
+        {part}
+      </span>
+    ) : (
+      part
+    )
+  );
+};
 
   const { toast } = useToast();
 
@@ -579,7 +602,7 @@ useEffect(() => {
                             <span
                               className="text-xs px-1 cursor-pointer hover:text-white transition-colors duration-200"
                             >
-                              {highlightMatch(claim.term.triple.predicate.label, searchTerm)}
+                              {highlightMatch(claim?.term?.triple?.predicate?.label ?? "", searchTerm)}
                             </span>
 
                             {/* Object */}
@@ -1635,6 +1658,12 @@ useEffect(() => {
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
             </div>
           )}
+                  {searchLoading && (
+  <div className="flex items-center gap-2 mt-2 text-xs text-gray-400 justify-center py-6">
+    <div className="w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+    Searching...
+  </div>
+)}
 
           <div ref={observerRef} className="h-10"></div>
           <XPRewardPopup forceShow={showPopup} onClose={() => setShowPopup(false)} />

@@ -852,7 +852,7 @@ export default function ClaimDetails() {
 
       <div className="flex flex-col lg:flex-row gap-3 mt-3">
         {/* Graph Container */}
-        <div className="w-full lg:max-w-[1200px] mx-auto bg-gradient-to-br from-[#1A0A2B] to-[#0B0515] rounded-xl p-3 sm:p-4 shadow-lg items-center">
+        <div className="w-[70%] lg:max-w-[1200px] mx-auto bg-gradient-to-br from-[#1A0A2B] to-[#0B0515] rounded-xl p-3 sm:p-4 shadow-lg items-center">
 
           {/* Chart Header */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4">
@@ -934,7 +934,7 @@ export default function ClaimDetails() {
 
 
         {/* Control Card (20%) */}
-        <div className="w-full lg:w-[25%] bg-gray-900 border border-gray-700 rounded-xl p-4 sm:p-6 flex flex-col gap-4">
+        <div className="w-full lg:w-[30%] bg-gray-900 border border-gray-700 rounded-xl p-4 sm:p-6 flex flex-col gap-4">
 
           {/* Support / Oppose Tabs */}
           <div className="flex flex-col sm:flex-row gap-2">
