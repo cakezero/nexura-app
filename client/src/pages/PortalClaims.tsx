@@ -39,6 +39,7 @@ export default function PortalClaims() {
   const [sortDirection, setSortDirection] = useState("desc");
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<Claim[]>([]);
+  // const isSearching = searchTerm.trim().length >= 2;
   const [termId, setTermId] = useState("");
   const [activeTab, setActiveTab] = useState<"deposit" | "redeem">("deposit");
   const [isToggled, setIsToggled] = useState(false);
@@ -173,6 +174,7 @@ const isFetchingRef = useRef(false);
 const offsetRef = useRef(0);
 
 const isSearching = searchTerm.trim().length > 0;
+const hasNoResults = isSearching && !searchLoading && searchResults.length === 0;
 const requestLockRef = useRef(false);
 
 const loadMore = async () => {
@@ -1658,12 +1660,21 @@ useEffect(() => {
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
             </div>
           )}
+
+          {hasNoResults && (
+  <div className="flex flex-col items-center justify-center mt-6 text-gray-500">
+    <p className="text-sm">No claims found</p>
+    <p className="text-xs opacity-70">Try a different keyword</p>
+  </div>
+)}
+
                   {searchLoading && (
   <div className="flex items-center gap-2 mt-2 text-xs text-gray-400 justify-center py-6">
     <div className="w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
     Searching...
   </div>
 )}
+
 
           <div ref={observerRef} className="h-10"></div>
           <XPRewardPopup forceShow={showPopup} onClose={() => setShowPopup(false)} />
