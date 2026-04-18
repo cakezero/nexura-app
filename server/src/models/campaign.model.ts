@@ -12,6 +12,7 @@ const campaignSchema = new Schema({
 	project_name: {
 		type: String,
 		required: true,
+		default: "Nexura"
 	},
 	description: {
 		type: String,

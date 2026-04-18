@@ -28,8 +28,12 @@ const mainNavItems = [
 export default function NexuraSidebar() {
   const [location] = useLocation();
   const [mounted, setMounted] = React.useState(false);
-  const { setOpen } = useSidebar();
+  const { setOpen, setOpenMobile, isMobile } = useSidebar();
   const closeTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleNavClick = () => {
+    if (isMobile) setOpenMobile(false);
+  };
 
   React.useEffect(() => {
     const t = setTimeout(() => setMounted(true), 30);
@@ -92,6 +96,7 @@ export default function NexuraSidebar() {
                     >
                       <Link
                         href={item.href}
+                        onClick={handleNavClick}
                         className="w-full flex items-center gap-1 group-data-[collapsible=icon]:justify-center"
                         data-testid={`nav-${item.title.toLowerCase().replace(/\s+/g, "-")}`}
                       >

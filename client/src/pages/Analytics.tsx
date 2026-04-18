@@ -1,6 +1,6 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import Chart from "react-apexcharts";
-import AnimatedBackground from "../components/AnimatedBackground";
+import AnalyticsBackground from "../components/AnalyticsBackground";
 import { ResponsivePie } from "@nivo/pie";
 import { ChevronDown } from "lucide-react";
 import { apiRequest } from "../lib/config";
@@ -164,41 +164,67 @@ const chartDataForRange = (): number[] => {
   return days.map(d => d.date);
 };
 
+const formatNumber = (num: number) => {
+  if (num >= 1000000)
+    return `${(num / 1000000).toFixed(num % 1000000 === 0 ? 0 : 1)}M`;
+
+  if (num >= 1000)
+    return `${(num / 1000).toFixed(num % 1000 === 0 ? 0 : 1)}k`;
+
+  return num.toString();
+};
+
   const cards = [
-    {
-      title: "Total Users",
-      value: data?.user.totalUsers ?? 0,
-      rate: pctChange(data?.user.totalUsers ?? 0, data?.user.totalUsersYesterday ?? 0),
-      description: "day-over-day growth",
-      icon: "referrals.png",
-    },
-    {
-      title: "Active Users",
-      value: activeUsersForRange[activeRange],
-      rate: pctChange(activeUsersForRange[activeRange], prevActiveForRange[activeRange]),
-      description: activeRange === "All Time" ? "all active users" : "vs previous period",
-      icon: "approved.png",
-    },
-    {
-      title: "New Users",
-      value: totalUsersForRange[activeRange],
-      rate: pctChange(totalUsersForRange[activeRange], prevNewUsersForRange[activeRange]),
-      description: activeRange === "All Time" ? "total signups" : "vs previous period",
-      icon: "new-users.png",
-    },
+  {
+    title: "Total Users",
+    value: data?.user.totalUsers ?? 0,
+    // rate: pctChange(
+    //   data?.user.totalUsers ?? 0,
+    //   data?.user.totalUsersYesterday ?? 0
+    // ),
+    // description: "total users",
+    icon: "referrals.png",
+    fullNumber: true,
+  },
+  {
+    title: "Active Users",
+    value: formatNumber(activeUsersForRange[activeRange] ?? 0),
+    rate: pctChange(
+      activeUsersForRange[activeRange] ?? 0,
+      prevActiveForRange[activeRange] ?? 0
+    ),
+    description:
+      activeRange === "All Time" ? "all active users" : "vs previous period",
+    icon: "approved.png",
+    fullNumber: false,
+  },
+  {
+    title: "New Users",
+    value: formatNumber(totalUsersForRange[activeRange] ?? 0),
+    rate: pctChange(
+      totalUsersForRange[activeRange] ?? 0,
+      prevNewUsersForRange[activeRange] ?? 0
+    ),
+    description:
+      activeRange === "All Time" ? "total signups" : "vs previous period",
+    icon: "new-users.png",
+    fullNumber: false,
+  },
     {
       title: "Quests Created",
       value: data?.totalQuests ?? 0,
       rate: null,
-      description: "total quests",
+      description: "Total Quests",
       icon: "quest-iconx.png",
+      fullNumber: false,
     },
     {
       title: "Campaigns Created",
       value: data?.totalCampaigns ?? 0,
       rate: null,
-      description: "total campaigns",
+      description: "Total Campaigns",
       icon: "campaign_icon.png",
+      fullNumber: false,
     },
   ];
 
@@ -224,15 +250,10 @@ const chartDataForRange = (): number[] => {
     dataLabels: { enabled: false },
   };
 
-  const formatNumber = (num: number) => {
-    if (num >= 1000000) return `${(num / 1000000).toFixed(num % 1000000 === 0 ? 0 : 1)}M`;
-    if (num >= 1000) return `${(num / 1000).toFixed(num % 1000 === 0 ? 0 : 1)}k`;
-    return num.toString();
-  };
 
   return (
     <div className="min-h-screen bg-black text-white overflow-x-hidden overflow-y-auto p-3 sm:p-6 relative pb-28 sm:pb-6 font-geist">
-      <AnimatedBackground />
+      <AnalyticsBackground />
 
        <div className="max-w-6xl mx-auto relative z-10 space-y-2">
          {/* Header */}
@@ -303,19 +324,39 @@ const chartDataForRange = (): number[] => {
 
  <div className="mt-12 flex flex-col sm:flex-row gap-2 sm:gap-4 w-full">
   {cards.map((card, idx) => (
+<div
+  key={idx}
+  className="
+    relative overflow-hidden
+    w-full sm:flex-1
+    rounded-3xl
+    border
+    p-4
+    flex flex-col justify-between
+    mt-2 sm:mt-4
+    text-white
+  "
+  style={{
+    background: "#170F1F",
+    border: "1px solid rgba(131, 58, 253, 0.18)",
+
+    backdropFilter: "blur(8px)",
+    WebkitBackdropFilter: "blur(8px)",
+
+    boxShadow: "inset 0 0 22px rgba(131, 58, 253, 0.12)",
+  }}
+>
     <div
-      key={idx}
-      className="
-        relative overflow-hidden
-        w-full sm:flex-1
-        rounded-3xl
-        border border-gray-700
-        bg-[#170F1F]
-        p-4
-        flex flex-col justify-between
-        mt-2 sm:mt-4
-      "
-    >
+    className="absolute w-56 h-56 rounded-full"
+    style={{
+      background: "#833AFD",
+      top: "-80px",
+      right: "-80px",
+      filter: "blur(65px)",
+      opacity: 0.5,
+    }}
+  />
+
       <div className="absolute -right-10 top-1/2 h-28 w-28 -translate-y-1/2 rounded-full bg-[#8B3EFE]/20 blur-3xl sm:hidden" />
 
       <img
@@ -337,7 +378,7 @@ const chartDataForRange = (): number[] => {
       </div>
 
       <div className="relative z-10 text-2xl font-bold text-white mb-2">
-        {formatNumber(card.value)}
+        {card.fullNumber ? card.value.toLocaleString() : card.value}
       </div>
 
       {card.rate !== null && card.rate !== undefined ? (
@@ -499,29 +540,38 @@ const chartDataForRange = (): number[] => {
       ? `${Math.round(((usersJoined - tasksCompleted) / usersJoined) * 100)}% of users drop before completion`
       : "0% of users drop before completion"}
   </div>
-
-  <div
-    className="hidden sm:flex mt-2 p-2 rounded-3xl border flex-col gap-2"
-    style={{ borderColor: "#D4BBFF4D", backgroundColor: "#632DBB" }}
-  >
-    <div className="flex items-center gap-2">
-      <div className="w-3 h-3 rounded-full bg-white" />
-      <span className="text-white text-[10px]">JOINED: Total users who joined a quest, campaign & lesson</span>
-    </div>
-    <div className="flex items-center gap-2">
-      <div className="w-3 h-3 rounded-full bg-[#00E1A2]" />
-      <span className="text-white text-[10px]">COMPLETED: Total users who completed a quest, campaign & lesson</span>
-    </div>
-  </div>
 </div>
 
    {/* Middle Card — On-Chain Activity */}
 <div
-  className="col-span-12 sm:col-span-5 row-span-2 p-3 sm:p-2 rounded-3xl flex flex-col border"
-  style={{ backgroundColor: "#170F1F", borderColor: "#D4BBFF66" }}
+  className="col-span-12 sm:col-span-5 row-span-2 p-3 sm:p-2 rounded-3xl flex flex-col border relative overflow-hidden text-white"
+  style={{
+    background: "#170F1F",
+    border: "1px solid rgba(131, 58, 253, 0.25)",
+    color: "#fff",
+    backdropFilter: "blur(8px)",
+    WebkitBackdropFilter: "blur(8px)",
+
+    boxShadow: "inset 0 0 30px rgba(131, 58, 253, 0.15)",
+  }}
 >
-  <span className="text-xs font-semibold uppercase text-white/90 text-center">On-Chain Activity</span>
-  <p className="text-center text-[11px] sm:text-[12px] text-white/70 mt-2">
+
+  {/* Main purple presence (only 1 light source now) */}
+<div
+  className="absolute w-[280px] h-[280px] rounded-full"
+  style={{
+    background: "#833AFD",
+    color: "#fff",
+    top: "-100px",
+    right: "-100px",
+    filter: "blur(75px)",
+    opacity: 0.5,
+  }}
+/>
+
+  {/* Content */}
+  <span className="text-xs font-semibold uppercase text-white text-center">On-Chain Activity</span>
+  <p className="text-center text-[11px] sm:text-[12px] text-white mt-2">
     Overview of transaction distribution across all on-chain activities
   </p>
 
@@ -553,20 +603,20 @@ const chartDataForRange = (): number[] => {
       <div className="w-full sm:ml-2 sm:pr-2 flex flex-col sm:justify-center sm:items-center">
         <div className="text-center sm:text-center mb-3 sm:mb-4">
           <div className="text-xl sm:text-2xl font-bold text-white">{totalTransactions}</div>
-          <div className="text-[10px] sm:text-[0.7rem] font-semibold text-white/30 uppercase">Transactions</div>
+          <div className="text-[10px] sm:text-[0.7rem] font-semibold text-white uppercase">Transactions</div>
         </div>
 
         <div
           className="flex flex-col gap-2 p-4 rounded-[1.5rem] border w-full sm:w-[220px]"
-          style={{ borderColor: "rgba(212,187,255,0.3)", backgroundColor: "transparent" }}
+          style={{ borderColor: "rgba(212,187,255,0.3)", backgroundColor: "#261F2E" }}
         >
           {transactionsData.map((t) => (
             <div key={t.id} className="flex justify-between items-center">
               <div className="flex items-center gap-2 min-w-0">
                 <div className="w-3 h-3 rounded-full border border-white shrink-0" style={{ backgroundColor: t.color }} />
-                <span className="text-[10px] sm:text-[0.7rem] font-semibold text-white/80 uppercase truncate">{t.id}</span>
+                <span className="text-[10px] sm:text-[0.7rem] font-semibold text-white capitalize truncate">{t.id}</span>
               </div>
-              <span className="text-[10px] sm:text-[0.7rem] font-bold text-white/80 ml-2">{t.value}</span>
+              <span className="text-[10px] sm:text-[0.7rem] font-bold text-white ml-2">{t.value}</span>
             </div>
           ))}
         </div>
@@ -577,35 +627,99 @@ const chartDataForRange = (): number[] => {
 
  {/* Top Right Card — Total Trust Distributed */}
 <div
-  className="col-span-12 sm:col-span-3 rounded-3xl p-4 flex flex-col justify-between border relative backdrop-blur-[15px] sm:backdrop-blur-[20px]"
+  className="col-span-12 sm:col-span-3 rounded-3xl p-4 flex flex-col justify-between border relative overflow-hidden text-white"
   style={{
-    backgroundColor: "rgba(23, 15, 31, 0.7)",
-    borderColor: "#D4BBFF66",
-    paddingTop: "1rem",
-    paddingBottom: "1rem",
-    paddingRight: "1.5rem",
+    background: "#170F1F",
+    border: "1px solid rgba(131, 58, 253, 0.25)",
+
+    backdropFilter: "blur(8px)",
+    WebkitBackdropFilter: "blur(8px)",
+
+    boxShadow: "inset 0 0 25px rgba(131, 58, 253, 0.12)",
   }}
 >
-  <img src="/intuition-icon.png" alt="Intuition Logo" className="hidden sm:block absolute top-4 right-4 w-7 h-7 object-contain z-10" />
-  <img src="/intuition-icon.png" alt="Intuition Logo" className="block sm:hidden absolute right-2 top-1/2 transform -translate-y-1/2 w-24 h-24 opacity-20 pointer-events-none" />
+  <div
+    className="absolute w-52 h-52 rounded-full"
+    style={{
+      background: "#833AFD",
+      top: "-60px",
+      right: "-60px",
+      filter: "blur(65px)",
+      opacity: 0.5,
+    }}
+  />
 
+  {/* Purple glow layer */}
+  <div className="absolute inset-0 bg-gradient-to-br from-purple-500/15 via-violet-500/5 to-transparent pointer-events-none" />
+
+  {/* Inner glass glow */}
+  <div className="absolute inset-0 shadow-[inset_0_0_40px_rgba(168,85,247,0.08)] pointer-events-none" />
+
+  {/* Desktop logo */}
+  <img
+    src="/intuition-icon.png"
+    alt="Intuition Logo"
+    className="hidden sm:block absolute top-4 right-4 w-7 h-7 object-contain z-10 opacity-80"
+  />
+
+  {/* Mobile logo */}
+  <img
+    src="/intuition-icon.png"
+    alt="Intuition Logo"
+    className="block sm:hidden absolute right-2 top-1/2 transform -translate-y-1/2 w-24 h-24 opacity-10 pointer-events-none"
+  />
+
+  {/* Title */}
   <div className="relative z-10">
-    <span className="text-xs font-semibold uppercase text-white">TOTAL TRUST DISTRIBUTED</span>
+    <span className="text-xs font-semibold uppercase text-white tracking-wider">
+      TOTAL TRUST DISTRIBUTED
+    </span>
   </div>
 
+  {/* Value */}
   <div className="flex items-center gap-3 relative z-10 mt-4">
-    <span className="text-2xl font-bold text-white">{formatNumber(data?.totalTrustDistributed ?? 0)}</span>
-    <img src="/trust-icon.png" alt="Trust Icon" className="w-12 h-8 object-contain" />
+    <span className="text-2xl font-bold text-white tracking-tight">
+      {formatNumber(data?.totalTrustDistributed ?? 0)}
+    </span>
+
+    <img
+      src="/trust-icon.png"
+      alt="Trust Icon"
+      className="w-12 h-8 object-contain opacity-90"
+    />
   </div>
 </div>
 
 {/* Bottom Right Cards */}
 <div className="col-span-12 sm:col-span-3 grid grid-cols-2 gap-4">
-  {/* Claims Created */}
-  <div className="bg-[#170F1F] rounded-3xl p-4 flex flex-col justify-between border col-span-1" style={{ borderColor: "#D4BBFF66" }}>
+{/* Claims Created */}
+<div
+  className="rounded-3xl p-4 flex flex-col justify-between border col-span-1 relative overflow-hidden text-white"
+  style={{
+    background: "#170F1F",
+    border: "1px solid rgba(131, 58, 253, 0.22)",
+    color: "#fff",
+    backdropFilter: "blur(8px)",
+    WebkitBackdropFilter: "blur(8px)",
+
+    boxShadow: "inset 0 0 18px rgba(131, 58, 253, 0.10)",
+  }}
+>
+    <div
+    className="absolute w-52 h-52 rounded-full"
+    style={{
+      background: "#833AFD",
+      color: "#fff",
+      top: "-70px",
+      right: "-70px",
+      filter: "blur(65px)",
+      opacity: 0.4,
+    }}
+  />
+  {/* Content */}
     <div className="flex items-center justify-between">
-      <span className="text-xs font-semibold uppercase text-white/70">TOTAL CLAIMS CREATED</span>
-      <img src="/intuition-icon.png" alt="Intuition Logo" className="w-6 h-6 object-contain" />
+      <span className="text-xs font-semibold uppercase text-white">TOTAL CLAIMS CREATED</span>
+      <img src="/nexxx.png" alt="Intuition Logo" className="w-6 h-6 object-contain" />
     </div>
     <div className="mt-4">
       <span className="text-xl font-bold text-white">{formatNumber(data?.claimsCreated ?? 0)}</span>
@@ -613,10 +727,34 @@ const chartDataForRange = (): number[] => {
   </div>
 
   {/* Lessons Created */}
-  <div className="bg-[#170F1F] rounded-3xl p-4 flex flex-col justify-between border col-span-1" style={{ borderColor: "#D4BBFF66" }}>
+
+<div
+  className="rounded-3xl p-4 flex flex-col justify-between border col-span-1 relative overflow-hidden text-white"
+  style={{
+    background: "#170F1F",
+    border: "1px solid rgba(131, 58, 253, 0.22)",
+
+    backdropFilter: "blur(8px)",
+    WebkitBackdropFilter: "blur(8px)",
+
+    boxShadow: "inset 0 0 18px rgba(131, 58, 253, 0.10)",
+  }}
+>
+  <div
+    className="absolute w-52 h-52 rounded-full"
+    style={{
+      background: "#833AFD",
+      top: "-70px",
+      right: "-70px",
+      filter: "blur(65px)",
+      opacity: 0.4,
+    }}
+  />
+
+  {/* Content */}
     <div className="flex items-center justify-between">
-      <span className="text-xs font-semibold uppercase text-white/70">TOTAL LESSONS CREATED</span>
-      <img src="/intuition-icon.png" alt="Intuition Logo" className="w-6 h-6 object-contain" />
+      <span className="text-xs font-semibold uppercase text-white">TOTAL LESSONS CREATED</span>
+      <img src="/learn-iconn.png" alt="Intuition Logo" className="w-6 h-6 object-contain" />
     </div>
     <div className="flex items-center gap-3 mt-4">
       <span className="text-xl font-bold text-white">{formatNumber(data?.lessonsCreated ?? 0)}</span>

@@ -17,6 +17,7 @@ import { apiRequestV2, apiRequest } from "../lib/queryClient";
 import { useToast } from "../hooks/use-toast";
 import { useAuth } from "../lib/auth";
 import { claimCampaignOnchainReward } from "../lib/performOnchainAction";
+import { createProofOfAction } from "../services/web3";
 
 type Quest = {
   _id: string;
@@ -122,7 +123,7 @@ export default function CampaignEnvironment() {
       }));
 
       setQuests(safeQuests);
-  setJoinedCampaign(Boolean(res.joined));
+      setJoinedCampaign(Boolean(res.joined));
       setProjectCoverImage(res.projectCoverImage);
       setCampaignCompleted(res.campaignCompleted?.campaignCompleted || false);
       setCampaignAddress(res.address || "");
@@ -352,6 +353,10 @@ export default function CampaignEnvironment() {
       if (campaignAddress && trustClaimed < totalTrustAvailable) {
         await claimCampaignOnchainReward({ campaignAddress, userId });
       }
+
+      // const txHash = await createProofOfAction({ username: user?.usernaeme, objectString: title });
+
+      // await apiRequestV2("POST", "/api/user/update-claims-created", { txHash });
 
       await apiRequestV2("POST", `/api/campaign/complete-campaign?id=${campaignId}`);
 

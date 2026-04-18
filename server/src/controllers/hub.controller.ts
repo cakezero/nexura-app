@@ -133,9 +133,9 @@ export const createHub = async (req: GlobalRequest, res: GlobalResponse) => {
     const adminDoc = req.admin as any;
     await hubAdmin.findByIdAndUpdate(req.id, { hub: createdHub._id, pendingTxHash: null });
 
-    // Migrate any pending payment hash from admins to hub
+    // Migrate any pending payment hash from admins to hub (payment represents completed on-chain studio fee)
     if (adminDoc?.pendingTxHash) {
-      await hub.findByIdAndUpdate(createdHub._id, { pendingTxHash: adminDoc.pendingTxHash });
+      await hub.findByIdAndUpdate(createdHub._id, { pendingTxHash: adminDoc.pendingTxHash, $inc: { noOfPayments: 1 } });
     }
 
     res.status(CREATED).json({ message: "hub created!" });
@@ -166,9 +166,13 @@ export const savePaymentHash = async (req: GlobalRequest, res: GlobalResponse) =
     const { txHash } = req.body;
     if (req.admin.hub) {
       // Hub exists — save on hub
-      await hub.findByIdAndUpdate(req.admin.hub, { pendingTxHash: txHash ?? null });
+      if (txHash) {
+        await hub.findByIdAndUpdate(req.admin.hub, { pendingTxHash: txHash, $inc: { noOfPayments: 1 } });
+      } else {
+        await hub.findByIdAndUpdate(req.admin.hub, { pendingTxHash: null });
+      }
     } else {
-      // Hub not created yet — save on admin as fallback
+      // Hub not created yet — save on admin as fallback; counter is incremented when hub is created
       await hubAdmin.findByIdAndUpdate(req.id, { pendingTxHash: txHash ?? null });
     }
     res.status(OK).json({ message: "payment hash saved" });

@@ -1,4 +1,4 @@
-import { redeem, getMultiVaultAddressFromChainId } from "@0xintuition/sdk";
+import { redeem, getMultiVaultAddressFromChainId, getAtomDetails, createTripleStatement, calculateAtomId, createAtomFromString } from "@0xintuition/sdk";
 import { Address, parseEther} from "viem";
 import { getWalletClient, getPublicClient } from "../lib/viem";
 import { apiRequestV2 } from "../lib/queryClient";
@@ -61,3 +61,60 @@ export const sellShares = async (sharesAmount: string, termId: Address, curveId:
 
   return transactionHash;
 };
+
+export const createProofOfAction = async ({ username, objectString }: { username: string, objectString: string }) => {
+  const walletClient = await getWalletClient();
+  const publicClient = getPublicClient();
+  
+  await walletClient.switchChain({ id: chain.id });
+
+  const address = getMultiVaultAddressFromChainId(walletClient.chain?.id!);
+
+  let subject: Address;
+  let object: Address;
+
+  const predicate = "0x2d864f0214db084b5420de2a72acaddae82d56d9e6e9fed7ecbab3d9f6afc1fe";
+
+  const subjectAtomId = calculateAtomId(username as Address);
+  const subjectExists = await getAtomDetails(subjectAtomId);
+
+  if (!subjectExists) {
+    const { state: { termId } } = await createAtomFromString(
+      { walletClient, publicClient, address },
+      username
+    );
+
+    subject = termId;
+  } else {
+    subject = subjectAtomId;
+  }
+
+  const objectAtomId = calculateAtomId(objectString as Address);
+  const objectExists = await getAtomDetails(objectAtomId);
+
+  if (!objectExists) {
+    const { state: { termId } } = await createAtomFromString(
+      { walletClient, publicClient, address },
+      objectString
+    );
+
+    object = termId;
+  } else {
+    object = objectAtomId;
+  }
+
+  const { transactionHash } = await createTripleStatement(
+    { walletClient, publicClient, address },
+    {
+      args: [
+        [subject],
+        [predicate],
+        [object],
+        [parseEther('0.1')],
+      ],
+      value: parseEther('0.1'),
+    }
+  );
+
+  return transactionHash;
+}

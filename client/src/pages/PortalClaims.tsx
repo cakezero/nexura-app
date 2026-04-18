@@ -38,6 +38,8 @@ export default function PortalClaims() {
   const [sortOption, setSortOption] = useState('{"total_market_cap":"desc"}');
   const [sortDirection, setSortDirection] = useState("desc");
   const [searchTerm, setSearchTerm] = useState("");
+  const [searchResults, setSearchResults] = useState<Claim[]>([]);
+  // const isSearching = searchTerm.trim().length >= 2;
   const [termId, setTermId] = useState("");
   const [activeTab, setActiveTab] = useState<"deposit" | "redeem">("deposit");
   const [isToggled, setIsToggled] = useState(false);
@@ -67,7 +69,7 @@ export default function PortalClaims() {
   >("review");
   // Example state to store totals
   const [userShares, setUserShares] = useState<{ support: bigint; oppose: bigint }>({ support: 0n, oppose: 0n });
-  
+  const [searchLoading, setSearchLoading] = useState(false);
 
     useEffect(() => {
     setShowPopup(true);
@@ -104,128 +106,154 @@ export default function PortalClaims() {
     })();
   }, [user?.address]);
 
-  useEffect(() => {
-  if (!searchTerm) {
-    setSortedClaims(sortClaims(visibleClaims, sortOption));
-    return;
-  }
+  
+useEffect(() => {
+  let cancelled = false;
 
-  const filtered = visibleClaims.filter(claim =>
-    claimMatchesSearch(claim, searchTerm)
+  const run = async () => {
+    if (searchTerm.trim().length < 1) {
+      setSearchResults([]);
+      return;
+    }
+
+    setSearchLoading(true);
+
+    try {
+      const res = await apiRequestV2(
+        "POST",
+        `/api/search-for-claim`,
+        { keyword: searchTerm }
+      );
+
+      if (!cancelled) {
+        setSearchResults(Array.isArray(res) ? res : []);
+      }
+    } catch (err) {
+      if (!cancelled) {
+        console.error("Search failed:", err);
+        setSearchResults([]);
+      }
+    } finally {
+      if (!cancelled) {
+        setSearchLoading(false);
+      }
+    }
+  };
+
+  const t = setTimeout(run, 500);
+
+  return () => {
+    cancelled = true;
+    clearTimeout(t);
+  };
+}, [searchTerm]);
+
+const highlightMatch = (text: string, term: string) => {
+  if (!term) return text;
+
+  // escape special regex characters
+  const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+  const regex = new RegExp(`(${escaped})`, "gi");
+
+  return text.split(regex).map((part, i) =>
+    part.toLowerCase() === term.toLowerCase() ? (
+      <span key={i} className="bg-yellow-400 text-black px-0.5 rounded">
+        {part}
+      </span>
+    ) : (
+      part
+    )
   );
-
-  setSortedClaims(sortClaims(filtered, sortOption));
-
-}, [visibleClaims, searchTerm, sortOption]);
-
-  // Returns true if claim matches search
-  const claimMatchesSearch = (claim: Claim, term: string) => {
-    const lower = term.toLowerCase();
-    return (
-      claim.term.triple.subject.label.toLowerCase().includes(lower) ||
-      claim.term.triple.predicate.label.toLowerCase().includes(lower) ||
-      claim.term.triple.object.label.toLowerCase().includes(lower)
-    );
-  };
-
-  const highlightMatch = (text: string, term: string) => {
-    if (!term) return text;
-    const regex = new RegExp(`(${term})`, "gi");
-    return text.split(regex).map((part, i) =>
-      regex.test(part) ? (
-        <span key={i} className="bg-yellow-400 text-black px-0.5 rounded">{part}</span>
-      ) : (
-        part
-      )
-    );
-  };
+};
 
   const { toast } = useToast();
 
 const LIMIT = 50;
 const isFetchingRef = useRef(false);
+const offsetRef = useRef(0);
+
+const isSearching = searchTerm.trim().length > 0;
+const hasNoResults = isSearching && !searchLoading && searchResults.length === 0;
+const requestLockRef = useRef(false);
 
 const loadMore = async () => {
-  if (isFetchingRef.current || !hasMore) return;
+  if (requestLockRef.current || isSearching) return;
+  if (!hasMore) return;
 
-  isFetchingRef.current = true;
+  requestLockRef.current = true;
   setLoading(true);
 
   try {
-    const searchQuery = "";
-
     const { claims } = await apiRequestV2(
       "GET",
-      `/api/get-claims?filter=${sortOption}&offset=${offset}`
+      `/api/get-claims?filter=${sortOption}&offset=${offsetRef.current}`
     );
 
-    if (!claims || claims.length === 0) {
+    if (!claims?.length) {
       setHasMore(false);
       return;
     }
 
-setVisibleClaims(prev => [...prev, ...claims]);
+    setVisibleClaims(prev => [...prev, ...claims]);
 
-    // move offset forward correctly
-    setOffset(prev => prev + claims.length);
+    offsetRef.current += claims.length;
 
-    // stop if less than LIMIT
-    if (claims.length < LIMIT) {
-      setHasMore(false);
-    }
+    if (claims.length < LIMIT) setHasMore(false);
 
   } catch (err) {
-    console.error("Failed to load claims:", err);
+    console.error(err);
   } finally {
+    requestLockRef.current = false;
     setLoading(false);
-    isFetchingRef.current = false;
   }
 };
 
-
-  // Call whenever user changes
 useEffect(() => {
-  if (!user) {
-    setUserPositions([]);
-    setActivePosition(0n);
-    return;
-  }
+  const source = isSearching ? searchResults : visibleClaims;
+  setSortedClaims(sortClaims(source, sortOption));
+}, [visibleClaims, searchResults, sortOption, isSearching]);
 
-  // reset state
+// Call whenever user changes
+useEffect(() => {
+  if (!user) return;
+
+  if (isSearching) return;
+
+  requestLockRef.current = true; 
+
+  offsetRef.current = 0;
   setOffset(0);
   setVisibleClaims([]);
   setHasMore(true);
 
-  // load first page
-  loadMore();
+  // release lock after render settles
+  setTimeout(() => {
+    requestLockRef.current = false;
+  }, 0);
 
-}, [user, sortOption, searchTerm]);
+}, [user, sortOption]);
 
-  const observerRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => {
-    if (!hasMore || loading) return;
+const observerRef = useRef<HTMLDivElement | null>(null);
 
-    const observer = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting) {
-        loadMore();
-      }
-    });
+useEffect(() => {
+  if (isSearching) return;
+  if (!hasMore) return;
 
-    if (observerRef.current) {
-      observer.observe(observerRef.current);
+  const el = observerRef.current;
+  if (!el) return;
+
+  const observer = new IntersectionObserver(entries => {
+    if (entries[0].isIntersecting) {
+      loadMore();
     }
+  });
 
-    return () => {
-      if (observerRef.current) {
-        observer.unobserve(observerRef.current);
-      }
-    };
-  }, [loading, hasMore, sortOption]);
+  observer.observe(el);
 
-  // useEffect(() => {
-  //   loadMore();
-  // }, [sortOption]);
+  return () => observer.disconnect();
+}, [hasMore, isSearching]);
 
   const formatTrust = (shares: bigint, decimals = 18, precision = 4) => {
     const divisor = 10n ** BigInt(decimals);
@@ -346,6 +374,8 @@ useEffect(() => {
             return
           };
         }
+
+        await apiRequestV2("POST", "/api/user/update-claims", { transactionHash });
       } else {
         transactionHash = await sellShares(transactionAmount, addressTermId, isToggled ? 2n : 1n);
       }
@@ -574,7 +604,7 @@ useEffect(() => {
                             <span
                               className="text-xs px-1 cursor-pointer hover:text-white transition-colors duration-200"
                             >
-                              {highlightMatch(claim.term.triple.predicate.label, searchTerm)}
+                              {highlightMatch(claim?.term?.triple?.predicate?.label ?? "", searchTerm)}
                             </span>
 
                             {/* Object */}
@@ -1630,6 +1660,21 @@ useEffect(() => {
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
             </div>
           )}
+
+          {hasNoResults && (
+  <div className="flex flex-col items-center justify-center mt-6 text-gray-500">
+    <p className="text-sm">No claims found</p>
+    <p className="text-xs opacity-70">Try a different keyword</p>
+  </div>
+)}
+
+                  {searchLoading && (
+  <div className="flex items-center gap-2 mt-2 text-xs text-gray-400 justify-center py-6">
+    <div className="w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+    Searching...
+  </div>
+)}
+
 
           <div ref={observerRef} className="h-10"></div>
           <XPRewardPopup forceShow={showPopup} onClose={() => setShowPopup(false)} />

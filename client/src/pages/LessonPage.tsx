@@ -7,6 +7,7 @@ import Confetti from "react-confetti";
 import { useAuth } from "../lib/auth";
 import { apiRequestV2 } from "../lib/queryClient";
 import { useWallet } from "../hooks/use-wallet";
+import { createProofOfAction } from "../services/web3";
 
 type LessonSummary = {
   _id: string;
@@ -468,6 +469,10 @@ export default function LessonPage() {
     setActionMessage("");
 
     try {
+      // const txHash = await createProofOfAction({ username: user?.usernaeme, objectString: lesson?.title });
+
+      // await apiRequestV2("POST", "/api/user/update-claims-created", { txHash });
+
       const response = await apiRequestV2("POST", `/api/lesson/reward-lesson-xp?id=${lessonId}`);
       setActionMessage(response.message || "XP reward claimed.");
       // Reset saved step progress on completion

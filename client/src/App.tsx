@@ -35,9 +35,9 @@ import AnimatedBackground from "./components/AnimatedBackground";
 import Home from "./pages/Home.tsx";
 import Analytics from "./pages/Analytics.tsx";
 import Analyticss from "./pages/Analyticss.tsx";
-import NexuraStudio from "./pages/NexuraStudio.tsx"
-import CreateHub from "./pages/studio/CreateHub.tsx"
-import SignInToHub from "./pages/studio/SignInToHub.tsx"
+import NexuraStudio from "./pages/NexuraStudio.tsx";
+import CreateHub from "./pages/studio/CreateHub.tsx";
+import SignInToHub from "./pages/studio/SignInToHub.tsx";
 import TheHub from "./pages/studio/TheHub.tsx";
 import ConnectedDiscord from "./pages/studio/ConnectedDiscord.tsx";
 import StudioDashboard from "./pages/studio/StudioDashboard.tsx"
