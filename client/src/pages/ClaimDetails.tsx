@@ -78,7 +78,7 @@ export default function ClaimDetails() {
     const nextItems = positions.slice(start, end) as never[];
 
     setVisiblePositions(prev => [...prev, ...nextItems]);
-    console.log(visiblePositions);
+    // console.log(visiblePositions);
 
     if (end >= positions.length) {
       setHasMore(false);
@@ -252,7 +252,7 @@ export default function ClaimDetails() {
         })),
       ];
 
-      console.log("Normalized userPositions:", myPositions);
+      // console.log("Normalized userPositions:", myPositions);
     } else {
       console.log("No user signed in, no positions to fetch");
     }
@@ -282,8 +282,8 @@ export default function ClaimDetails() {
 
     const allPrices = [...supportPrices, ...counterPrices];
 
-    console.log("==== VAULT SHARE PRICES ====");
-    console.table(allPrices);
+    // console.log("==== VAULT SHARE PRICES ====");
+    // console.table(allPrices);
 
   }, [term, counterTerm]);
 
@@ -320,7 +320,7 @@ export default function ClaimDetails() {
 
     const getVaultPrice = (vaults: typeof term.vaults | typeof counterTerm.vaults | undefined, index: number) => {
       const price = vaults?.[index]?.current_share_price ?? "0";
-      console.log(`Vault index ${index}:`, price);
+      // console.log(`Vault index ${index}:`, price);
       return price;
     };
 
@@ -328,17 +328,17 @@ export default function ClaimDetails() {
       sharePrice = growthType === "linear"
         ? getVaultPrice(term.vaults, 0)
         : getVaultPrice(term.vaults, 1);
-      console.log(`ActiveTab: support, GrowthType: ${growthType}`);
+      // console.log(`ActiveTab: support, GrowthType: ${growthType}`);
     } else {
       sharePrice = growthType === "linear"
         ? getVaultPrice(counterTerm.vaults, 0)
         : getVaultPrice(counterTerm.vaults, 1);
-      console.log(`ActiveTab: oppose, GrowthType: ${growthType}`);
+      // console.log(`ActiveTab: oppose, GrowthType: ${growthType}`);
     }
 
     // Use formatEther to convert BigInt string → human-readable decimal
     const formattedPrice = parseFloat(formatEther(BigInt(sharePrice))).toFixed(2);
-    console.log("Calculated sharePrice (formatted):", formattedPrice);
+    // console.log("Calculated sharePrice (formatted):", formattedPrice);
 
     return formattedPrice;
   }
@@ -537,7 +537,7 @@ export default function ClaimDetails() {
 
   const numericBalance = Number(balance);
   const hasBalance = numericBalance > 0;
-  const tradeLocked = !hasBalance || hasOppositePosition;
+  const tradeLocked = hasOppositePosition;
 
   const currentUrl = window.location.href;
 
@@ -1125,7 +1125,7 @@ export default function ClaimDetails() {
 
           {/* Warnings */}
           {isBuy && currentAmount && Number(currentAmount) < 0.01 && (
-            <div className="mt-1 flex items-center gap-1 text-red-400 text-xs">
+            <div className="flex items-center gap-1 text-red-400 text-xs">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M12 3C7.03 3 3 7.03 3 12s4.03 9 9 9 9-4.03 9-9-4.03-9-9-9z" />
               </svg>
@@ -1133,7 +1133,17 @@ export default function ClaimDetails() {
             </div>
           )}
 
-          {!hasBalance && <div className="mt-2 text-xs text-red-400"></div>}
+                      {currentAmount &&
+  Number(currentAmount) >
+    (isBuy ? Number(balance) : Number(userShares)) && (
+    <span className="text-red-400 text-xs">
+      {isBuy
+        ? "Insufficient funds"
+        : "You cannot sell more than your shares"}
+    </span>
+)}
+
+          {/* {!hasBalance && <div className="mt-2 text-xs text-red-400"></div>} */}
 
           {hasOppositePosition && (
             <div className="mt-1 flex items-center gap-1 text-red-400 text-xs">
@@ -1145,7 +1155,7 @@ export default function ClaimDetails() {
           )}
 
           {/* You Receive */}
-          <div className="flex w-full justify-between items-center px-3 py-1.5 bg-gray-800 border border-[#833AFD] rounded-md text-white text-xs mt-2">
+          <div className="flex w-full justify-between items-center px-3 py-1.5 bg-gray-800 border border-[#833AFD] rounded-md text-white text-xs ">
             <span>You receive</span>
             <div className="flex items-center gap-1">
               {loadingAmount ? (
@@ -1168,11 +1178,15 @@ export default function ClaimDetails() {
 
           {/* Connect / Buy / Sell Button */}
           <div className="mt-3 flex flex-col gap-2 w-full">
-            {currentAmount && Number(currentAmount) > (isBuy ? Number(balance) : userShares) && (
-              <span className="text-red-400 text-xs">
-                You cannot {isBuy ? "buy more than your balance" : "sell more than your shares"}!
-              </span>
-            )}
+            {/* {currentAmount &&
+  Number(currentAmount) >
+    (isBuy ? Number(balance) : Number(userShares)) && (
+    <span className="text-red-400 text-xs">
+      {isBuy
+        ? "Insufficient funds"
+        : "You cannot sell more than your shares"}
+    </span>
+)} */}
 
             <button
               onClick={async () => {
