@@ -469,9 +469,9 @@ export default function LessonPage() {
     setActionMessage("");
 
     try {
-      const txHash = await createProofOfAction({ username: user?.usernaeme, objectString: lesson?.title });
+      // const txHash = await createProofOfAction({ username: user?.usernaeme, objectString: lesson?.title });
 
-      await apiRequestV2("POST", "/api/user/update-claims-created", { txHash });
+      // await apiRequestV2("POST", "/api/user/update-claims-created", { txHash });
 
       const response = await apiRequestV2("POST", `/api/lesson/reward-lesson-xp?id=${lessonId}`);
       setActionMessage(response.message || "XP reward claimed.");

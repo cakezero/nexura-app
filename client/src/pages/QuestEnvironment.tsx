@@ -105,9 +105,9 @@ export default function QuestEnvironment() {
 
   const claimQuestReward = async () => {
     try {
-      const txHash = await createProofOfAction({ username: user?.usernaeme, objectString: title });
+      // const txHash = await createProofOfAction({ username: user?.usernaeme, objectString: title });
 
-      await apiRequestV2("POST", "/api/user/update-claims-created", { txHash });
+      // await apiRequestV2("POST", "/api/user/update-claims-created", { txHash });
 
       await apiRequestV2("POST", `/api/quest/claim-quest?id=${questId}`);
 

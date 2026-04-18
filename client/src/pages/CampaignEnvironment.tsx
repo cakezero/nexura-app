@@ -354,9 +354,9 @@ export default function CampaignEnvironment() {
         await claimCampaignOnchainReward({ campaignAddress, userId });
       }
 
-      const txHash = await createProofOfAction({ username: user?.usernaeme, objectString: title });
+      // const txHash = await createProofOfAction({ username: user?.usernaeme, objectString: title });
 
-      await apiRequestV2("POST", "/api/user/update-claims-created", { txHash });
+      // await apiRequestV2("POST", "/api/user/update-claims-created", { txHash });
 
       await apiRequestV2("POST", `/api/campaign/complete-campaign?id=${campaignId}`);
 
