@@ -190,7 +190,7 @@ export const claimDepositXp = async (req: GlobalRequest, res: GlobalResponse) =>
     }
 
     trustUser.dailyTrustXpDate = exactDate as string;
-    trustUser.xp += 50;
+    trustUser.xp += 500;
 
     await trustUser.save();
 
@@ -963,6 +963,40 @@ export const updateClaims = async (req: GlobalRequest, res: GlobalResponse) => {
   }
 };
 
+export const updateClaimsCreated = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const { txHash }: { txHash: string } = req.body;
+
+    if (!txHash) {
+      res.status(BAD_REQUEST).json({ error: "send transaction hash" });
+      return;
+    }
+
+    const userToUpdate = await user
+      .findById(req.id)
+      .select("address noOfClaimsCreated");
+    if (!userToUpdate) {
+      res.status(BAD_REQUEST).json({ error: "id associated with user is invalid" });
+      return;
+    }
+
+    const { from } = await getAmountPaid(txHash);
+    if (from.toLowerCase() !== userToUpdate.address) {
+      res.status(UNAUTHORIZED).json({ error: "tx hash must be from authenticated user" });
+      return;
+    }
+
+    userToUpdate.noOfClaimsCreated += 1;
+
+    await userToUpdate.save();
+
+    res.status(OK).json({ message: "no of claims created tracked" });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error updating claims created" });
+  }
+}
+
 export const getAnalytics = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
     const usersFound = await user
@@ -1022,13 +1056,22 @@ export const getAnalytics = async (req: GlobalRequest, res: GlobalResponse) => {
         $group: {
           _id: null,
           totalClaims: { $sum: "$noOfClaims" },
-          totalMintsCounter: { $sum: "$noOfMints" },
         },
       },
     ]);
 
     const claimsBought = userOnchainAggregate[0]?.totalClaims ?? 0;
-    const mintsFromCounter = userOnchainAggregate[0]?.totalMintsCounter ?? 0;
+
+    const claimsCreatedAggregate = await user.aggregate([
+      {
+        $group: {
+          _id: null,
+          totalClaimsCreated: { $sum: "$noOfClaimsCreated" },
+        },
+      },
+    ]);
+
+    const claimsCreated = claimsCreatedAggregate[0]?.totalClaimsCreated ?? 0;
 
     const paymentsAggregate = await hub.aggregate([
       {
@@ -1072,8 +1115,6 @@ export const getAnalytics = async (req: GlobalRequest, res: GlobalResponse) => {
       return sum + (u.badges?.length ?? 0);
     }, 0);
 
-    const nexonsMinted = Math.max(mintsFromCounter, mintsFromBadges);
-
     const rewardCampaignsTrust = await campaign.aggregate([
       {
         $match: {
@@ -1094,7 +1135,7 @@ export const getAnalytics = async (req: GlobalRequest, res: GlobalResponse) => {
     const totalTrustDistributed =
       rewardCampaignsTrust[0]?.totalTrustDistributed ?? 0;
 
-    const totalOnchainInteractions = claimsBought + payments + nexonsMinted;
+    const totalOnchainInteractions = claimsBought + payments + mintsFromBadges;
 
     const users7d = usersFound.filter((u) => {
       const last7Days = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -1228,9 +1269,10 @@ export const getAnalytics = async (req: GlobalRequest, res: GlobalResponse) => {
         },
         totalReferrals,
         lessonsCreated,
-        claimsCreated: claimsBought,
+        claimsCreated,
+        claimsBought,
         payments,
-        nexonsMinted,
+        nexonsMinted: mintsFromBadges,
         totalQuests,
         totalQuestsCompleted,
         totalCampaignsCompleted,

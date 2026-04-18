@@ -15,6 +15,10 @@ const userSchema = new Schema({
 		required: true,
 		unique: true
   },
+	noOfClaimsCreated: {
+		type: Number,
+		default: 0
+	},
 	noOfClaims: {
 		type: Number,
 		default: 0,
