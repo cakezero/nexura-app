@@ -3,6 +3,7 @@ import {
   addAdmin,
   adminLogout,
   rewardXp,
+  rewardXpBatch,
   banUser,
   unBanUser,
   getBannedUsers,
@@ -55,6 +56,7 @@ router
   .post("/remove-admin", removeAdmin)
   .post("/manage-admin", manageAdmin)
   .post("/reward-xp", rewardXp)
+  .post("/reward-xp-batch", rewardXpBatch)
   .post("/ban-user", banUser)
   .post("/unban-user", unBanUser)
   .get("/me", attachAdminCampaignHub, getHub)
