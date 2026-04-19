@@ -20,7 +20,7 @@ import {
   DialogDescription,
 } from "../../components/ui/dialog";
 import { Calendar, Shield, LayoutDashboard, Search, Bell, RefreshCw, Check, X, Eye, Clock, CheckCircle2, XCircle, ChevronDown, Users, FileText } from "lucide-react";
-import DashboardAnalytics from "../../components/admin/DashboardAnalytics";
+import { StatsOverview } from "../../components/admin/StatsOverview";
 import CampaignSubmissions from "../../components/admin/CampaignSubmissions";
 import { TASKS } from "../../types/admin";
 import AdminManagement, { AdminType as Admin } from "../../components/admin/AdminManagement";
@@ -248,7 +248,9 @@ const fetchBannedUsers = async () => {
 
           <main className="flex-1 overflow-y-auto pt-4 pb-8 px-4 md:pt-8 md:pb-8 md:px-8 relative bg-black/20">
             <div className="max-w-7xl mx-auto">
-              {activeTab === "campaignSubmissions" && <DashboardAnalytics />}
+              {activeTab !== "adminManagement" && activeTab !== "campaignsTab" && (
+                <StatsOverview key={activeTab} tasks={activeTab === "campaignSubmissions" ? campaignTasks : []} />
+              )}
               {activeTab === "campaignsTab" && <CampaignsTab />}
 
               {activeTab === "campaignSubmissions" && (
