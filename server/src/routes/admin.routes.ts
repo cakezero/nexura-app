@@ -21,7 +21,7 @@ import {
 import { publishAdminCampaign } from "@/controllers/adminCampaign.controller";
 import { addCampaignAddress, closeCampaign, deleteCampaign, fetchHubCampaigns, recordCampaignRewardsWithdrawal, reopenCampaign } from "@/controllers/campaign.controller";
 import { fetchChannels, fetchRoles, fetchServers } from "@/controllers/hub.auth.controller";
-import { getCampaign, getHub, saveCampaign, saveCampaignWithQuests } from "@/controllers/hub.controller";
+import { disconnectHubDiscord, getCampaign, getHub, saveCampaign, saveCampaignWithQuests, updateHub } from "@/controllers/hub.controller";
 import {
   createLesson,
   deleteLesson,
@@ -60,6 +60,8 @@ router
   .post("/ban-user", banUser)
   .post("/unban-user", unBanUser)
   .get("/me", attachAdminCampaignHub, getHub)
+  .patch("/update-hub", requireAdminSuperadmin, attachAdminCampaignHub, upload.single("logo"), updateHub)
+  .patch("/disconnect-discord", requireAdminSuperadmin, attachAdminCampaignHub, disconnectHubDiscord)
   .get("/get-campaigns", attachAdminCampaignHub, fetchHubCampaigns)
   .get("/get-campaign", attachAdminCampaignHub, getCampaign)
   .get("/get-roles", fetchRoles)
