@@ -427,9 +427,9 @@ function SuccessView({ xpReward, txHash, onDismiss, networkFeeEth, userXp = 0 }:
               className="mt-4 font-bold text-[17px] sm:text-[22px] text-white text-center leading-[1.05] tracking-[-0.6px] animate-in fade-in slide-in-from-bottom-4 duration-500"
               style={{ animationDelay: "220ms", animationFillMode: "both" }}
             >
-              Your Rewards are
+              Rewards
               <br />
-              Ready to be Claimed
+              Harvested Successfully
             </h2>
 
             <p
