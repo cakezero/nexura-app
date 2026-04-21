@@ -100,7 +100,13 @@ export default function ProofOfActionModal({
   }, [alreadyClaimed]);
 
   const objectName = object?.trim();
-  const objectLabel = objectName ? `${objectName} on Nexura` : "this action on Nexura";
+  const sourceKey = (sourceLabel || "").toLowerCase();
+  const isEcosystem = sourceKey.includes("ecosystem") || sourceKey.includes("dapp");
+  const objectLabel = !objectName
+    ? "this action on Nexura"
+    : isEcosystem
+      ? objectName
+      : `${objectName} on Nexura`;
   const predicateLabel = resolvePredicate(sourceLabel);
   const objectIcon = resolveObjectIcon(sourceLabel);
 
@@ -141,7 +147,7 @@ export default function ProofOfActionModal({
       const hash = await createProofOfAction({
         subjectString: SUBJECT,
         predicateString: predicateLabel,
-        objectString: objectName,
+        objectString: objectLabel,
         stakeTrust: parsedStake.toString(),
       });
       setTxHash(hash);
