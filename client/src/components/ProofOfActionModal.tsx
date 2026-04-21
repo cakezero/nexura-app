@@ -60,12 +60,13 @@ export default function ProofOfActionModal({
   userXp = 0,
 }: ProofOfActionModalProps) {
   const { toast } = useToast();
-  const { isConnected, connectWallet } = useWallet();
+  const { isConnected, connectWallet, address } = useWallet();
   const [staking, setStaking] = useState(false);
   const [staked, setStaked] = useState(alreadyClaimed);
   const [txHash, setTxHash] = useState<string>("");
   const [networkFee, setNetworkFee] = useState<string>("");
   const [stakeInput, setStakeInput] = useState<string>(stakeTrust);
+  const [walletBalance, setWalletBalance] = useState<bigint>(0n);
 
   useEffect(() => {
     if (!open) {
@@ -76,6 +77,23 @@ export default function ProofOfActionModal({
       setStakeInput(stakeTrust);
     }
   }, [open, alreadyClaimed, stakeTrust]);
+
+  useEffect(() => {
+    if (!open || !address) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const publicClient = getPublicClient();
+        const balance = await publicClient.getBalance({ address: address as `0x${string}` });
+        if (!cancelled) setWalletBalance(balance);
+      } catch {
+        if (!cancelled) setWalletBalance(0n);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, address, txHash]);
 
   useEffect(() => {
     if (alreadyClaimed) setStaked(true);
@@ -123,7 +141,7 @@ export default function ProofOfActionModal({
       const hash = await createProofOfAction({
         subjectString: SUBJECT,
         predicateString: predicateLabel,
-        objectString: objectLabel,
+        objectString: objectName,
         stakeTrust: parsedStake.toString(),
       });
       setTxHash(hash);
@@ -277,8 +295,9 @@ export default function ProofOfActionModal({
                       <span className="text-[rgba(255,255,255,0.6)] text-[10px] font-bold tracking-[1px] uppercase">
                         Initial Deposit
                       </span>
-                      <span className="text-[rgba(255,255,255,0.6)] text-[11px] font-semibold">
-                        min {MIN_STAKE}
+                      <span className="flex items-center gap-1 bg-[#110A2B] border border-[#393B60] rounded-[999px] px-2 py-0.5 text-[11px] text-white font-semibold">
+                        <img src="/wallet.png" alt="Wallet Icon" className="w-3.5 h-3.5" />
+                        {(Number(walletBalance) / 10 ** 18).toFixed(2)} TRUST
                       </span>
                     </div>
                     <div className={`bg-[rgba(6,2,16,0.6)] border rounded-xl h-[32px] px-[12px] flex items-center justify-between transition-colors ${stakeValid ? "border-[rgba(131,58,253,0.5)]" : "border-[rgba(239,68,68,0.6)]"}`}>
