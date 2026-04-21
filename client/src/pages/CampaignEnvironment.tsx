@@ -18,6 +18,7 @@ import { useToast } from "../hooks/use-toast";
 import { useAuth } from "../lib/auth";
 import { claimCampaignOnchainReward } from "../lib/performOnchainAction";
 import { createProofOfAction } from "../services/web3";
+import ProofOfActionModal from "../components/ProofOfActionModal";
 
 type Quest = {
   _id: string;
@@ -81,6 +82,7 @@ export default function CampaignEnvironment() {
   const [joiningCampaign, setJoiningCampaign] = useState(false);
   const [campaignReady, setCampaignReady] = useState(false);
   const [campaignRefreshToken, setCampaignRefreshToken] = useState(0);
+  const [showProofModal, setShowProofModal] = useState(false);
 
   const [description, setDescription] = useState("");
   const [title, setTitle] = useState("");
@@ -350,13 +352,20 @@ export default function CampaignEnvironment() {
         throw new Error("Kindly complete quests to claim reward");
       }
 
+      setShowProofModal(true);
+    } catch (error: any) {
+      console.error(error);
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  };
+
+  const finalizeCampaignReward = async (txHash: string) => {
+    try {
       if (campaignAddress && trustClaimed < totalTrustAvailable) {
         await claimCampaignOnchainReward({ campaignAddress, userId });
       }
 
-      // const txHash = await createProofOfAction({ username: user?.usernaeme, objectString: title });
-
-      // await apiRequestV2("POST", "/api/user/update-claims-created", { txHash });
+      await apiRequestV2("POST", "/api/user/update-claims-created", { txHash });
 
       await apiRequestV2("POST", `/api/campaign/complete-campaign?id=${campaignId}`);
 
@@ -364,6 +373,7 @@ export default function CampaignEnvironment() {
     } catch (error: any) {
       console.error(error);
       toast({ title: "Error", description: error.message, variant: "destructive" });
+      throw error;
     }
   };
 
@@ -731,6 +741,15 @@ export default function CampaignEnvironment() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ProofOfActionModal
+        open={showProofModal}
+        onOpenChange={setShowProofModal}
+        subject={(user as any)?.username || (user as any)?.usernaeme || ""}
+        object={title || "this campaign"}
+        sourceLabel="Campaign"
+        onSuccess={finalizeCampaignReward}
+      />
     </div>
   )
 };

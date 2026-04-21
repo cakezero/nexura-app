@@ -8,6 +8,7 @@ import { useAuth } from "../lib/auth";
 import { apiRequestV2 } from "../lib/queryClient";
 import { useWallet } from "../hooks/use-wallet";
 import { createProofOfAction } from "../services/web3";
+import ProofOfActionModal from "../components/ProofOfActionModal";
 
 type LessonSummary = {
   _id: string;
@@ -130,6 +131,7 @@ export default function LessonPage() {
   const [pageError, setPageError] = useState("");
   const [actionMessage, setActionMessage] = useState("");
   const [showXPModal, setShowXPModal] = useState(false);
+  const [showProofModal, setShowProofModal] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
   const [didInitStep, setDidInitStep] = useState(false);
@@ -465,13 +467,17 @@ export default function LessonPage() {
     const canContinue = await ensureReadyForProtectedAction();
     if (!canContinue) return;
 
+    setShowProofModal(true);
+  };
+
+  const finalizeLessonXpClaim = async (txHash: string) => {
+    if (!lessonId) return;
+
     setClaiming(true);
     setActionMessage("");
 
     try {
-      // const txHash = await createProofOfAction({ username: user?.usernaeme, objectString: lesson?.title });
-
-      // await apiRequestV2("POST", "/api/user/update-claims-created", { txHash });
+      await apiRequestV2("POST", "/api/user/update-claims-created", { txHash });
 
       const response = await apiRequestV2("POST", `/api/lesson/reward-lesson-xp?id=${lessonId}`);
       setActionMessage(response.message || "XP reward claimed.");
@@ -1010,6 +1016,16 @@ export default function LessonPage() {
 
 
       </div>
+
+      <ProofOfActionModal
+        open={showProofModal}
+        onOpenChange={setShowProofModal}
+        subject={user?.username || user?.usernaeme || ""}
+        object={lesson?.title || "this lesson"}
+        xpReward={lesson?.reward}
+        sourceLabel="Lesson"
+        onSuccess={finalizeLessonXpClaim}
+      />
 
       {/* Lesson Complete modal — matches Figma design */}
       {showXPModal ? (
