@@ -355,7 +355,6 @@ export default function EcosystemDapps() {
         sourceLabel="Ecosystem"
         onSuccess={finalizeDappClaim}
         alreadyClaimed={Boolean(proofModalDapp?.done)}
-        userXp={Number(user?.xp) || 0}
       />
     </div>
   );

@@ -1,12 +1,10 @@
 import { useEffect, useState } from "react";
-import { X, Loader2, Check, ArrowRight, ArrowLeft, FileText, Share2, Download, Sparkles } from "lucide-react";
+import { X, Loader2, Check, ArrowRight } from "lucide-react";
 import { Dialog, DialogContent } from "./ui/dialog";
 import { createProofOfAction } from "../services/web3";
 import { useToast } from "../hooks/use-toast";
 import { toUserFriendlyErrorMessage } from "../lib/errorMessages";
 import { getPublicClient } from "../lib/viem";
-import { formatEther } from "viem";
-import { getLevelProgress } from "../lib/levels";
 import { useWallet } from "../hooks/use-wallet";
 import subjectAvatarImg from "../assets/proof-modal/subject-avatar.png";
 import predicateCheckImg from "../assets/proof-modal/predicate-check.png";
@@ -28,7 +26,6 @@ interface ProofOfActionModalProps {
   onSuccess: (txHash: string) => Promise<void> | void;
   sourceLabel?: string;
   alreadyClaimed?: boolean;
-  userXp?: number;
 }
 
 const SUBJECT = "I";
@@ -57,14 +54,12 @@ export default function ProofOfActionModal({
   onSuccess,
   sourceLabel,
   alreadyClaimed = false,
-  userXp = 0,
 }: ProofOfActionModalProps) {
   const { toast } = useToast();
   const { isConnected, connectWallet, address } = useWallet();
   const [staking, setStaking] = useState(false);
   const [staked, setStaked] = useState(alreadyClaimed);
   const [txHash, setTxHash] = useState<string>("");
-  const [networkFee, setNetworkFee] = useState<string>("");
   const [stakeInput, setStakeInput] = useState<string>(stakeTrust);
   const [walletBalance, setWalletBalance] = useState<bigint>(0n);
 
@@ -73,7 +68,6 @@ export default function ProofOfActionModal({
       setStaking(false);
       setStaked(alreadyClaimed);
       setTxHash("");
-      setNetworkFee("");
       setStakeInput(stakeTrust);
     }
   }, [open, alreadyClaimed, stakeTrust]);
@@ -152,14 +146,6 @@ export default function ProofOfActionModal({
       });
       setTxHash(hash);
       setStaked(true);
-      try {
-        const publicClient = getPublicClient();
-        const receipt = await publicClient.waitForTransactionReceipt({ hash: hash as `0x${string}` });
-        const feeWei = receipt.gasUsed * receipt.effectiveGasPrice;
-        setNetworkFee(formatEther(feeWei));
-      } catch {
-        // Best-effort: leave blank if receipt lookup fails.
-      }
       await onSuccess(hash);
       toast({
         title: "Proof of Action staked",
@@ -213,10 +199,7 @@ export default function ProofOfActionModal({
           {staked ? (
             <SuccessView
               xpReward={xpReward}
-              txHash={txHash}
               onDismiss={() => handleOpenChange(false)}
-              networkFeeEth={networkFee}
-              userXp={userXp}
             />
           ) : (
           <div className="px-[28px] pt-[24px] pb-[26px]">
@@ -400,177 +383,75 @@ export default function ProofOfActionModal({
 
 interface SuccessViewProps {
   xpReward?: number | string;
-  txHash: string;
   onDismiss: () => void;
-  networkFeeEth?: string;
-  userXp?: number;
 }
 
-function formatClaimId(hash: string): string {
-  const cleaned = (hash || "").replace(/^0x/, "").toUpperCase();
-  if (cleaned.length < 6) return "NEX-0000-00";
-  return `NEX-${cleaned.slice(0, 4)}-${cleaned.slice(-2)}`;
-}
-
-function formatNetworkFee(feeEth: string): string {
-  if (!feeEth) return "—";
-  const n = Number(feeEth);
-  if (!Number.isFinite(n) || n === 0) return "—";
-  if (n < 0.00001) return `${n.toExponential(2)} TRUST`;
-  return `${n.toFixed(6)} TRUST`;
-}
-
-function SuccessView({ xpReward, txHash, onDismiss, networkFeeEth, userXp = 0 }: SuccessViewProps) {
+function SuccessView({ xpReward, onDismiss }: SuccessViewProps) {
   const xpAmount = typeof xpReward !== "undefined" ? String(xpReward) : "0";
-  const claimId = formatClaimId(txHash);
-  const rewardXp = Number(xpReward) || 0;
-  const totalXpAfter = userXp + rewardXp;
-  const levelProgress = getLevelProgress(totalXpAfter);
-  const nextLevelName = levelProgress.next?.name ?? levelProgress.current.name;
 
   return (
     <div className="px-[14px] sm:px-[17px] pt-[14px] pb-[12px]">
-      <div className="flex flex-col gap-2.5">
-        <div
-          className="relative overflow-hidden rounded-[14px] border border-[rgba(212,187,255,0.1)] bg-[rgba(28,32,37,0.6)] backdrop-blur-[10px] shadow-[0_0_20px_0_rgba(138,63,252,0.1)] p-4 sm:p-5 flex flex-col items-center justify-center min-h-[240px] animate-in fade-in zoom-in-95 duration-500"
-          style={{ animationFillMode: "both" }}
-        >
-          <div
-            className="absolute inset-0 opacity-20 pointer-events-none"
-            style={{ background: "radial-gradient(circle at 50% 50%, rgba(212,187,255,0.22) 0%, transparent 70%)" }}
-          />
-
-          <div className="relative z-10 flex flex-col items-center">
-            <div
-              className="w-[48px] h-[48px] rounded-[12px] bg-[rgba(0,225,162,0.1)] border border-[rgba(0,225,162,0.3)] flex items-center justify-center animate-in zoom-in-50 fade-in duration-500"
-              style={{ animationDelay: "120ms", animationFillMode: "both" }}
-            >
-              <Check className="w-5 h-5 text-[#00e1a2]" strokeWidth={3} />
-            </div>
-
-            <h2
-              className="mt-4 font-bold text-[17px] sm:text-[22px] text-white text-center leading-[1.05] tracking-[-0.6px] animate-in fade-in slide-in-from-bottom-4 duration-500"
-              style={{ animationDelay: "220ms", animationFillMode: "both" }}
-            >
-              Claim Created
-              <br />
-              Successfully
-            </h2>
-
-            <p
-              className="mt-2.5 text-[#94a3b8] text-[10px] sm:text-[11px] text-center leading-[14px] max-w-[224px] animate-in fade-in duration-500"
-              style={{ animationDelay: "320ms", animationFillMode: "both" }}
-            >
-              Your onchain claim has been verified and recorded on The Intuition Knowledge Graph.
-            </p>
-
-            <div
-              className="mt-4 flex flex-col items-center gap-0.5 animate-in fade-in zoom-in-95 duration-500"
-              style={{ animationDelay: "420ms", animationFillMode: "both" }}
-            >
-              <span className="text-[#64748b] text-[8px] font-bold tracking-[0.8px] uppercase">
-                Unclaimed Balance
-              </span>
-              <div className="flex items-end gap-1">
-                <span
-                  className="text-[#d4bbff] text-[28px] sm:text-[32px] font-bold leading-none"
-                  style={{ textShadow: "0 0 10px rgba(212,187,255,0.5)" }}
-                >
-                  +{xpAmount}
-                </span>
-                <span className="text-[#94e2ff] text-[11px] sm:text-[12px] font-bold mb-1">XP</span>
-              </div>
-            </div>
-
-            <button
-              onClick={onDismiss}
-              data-testid="proof-success-claim-cta"
-              className="mt-4 px-5 py-[9px] rounded-[100px] font-bold text-[10px] sm:text-[11px] text-[#270058] bg-gradient-to-r from-[#8a3ffc] to-[#00ccf9] flex items-center gap-1.5 hover:scale-[1.03] hover:shadow-[0_0_12px_rgba(138,63,252,0.55)] active:scale-[0.98] transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 duration-500"
-              style={{ animationDelay: "540ms", animationFillMode: "both" }}
-            >
-              Claim XP Rewards
-              <ArrowRight className="w-3 h-3" strokeWidth={3} />
-            </button>
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-2.5">
-          <div
-            className="rounded-[14px] border border-[rgba(212,187,255,0.1)] border-l-2 border-l-[#d4bbff] bg-[rgba(28,32,37,0.6)] backdrop-blur-[10px] p-3 animate-in fade-in slide-in-from-right-4 duration-500"
-            style={{ animationDelay: "360ms", animationFillMode: "both" }}
-          >
-            <div className="flex items-center gap-1.5">
-              <FileText className="w-[10px] h-[10px] text-white" strokeWidth={2.5} />
-              <h3 className="text-white font-bold text-[11px]">Claim Summary</h3>
-            </div>
-            <div className="mt-2.5 space-y-1.5">
-              <div className="flex items-center justify-between pb-1 border-b border-white/5">
-                <span className="text-[#94a3b8] text-[8px] tracking-[0.5px] uppercase">Claim ID</span>
-                <span className="font-mono text-[#cdc2d8] text-[9px]">{claimId}</span>
-              </div>
-              <div className="flex items-center justify-between pb-1 border-b border-white/5">
-                <span className="text-[#94a3b8] text-[8px] tracking-[0.5px] uppercase">Status</span>
-                <span className="bg-[rgba(0,225,162,0.1)] text-[#00e1a2] text-[7px] font-semibold uppercase tracking-[-0.25px] px-1 py-0.5 rounded-[3px]">
-                  Verified
-                </span>
-              </div>
-              <div className="flex items-center justify-between pb-1 border-b border-white/5">
-                <span className="text-[#94a3b8] text-[8px] tracking-[0.5px] uppercase">Network Fee</span>
-                <span className="text-[#cdc2d8] text-[9px]">{formatNetworkFee(networkFeeEth || "")}</span>
-              </div>
-            </div>
-          </div>
-
-          <div
-            className="rounded-[14px] border border-[rgba(212,187,255,0.1)] bg-[rgba(28,32,37,0.6)] backdrop-blur-[10px] p-3 relative overflow-hidden animate-in fade-in slide-in-from-right-4 duration-500"
-            style={{ animationDelay: "460ms", animationFillMode: "both" }}
-          >
-            <Sparkles className="absolute -bottom-1.5 -right-1.5 w-8 h-8 text-white/5" strokeWidth={1} />
-            <div className="flex items-end justify-between mb-2">
-              <div>
-                <span className="text-[#94a3b8] text-[8px] tracking-[0.5px] uppercase block mb-0.5">
-                  {levelProgress.next ? "Next Level" : "Current Level"}
-                </span>
-                <span className="text-white font-bold text-[11px]">{nextLevelName}</span>
-              </div>
-              <span className="text-[#94e2ff] text-[10px] font-bold">{levelProgress.progressPct}%</span>
-            </div>
-            <div className="bg-[#262a30] h-1 rounded-[6px] overflow-hidden">
-              <div
-                className="bg-[#94e2ff] h-full rounded-[6px] shadow-[0_0_6px_rgba(148,226,255,0.6)] transition-[width] duration-1000 ease-out"
-                style={{ width: `${levelProgress.progressPct}%` }}
-              />
-            </div>
-            <p className="mt-2 text-[#64748b] text-[8px] italic leading-[12px]">
-              {levelProgress.next
-                ? `${levelProgress.xpRemaining.toLocaleString()} XP to ${levelProgress.next.name}.`
-                : `Top tier — ${levelProgress.current.name}.`}
-            </p>
-          </div>
-        </div>
-      </div>
-
       <div
-        className="mt-3 flex flex-row items-center justify-between gap-2 px-1 animate-in fade-in duration-500"
-        style={{ animationDelay: "620ms", animationFillMode: "both" }}
+        className="relative overflow-hidden rounded-[14px] border border-[rgba(212,187,255,0.1)] bg-[rgba(28,32,37,0.6)] backdrop-blur-[10px] shadow-[0_0_20px_0_rgba(138,63,252,0.1)] p-4 sm:p-5 flex flex-col items-center justify-center min-h-[240px] animate-in fade-in zoom-in-95 duration-500"
+        style={{ animationFillMode: "both" }}
       >
-        <div className="flex gap-3">
-          <button className="flex items-center gap-1 text-[#94a3b8] text-[9px] font-medium hover:text-white transition-colors">
-            <Share2 className="w-2.5 h-2.5" />
-            Share
-          </button>
-          <button className="flex items-center gap-1 text-[#94a3b8] text-[9px] font-medium hover:text-white transition-colors">
-            <Download className="w-2.5 h-2.5" />
-            Receipt
+        <div
+          className="absolute inset-0 opacity-20 pointer-events-none"
+          style={{ background: "radial-gradient(circle at 50% 50%, rgba(212,187,255,0.22) 0%, transparent 70%)" }}
+        />
+
+        <div className="relative z-10 flex flex-col items-center">
+          <div
+            className="w-[48px] h-[48px] rounded-[12px] bg-[rgba(0,225,162,0.1)] border border-[rgba(0,225,162,0.3)] flex items-center justify-center animate-in zoom-in-50 fade-in duration-500"
+            style={{ animationDelay: "120ms", animationFillMode: "both" }}
+          >
+            <Check className="w-5 h-5 text-[#00e1a2]" strokeWidth={3} />
+          </div>
+
+          <h2
+            className="mt-4 font-bold text-[17px] sm:text-[22px] text-white text-center leading-[1.05] tracking-[-0.6px] animate-in fade-in slide-in-from-bottom-4 duration-500"
+            style={{ animationDelay: "220ms", animationFillMode: "both" }}
+          >
+            Claim Created
+            <br />
+            Successfully
+          </h2>
+
+          <p
+            className="mt-2.5 text-[#94a3b8] text-[10px] sm:text-[11px] text-center leading-[14px] max-w-[224px] animate-in fade-in duration-500"
+            style={{ animationDelay: "320ms", animationFillMode: "both" }}
+          >
+            Your onchain claim has been verified and recorded on The Intuition Knowledge Graph.
+          </p>
+
+          <div
+            className="mt-4 flex flex-col items-center gap-0.5 animate-in fade-in zoom-in-95 duration-500"
+            style={{ animationDelay: "420ms", animationFillMode: "both" }}
+          >
+            <span className="text-[#64748b] text-[8px] font-bold tracking-[0.8px] uppercase">
+              Unclaimed Balance
+            </span>
+            <div className="flex items-end gap-1">
+              <span
+                className="text-[#d4bbff] text-[28px] sm:text-[32px] font-bold leading-none"
+                style={{ textShadow: "0 0 10px rgba(212,187,255,0.5)" }}
+              >
+                +{xpAmount}
+              </span>
+              <span className="text-[#94e2ff] text-[11px] sm:text-[12px] font-bold mb-1">XP</span>
+            </div>
+          </div>
+
+          <button
+            onClick={onDismiss}
+            data-testid="proof-success-claim-cta"
+            className="mt-4 px-5 py-[9px] rounded-[100px] font-bold text-[10px] sm:text-[11px] text-[#270058] bg-gradient-to-r from-[#8a3ffc] to-[#00ccf9] flex items-center gap-1.5 hover:scale-[1.03] hover:shadow-[0_0_12px_rgba(138,63,252,0.55)] active:scale-[0.98] transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 duration-500"
+            style={{ animationDelay: "540ms", animationFillMode: "both" }}
+          >
+            Claim XP Rewards
+            <ArrowRight className="w-3 h-3" strokeWidth={3} />
           </button>
         </div>
-        <button
-          onClick={onDismiss}
-          className="flex items-center gap-1 text-[#64748b] text-[9px] hover:text-white transition-colors"
-        >
-          <ArrowLeft className="w-2.5 h-2.5" />
-          Return
-        </button>
       </div>
     </div>
   );
