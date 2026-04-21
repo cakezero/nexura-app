@@ -89,8 +89,14 @@ export const createProofOfAction = async ({
   const address = getMultiVaultAddressFromChainId(walletClient.chain?.id!);
 
   const resolveAtom = async (label: string): Promise<Address> => {
+    // Trust-but-verify known IDs: if the precomputed hash is stale or was
+    // computed with a different encoding, fall through to the canonical path.
     const known = KNOWN_ATOM_IDS[label];
-    if (known) return known;
+    if (known) {
+      try {
+        if (await getAtomDetails(known)) return known;
+      } catch { /* fall through */ }
+    }
     // createAtomFromString stores atomData as toHex(label); match that here
     // so calculateAtomId produces the same id as what the contract indexes.
     const atomId = calculateAtomId(toHex(label));
