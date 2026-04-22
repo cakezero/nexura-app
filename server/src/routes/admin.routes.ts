@@ -60,7 +60,7 @@ router
   .post("/ban-user", banUser)
   .post("/unban-user", unBanUser)
   .get("/me", attachAdminCampaignHub, getHub)
-  .patch("/update-hub", requireAdminSuperadmin, attachAdminCampaignHub, upload.single("logo"), updateHub)
+  .patch("/update-hub", requireAdminSuperadmin, attachAdminCampaignHub, upload.fields([{ name: "logo", maxCount: 1 }, { name: "document", maxCount: 1 }]), updateHub)
   .patch("/disconnect-discord", requireAdminSuperadmin, attachAdminCampaignHub, disconnectHubDiscord)
   .get("/get-campaigns", attachAdminCampaignHub, fetchHubCampaigns)
   .get("/get-campaign", attachAdminCampaignHub, getCampaign)

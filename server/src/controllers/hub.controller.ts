@@ -10,6 +10,7 @@ import { miniQuestCompleted, campaignQuestCompleted } from '@/models/questsCompl
 import { campaign } from '@/models/campaign.model';
 import { campaignQuest } from '@/models/quests.model';
 import { uploadImg } from "@/utils/img.utils";
+import { uploadFile } from "@/utils/file.utils";
 import { normalizeCampaignDateInput, normalizeCampaignDatesForResponse, parseCampaignDate } from "@/utils/campaignDates";
 
 const DISCORD_CAMPAIGN_TAGS = new Set([
@@ -312,15 +313,27 @@ export const addHubAdmin = async (req: GlobalRequest, res: GlobalResponse) => {
 
 export const updateHub = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
-    const logoBuffer = req.file?.buffer;
+    const files = req.files as { [field: string]: Express.Multer.File[] } | undefined;
+    const logoFile = files?.logo?.[0];
+    const documentFile = files?.document?.[0];
 
     const { name, logo } = req.body;
 
-    if (logoBuffer && logo) {
-      // remove previous logo
-      req.body.logo = await uploadImg({ file: logoBuffer, filename: req.file?.originalname, folder: "hub-logo" });
-    } else if (logoBuffer && !logo) {
-      req.body.logo = await uploadImg({ file: logoBuffer, filename: req.file?.originalname, folder: "hub-logo" });
+    if (logoFile?.buffer) {
+      req.body.logo = await uploadImg({
+        file: logoFile.buffer,
+        filename: logoFile.originalname,
+        folder: "hub-logo",
+      });
+    }
+
+    if (documentFile?.buffer) {
+      req.body.document = await uploadFile({
+        file: documentFile.buffer,
+        filename: documentFile.originalname,
+        contentType: documentFile.mimetype,
+        folder: "hub-documents",
+      });
     }
 
     const trimmedName = typeof name === "string" ? name.trim() : undefined;
@@ -341,6 +354,7 @@ export const updateHub = async (req: GlobalRequest, res: GlobalResponse) => {
     if (safeBody.website !== undefined) safeBody.website = String(safeBody.website ?? "").trim();
     if (safeBody.xAccount !== undefined) safeBody.xAccount = String(safeBody.xAccount ?? "").trim();
     if (safeBody.discordServer !== undefined) safeBody.discordServer = String(safeBody.discordServer ?? "").trim();
+    if (safeBody.document !== undefined) safeBody.document = String(safeBody.document ?? "").trim();
     const updatedHub = await hub.findByIdAndUpdate(req.admin.hub, safeBody, { new: true });
     res.status(OK).json(updatedHub);
   } catch (error) {
