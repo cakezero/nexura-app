@@ -383,7 +383,7 @@ export default function Campaigns() {
             </div>
           )}
 
-          {campaign.reward.pool && (
+          {Number(campaign.reward?.pool) > 0 && (
             <div className="flex flex-row justify-between text-xs items-center">
               <span className="text-gray-500">Reward Pool:</span>
               <span className="text-white flex items-center gap-1 text-right">
