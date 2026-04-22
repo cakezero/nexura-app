@@ -931,7 +931,7 @@ export const updateClaims = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
     const { action, transactionHash }: { action: "buy" | "sell", transactionHash: string } = req.body;
 
-    if (!transactionHash || !action) {
+    if (!transactionHash && !action) {
       res.status(BAD_REQUEST).json({ error: "transaction hash and action are required" });
       return;
     }
