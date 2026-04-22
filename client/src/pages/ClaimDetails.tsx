@@ -298,7 +298,7 @@ export default function ClaimDetails() {
         pos?.direction === mainTab
     );
 
-    return up ? Number(formatEther(BigInt(parseInt(up.shares) > 0 ? up.shares : 0))) : 0;
+    return up ? Number(formatEther(BigInt(parseInt(up.shares ?? "0")))) : 0;
   }, [userPositions, user, growthType, mainTab]);
 
   const hasOppositePosition = useMemo(() => {
@@ -311,7 +311,7 @@ export default function ClaimDetails() {
     return userPositions.some(
       (pos) =>
         pos.direction === oppositeDirection &&
-        Number(formatEther(BigInt(pos.shares ?? 0))) > 0
+        Number(formatEther(BigInt(pos.shares ?? "0"))) > 0
     );
   }, [userPositions, mainTab, user]);
 
