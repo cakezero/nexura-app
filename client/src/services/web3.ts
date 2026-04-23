@@ -108,10 +108,27 @@ export const createProofOfAction = async ({
 
   // If the triple (subject, predicate, object) already exists, stake into it
   // via deposit. Otherwise create the triple with the initial deposit.
+  // Check existence on-chain via isTriple (authoritative) and fall back to
+  // the GraphQL indexer. The indexer lags, so concurrent users would otherwise
+  // both miss an existing triple and each create a new one.
   const tripleId = calculateTripleId(subject, predicate, object);
-  const existingTriple = await getTripleDetails(tripleId);
+  let tripleExists = false;
+  try {
+    tripleExists = await publicClient.readContract({
+      address,
+      abi: MultiVaultAbi,
+      functionName: "isTriple",
+      args: [tripleId],
+    }) as boolean;
+  } catch {
+    tripleExists = false;
+  }
+  if (!tripleExists) {
+    const indexed = await getTripleDetails(tripleId);
+    tripleExists = Boolean(indexed);
+  }
 
-  if (existingTriple) {
+  if (tripleExists) {
     // Stake on an existing triple by calling MultiVault.deposit directly.
     // The SDK's single `deposit` wrapper drops msg.value, and PROXY_FEE_CONTRACT
     // was previously used as a workaround but depends on a frontend env var
