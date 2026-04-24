@@ -7,7 +7,7 @@ async function fixStaleIndexes() {
 	const db = mongoose.connection;
 	// Map: collection name → index names to drop if they exist
 	const indexFixes: Record<string, string[]> = {
-		projects: ["guildId_1", "verifiedId_1", "xUsername_1", "address_1", "email_1"],
+		projects: ["guildId_1", "verifiedId_1", "xUsername_1", "address_1", "email_1", "name_1"],
 		"hub-admins": ["address_1", "xUsername_1"],
 		users: ["email_1"],
 		campaigns: ["email_1", "address_1"],
@@ -18,7 +18,8 @@ async function fixStaleIndexes() {
 			const col = db.collection(colName);
 			const indexes = await col.indexes();
 			for (const name of toDrop) {
-				if (indexes.find((i: any) => i.name === name)) {
+				const existing = indexes.find((i: any) => i.name === name);
+				if (existing) {
 					await col.dropIndex(name);
 					logger.info(`DB: dropped stale index ${name} on ${colName}`);
 				}
@@ -27,6 +28,20 @@ async function fixStaleIndexes() {
 			// Non-fatal — collection may not exist yet
 			logger.warn(`DB: fixStaleIndexes(${colName}) skipped: ${err.message}`);
 		}
+	}
+
+	// Recreate projects.name_1 as binary (case-sensitive) unique index.
+	// Prior index was created with locale collation which treated "Nexura" and
+	// "nexura" as equal, blocking distinct-case hub names.
+	try {
+		const col = db.collection("projects");
+		const idxs = await col.indexes();
+		if (!idxs.find((i: any) => i.name === "name_1")) {
+			await col.createIndex({ name: 1 }, { unique: true, name: "name_1" });
+			logger.info(`DB: created case-sensitive unique index name_1 on projects`);
+		}
+	} catch (err: any) {
+		logger.warn(`DB: recreate projects.name_1 skipped: ${err.message}`);
 	}
 }
 
