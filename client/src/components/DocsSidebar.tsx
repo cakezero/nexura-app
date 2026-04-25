@@ -2,48 +2,100 @@ import { useState } from "react";
 import AnimatedBackground from "./AnimatedBackground";
 
 const DocsSidebar = ({ active, setActive }: any) => {
-  const itemBaseStyle = {
-    clipPath:
-      "polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)",
+  const [openSection, setOpenSection] = useState<string | null>(null);
+
+  const renderItem = (id: string, text: string) => {
+    const isActive = active === id;
+
+    return (
+      <li
+        key={id}
+        className={`cursor-pointer flex items-center gap-2 px-2 py-2 ${
+          isActive ? "bg-[#0C0A18]" : ""
+        }`}
+        onClick={() => setActive(id)}
+      >
+        {/* Dot */}
+        <span
+          className="w-2 h-2 rounded-full"
+          style={{
+            backgroundColor: isActive ? "#7C5CE4" : "#8C78D21F",
+          }}
+        />
+
+        {/* Text */}
+        <span className="text-gray-300">{text}</span>
+      </li>
+    );
   };
 
-  const renderItem = (id: string, text: string, icon: string) => {
-  const isActive = active === id;
+  const Header = ({
+    title,
+    id,
+    hasDropdown = true,
+  }: {
+    title: string;
+    id?: string;
+    hasDropdown?: boolean;
+  }) => {
+    const isOpen = openSection === id;
 
-  return (
-    <li key={id} className="cursor-pointer" onClick={() => setActive(id)}>
-      <div className="flex items-center relative">
-        <div
-          className="flex items-center gap-2 px-3 py-2 border w-full relative"
+    return (
+      <div
+        className="flex items-center justify-between cursor-pointer"
+        onClick={() => {
+          if (!hasDropdown) return;
+          setOpenSection(isOpen ? null : id || null);
+        }}
+      >
+        <h2
           style={{
-            ...itemBaseStyle,
-            background: isActive ? "#8B5CF633" : "#FFFFFF0D",
-            borderColor: "#8B5CF633",
+            color: "#5A5275",
+            fontWeight: 700,
+            fontSize: "13.08px",
+            lineHeight: "22.23px",
+            letterSpacing: "1.83px",
+            textTransform: "uppercase",
           }}
         >
-{/* Center-right vertical stick */}
-{isActive && (
-  <div className="absolute top-1/2 right-4 -translate-y-1/2 w-[3px] h-5 bg-[#8B3EFE]" />
-)}
+          {title}
+        </h2>
 
-          <span className="w-5 h-5">
-            <img
-              src={`/${icon}`}
-              alt=""
-              className={`w-full h-full object-contain ${
-                isActive ? "opacity-100" : "opacity-70"
-              }`}
-            />
-          </span>
+        {hasDropdown && (
+          <img
+            src="/dropdown.png"
+            alt=""
+            className={`w-3 h-2 transition-transform duration-300 ${
+              isOpen ? "rotate-180" : ""
+            }`}
+          />
+        )}
+      </div>
+    );
+  };
 
-          <span className={isActive ? "text-white" : "text-gray-300"}>
-            {text}
-          </span>
+  // 🔥 reusable dropdown wrapper
+  const Dropdown = ({ id, children }: any) => {
+    const isOpen = openSection === id;
+
+    return (
+      <div
+        className={`ml-2 overflow-hidden transition-all duration-300 ease-out ${
+          isOpen ? "max-h-[500px]" : "max-h-0"
+        }`}
+      >
+        <div
+          className={`space-y-2 text-sm transition-all duration-300 ease-out ${
+            isOpen
+              ? "opacity-100 translate-y-0"
+              : "opacity-0 -translate-y-1"
+          }`}
+        >
+          {children}
         </div>
       </div>
-    </li>
-  );
-};
+    );
+  };
 
   return (
     <div className="relative">
@@ -59,48 +111,61 @@ const DocsSidebar = ({ active, setActive }: any) => {
       <aside className="relative z-20 w-64 text-white p-4 overflow-y-auto sticky top-0">
         {/* INTRODUCTION */}
         <div className="mb-6">
-          <div className="flex items-center mb-3">
-            <span className="w-2 h-2 rounded-full bg-purple-500 mr-2"></span>
-            <h2 className="text-purple-500 font-semibold text-sm">
-              INTRODUCTION
-            </h2>
-          </div>
+          <Header title="INTRODUCTION" id="intro" />
 
-          <ul className="ml-2 space-y-3 text-sm">
-            {renderItem("what-is", "What is Nexura?", "lightning.png")}
-            {renderItem("why", "Why Nexura Exists", "idea.png")}
-            {renderItem("guide", "User Guide", "user-guide.png")}
-          </ul>
+          <Dropdown id="intro">
+            {renderItem("introduction", "Introduction")}
+          </Dropdown>
         </div>
 
-        {/* CORE CONCEPTS */}
+        {/* CORE CONCEPT */}
         <div className="mb-6">
-          <div className="flex items-center mb-3">
-            <span className="w-2 h-2 rounded-full bg-purple-500 mr-2"></span>
-            <h2 className="text-purple-500 font-semibold text-sm">
-              CORE CONCEPTS
-            </h2>
-          </div>
+          <Header title="CORE CONCEPTS" id="core" />
 
-          <ul className="ml-2 space-y-3 text-sm">
-            {renderItem("features", "Key Features", "world-cut.png")}
-            {renderItem("nexon", "Nexon System", "nexon-system.png")}
-          </ul>
+          <Dropdown id="core">
+            {renderItem("features", "Key Features")}
+          </Dropdown>
         </div>
 
-        {/* BUILDER INTERACTION */}
-        <div>
-          <div className="flex items-center mb-3">
-            <span className="w-2 h-2 rounded-full bg-purple-500 mr-2"></span>
-            <h2 className="text-purple-500 font-semibold text-sm">
-              BUILDER INTERACTION
-            </h2>
-          </div>
+        {/* USING NEXURA */}
+        <div className="mb-6">
+          <Header title="USING NEXURA" id="using" />
 
-          <ul className="ml-2 space-y-3 text-sm">
-            {renderItem("builder", "Builder Guide", "lightning.png")}
-          </ul>
+          <Dropdown id="using">
+            {renderItem("gettingstarted", "Getting Started")}
+            {renderItem("nexonsystem", "The Nexon System")}
+          </Dropdown>
         </div>
+
+        {/* TECHNICAL OVERVIEW */}
+        <div className="mb-6">
+          <Header title="TECHNICAL OVERVIEW" id="technical" />
+
+          <Dropdown id="technical">
+            {renderItem("technicaloverview", "Nexura Technical Overview")}
+            {renderItem("architecturallayer", "Architectural Layer")}
+          </Dropdown>
+        </div>
+
+        {/* FAQs */}
+<div className="mb-6">
+  <div
+    onClick={() => setActive("faqs")}
+    className="cursor-pointer"
+  >
+    <Header title="FAQs" hasDropdown={false} />
+  </div>
+</div>
+
+{/* LEGAL */}
+<div>
+  <div
+    onClick={() => setActive("legal")}
+    className="cursor-pointer"
+  >
+    <Header title="LEGAL" hasDropdown={false} />
+  </div>
+</div>
       </aside>
     </div>
   );

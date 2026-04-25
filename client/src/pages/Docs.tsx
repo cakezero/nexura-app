@@ -1,65 +1,78 @@
 import { useState } from "react";
 import DocsSidebar from "../components/DocsSidebar";
 import DocsHeader from "../components/DocsHeader";
-import WhatIsNexura from "../components/docs/content/WhatIsNexura";
-import WhyNexuraExists from "../components/docs/content/WhyNexuraExists";
-import UserGuide from "../components/docs/content/UserGuide";
+import Introduction from "../components/docs/content/Introduction";
 import KeyFeatures from "../components/docs/content/KeyFeatures";
-import NexonSystem from "../components/docs/content/NexonSystem";
-import BuilderGuide from "../components/docs/content/BuilderGuide";
+import NexonSystem from "../components/docs/content/TheNexonSystem";
+import GettingStarted from "../components/docs/content/GettingStartedOnNexura";
+import TechnicalOverview from "../components/docs/content/TechnicalOverview";
+import ArchitecturalLayer from "../components/docs/content/ArchitecturalLayer";
+import FAQs from "../components/docs/content/FAQs";
+import Legal from "../components/docs/content/Legal";
 
 const docsContentMap = {
-  "what-is": WhatIsNexura,
-  why: WhyNexuraExists,
-  guide: UserGuide,
+  introduction: Introduction,
   features: KeyFeatures,
-  nexon: NexonSystem,
-  builder: BuilderGuide,
+  gettingstarted: GettingStarted,
+  nexonsystem: NexonSystem,
+  technicaloverview: TechnicalOverview,
+  architecturallayer: ArchitecturalLayer,
+  faqs: FAQs,
+  legal: Legal,
 };
 
-
-
 const docsMap = {
-  "what-is": {
+  introduction: {
     topic: "INTRODUCTION",
-    subtopic: "What is Nexura?",
+    subtopic: "Introduction",
   },
-  "why": {
-    topic: "INTRODUCTION",
-    subtopic: "Why Nexura Exists",
-  },
-  "guide": {
-    topic: "INTRODUCTION",
-    subtopic: "User Guide",
-  },
-  "features": {
+  features: {
     topic: "CORE CONCEPTS",
     subtopic: "Key Features",
   },
-  "nexon": {
-    topic: "CORE CONCEPTS",
-    subtopic: "Nexon System",
+  gettingstarted: {
+    topic: "USING NEXURA",
+    subtopic: "Getting Started",
   },
-  "builder": {
-    topic: "BUILDER INTERACTION",
-    subtopic: "Builder Guide",
+  nexonsystem: {
+    topic: "USING NEXURA",
+    subtopic: "The Nexon System",
+  },
+  technicaloverview: {
+    topic: "TECHNICAL OVERVIEW",
+    subtopic: "Nexura Technical Overview",
+  },
+  architecturallayer: {
+    topic: "TECHNICAL OVERVIEW",
+    subtopic: "Architectural Layer",
+  },
+
+  faqs: {
+    topic: "SUPPORT",
+    subtopic: "FAQs",
+  },
+  legal: {
+    topic: "LEGAL",
+    subtopic: "Legal",
   },
 };
 
 const Docs = () => {
-  const [active, setActive] = useState("what-is");
+  const [active, setActive] = useState("introduction");
   const [sections, setSections] = useState([]);
 
   const current = docsMap[active];
   const ActiveContent = docsContentMap[active];
 
   const docsOrder = [
-  "what-is",
-  "why",
-  "guide",
+  "introduction",
   "features",
-  "nexon",
-  "builder",
+  "gettingstarted",
+  "nexonsystem",
+  "technicaloverview",
+  "architecturallayer",
+  "faqs",
+  "legal"
 ];
 
 const currentIndex = docsOrder.indexOf(active);
