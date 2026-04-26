@@ -55,6 +55,7 @@ import ConnectDiscord from "./pages/studio/ConnectDiscord.tsx";
 import Docs from "./pages/Docs.tsx"
 import LessonPage from "./pages/LessonPage";
 import ResetHubPassword from "./pages/studio/ResetHubPassword.tsx";
+import AnalyticsBackground from "./components/AnalyticsBackground.tsx"
 
 function Router() {
    const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -78,7 +79,8 @@ function Router() {
       <Route path="/home" component={Home} />
       <Route path="/discover" component={Discover} />
       <Route path="/levels" component={Levels} />
-      {/*<Route path="/docs" component={Docs} />*/}
+      <Route path="/docs" component={Docs} />
+      <Route path="/docs/:slug?" component={Docs} />
       {/* NEXURA pages */}
       <Route path="/learn" component={Learn} />
       <Route path="/learn/:id" component={LessonPage } />
@@ -222,8 +224,8 @@ function App() {
                 return (
                   <div className="flex h-screen w-full text-white selection:bg-blue-500/30 relative">
 
-                    {/* {BACKGROUND FOR ALL PAGES} */}
-                    <AnimatedBackground />
+                    {/* BACKGROUND FOR ALL PAGES */}
+{isDocs ? <AnalyticsBackground /> : <AnimatedBackground />}
 
                     {/* Sidebar */}
                     {!isHome && !isStudio && !isDocs && !isProjectCreate && <NexuraSidebar />}
@@ -235,15 +237,15 @@ function App() {
     <header className="flex items-center p-4 app-header">
       
       {/* LEFT: Logo (only for docs) */}
-      {isDocs && (
-        <div className="flex items-center">
-          <img
-            src="/nexura-logo.png"
-            alt="Nexura"
-            className="h-8 w-auto"
-          />
-        </div>
-      )}
+{isDocs && (
+  <div className="hidden lg:flex items-center">
+    <img
+      src="/nexura-logo.png"
+      alt="Nexura"
+      className="h-8 w-auto"
+    />
+  </div>
+)}
 
       <SidebarTrigger
           data-testid="button-sidebar-toggle"
