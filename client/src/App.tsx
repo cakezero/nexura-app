@@ -43,19 +43,26 @@ import ConnectedDiscord from "./pages/studio/ConnectedDiscord.tsx";
 import StudioDashboard from "./pages/studio/StudioDashboard.tsx"
 import StudioLayout from "./pages/studio/StudioLayout.tsx"
 import CampaignsTab from "./components/admin/CampaignsTab.tsx";
+import QuestsTab from "./components/admin/QuestsTab.tsx";
 import { getStoredAccessToken, apiRequest } from './lib/config'
 import { clearProjectSession, getStoredProjectToken, projectApiRequest } from './lib/projectApi'
 import CreateNewCampaigns from "./components/admin/CreateNewCampaign.tsx";
 import MyCampaign from "./components/admin/MyCampaign.tsx"
+import MyQuest from "./components/admin/MyQuest.tsx"
 import AdminManagement from "./components/admin/AdminManagement.tsx";
 import AdminSignUp from "./pages/studio/AdminSignUp.tsx";
 import HubProfile from "./pages/studio/HubProfile.tsx";
+import UserProfile from "./pages/studio/UserProfile.tsx"
 import ClaimDetails from "./pages/ClaimDetails";
 import ConnectDiscord from "./pages/studio/ConnectDiscord.tsx";
 import Docs from "./pages/Docs.tsx"
 import LessonPage from "./pages/LessonPage";
 import ResetHubPassword from "./pages/studio/ResetHubPassword.tsx";
 import AnalyticsBackground from "./components/AnalyticsBackground.tsx"
+import UserDashboard from "./pages/studio/UserDashboard.tsx";
+import CreateNewQuests from "./components/admin/CreateNewQuest.tsx";
+import UserLayout from "./pages/studio/UserLayout.tsx";
+import QuestSubmissions from "./components/admin/QuestsSubmissions.tsx";
 
 function Router() {
    const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -111,54 +118,96 @@ function Router() {
       <Route path="/studio-dashboard">
         <StudioDashboard onLogout={handleLogout} />
       </Route>
+<Route path="/user-dashboard/quest-submissions">
+  <UserLayout title="Quest Submissions" onLogout={handleLogout}>
+    <QuestSubmissions/>
+  </UserLayout>
+</Route>
       <Route path="/studio-dashboard/dashboard">
         <StudioDashboard onLogout={handleLogout} />
       </Route>
-      <Route path="/studio-dashboard/create-new-campaign">
-        <StudioLayout title="Create Campaign" onLogout={handleLogout}>
-          <CreateNewCampaigns />
-        </StudioLayout>
+      <Route path="/user-dashboard">
+        <UserDashboard onLogout={handleLogout} />
       </Route>
-      <Route path="/studio-dashboard/campaigns-tab">
-        <StudioLayout title="Campaigns" onLogout={handleLogout}>
-          <CampaignsTab />
-        </StudioLayout>
-      </Route>
-      <Route path="/studio-dashboard/admin-management">
-        <StudioLayout title="User Administration" onLogout={handleLogout}>
-          <AdminManagement />
-        </StudioLayout>
-      </Route>
-      <Route path="/studio-dashboard/my-campaign">
-        <StudioLayout title="My Campaign" onLogout={handleLogout}>
-          <MyCampaign />
-        </StudioLayout>
-      </Route>
-      <Route path="/studio-dashboard/hub-profile">
-        <StudioLayout title="Project Profile" onLogout={handleLogout}>
-          <HubProfile />
-        </StudioLayout>
-      </Route>
-      <Route path="/studio-dashboard/connect-discord">
-        <StudioLayout title="Connect Discord" onLogout={handleLogout}>
-          <ConnectDiscord />
-        </StudioLayout>
-      </Route>
-      <Route path="/studio-dashboard/connected-discord">
-        <StudioLayout title="Connect Discord" onLogout={handleLogout}>
-          <ConnectedDiscord />
-        </StudioLayout>
-      </Route>
-      <Route path="/connect-discord">
-        <StudioLayout title="Connect Discord" onLogout={handleLogout}>
-          <ConnectDiscord />
-        </StudioLayout>
-      </Route>
-      <Route path="/project/connected-discord">
-        <StudioLayout title="Connect Discord" onLogout={handleLogout}>
-          <ConnectedDiscord />
-        </StudioLayout>
-      </Route>
+
+<Route path="/studio-dashboard/create-new-campaign">
+  <StudioLayout title="Create Campaign" onLogout={handleLogout}>
+    <CreateNewCampaigns />
+  </StudioLayout>
+</Route>
+
+<Route path="/user-dashboard/create-new-quest">
+  <UserLayout title="Create Quest" onLogout={handleLogout}>
+    <CreateNewQuests />
+  </UserLayout>
+</Route>
+
+<Route path="/studio-dashboard/campaigns-tab">
+  <StudioLayout title="Campaigns" onLogout={handleLogout}>
+    <CampaignsTab />
+  </StudioLayout>
+</Route>
+
+<Route path="/user-dashboard/quests-tab">
+  <UserLayout title="Quests" onLogout={handleLogout}>
+    <QuestsTab />
+  </UserLayout>
+</Route>
+
+<Route path="/studio-dashboard/admin-management">
+  <StudioLayout title="User Administration" onLogout={handleLogout}>
+    <AdminManagement />
+  </StudioLayout>
+</Route>
+
+<Route path="/studio-dashboard/my-campaign">
+  <StudioLayout title="My Campaign" onLogout={handleLogout}>
+    <MyCampaign />
+  </StudioLayout>
+</Route>
+
+<Route path="/user-dashboard/my-quest">
+  <UserLayout title="My Quest" onLogout={handleLogout}>
+    <MyQuest />
+  </UserLayout>
+</Route>
+
+<Route path="/studio-dashboard/hub-profile">
+  <StudioLayout title="Project Profile" onLogout={handleLogout}>
+    <HubProfile />
+  </StudioLayout>
+</Route>
+
+<Route path="/user-dashboard/user-profile">
+  <UserLayout title="User Profile" onLogout={handleLogout}>
+    <UserProfile />
+  </UserLayout>
+</Route>
+
+<Route path="/studio-dashboard/connect-discord">
+  <StudioLayout title="Connect Discord" onLogout={handleLogout}>
+    <ConnectDiscord />
+  </StudioLayout>
+</Route>
+
+<Route path="/studio-dashboard/connected-discord">
+  <StudioLayout title="Connect Discord" onLogout={handleLogout}>
+    <ConnectedDiscord />
+  </StudioLayout>
+</Route>
+
+<Route path="/connect-discord">
+  <UserLayout title="Connect Discord" onLogout={handleLogout}>
+    <ConnectDiscord />
+  </UserLayout>
+</Route>
+
+<Route path="/project/connected-discord">
+  <UserLayout title="Connect Discord" onLogout={handleLogout}>
+    <ConnectedDiscord />
+  </UserLayout>
+</Route>
+
       <Route path="/studio/register" component={AdminSignUp} />
       <Route path="/studio/reset-password" component={ResetHubPassword} />
       <Route path="/project/:projectId/*" component={ProjectDashboard} />
@@ -196,6 +245,7 @@ function App() {
     };
   }, [location]);
 
+  
   // NEXURA-style sidebar configuration
   const sidebarStyle = {
     "--sidebar-width": "12rem",
@@ -211,6 +261,7 @@ function App() {
                 
 
                 const isHome = location === "/" || location === "/home";
+                const isUserRoutes = location.startsWith("/user-dashboard");
                 const isStudio =
                   location === "/studio" ||
                   location.startsWith("/studio-dashboard") ||
@@ -228,12 +279,12 @@ function App() {
 {isDocs ? <AnalyticsBackground /> : <AnimatedBackground />}
 
                     {/* Sidebar */}
-                    {!isHome && !isStudio && !isDocs && !isProjectCreate && <NexuraSidebar />}
+                    {!isHome && !isStudio &&!isUserRoutes && !isDocs && !isProjectCreate && <NexuraSidebar />}
 
                     {/* Main content */}
 <div className="flex-1 flex flex-col relative z-10">
   
-  {!isHome && !isStudio && !isProjectCreate && (
+  {!isHome && !isStudio &&!isUserRoutes && !isProjectCreate && (
     <header className="flex items-center p-4 app-header">
       
       {/* LEFT: Logo (only for docs) */}
