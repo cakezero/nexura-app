@@ -85,66 +85,6 @@ useEffect(() => {
     reader.readAsDataURL(file);
   };
 
-  // const handleSave = async () => {
-  //   if (!name.trim()) {
-  //     toast({
-  //       title: "Missing name",
-  //       description: "Name is required.",
-  //       variant: "destructive",
-  //     });
-  //     return;
-  //   }
-
-  //   setSaving(true);
-
-  //   try {
-  //     const fd = new FormData();
-  //     fd.append("name", name.trim());
-  //     fd.append("bio", bio ?? "");
-
-  //     if (imagePreview) {
-  //       const blob = base64ToBlob(imagePreview);
-  //       fd.append("avatar", blob, "avatar.png");
-  //     }
-
-  //     await userApiRequest({
-  //       method: "PATCH",
-  //       endpoint: "/user/update-profile",
-  //       formData: fd,
-  //     });
-
-  //     // 🔥 Update LOCAL session (this is what your sidebar uses)
-  //     storeUserSession({
-  //       ...(user || {}),
-  //       type: "user",
-  //       role: "user",
-  //       username: name.trim(),
-  //       bio,
-  //       avatar: imagePreview,
-  //     });
-
-  //     toast({
-  //       title: "Profile updated",
-  //       description: "Your profile has been saved.",
-  //     });
-
-  //     // Exit edit mode
-  //     setIsEditing(false);
-
-  //     // 🔥 Force UI refresh so sidebar updates immediately
-  //     window.location.reload();
-
-  //   } catch (err: any) {
-  //     toast({
-  //       title: "Error",
-  //       description: err?.message || "Failed to update profile.",
-  //       variant: "destructive",
-  //     });
-  //   } finally {
-  //     setSaving(false);
-  //   }
-  // };
-
   const handleSave = async () => {
   if (!name.trim()) {
     toast({
@@ -158,16 +98,20 @@ useEffect(() => {
   setSaving(true);
 
   try {
+    const currentUser = getStoredUserSession(); // 🔥 ALWAYS FRESH READ
+
     const updatedUser = {
-      ...user,
+      ...currentUser,
       type: "user",
       role: "user",
       username: name.trim(),
       bio: bio || "",
-      avatar: imagePreview || user?.avatar || "",
+      avatar: imagePreview || currentUser?.avatar || "",
     };
 
     storeUserSession(updatedUser);
+
+    window.dispatchEvent(new Event("user-session-update"));
 
     toast({
       title: "Profile updated",
@@ -175,10 +119,6 @@ useEffect(() => {
     });
 
     setIsEditing(false);
-
-    // optional but cleaner than full reload
-    window.dispatchEvent(new Event("storage"));
-
   } catch (err: any) {
     toast({
       title: "Error",

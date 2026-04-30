@@ -21,14 +21,10 @@ interface StudioDashboardProps {
   onLogout: () => void;
 }
 
-type TabType = "profile" | "quests" | "questSubmissions";
-
-type BannedUser = {
-  _id: string;
-  walletAddress: string;
-  username: string;
-  bannedAt: string;
-};
+type TabType =
+  | "userProfile"
+  | "questTab"
+  | "questSubmissions";
 
 export default function userDashboard({ onLogout }: StudioDashboardProps) {
   const [location, setLocation] = useLocation();
@@ -41,12 +37,12 @@ export default function userDashboard({ onLogout }: StudioDashboardProps) {
   }, []);
 
   // ---------------- TAB DERIVATION (SOURCE: URL ONLY) ----------------
-const activeTab: TabType =
-  location.includes("/user-dashboard/user-profile")
-    ? "profile"
-    : location.includes("/user-dashboard/quests-tab")
-    ? "quests"
-    : "questSubmissions";
+  const activeTab: TabType =
+    location.includes("/user-dashboard/user-profile")
+      ? "userProfile"
+      : location.includes("/user-dashboard/quests-tab")
+      ? "questTab"
+      : "questSubmissions";
 
   // ---------------- STATE ----------------
   const [viewedSubmissions, setViewedSubmissions] = useState<Set<string>>(new Set());
@@ -57,14 +53,14 @@ const activeTab: TabType =
   const [selectedTask, setSelectedTask] = useState<TASKSS | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
+
   const toggleUserSelection = (id: string) => {
-  setSelectedUsers(prev => {
-    const newSet = new Set(prev);
-    if (newSet.has(id)) newSet.delete(id);
-    else newSet.add(id);
-    return newSet;
-  });
-};
+    setSelectedUsers(prev => {
+      const newSet = new Set(prev);
+      newSet.has(id) ? newSet.delete(id) : newSet.add(id);
+      return newSet;
+    });
+  };
 
   // ---------------- FETCH QUESTS ----------------
   const fetchQuests = async () => {
@@ -138,11 +134,11 @@ const activeTab: TabType =
   };
 
   // ---------------- NAVIGATION ----------------
-const navigate = (tab: TabType) => {
-  if (tab === "profile") setLocation("/user-dashboard/user-profile");
-  if (tab === "quests") setLocation("/user-dashboard/quests-tab");
-  if (tab === "questSubmissions") setLocation("/user-dashboard");
-};
+  const navigate = (tab: TabType) => {
+    if (tab === "userProfile") setLocation("/user-dashboard/user-profile");
+    if (tab === "questTab") setLocation("/user-dashboard/quests-tab");
+    if (tab === "questSubmissions") setLocation("/user-dashboard");
+  };
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden">
@@ -151,45 +147,41 @@ const navigate = (tab: TabType) => {
       <div className="relative z-10 flex h-screen flex-col md:flex-row">
 
         {/* SIDEBAR */}
-        <UserSidebar
-          activeTab={activeTab}
-        />
+        <UserSidebar activeTab={activeTab} />
 
         {/* MAIN AREA */}
         <div className="flex-1 flex flex-col overflow-hidden">
 
-          {/* HEADER */}
           <header className="hidden md:flex h-16 border-b border-white/10 items-center px-6">
             <h2 className="text-white font-semibold">
-              {activeTab === "profile" && "User Profile"}
-              {activeTab === "quests" && "Quests"}
-              {activeTab === "questSubmissions" && "Quest Submissions"}
+              {activeTab === "userProfile" && "User Profile"}
+              {activeTab === "questTab" && "Quests"}
+              {activeTab === "questSubmissions" && "Dashboard"}
             </h2>
           </header>
 
-          {/* CONTENT */}
           <main className="flex-1 overflow-y-auto px-6 py-6">
 
             {activeTab === "questSubmissions" && (
-  <QuestSubmissions
-    tasks={questTasks}
-    loading={loading}
-    searchTerm={searchTerm}
-    setSearchTerm={setSearchTerm}
-    selectedUsers={selectedUsers}
-    viewedSubmissions={viewedSubmissions}
-    toggleUserSelection={toggleUserSelection}
-    handleView={handleView}
-    handleAction={handleAction}
-    onRefresh={fetchQuests}
-  />
-)}
+              <QuestSubmissions
+                tasks={questTasks}
+                loading={loading}
+                searchTerm={searchTerm}
+                setSearchTerm={setSearchTerm}
+                selectedUsers={selectedUsers}
+                viewedSubmissions={viewedSubmissions}
+                toggleUserSelection={toggleUserSelection}
+                handleView={handleView}
+                handleAction={handleAction}
+                onRefresh={fetchQuests}
+              />
+            )}
 
-            {activeTab === "quests" && (
+            {activeTab === "questTab" && (
               <div className="text-white">Quests Page</div>
             )}
 
-            {activeTab === "profile" && (
+            {activeTab === "userProfile" && (
               <div className="text-white">User Profile Page</div>
             )}
 

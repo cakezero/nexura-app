@@ -1,48 +1,55 @@
 import { cn } from "../../lib/utils";
-import { Zap, Users, LogOut, User } from "lucide-react";
+import { Zap, Users, User } from "lucide-react";
 import { useLocation } from "wouter";
 import AnimatedBackground from "../../components/AnimatedBackground";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { getStoredUserSession } from "../../lib/userSession";
 
-type TabType =
-  | "userProfile"
-  | "questsTab"
-  | "questSubmissions";
+type TabType = "userProfile" | "questsTab" | "questSubmissions";
 
 interface UserSidebarProps {
   activeTab: TabType;
 }
 
-export default function UserSidebar({
-  activeTab,
-}: UserSidebarProps) {
+export default function UserSidebar({ activeTab }: UserSidebarProps) {
   const [, setLocation] = useLocation();
 
   const [userAvatar, setUserAvatar] = useState("/default-avatar.png");
   const [username, setUsername] = useState("@user");
 
-  useEffect(() => {
-    const user = getStoredUserSession();
+const syncUser = useCallback(() => {
+  const user = getStoredUserSession(); // ALWAYS fresh
 
-    if (user?.type === "user") {
-      setUsername(user.username || "@user");
-      setUserAvatar(user.avatar || "/default-avatar.png");
-    }
-  }, []);
+  if (user?.type === "user") {
+    setUsername(user.username || "@user");
+    setUserAvatar(user.avatar || "/default-avatar.png");
+  }
+}, []);
 
-  // ✅ ORIGINAL STRUCTURE PRESERVED
-  const sidebarItems = [
-    { title: "Profile", icon: User, id: "userProfile" as TabType },
-    { title: "Quests", icon: Users, id: "questsTab" as TabType },
-    { title: "Dashboard", icon: Zap, id: "questSubmissions" as TabType },
+useEffect(() => {
+  syncUser();
+
+  const handler = () => {
+    syncUser();
+  };
+
+  window.addEventListener("user-session-update", handler);
+
+  return () => {
+    window.removeEventListener("user-session-update", handler);
+  };
+}, []);
+
+  const sidebarItems: { title: string; icon: any; id: TabType }[] = [
+    { title: "Profile", icon: User, id: "userProfile" },
+    { title: "Quests", icon: Users, id: "questsTab" },
+    { title: "Dashboard", icon: Zap, id: "questSubmissions" },
   ];
 
-  // ✅ FIXED ROUTING ONLY (NO LOGIC CHANGE, JUST CLARITY)
   const routeByTab: Record<TabType, string> = {
     userProfile: "/user-dashboard/user-profile",
     questsTab: "/user-dashboard/quests-tab",
-    questSubmissions: "/user-dashboard", 
+    questSubmissions: "/user-dashboard",
   };
 
   const navigate = (id: TabType) => {
@@ -51,7 +58,6 @@ export default function UserSidebar({
 
   return (
     <>
-      {/* ── Desktop sidebar ── */}
       <div className="w-[16rem] border-r border-white/10 hidden md:flex flex-col z-20">
         <div className="p-6 border-b border-white/10 relative">
           <AnimatedBackground className="absolute inset-0 z-0" />
@@ -97,17 +103,12 @@ export default function UserSidebar({
         </nav>
       </div>
 
-      {/* ── Mobile top bar ── */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-30 flex items-center justify-between px-4 py-3 bg-black/80 backdrop-blur-xl border-b border-white/10">
         <img src="/nexura-logo.png" alt="Nexura" className="h-7 w-auto" />
 
         <div className="flex items-center gap-2 border border-purple-500 rounded-xl px-2 py-1 max-w-[55%] min-w-0">
           <div className="w-6 h-6 rounded-lg overflow-hidden flex-shrink-0">
-            <img
-              src={userAvatar}
-              alt="User"
-              className="w-full h-full object-cover"
-            />
+            <img src={userAvatar} alt="User" className="w-full h-full object-cover" />
           </div>
           <span className="text-white text-xs font-semibold truncate">
             {username}
@@ -115,7 +116,6 @@ export default function UserSidebar({
         </div>
       </div>
 
-      {/* ── Mobile bottom nav ── */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 flex bg-black/90 backdrop-blur-xl border-t border-white/10">
         {sidebarItems.map((item) => (
           <button
