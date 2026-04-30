@@ -5,7 +5,7 @@ import { Button } from "../../components/ui/button";
 import AnimatedBackground from "../../components/AnimatedBackground";
 
 // 👇 IMPORTANT: user sidebar (you must already have or create this)
-import UserSidebar from "./UserSidebar";
+import UserSidebar from "./userSidebar";
 
 import { getStoredUserSession } from "../../lib/userSession";
 
