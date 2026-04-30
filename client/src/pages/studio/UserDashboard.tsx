@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useLocation } from "wouter";
 import AnimatedBackground from "../../components/AnimatedBackground.tsx";
-import UserSidebar from "./UserSidebar.tsx";
+import UserSidebar from "./userSidebar.tsx";
 import { projectApiRequest, isProjectSignedIn } from "../../lib/projectApi";
 
 import {
