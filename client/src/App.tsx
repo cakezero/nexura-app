@@ -48,7 +48,7 @@ import { getStoredAccessToken, apiRequest } from './lib/config'
 import { clearProjectSession, getStoredProjectToken, projectApiRequest } from './lib/projectApi'
 import CreateNewCampaigns from "./components/admin/CreateNewCampaign.tsx";
 import MyCampaign from "./components/admin/MyCampaign.tsx"
-import MyQuest from "./components/admin/MyQuest.tsx"
+import MyQuest from "./components/admin/MyQuest.tsx";
 import AdminManagement from "./components/admin/AdminManagement.tsx";
 import AdminSignUp from "./pages/studio/AdminSignUp.tsx";
 import HubProfile from "./pages/studio/HubProfile.tsx";

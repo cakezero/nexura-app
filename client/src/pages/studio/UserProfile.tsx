@@ -16,7 +16,6 @@ import {
   getStoredUserSession,
   storeUserSession,
 } from "../../lib/userSession";
-import { userApiRequest } from "../../lib/userApiRequest";
 
 export default function UserProfile() {
   const [, setLocation] = useLocation();
