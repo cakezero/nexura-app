@@ -720,7 +720,7 @@ const formatNumber = (num: number) => {
   />
   {/* Content */}
     <div className="flex items-center justify-between">
-      <span className="text-xs font-semibold uppercase text-white">TOTAL CLAIMS CREATED</span>
+      <span className="text-xs font-semibold uppercase text-white max-w-[60%] leading-tight">PROOF OF ACTION</span>
       <img src="/nexxx.png" alt="Intuition Logo" className="w-6 h-6 object-contain" />
     </div>
     <div className="mt-4">
