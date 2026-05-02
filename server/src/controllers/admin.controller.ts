@@ -4,7 +4,8 @@ import mongoose from "mongoose";
 import logger from "@/config/logger";
 import { quest } from "@/models/quests.model";
 import { admin } from "@/models/admin.model";
-import { BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND, OK, UNAUTHORIZED } from "@/utils/status.utils";
+import { BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND, NO_CONTENT, OK, UNAUTHORIZED } from "@/utils/status.utils";
+import { campaign as campaignModel } from "@/models/campaign.model";
 import { generateOTP, getRefreshToken, hashPassword, JWT, validateQuestData } from "@/utils/utils";
 import { sendAdminResetEmail, sendEmailToAdmin } from "@/utils/sendMail";
 import { campaignQuestCompleted, miniQuestCompleted } from "@/models/questsCompleted.models";
@@ -808,3 +809,172 @@ export const markTask = async (req: GlobalRequest, res: GlobalResponse) => {
 		res.status(INTERNAL_SERVER_ERROR).json({ error: "error marking submission" });
 	}
 }
+
+export const getStudioCampaigns = async (_req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const campaigns = await campaignModel
+      .find({ status: { $ne: "Deleted" }, deletedAt: null })
+      .populate({ path: "hub", select: "name logo" })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const normalized = campaigns.map((c: any) => ({
+      _id: String(c._id),
+      title: c.description || c.title || "",
+      projectName: c.project_name || "",
+      status: c.status || "—",
+      starts_at: c.starts_at ?? null,
+      ends_at: c.ends_at ?? null,
+      reward: {
+        xp: Number(c.reward?.xp ?? 0),
+        pool: Number(c.reward?.pool ?? 0),
+        trustTokens: Number(c.reward?.trustTokens ?? 0),
+      },
+      participants: Number(c.participants ?? 0),
+      creator: {
+        id: c.hub?._id ? String(c.hub._id) : "",
+        name: c.hub?.name || c.project_name || "Unknown",
+        logo: c.hub?.logo || c.project_image || "",
+      },
+      createdAt: c.createdAt ?? null,
+    }));
+
+    res.status(OK).json({ studioCampaigns: normalized });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching studio campaigns" });
+  }
+};
+
+export const deleteStudioCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const id = typeof req.query.id === "string" ? req.query.id.trim() : "";
+    if (!id) {
+      res.status(BAD_REQUEST).json({ error: "campaign id is required" });
+      return;
+    }
+
+    const updated = await campaignModel.findByIdAndUpdate(
+      id,
+      { status: "Deleted", deletedAt: new Date() },
+      { new: true }
+    );
+
+    if (!updated) {
+      res.status(NOT_FOUND).json({ error: "campaign not found" });
+      return;
+    }
+
+    res.status(NO_CONTENT).send();
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error deleting studio campaign" });
+  }
+};
+
+export const getDeletedStudioCampaigns = async (_req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const campaigns = await campaignModel
+      .find({ status: "Deleted" })
+      .populate({ path: "hub", select: "name logo" })
+      .sort({ deletedAt: -1, createdAt: -1 })
+      .lean();
+
+    const normalized = campaigns.map((c: any) => ({
+      _id: String(c._id),
+      title: c.description || c.title || "",
+      projectName: c.project_name || "",
+      status: c.status || "—",
+      starts_at: c.starts_at ?? null,
+      ends_at: c.ends_at ?? null,
+      reward: {
+        xp: Number(c.reward?.xp ?? 0),
+        pool: Number(c.reward?.pool ?? 0),
+        trustTokens: Number(c.reward?.trustTokens ?? 0),
+      },
+      participants: Number(c.participants ?? 0),
+      creator: {
+        id: c.hub?._id ? String(c.hub._id) : "",
+        name: c.hub?.name || c.project_name || "Unknown",
+        logo: c.hub?.logo || c.project_image || "",
+      },
+      createdAt: c.createdAt ?? null,
+      deletedAt: c.deletedAt ?? null,
+    }));
+
+    res.status(OK).json({ deletedCampaigns: normalized });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching deleted campaigns" });
+  }
+};
+
+export const restoreStudioCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const id = typeof req.query.id === "string" ? req.query.id.trim() : "";
+    if (!id) {
+      res.status(BAD_REQUEST).json({ error: "campaign id is required" });
+      return;
+    }
+
+    const campaignToRestore = await campaignModel.findById(id);
+    if (!campaignToRestore) {
+      res.status(NOT_FOUND).json({ error: "campaign not found" });
+      return;
+    }
+
+    const now = new Date();
+    const startsAtStr = String(campaignToRestore.starts_at || "");
+    const endsAtStr = String(campaignToRestore.ends_at || "");
+    const startsAt = startsAtStr ? new Date(startsAtStr) : null;
+    const endsAt = endsAtStr ? new Date(endsAtStr) : null;
+
+    let targetStatus = "Active";
+    if (endsAt && !isNaN(endsAt.getTime()) && endsAt <= now) {
+      targetStatus = "Ended";
+    } else if (startsAt && !isNaN(startsAt.getTime()) && startsAt > now) {
+      targetStatus = "Scheduled";
+    }
+
+    // Use findByIdAndUpdate to avoid validation errors on existing invalid documents
+    const updated = await campaignModel.findByIdAndUpdate(
+      id,
+      { 
+        status: targetStatus, 
+        $unset: { deletedAt: "" } 
+      },
+      { new: true }
+    );
+
+    if (!updated) {
+      res.status(NOT_FOUND).json({ error: "campaign not found" });
+      return;
+    }
+
+    res.status(OK).json({ message: "campaign restored successfully" });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error restoring campaign" });
+  }
+};
+
+export const permanentlyDeleteStudioCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const id = typeof req.query.id === "string" ? req.query.id.trim() : "";
+    if (!id) {
+      res.status(BAD_REQUEST).json({ error: "campaign id is required" });
+      return;
+    }
+
+    const result = await campaignModel.findByIdAndDelete(id);
+    if (!result) {
+      res.status(NOT_FOUND).json({ error: "campaign not found" });
+      return;
+    }
+
+    res.status(NO_CONTENT).send();
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error permanently deleting campaign" });
+  }
+};

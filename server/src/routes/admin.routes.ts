@@ -16,10 +16,13 @@ import {
   getAdminLeaderboard,
   markTask,
   removeAdmin,
-  manageAdmin
+  manageAdmin,
+  getStudioCampaigns,
+  deleteStudioCampaign,
+  getDeletedStudioCampaigns,
+  restoreStudioCampaign,
+  permanentlyDeleteStudioCampaign,
 } from "@/controllers/admin.controller";
-import { publishAdminCampaign } from "@/controllers/adminCampaign.controller";
-import { addCampaignAddress, closeCampaign, deleteCampaign, fetchHubCampaigns, recordCampaignRewardsWithdrawal, reopenCampaign } from "@/controllers/campaign.controller";
 import { fetchChannels, fetchRoles, fetchServers } from "@/controllers/hub.auth.controller";
 import { disconnectHubDiscord, getCampaign, getHub, saveCampaign, saveCampaignWithQuests, updateHub } from "@/controllers/hub.controller";
 import {
@@ -44,6 +47,8 @@ import {
 } from "@/controllers/lesson.controller";
 import { upload } from "@/config/multer";
 import { attachAdminCampaignHub, requireAdminSuperadmin } from "@/middlewares/auth.middleware";
+import { publishAdminCampaign } from "@/controllers/adminCampaign.controller";
+import { addCampaignAddress, closeCampaign, deleteCampaign, fetchHubCampaigns, recordCampaignRewardsWithdrawal, reopenCampaign } from "@/controllers/campaign.controller";
 
 const router = Router();
 
@@ -98,6 +103,11 @@ router
   .get("/user-summary", getUserSummary)
   .get("/leaderboard", getAdminLeaderboard)
   .get("/get-lesson-details", getLessonDetailsForAdmin)
-  .get("/get-lessons", getAllLessons);
+  .get("/get-lessons", getAllLessons)
+  .get("/studio-campaigns", getStudioCampaigns)
+  .delete("/studio-campaigns", deleteStudioCampaign)
+  .get("/deleted-studio-campaigns", getDeletedStudioCampaigns)
+  .patch("/restore-studio-campaign", restoreStudioCampaign)
+  .delete("/permanent-studio-campaign", permanentlyDeleteStudioCampaign);
 
 export default router;
