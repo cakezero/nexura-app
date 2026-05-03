@@ -329,6 +329,8 @@ export default function CampaignEnvironment() {
             }
           } else if (quest.tag === "portal") {
             await apiRequestV2("POST", "/api/quest/check-portal-task", { termId: id, id: quest._id, questId: campaignId, page: "campaign" });
+          } else if (quest.tag === "trust-name") {
+            await apiRequestV2("POST", "/api/quest/check-trust-name", { id: quest._id, questId: campaignId });
           }
         // }
       } catch (error: any) {
@@ -336,7 +338,7 @@ export default function CampaignEnvironment() {
         throw new Error(error.message);
       }
 
-      if (quest.tag !== "portal") {
+      if (quest.tag !== "portal" && quest.tag !== "trust-name") {
         const res = await apiRequest(
           "POST",
           `/api/quest/perform-campaign-quest`,

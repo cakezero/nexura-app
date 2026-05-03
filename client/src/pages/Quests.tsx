@@ -96,9 +96,9 @@ export default function Quests() {
 
   const { toast } = useToast();
 
-  const { data: quests, isLoading } = useQuery<{
+  const { data, isLoading } = useQuery<{
     oneTimeQuests: Quest[];
-    weeklyQuests: Quest[];
+    quests: Quest[];
     featuredQuests: Quest[];
   }>({
     queryKey: ["/api/quests"],
@@ -122,7 +122,7 @@ export default function Quests() {
     localStorage.setItem('nexura:one-time-quest:claimed', JSON.stringify(value));
   }, [claimedTasks]);
 
-  const allQuests: Quest[] = quests?.weeklyQuests ?? DUMMY_QUESTS;
+  const allQuests: Quest[] = data?.quests ?? DUMMY_QUESTS;
 
   const activeQuests = allQuests.filter((q) => q.status === "active");
   const upcomingQuests = allQuests.filter((q) => q.status === "upcoming");
