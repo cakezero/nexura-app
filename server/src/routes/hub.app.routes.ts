@@ -7,6 +7,7 @@ import {
   reopenCampaign,
   updateCampaign
 } from "@/controllers/campaign.controller";
+import{ createQuest, saveQuest, saveQuestWithMiniQuests, deleteMiniQuest, deleteQuest } from "@/controllers/quest.controller";
 import {
   addHubAdmin,
   deleteCampaignQuest,
@@ -35,6 +36,11 @@ router
   .patch("/save-campaign", upload.single("coverImage"), saveCampaign)
   .get("/get-campaign", getCampaign)
   .delete("/delete-hub", deleteHub)
+  .delete("/delete-mini-quest", deleteMiniQuest)
+  .post("/create-quest", upload.single("coverImage"), createQuest)
+  .post("/save-quest", upload.single("coverImage"), saveQuest)
+  .post("/save-mini-quest", upload.single("coverImage"), saveQuestWithMiniQuests)
+  .delete("/delete-quest", deleteQuest)
   .patch("/update-ids", updateIds)
   .delete("/remove-admin", removeHubAdmin)
   .post("/create-hub", upload.single("logo"), createHub)

@@ -77,6 +77,7 @@ router
   .patch("/add-campaign-address", requireAdminSuperadmin, attachAdminCampaignHub, addCampaignAddress)
   .patch("/publish-campaign", requireAdminSuperadmin, attachAdminCampaignHub, publishAdminCampaign)
   .delete("/delete-campaign", requireAdminSuperadmin, attachAdminCampaignHub, deleteCampaign)
+  .delete("/delete-quest", requireAdminSuperadmin, attachAdminCampaignHub, deleteCampaign)
   .patch("/close-campaign", requireAdminSuperadmin, attachAdminCampaignHub, closeCampaign)
   .patch("/reopen-campaign", requireAdminSuperadmin, attachAdminCampaignHub, reopenCampaign)
   .patch("/record-campaign-rewards-withdrawal", requireAdminSuperadmin, attachAdminCampaignHub, recordCampaignRewardsWithdrawal)

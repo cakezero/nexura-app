@@ -10,11 +10,13 @@ import appRoutes from "./app.routes.ts";
 import lessonRoutes from "./lesson.routes.ts";
 import {
 	fetchEcosystemDapps,
+	fetchMiniQuests,
 	fetchQuests,
 } from "@/controllers/quest.controller.ts";
 import { signIn } from "@/controllers/auth.controller";
 import { createAdmin, adminLogin, forgotAdminPassword, resetAdminPassword } from "@/controllers/admin.controller";
 import { authenticateUser2, authenticateAdmin, authenticateUser } from "@/middlewares/auth.middleware";
+import userHubRoutes from "./userHub.routes.ts";
 
 const router = Router();
 
@@ -33,9 +35,11 @@ router
 	.get("/quests", authenticateUser2, fetchQuests)
 	.get("/campaigns", authenticateUser2, fetchCampaigns)
 	.use("/campaign", campaignRoutes)
-	.get("/leaderboard", authenticateUser2, getLeaderboard)
-	.use("/hub", hubRoutes)
-	.use("/quest", questRoutes)
+  .get("/leaderboard", authenticateUser2, getLeaderboard)
+	.get("/quest/fetch-mini-quests", authenticateUser2, fetchMiniQuests)
+  .use("/hub", hubRoutes)
+	.use("/user-hub", userHubRoutes)
+	.use("/quest", authenticateUser, questRoutes)
 	.use("/lesson", lessonRoutes)
 	.use("/user", authenticateUser, userRoutes);
 
