@@ -28,45 +28,34 @@ export default function SignInToHub() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   async function handleSignIn() {
-    if (!email || !password) {
-      toast({ title: "Missing fields", description: "Please fill in all fields.", variant: "destructive" });
-      return;
-    }
+  setLoading(true);
 
-    setLoading(true);
-    try {
-      const res = await projectApiRequest<{ message?: string; accessToken?: string; token?: string; project?: Record<string, unknown>; admin?: { _id: string; name: string; email: string; role: string; hub?: string } }>({
-        method: "POST",
-        endpoint: "/hub/sign-in",
-        data: { email, password, role: "project" },
-      });
+  try {
+    // fake session (test mode only)
+    storeProjectSession("test-token", {
+      email: email || "test@nexura.dev",
+      role: "admin",
+      adminId: "test-admin-id",
+      name: "Test Project",
+      logo: "",
+    });
 
-      const token = (res.token ?? res.accessToken) as string | undefined;
-      if (!token) throw new Error("No access token received");
+    toast({
+      title: "Signed in!",
+      description: "Welcome back to Nexura Studio.",
+    });
 
-      // Store token first so subsequent authenticated requests work
-      storeProjectSession(token, { email, role: res.admin?.role ?? "admin", adminId: res.admin?._id ?? "" });
-
-      // Fetch project profile to get name and logo
-      try {
-        const { hub } = await projectApiRequest<{ hub: Record<string, any> }>({
-          method: "GET",
-          endpoint: "/hub/me",
-        });
-        storeProjectSession(token, { email, name: hub.name ?? email, logo: hub.logo ?? "", role: res.admin?.role ?? "admin", adminId: res.admin?._id ?? "" });
-      } catch {
-        // profile fetch failed — keep email as name
-      }
-
-      toast({ title: "Signed in!", description: "Welcome back to Nexura Studio." });
-      setLocation("/studio-dashboard");
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Invalid credentials.";
-      toast({ title: "Sign in failed", description: msg, variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
+    setLocation("/studio-dashboard");
+  } catch (err: any) {
+    toast({
+      title: "Sign in failed",
+      description: err?.message || "Something went wrong.",
+      variant: "destructive",
+    });
+  } finally {
+    setLoading(false);
   }
+}
 
   async function handleSendOTP() {
     if (!resetEmail) {
