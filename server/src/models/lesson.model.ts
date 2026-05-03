@@ -30,6 +30,16 @@ const lessonSchema = new mongoose.Schema({
     enum: ["draft", "published"],
     default: "draft",
   },
+  creator: {
+    type: mongoose.Schema.Types.ObjectId,
+    refPath: "creatorModel",
+    required: true
+  },
+  creatorModel: {
+    type: String,
+    required: true,
+    enum: ["users", "project", "admin"]
+  },
   disclaimer: {
     type: String,
     default: "",

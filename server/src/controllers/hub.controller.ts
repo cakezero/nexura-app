@@ -1,9 +1,9 @@
 import { OTP } from '@/models/otp.model';
-import { hub, hubAdmin } from '@/models/hub.model';
+import { hub, hubAdmin, userHub, userHubAdmin } from '@/models/hub.model';
 import { addHubAdminEmail } from '@/utils/sendMail';
 import { BAD_REQUEST, INTERNAL_SERVER_ERROR, CREATED, OK, NO_CONTENT, NOT_FOUND, FORBIDDEN } from '@/utils/status.utils';
 import { CLIENT_URL } from '@/utils/env.utils';
-import { generateOTP, validateHubData, getMissingFields, validateCampaignData, validateCampaignQuestData, validateSaveCampaignData } from '@/utils/utils';
+import { generateOTP, validateHubData, getMissingFields, validateCampaignData, validateCampaignQuestData, validateSaveCampaignData, validateUserHubData } from '@/utils/utils';
 import logger from '@/config/logger';
 import { submission } from '@/models/submission.model';
 import { miniQuestCompleted, campaignQuestCompleted } from '@/models/questsCompleted.models';
@@ -11,7 +11,7 @@ import { campaign } from '@/models/campaign.model';
 import { campaignQuest } from '@/models/quests.model';
 import { uploadImg } from "@/utils/img.utils";
 import { uploadFile } from "@/utils/file.utils";
-import { normalizeCampaignDateInput, normalizeCampaignDatesForResponse, parseCampaignDate } from "@/utils/campaignDates";
+import { normalizeCampaignDateInput, normalizeCampaignDatesForResponse, parseDate } from "@/utils/dates";
 
 const DISCORD_CAMPAIGN_TAGS = new Set([
   "discord",
@@ -695,7 +695,7 @@ export const saveCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
           trustTokens: reward.trust ?? 0,
         },
       };
-      body.hub = req.admin.hub;
+
       const savedCampaign = await campaign.create(body);
       const savedCampaignId = savedCampaign._id;
 
@@ -721,14 +721,17 @@ export const saveCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
       res.status(NOT_FOUND).json({ error: "campaign not found" });
       return;
     }
+
     const lockedDiscordGuildId = campaignFound.status !== "Save"
       ? await resolveCampaignDiscordLaunchGuildId(campaignFound)
       : "";
+
     const discordGuildIdForCampaign = lockedDiscordGuildId || String(hubFound.guildId ?? "").trim();
 
     const incomingNameOfProject = typeof req.body.nameOfProject === "string"
       ? req.body.nameOfProject.trim()
       : "";
+
     const { campaignQuests: _cq, isDraft: _d, existingCoverImage: _e, hubCoverImage: _h, nameOfProject: _n, ...updateFields } = req.body;
 
     if (updateFields.reward && typeof updateFields.reward === "object") {
@@ -759,15 +762,15 @@ export const saveCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
 
     const existingPool = Number(campaignFound.reward?.pool ?? 0);
     const existingMaxParticipants = Number((campaignFound as any).maxParticipants ?? campaignFound.participants ?? 0);
-    const existingStartsAt = parseCampaignDate(campaignFound.starts_at);
-    const existingEndsAt = parseCampaignDate(campaignFound.ends_at);
+    const existingStartsAt = parseDate(campaignFound.starts_at);
+    const existingEndsAt = parseDate(campaignFound.ends_at);
     const incomingPool = updateFields.reward
       ? Number((updateFields.reward as Record<string, unknown>).pool ?? existingPool)
       : existingPool;
     const incomingMaxParticipants = updateFields.maxParticipants !== undefined
       ? Number(updateFields.maxParticipants ?? existingMaxParticipants)
       : existingMaxParticipants;
-    const incomingEndsAt = updateFields.ends_at ? parseCampaignDate(updateFields.ends_at) : existingEndsAt;
+    const incomingEndsAt = updateFields.ends_at ? parseDate(updateFields.ends_at) : existingEndsAt;
     const rewardsContractSettled = Boolean((campaignFound as any).rewardsDeployment?.remainderWithdrawalTxHash);
     const campaignHasStarted = existingStartsAt ? existingStartsAt.getTime() <= Date.now() : false;
 
@@ -801,11 +804,11 @@ export const saveCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
     if (campaignFound.status !== "Save") {
       const now = new Date();
       const newStartsAt = updateFields.starts_at
-        ? parseCampaignDate(updateFields.starts_at)
-        : parseCampaignDate(campaignFound.starts_at);
+        ? parseDate(updateFields.starts_at)
+        : parseDate(campaignFound.starts_at);
       const newEndsAt = updateFields.ends_at
-        ? parseCampaignDate(updateFields.ends_at)
-        : parseCampaignDate(campaignFound.ends_at);
+        ? parseDate(updateFields.ends_at)
+        : parseDate(campaignFound.ends_at);
 
       if (newEndsAt && newEndsAt <= now) {
         updateFields.status = "Ended";
@@ -816,7 +819,7 @@ export const saveCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
       }
     }
 
-    const updatedCampaign = await campaign.findByIdAndUpdate(id, updateFields, { new: true });
+    await campaign.findByIdAndUpdate(id, updateFields, { new: true });
 
     // Update quests without destroying existing IDs/submissions
     if (questsToSave !== null) {
@@ -1015,3 +1018,53 @@ export const updateCamapaignQuest = async (req: GlobalRequest, res: GlobalRespon
     res.status(INTERNAL_SERVER_ERROR).json({ error: "error updating quest" });
   }
 }
+
+export const createUserHub = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const { error } = validateUserHubData(req.body);
+    if (error) {
+      const emptyFields = getMissingFields(error);
+
+      res
+        .status(BAD_REQUEST)
+        .json({ error: `these field(s) are required: ${emptyFields}` });
+      return;
+    }
+
+    const name = String(req.body.name ?? "").trim();
+
+    const nameExists = await userHub.exists({ name });
+    if (nameExists) {
+      res.status(BAD_REQUEST).json({ error: "name is already in use" });
+      return;
+    }
+
+    const website = String(req.body.website ?? "").trim();
+    const xAccount = String(req.body.xAccount ?? "").trim();
+
+    const createdHub = await userHub.create({
+      name,
+      description: req.body.description ?? "",
+      website,
+      xAccount,
+      logo: req.body.pfp,
+      superAdmin: req.id,
+    });
+
+    const adminDoc = req.admin as any;
+    await userHubAdmin.findByIdAndUpdate(req.id, { hub: createdHub._id, pendingTxHash: null });
+
+    // Migrate any pending payment hash from admins to hub (payment represents completed on-chain studio fee)
+    if (adminDoc?.pendingTxHash) {
+      await userHub.findByIdAndUpdate(createdHub._id, { pendingTxHash: adminDoc.pendingTxHash, $inc: { noOfPayments: 1 } });
+    }
+
+    res.status(CREATED).json({ message: "user hub created!" });
+  } catch (error: any) {
+    logger.error(error);
+    res
+      .status(INTERNAL_SERVER_ERROR)
+      .json({ error: error?.message || "Error creating user hub" });
+  }
+};
+

@@ -46,6 +46,8 @@ export const createLesson = async (req: GlobalRequest, res: GlobalResponse) => {
     const coverImage = await getUploadedLessonImage(req, "coverImage", "lesson-covers");
     const profileImage = await getUploadedLessonImage(req, "profileImage", "lesson-profiles");
 
+    const page = req.body.page;
+
     if (coverImage) req.body.coverImage = coverImage;
     if (profileImage) req.body.profileImage = profileImage;
 
@@ -57,7 +59,7 @@ export const createLesson = async (req: GlobalRequest, res: GlobalResponse) => {
 
     const disclaimer = typeof req.body.disclaimer === "string" ? req.body.disclaimer.trim() : "";
 
-    await lesson.create({ ...req.body, disclaimer, status: "draft" });
+    await lesson.create({ ...req.body, disclaimer, status: "draft", creator: req.admin.hub, creatorModel: page === "user" ? "users" : page !== "project" ? "admin" : "project" });
 
     res.status(CREATED).json({ message: "lesson created" });
   } catch (error) {
@@ -665,7 +667,6 @@ export const deleteLesson = async (req: GlobalRequest, res: GlobalResponse) => {
       res.status(BAD_REQUEST).json({ error: "lesson id is required" });
       return;
     }
-
 
     await Promise.all([
       lesson.deleteOne({ _id: lessonId }),

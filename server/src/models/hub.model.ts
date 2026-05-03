@@ -63,13 +63,17 @@ const hubSchema = new Schema({
     type: Number,
     default: 0
   },
+  questsCreated: {
+    type: Number,
+    default: 0
+  },
   noOfPayments: {
     type: Number,
     default: 0
   },
   xpAllocated: {
     type: Number,
-    default: 200
+    default: 500
   },
   superAdmin: {
     type: mongoose.Schema.Types.ObjectId,
@@ -114,3 +118,75 @@ const hubAdminSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 export const hubAdmin = mongoose.model("hub-admins", hubAdminSchema);
+
+const userHubSchema = new Schema({
+  systemKey: {
+    type: String,
+    unique: true,
+    sparse: true,
+  },
+  name: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  logo: {
+    type: String,
+    required: true
+  },
+  description: {
+    type: String,
+    required: false,
+    default: ""
+  },
+  xAccount: {
+    type: String,
+    required: false,
+    default: ""
+  },
+  questsCreated: {
+    type: Number,
+    default: 0
+  },
+  noOfPayments: {
+    type: Number,
+    default: 0
+  },
+  superAdmin: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "user-hub-admins",
+    required: true
+  },
+  pendingTxHash: {
+    type: String,
+    default: null,
+  }
+}, { timestamps: true });
+
+export const userHub = mongoose.model("user-hubs", userHubSchema);
+
+const userHubAdminSchema = new mongoose.Schema({
+  email: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  password: {
+    type: String,
+    required: true
+  },
+  name: {
+    type: String,
+    required: true,
+  },
+  hub: {
+    type: Schema.Types.ObjectId,
+    ref: 'user-hubs',
+  },
+  pendingTxHash: {
+    type: String,
+    default: null,
+  }
+}, { timestamps: true });
+
+export const userHubAdmin = mongoose.model("user-hub-admins", userHubAdminSchema);

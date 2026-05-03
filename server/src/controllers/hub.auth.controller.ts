@@ -18,7 +18,7 @@ import {
 	DISCORD_CLIENT_SECRET,
 	BOT_TOKEN,
 } from "@/utils/env.utils";
-import { hubAdmin, hub } from "@/models/hub.model";
+import { hubAdmin, hub, userHubAdmin } from "@/models/hub.model";
 import bcrypt from "bcrypt";
 import axios from "axios";
 import { resetEmail } from "@/utils/sendMail";
@@ -56,7 +56,7 @@ export const signIn = async (req: GlobalRequest, res: GlobalResponse) => {
 		const accessToken = JWT.sign(id);
 		const refreshToken = getRefreshToken(id);
 
-		res.cookie("refreshToken", refreshToken, {
+		res.cookie("hubRefreshToken", refreshToken, {
 			httpOnly: true,
 			secure: true,
 			maxAge: 30 * 24 * 60 * 60,
@@ -110,7 +110,7 @@ export const superAdminSignUp = async (req: GlobalRequest, res: GlobalResponse) 
 		const accessToken = JWT.sign(superAdmin._id.toString());
 		const refreshToken = getRefreshToken(superAdmin._id.toString());
 
-		res.cookie("refreshToken", refreshToken, {
+		res.cookie("hubRefreshToken", refreshToken, {
 			httpOnly: true,
 			secure: true,
 			maxAge: 30 * 24 * 60 * 60,
@@ -292,7 +292,7 @@ export const hubAdminSignUp = async (req: GlobalRequest, res: GlobalResponse) =>
 		const accessToken = JWT.sign(id);
 		const refreshToken = getRefreshToken(id);
 
-		res.cookie("refreshToken", refreshToken, {
+		res.cookie("hubRefreshToken", refreshToken, {
 			httpOnly: true,
 			secure: true,
 			maxAge: 30 * 24 * 60 * 60,
@@ -384,7 +384,7 @@ export const resetPassword = async (req: GlobalRequest, res: GlobalResponse) => 
 		const accessToken = JWT.sign(id);
 		const refreshToken = getRefreshToken(id);
 
-		res.cookie("refreshToken", refreshToken, {
+		res.cookie("hubRefreshToken", refreshToken, {
 			httpOnly: true,
 			secure: true,
 			maxAge: 30 * 24 * 60 * 60,
@@ -416,12 +416,212 @@ export const logout = async (req: GlobalRequest, res: GlobalResponse) => {
 
 		await REDIS.set({ key: `logout:${token}`, data: { token }, ttl: 7 * 24 * 60 * 60 });
 
-		res.clearCookie("refreshToken");
+		res.clearCookie("hubRefreshToken");
 		res.status(OK).json({ message: "admin logged out!" });
 	} catch (error) {
 		logger.error(error);
 		res
 			.status(INTERNAL_SERVER_ERROR)
 			.json({ error: "Error logging out admin" });
+	}
+};
+
+export const userHubSignIn = async (req: GlobalRequest, res: GlobalResponse) => {
+	try {
+		const { email, password }: { email: string; password: string } = req.body;
+
+		if (!email || !password) {
+			res.status(BAD_REQUEST).json({ error: "send the required data: email and password" });
+			return;
+		}
+
+		const adminExists = await userHubAdmin.findOne({ email }).lean();
+		if (!adminExists) {
+			res.status(BAD_REQUEST).json({ error: "invalid signin credentials" });
+			return;
+		}
+
+		const comparePassword = await bcrypt.compare(password, adminExists.password);
+		if (!comparePassword) {
+			res.status(BAD_REQUEST).json({ error: "invalid signin credentials" });
+			return;
+		}
+
+		const id = adminExists._id.toString();
+
+		const accessToken = JWT.sign(id);
+		const refreshToken = getRefreshToken(id);
+
+		res.cookie("userHubRefreshToken", refreshToken, {
+			httpOnly: true,
+			secure: true,
+			maxAge: 30 * 24 * 60 * 60,
+		});
+
+		res.status(OK).json({
+			message: "signed in!",
+			accessToken,
+			admin: {
+				_id: adminExists._id,
+				name: adminExists.name,
+				email: adminExists.email,
+				hub: adminExists.hub,
+			},
+		});
+	} catch (error) {
+		logger.error(error);
+		res
+			.status(INTERNAL_SERVER_ERROR)
+			.json({ error: "Error signing in" });
+	}
+};
+
+export const userHubAdminSignUp = async (req: GlobalRequest, res: GlobalResponse) => {
+	try {
+		const { error } = validateSuperAdminData(req.body);
+		if (error) {
+			const missingFields = getMissingFields(error);
+			res.status(BAD_REQUEST).json({ error: `these field(s) are/is required: ${missingFields}` });
+			return;
+    }
+
+    const { name, email, password } = req.body;
+
+    const emailExists = await userHubAdmin.exists({ email: email.trim().toLowerCase() });
+    if (emailExists) {
+      res.status(BAD_REQUEST).json({ error: "An account with this email already exists. Please sign in instead." });
+      return;
+    }
+
+    const hashedPassword = await hashPassword(password);
+
+		const superAdmin = await userHubAdmin.create({
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
+      password: hashedPassword,
+    });
+
+		const accessToken = JWT.sign(superAdmin._id.toString());
+		const refreshToken = getRefreshToken(superAdmin._id.toString());
+
+		res.cookie("userHubRefreshToken", refreshToken, {
+			httpOnly: true,
+			secure: true,
+			maxAge: 30 * 24 * 60 * 60,
+		});
+
+		res.status(CREATED).json({ message: "user hub admin created", accessToken });
+	} catch (error: any) {
+		logger.error(error);
+		const isDuplicate = error?.code === 11000;
+		res.status(isDuplicate ? BAD_REQUEST : INTERNAL_SERVER_ERROR).json({
+      error: isDuplicate ? "An account with this email already exists. Please sign in instead." : "Error creating super admin",
+    });
+	}
+}
+
+export const userHubLogout = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+
+		const { token } = req;
+
+		await REDIS.set({ key: `logout:${token}`, data: { token }, ttl: 7 * 24 * 60 * 60 });
+
+		res.clearCookie("userHubRefreshToken");
+		res.status(OK).json({ message: "user hub admin logged out!" });
+	} catch (error) {
+		logger.error(error);
+		res
+			.status(INTERNAL_SERVER_ERROR)
+			.json({ error: "Error logging out user hub admin" });
+	}
+}
+
+export const userHubForgotPassword = async (req: GlobalRequest, res: GlobalResponse) => {
+	try {
+		const { email } = req.body;
+
+		if (!email) {
+			res.status(BAD_REQUEST).json({ error: "email is required" });
+			return;
+		}
+
+		const hubAdminExists = await userHubAdmin.findOne({ email }).lean();
+		if (!hubAdminExists) {
+			res.status(NOT_FOUND).json({ error: "email associated with admin is invalid or does not exist" });
+			return;
+		}
+
+		const id = hubAdminExists._id.toString();
+		const clientLink = `${CLIENT_URL}/studio/reset-password?token=`;
+
+		const token = JWT.sign(id, "10m");
+		const link = clientLink + token;
+
+		await resetEmail(email, link);
+
+		res.status(OK).json({ message: "password reset email sent!" });
+	} catch (error) {
+		logger.error(error);
+		res
+			.status(INTERNAL_SERVER_ERROR)
+			.json({ error: "Error sending password reset email" });
+	}
+};
+
+export const userHubResetPassword = async (req: GlobalRequest, res: GlobalResponse) => {
+	try {
+		const { token, password } = req.body;
+
+		if (!token || !password) {
+			res.status(BAD_REQUEST).json({ error: "send token and password" });
+			return;
+		}
+
+		const accessTokenUsed = await REDIS.get(`reset-access-token:${token}`);
+		if (accessTokenUsed) {
+			res.status(BAD_REQUEST).json({ error: "access token already used, request a new one to change your password" });
+			return;
+		}
+
+		const { id } = await JWT.verify(token) as { id: string };
+
+		const adminExists = await userHubAdmin.findById(id);
+		if (!adminExists) {
+			res.status(BAD_REQUEST).json({ error: "id associated with admin is invalid" });
+			return;
+		}
+
+		const hashedPassword = await hashPassword(password);
+
+		adminExists.password = hashedPassword;
+		await adminExists.save();
+
+		await REDIS.set({ key: `reset-access-token:${token}`, data: { token }, ttl: 10 * 60 });
+
+		const accessToken = JWT.sign(id);
+		const refreshToken = getRefreshToken(id);
+
+		res.cookie("userHubRefreshToken", refreshToken, {
+			httpOnly: true,
+			secure: true,
+			maxAge: 30 * 24 * 60 * 60,
+		});
+
+		res.status(OK).json({
+			message: "admin password reset successful!",
+			accessToken,
+			admin: {
+				_id: adminExists._id,
+				name: adminExists.name,
+				email: adminExists.email,
+				hub: adminExists.hub,
+			},
+		});
+	} catch (error) {
+		logger.error(error);
+		res
+			.status(INTERNAL_SERVER_ERROR)
+			.json({ error: "Error resetting admin password" });
 	}
 };
