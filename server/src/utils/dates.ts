@@ -10,7 +10,7 @@ const normalizeLegacyCampaignDateString = (value: string) => {
 	return trimmed;
 };
 
-export const parseCampaignDate = (value: unknown) => {
+export const parseDate = (value: unknown) => {
 	if (!value) return null;
 	if (value instanceof Date) {
 		return Number.isNaN(value.getTime()) ? null : value;
@@ -22,13 +22,13 @@ export const parseCampaignDate = (value: unknown) => {
 };
 
 export const normalizeCampaignDateInput = (value: unknown) => {
-	const parsed = parseCampaignDate(value);
+	const parsed = parseDate(value);
 	if (!parsed) return value;
 	return parsed.toISOString();
 };
 
 export const serializeCampaignDate = (value: unknown) => {
-	const parsed = parseCampaignDate(value);
+	const parsed = parseDate(value);
 	if (!parsed) return typeof value === "string" ? value.trim() : value;
 	return parsed.toISOString();
 };
