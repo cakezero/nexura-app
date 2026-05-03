@@ -5,7 +5,7 @@ import AnimatedBackground from "../../components/AnimatedBackground";
 import { useEffect, useState } from "react";
 import { getStoredProjectInfo, clearProjectSession, projectApiRequest, getStoredProjectToken, storeProjectSession } from "../../lib/projectApi";
 
-type TabType = "hubProfile" | "campaignSubmissions" | "adminManagement" | "campaignsTab" | "lessonsTab";
+type TabType = "hubProfile" | "campaignSubmissions" | "adminManagement" | "campaignsTab" | "lessonsTab" | "questsTab";
 
 interface StudioSidebarProps {
   activeTab: TabType;
@@ -72,6 +72,7 @@ export default function StudioSidebar({
     campaignSubmissions: "/studio-dashboard/dashboard",
     campaignsTab: "/studio-dashboard/campaigns-tab",
     lessonsTab: "/studio-dashboard/lessons-tab",
+    questsTab: "/studio-dashboard/quests-tab",
     adminManagement: "/studio-dashboard/admin-management",
   };
 

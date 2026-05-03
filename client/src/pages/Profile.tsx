@@ -141,6 +141,7 @@ export default function Profile() {
       longestStreak: 0,
       badges: [],
       socialProfiles: { x: "", discord: "" },
+      trustName: "",
     };
 
     if (!user) return base;

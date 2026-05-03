@@ -1952,7 +1952,7 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
 
         const followKey = `${NEXURA_USERNAME}:follow`;
 
-        const followersInCache = await REDIS.get(followKey);
+        const followersInCache = await REDIS.get(followKey) as any;
 
         const followFound = followersInCache.some(
           (follower: { id: string }) => follower.id === xId,
@@ -2067,7 +2067,7 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
 
         const repostKey = `${postId}:repost`;
 
-        const repostInCache = await REDIS.get(repostKey);
+        const repostInCache = await REDIS.get(repostKey) as any;
 
         const repostFound = repostInCache.some(
           (reposter: { id: string }) => reposter.id === xId,
@@ -2144,7 +2144,7 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
 
         const commentKey = `${postId}:comments`;
 
-        const commentsInCache = await REDIS.get(commentKey);
+        const commentsInCache = await REDIS.get(commentKey) as any;
 
         const commentFound = commentsInCache.some(
           (reply: { author: { id: string } }) => reply.author.id === xId,

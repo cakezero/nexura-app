@@ -136,7 +136,7 @@ export const fetchCampaigns = async (
 				select: "name description logo website xAccount discordServer guildId",
 			})
 			.lean();
-		const statusUpdates: Array<{ _id: unknown; status: string }> = [];
+		const statusUpdates: Array<{ _id: any; status: string }> = [];
 		const normalizedCampaigns = campaigns.map((c) => {
 			const normalizedStatus = getTemporalCampaignStatus(c);
 			const publicStatus = normalizedStatus === "Deleted" ? "Ended" : normalizedStatus;
@@ -173,7 +173,7 @@ export const fetchCampaigns = async (
 				statusUpdates.map(({ _id, status }) => ({
 					updateOne: {
 						filter: { _id },
-						update: { $set: { status } },
+						update: { $set: { status: status as any } },
 					},
 				}))
 			);
@@ -745,25 +745,25 @@ export const reopenCampaign = async (
 			res.status(NOT_FOUND).json({ error: "campaign id is invalid" });
 			return;
 		}
-		if (String(foundCampaign.hub) !== String(req.admin.hub)) {
+		if (String((foundCampaign as any).hub) !== String(req.admin.hub)) {
 			res.status(FORBIDDEN).json({ error: "you are not allowed to reopen this campaign" });
 			return;
 		}
-		if (foundCampaign.status !== "Ended") {
+		if ((foundCampaign as any).status !== "Ended") {
 			res.status(BAD_REQUEST).json({ error: "only ended campaigns can be reopened" });
 			return;
 		}
 
 		const now = new Date();
-		const startsAt = parseDate(foundCampaign.starts_at);
-		const endsAt = parseDate(foundCampaign.ends_at);
+		const startsAt = parseDate((foundCampaign as any).starts_at);
+		const endsAt = parseDate((foundCampaign as any).ends_at);
 		const rewardsContractSettled = Boolean((foundCampaign as any).rewardsDeployment?.remainderWithdrawalTxHash);
 
-		if (endsAt && endsAt <= now) {
+		if (endsAt! && endsAt! <= now) {
 			res.status(FORBIDDEN).json({ error: "campaign end date has passed and it cannot be reopened" });
 			return;
 		}
-		if (foundCampaign.contractAddress && Number(foundCampaign.reward?.pool ?? 0) > 0 && rewardsContractSettled) {
+		if ((foundCampaign as any).contractAddress && Number((foundCampaign as any).reward?.pool ?? 0) > 0 && rewardsContractSettled) {
 			res.status(BAD_REQUEST).json({
 				error: "this rewards campaign cannot be reopened because its remaining funds have already been withdrawn",
 			});
@@ -787,8 +787,8 @@ export const reopenCampaign = async (
 			}
 		}
 
-		foundCampaign.status = startsAt && startsAt > now ? "Scheduled" : "Active";
-		await foundCampaign.save();
+		(foundCampaign as any).status = (startsAt! && startsAt! > now) ? ("Scheduled" as any) : ("Active" as any);
+		await (foundCampaign as any).save();
 
 		res.status(OK).json({ message: "campaign reopened!" });
 	} catch (error) {
@@ -885,7 +885,7 @@ export const claimCampaignRewards = async (
 export const fetchHubCampaigns = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
 		const hubCampaigns = await campaign.find({ hub: req.admin.hub, status: { $ne: "Deleted" }, deletedAt: null }).lean();
-		const statusUpdates: Array<{ _id: unknown; status: string }> = [];
+		const statusUpdates: Array<{ _id: any; status: string }> = [];
 		const normalizedCampaigns = hubCampaigns.map((c) => {
 			const normalizedStatus = getTemporalCampaignStatus(c);
 			if (normalizedStatus !== c.status) {
@@ -899,7 +899,7 @@ export const fetchHubCampaigns = async (req: GlobalRequest, res: GlobalResponse)
 				statusUpdates.map(({ _id, status }) => ({
 					updateOne: {
 						filter: { _id },
-						update: { $set: { status } },
+						update: { $set: { status: status as any } },
 					},
 				}))
 			);

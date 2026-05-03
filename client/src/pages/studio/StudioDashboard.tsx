@@ -38,7 +38,7 @@ type BannedUser = {
   bannedAt: string;
 }
 
-type TabType = "hubProfile" | "campaignSubmissions" | "adminManagement" | "campaignsTab" | "lessonsTab";
+type TabType = "hubProfile" | "campaignSubmissions" | "adminManagement" | "campaignsTab" | "lessonsTab" | "questsTab";
 
 export default function StudioDashboard({ onLogout }: StudioDashboardProps) {
   const [location, setLocation] = useLocation();

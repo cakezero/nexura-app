@@ -181,7 +181,7 @@ export const updateQuestion = async (req: GlobalRequest, res: GlobalResponse) =>
       ? options.map((option) => option.trim()).filter(Boolean)
       : questionExists.options;
 
-    const normalizedSolution = typeof solution === "string" ? solution.trim() : questionExists.solution;
+    const normalizedSolution = typeof solution === "string" ? solution.trim() : (questionExists.solution as string);
 
     if (normalizedOptions.length < 2) {
       res.status(BAD_REQUEST).json({ error: "at least two options are required" });
@@ -201,10 +201,10 @@ export const updateQuestion = async (req: GlobalRequest, res: GlobalResponse) =>
     questionExists.solution = normalizedSolution;
     if (typeof introHeader === "string") questionExists.introHeader = introHeader;
     if (typeof introBody === "string") questionExists.introBody = introBody;
-    if (typeof introTrophy === "string") questionExists.introTrophy = introTrophy;
+    if (typeof introTrophy === "string") questionExists.introTrophy = introTrophy as "" | "bronze" | "silver" | "gold";
     if (typeof outroHeader === "string") questionExists.outroHeader = outroHeader;
     if (typeof outroBody === "string") questionExists.outroBody = outroBody;
-    if (typeof outroTrophy === "string") questionExists.outroTrophy = outroTrophy;
+    if (typeof outroTrophy === "string") questionExists.outroTrophy = outroTrophy as "" | "bronze" | "silver" | "gold";
 
     await questionExists.save();
 
@@ -260,10 +260,10 @@ export const updateMiniLesson = async (req: GlobalRequest, res: GlobalResponse) 
     miniLessonExists.text = text.trim();
     if (typeof introHeader === "string") miniLessonExists.introHeader = introHeader;
     if (typeof introBody === "string") miniLessonExists.introBody = introBody;
-    if (typeof introTrophy === "string") miniLessonExists.introTrophy = introTrophy;
+    if (typeof introTrophy === "string") miniLessonExists.introTrophy = introTrophy as "" | "bronze" | "silver" | "gold";
     if (typeof outroHeader === "string") miniLessonExists.outroHeader = outroHeader;
     if (typeof outroBody === "string") miniLessonExists.outroBody = outroBody;
-    if (typeof outroTrophy === "string") miniLessonExists.outroTrophy = outroTrophy;
+    if (typeof outroTrophy === "string") miniLessonExists.outroTrophy = outroTrophy as "" | "bronze" | "silver" | "gold";
     await miniLessonExists.save();
 
     res.status(OK).json({ message: "mini lesson updated" });
@@ -318,10 +318,10 @@ export const updateVideoLesson = async (req: GlobalRequest, res: GlobalResponse)
     videoLessonExists.url = url.trim();
     if (typeof introHeader === "string") videoLessonExists.introHeader = introHeader;
     if (typeof introBody === "string") videoLessonExists.introBody = introBody;
-    if (typeof introTrophy === "string") videoLessonExists.introTrophy = introTrophy;
+    if (typeof introTrophy === "string") videoLessonExists.introTrophy = introTrophy as "" | "bronze" | "silver" | "gold";
     if (typeof outroHeader === "string") videoLessonExists.outroHeader = outroHeader;
     if (typeof outroBody === "string") videoLessonExists.outroBody = outroBody;
-    if (typeof outroTrophy === "string") videoLessonExists.outroTrophy = outroTrophy;
+    if (typeof outroTrophy === "string") videoLessonExists.outroTrophy = outroTrophy as "" | "bronze" | "silver" | "gold";
     await videoLessonExists.save();
 
     res.status(OK).json({ message: "video lesson updated" });
@@ -502,7 +502,7 @@ export const updateQuestionIntro = async (req: GlobalRequest, res: GlobalRespons
     }
     questionExists.introHeader = introHeader ?? "";
     questionExists.introBody = introBody ?? "";
-    questionExists.introTrophy = introTrophy ?? "";
+    questionExists.introTrophy = (introTrophy ?? "") as "" | "bronze" | "silver" | "gold";
     await questionExists.save();
     res.status(OK).json({ message: "question intro updated" });
   } catch (error) {
