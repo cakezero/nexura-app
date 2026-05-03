@@ -58,6 +58,19 @@ import ResetHubPassword from "./pages/studio/ResetHubPassword.tsx";
 import AnalyticsBackground from "./components/AnalyticsBackground.tsx"
 import LessonCreate from "./pages/studio/LessonCreate";
 import Lessons from "./pages/studio/Lessons";
+import UserDashboard from "./pages/studio/UserDashboard.tsx";
+import CreateNewQuests from "./components/admin/CreateNewQuest.tsx";
+import UserLayout from "./pages/studio/UserLayout.tsx";
+import SelectRole from "./pages/studio/SelectRole.tsx";
+import ProjectsHub from "./pages/studio/ProjectsHub.tsx";
+import UsersHub from "./pages/studio/UsersHub.tsx";
+import UsersCreate from "./pages/studio/UsersCreate.tsx";
+import UserSignup from "./pages/studio/UserSignup.tsx";
+import UserSignIn from "./pages/studio/UserSignin.tsx";
+import UserProfile from "./pages/studio/UserProfile.tsx"
+import QuestsTab from "./components/admin/QuestsTab.tsx";
+import userDashboard from "./pages/studio/UserDashboard.tsx";
+import QuestCard from "./components/QuestCard.tsx";
 
 function Router() {
    const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -106,7 +119,29 @@ function Router() {
       <Route path="/achievements" component={Achievements} />
       <Route path="/leaderboard" component={Leaderboard} />
       {/* Developer pages */}
-      <Route path="/projects/create" component={ProjectCreate} />
+      <Route path="/studio/select-role" component={SelectRole} />
+      <Route path="/studio/projects-hub" component={ProjectsHub} />
+      <Route path="/studio/users-hub" component={UsersHub} />
+      <Route path="/studio/users/create" component={UsersCreate} />
+      <Route path="/studio/users/user-signup" component={UserSignup} />
+      <Route path="/studio/users/user-signin" component={UserSignIn} />
+      <Route path="/user-dashboard/user-profile">
+        <UserLayout title="Create Campaign" onLogout={handleLogout}>
+          <UserProfile />
+        </UserLayout>
+      </Route>
+      <Route path="/user-dashboard" component= {UserDashboard} />
+      <Route path="/user-dashboard/quests-tab">
+        <UserLayout title="Create Campaign" onLogout={handleLogout}>
+          <QuestsTab />
+        </UserLayout>
+      </Route>
+      <Route path="/user-dashboard/create-new-quest">
+        <UserLayout title="Create Campaign" onLogout={handleLogout}>
+          <CreateNewQuests />
+        </UserLayout>
+      </Route>
+      <Route path="/studio/projects/create" component={ProjectCreate} />
       <Route path="/projects/create/create-hub" component={CreateHub} />
       <Route path="/projects/create/signin-to-hub" component={SignInToHub} />
       <Route path="/projects/create/the-hub" component={TheHub} />
@@ -223,6 +258,7 @@ function App() {
                 
 
                 const isHome = location === "/" || location === "/home";
+                const isUser = location.startsWith("/user-dashboard")
                 const isStudio =
                   location === "/studio" ||
                   location.startsWith("/studio-dashboard") ||
@@ -240,12 +276,12 @@ function App() {
 {isDocs ? <AnalyticsBackground /> : <AnimatedBackground />}
 
                     {/* Sidebar */}
-                    {!isHome && !isStudio && !isDocs && !isProjectCreate && <NexuraSidebar />}
+                    {!isHome && !isStudio &&!isUser && !isDocs && !isProjectCreate && <NexuraSidebar />}
 
                     {/* Main content */}
 <div className="flex-1 flex flex-col relative z-10">
   
-  {!isHome && !isStudio && !isProjectCreate && (
+  {!isHome && !isStudio &&!isUser && !isProjectCreate && (
     <header className="flex items-center p-4 app-header">
       
       {/* LEFT: Logo (only for docs) */}

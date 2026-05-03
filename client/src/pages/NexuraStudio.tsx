@@ -120,7 +120,7 @@ export default function NexuraStudio() {
           {/* CTA */}
           <div className="flex flex-col items-center gap-2 mb-2">
             <button
-              onClick={() => setLocation("/projects/create")}
+              onClick={() => setLocation("/studio/select-role")}
               className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-transparent border border-white text-white font-semibold text-xs transition-all duration-200 hover:bg-purple-600 hover:border-purple-600 hover:shadow-[0_0_20px_rgba(131,58,253,0.7)] hover:scale-[1.03] active:scale-[0.98]"
             >
               Enter Studio
@@ -167,7 +167,7 @@ export default function NexuraStudio() {
     src="/enter-studio.png"
     alt="Enter Studio"
     className="cursor-pointer w-[200px] max-w-full h-auto transform transition-transform duration-200 hover:scale-105"
-    onClick={() => setLocation("/projects/create")}
+    onClick={() => setLocation("/studio/select-role")}
   />
 </div>
 
