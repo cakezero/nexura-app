@@ -11,6 +11,7 @@ import { sendAdminResetEmail, sendEmailToAdmin } from "@/utils/sendMail";
 import { campaignQuestCompleted, miniQuestCompleted } from "@/models/questsCompleted.models";
 import { submission } from "@/models/submission.model";
 import { user } from "@/models/user.model";
+import { hub } from "@/models/hub.model";
 import { bannedUser } from "@/models/bannedUser.model";
 import { REDIS } from "@/utils/redis.utils";
 
@@ -95,16 +96,19 @@ export const createQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 			return;
 		}
 
-		const newQuest = new quest(req.body);
-		if (newQuest.category !== "weekly") {
-			await newQuest.save();
-		} else {
-			// new Date(new Date(Date.now() + 86400000).setHours(0, 60, 0, 0)); (quests expire at 12am UTC. For now, it expires 1 day after creation)
-			newQuest.expires = new Date(Date.now() + 86400000);
-			await newQuest.save();
-		}
+		const hubUserId = req.admin.hub;
 
-		res.status(OK).json({ message: "quest quest created!" });
+		const createdHub = await hub.findById(hubUserId);
+		if (!createdHub) {
+			res
+				.status(NOT_FOUND)
+				.json({ error: "id associated with hub is invalid" });
+			return;
+    }
+
+    await quest.create({ ...req.body, hub: createdHub._id });
+
+		res.status(OK).json({ message: "quest created!" });
 	} catch (error) {
 		logger.error(error);
 		res.status(INTERNAL_SERVER_ERROR).json({ error: "error creating quest" });
@@ -202,7 +206,7 @@ export const rewardXpBatch = async (req: GlobalRequest, res: GlobalResponse) => 
 		});
 	} catch (error) {
 		logger.error(error);
-		res.status(INTERNAL_SERVER_ERROR).json({ error: "Internal Server Error" });
+		res.status(INTERNAL_SERVER_ERROR).json({ error: "error performing batch xp reward" });
 	}
 };
 
