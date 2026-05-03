@@ -87,6 +87,7 @@ const hubSchema = new Schema({
 }, { timestamps: true });
 
 export const hub = mongoose.model("hubs", hubSchema, "projects");
+export const projectModel = mongoose.model("project", hubSchema, "projects");
 
 const hubAdminSchema = new mongoose.Schema({
   email: {

@@ -84,7 +84,8 @@ const miniLessonSchema = new mongoose.Schema({
   },
   text: {
     type: String,
-    required: true
+    required: false,
+    default: "",
   },
   order: {
     type: Number,
@@ -124,7 +125,8 @@ const miniLesson = mongoose.model("mini-lessons", miniLessonSchema);
 const questionSchema = new mongoose.Schema({
   question: {
     type: String,
-    required: true
+    required: false,
+    default: "",
   },
   order: {
     type: Number,
@@ -132,11 +134,13 @@ const questionSchema = new mongoose.Schema({
   },
   options: [{
     type: String,
-    required: true
+    required: false,
+    default: "",
   }],
   solution: {
     type: String,
-    required: true
+    required: false,
+    default: "",
   },
   lesson: {
     type: mongoose.Schema.Types.ObjectId,
@@ -212,7 +216,8 @@ const videoLessonSchema = new mongoose.Schema({
   },
   url: {
     type: String,
-    required: true
+    required: false,
+    default: "",
   },
   order: {
     type: Number,

@@ -263,26 +263,33 @@ export const authenticateAdmin = async (req: GlobalRequest, res: GlobalResponse,
       return;
     }
 
-    const { id } = await JWT.verify(token) as decodedDataType;
+    const id = (await JWT.verify(token) as decodedDataType).id;
 
-    const isAdmin = await admin.findById(id);
+    let isAdmin = await admin.findById(id).lean();
+    let isHubAdmin: any = null;
+
     if (!isAdmin) {
+      isHubAdmin = await hubAdmin.findById(id).lean();
+    }
+
+    if (!isAdmin && !isHubAdmin) {
       res.status(UNAUTHORIZED).json({ error: "only admins can use this route" });
       return;
     }
 
-    const normalizedAdmin = isAdmin.toObject();
+    const adminUser = isAdmin || isHubAdmin;
     const adminName =
-      normalizedAdmin.username?.trim() ||
-      normalizedAdmin.email.split("@")[0] ||
+      adminUser.username?.trim() ||
+      adminUser.name?.trim() ||
+      adminUser.email.split("@")[0] ||
       "Administrator";
 
     req.id = id;
     req.token = token;
-    req.role = isAdmin.role;
+    req.role = adminUser.role;
     req.adminName = adminName;
     req.admin = {
-      ...normalizedAdmin,
+      ...adminUser,
       name: adminName,
     };
 

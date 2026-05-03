@@ -173,7 +173,7 @@ const miniQuestSchema = new Schema({
 	},
 	tag: {
 		type: String,
-		enum: ["like", "follow", "message", "other", "portal", "comment", "repost"]
+		enum: ["like", "follow", "message", "other", "portal", "comment", "repost", "trust-name"]
 	},
 	link: {
 		type: String

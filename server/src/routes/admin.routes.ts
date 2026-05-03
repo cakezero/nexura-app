@@ -18,10 +18,13 @@ import {
   removeAdmin,
   manageAdmin,
   getStudioCampaigns,
+  getXpHistory,
   deleteStudioCampaign,
   getDeletedStudioCampaigns,
   restoreStudioCampaign,
   permanentlyDeleteStudioCampaign,
+  getStudioQuests,
+  getStudioLessons,
 } from "@/controllers/admin.controller";
 import { fetchChannels, fetchRoles, fetchServers } from "@/controllers/hub.auth.controller";
 import { disconnectHubDiscord, getCampaign, getHub, saveCampaign, saveCampaignWithQuests, updateHub } from "@/controllers/hub.controller";
@@ -98,17 +101,15 @@ router
   .patch("/unpublish-lesson", unpublishLesson)
   .patch("/update-question-intro", updateQuestionIntro)
   .get("/get-banned-users", getBannedUsers)
-  .get("/get-quests", attachAdminCampaignHub, getTasks)
+  .get("/get-xp-history", getXpHistory)
   .get("/get-admins", getAdmins)
-  .delete("/delete-invite", deleteAdminInvite)
-  .get("/user-summary", getUserSummary)
-  .get("/leaderboard", getAdminLeaderboard)
-  .get("/get-lesson-details", getLessonDetailsForAdmin)
-  .get("/get-lessons", getAllLessons)
+  .get("/get-quests", getTasks)
   .get("/studio-campaigns", getStudioCampaigns)
-  .delete("/studio-campaigns", deleteStudioCampaign)
   .get("/deleted-studio-campaigns", getDeletedStudioCampaigns)
+  .delete("/studio-campaigns", deleteStudioCampaign)
   .patch("/restore-studio-campaign", restoreStudioCampaign)
-  .delete("/permanent-studio-campaign", permanentlyDeleteStudioCampaign);
+  .delete("/permanent-studio-campaign", permanentlyDeleteStudioCampaign)
+  .get("/studio-quests", getStudioQuests)
+  .get("/studio-lessons", getStudioLessons);
 
 export default router;

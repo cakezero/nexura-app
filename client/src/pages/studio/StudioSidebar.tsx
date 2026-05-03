@@ -1,11 +1,11 @@
 import { cn } from "../../lib/utils";
-import { Zap, Shield, Users, LogOut, User } from "lucide-react";
+import { Zap, Shield, Users, LogOut, User, BookOpen } from "lucide-react";
 import { useLocation } from "wouter";
 import AnimatedBackground from "../../components/AnimatedBackground";
 import { useEffect, useState } from "react";
 import { getStoredProjectInfo, clearProjectSession, projectApiRequest, getStoredProjectToken, storeProjectSession } from "../../lib/projectApi";
 
-type TabType = "hubProfile" | "campaignSubmissions" | "adminManagement" | "campaignsTab";
+type TabType = "hubProfile" | "campaignSubmissions" | "adminManagement" | "campaignsTab" | "lessonsTab";
 
 interface StudioSidebarProps {
   activeTab: TabType;
@@ -27,6 +27,7 @@ export default function StudioSidebar({
   const sidebarItems = [
     { title: "Profile", icon: User, id: "hubProfile" as TabType },
     { title: "Campaigns", icon: Users, id: "campaignsTab" as TabType },
+    { title: "Lessons", icon: BookOpen, id: "lessonsTab" as TabType },
     { title: "Dashboard", icon: Zap, id: "campaignSubmissions" as TabType },
     ...(adminRole === "superadmin" ? [{ title: "Admin Management", icon: Shield, id: "adminManagement" as TabType }] : []),
   ];
@@ -70,6 +71,7 @@ export default function StudioSidebar({
     hubProfile: "/studio-dashboard/hub-profile",
     campaignSubmissions: "/studio-dashboard/dashboard",
     campaignsTab: "/studio-dashboard/campaigns-tab",
+    lessonsTab: "/studio-dashboard/lessons-tab",
     adminManagement: "/studio-dashboard/admin-management",
   };
 

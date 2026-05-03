@@ -38,7 +38,7 @@ type BannedUser = {
   bannedAt: string;
 }
 
-type TabType = "hubProfile" | "campaignSubmissions" | "adminManagement" | "campaignsTab";
+type TabType = "hubProfile" | "campaignSubmissions" | "adminManagement" | "campaignsTab" | "lessonsTab";
 
 export default function StudioDashboard({ onLogout }: StudioDashboardProps) {
   const [location, setLocation] = useLocation();
@@ -46,10 +46,11 @@ export default function StudioDashboard({ onLogout }: StudioDashboardProps) {
     if (location.includes("/studio-dashboard/dashboard")) return "campaignSubmissions";
     if (location.includes("hub-profile")) return "hubProfile";
     if (location.includes("admin-management")) return "adminManagement";
+    if (location.includes("create-lesson")) return "lessonsTab";
     if (location.includes("campaigns-tab") || location.includes("create-new-campaign") || location.includes("my-campaign")) {
       return "campaignsTab";
     }
-    return "campaignsTab";
+    return "campaignSubmissions";
   };
   const [activeTab, setActiveTab] = useState<TabType>(deriveTab);
 

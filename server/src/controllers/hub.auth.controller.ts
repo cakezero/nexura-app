@@ -5,7 +5,8 @@ import {
 	validateSuperAdminData,
 	JWT,
 	getRefreshToken,
-	hashPassword
+	hashPassword,
+	generateOTP
 } from "@/utils/utils";
 import logger from "@/config/logger";
 import { server } from "@/models/server.model";
@@ -21,7 +22,7 @@ import {
 import { hubAdmin, hub, userHubAdmin } from "@/models/hub.model";
 import bcrypt from "bcrypt";
 import axios from "axios";
-import { resetEmail } from "@/utils/sendMail";
+import { resetEmail, resetPasswordOTPEmail } from "@/utils/sendMail";
 import { OTP } from "@/models/otp.model";
 import { REDIS } from "@/utils/redis.utils";
 
@@ -328,49 +329,55 @@ export const forgotPassword = async (req: GlobalRequest, res: GlobalResponse) =>
 			return;
 		}
 
-		const hubAdminExists = await hubAdmin.findOne({ email }).lean();
+		const hubAdminExists = await hubAdmin.findOne({ email: email.trim().toLowerCase() }).lean();
 		if (!hubAdminExists) {
 			res.status(NOT_FOUND).json({ error: "email associated with admin is invalid or does not exist" });
 			return;
 		}
 
-		const id = hubAdminExists._id.toString();
-		const clientLink = `${CLIENT_URL}/studio/reset-password?token=`;
+		const code = generateOTP();
+		const hubId = hubAdminExists.hub?.toString();
 
-		const token = JWT.sign(id, "10m");
-		const link = clientLink + token;
+		await OTP.findOneAndUpdate(
+			{ email: hubAdminExists.email },
+			{
+				email: hubAdminExists.email,
+				code,
+				hubId,
+				expiresAt: new Date(Date.now() + 5 * 60 * 1000),
+			},
+			{ upsert: true, new: true, setDefaultsOnInsert: true }
+		);
 
-		await resetEmail(email, link);
+		await resetPasswordOTPEmail(hubAdminExists.email, code);
 
-		res.status(OK).json({ message: "password reset email sent!" });
-	} catch (error) {
+		res.status(OK).json({ message: "password reset code sent!" });
+	} catch (error: any) {
 		logger.error(error);
 		res
 			.status(INTERNAL_SERVER_ERROR)
-			.json({ error: "Error sending password reset email" });
+			.json({ error: "Error sending password reset code" });
 	}
 };
 
 export const resetPassword = async (req: GlobalRequest, res: GlobalResponse) => {
 	try {
-		const { token, password } = req.body;
+		const { email, code, password } = req.body;
 
-		if (!token || !password) {
-			res.status(BAD_REQUEST).json({ error: "send token and password" });
+		if (!email || !code || !password) {
+			res.status(BAD_REQUEST).json({ error: "email, code, and password are required" });
 			return;
 		}
 
-		const accessTokenUsed = await REDIS.get(`reset-access-token:${token}`);
-		if (accessTokenUsed) {
-			res.status(BAD_REQUEST).json({ error: "access token already used, request a new one to change your password" });
+		const otp = await OTP.findOne({ email: email.trim().toLowerCase(), code }).lean();
+		if (!otp) {
+			res.status(BAD_REQUEST).json({ error: "invalid or expired code" });
 			return;
 		}
 
-		const { id } = await JWT.verify(token) as { id: string };
-
-		const adminExists = await hubAdmin.findById(id);
+		const adminExists = await hubAdmin.findOne({ email: email.trim().toLowerCase() });
 		if (!adminExists) {
-			res.status(BAD_REQUEST).json({ error: "id associated with admin is invalid" });
+			res.status(NOT_FOUND).json({ error: "admin not found" });
 			return;
 		}
 
@@ -379,8 +386,9 @@ export const resetPassword = async (req: GlobalRequest, res: GlobalResponse) => 
 		adminExists.password = hashedPassword;
 		await adminExists.save();
 
-		await REDIS.set({ key: `reset-access-token:${token}`, data: { token }, ttl: 10 * 60 });
+		await OTP.deleteOne({ _id: otp._id });
 
+		const id = adminExists._id.toString();
 		const accessToken = JWT.sign(id);
 		const refreshToken = getRefreshToken(id);
 
@@ -546,49 +554,55 @@ export const userHubForgotPassword = async (req: GlobalRequest, res: GlobalRespo
 			return;
 		}
 
-		const hubAdminExists = await userHubAdmin.findOne({ email }).lean();
+		const hubAdminExists = await userHubAdmin.findOne({ email: email.trim().toLowerCase() }).lean();
 		if (!hubAdminExists) {
 			res.status(NOT_FOUND).json({ error: "email associated with admin is invalid or does not exist" });
 			return;
 		}
 
-		const id = hubAdminExists._id.toString();
-		const clientLink = `${CLIENT_URL}/studio/reset-password?token=`;
+		const code = generateOTP();
+		const hubId = hubAdminExists.hub?.toString();
 
-		const token = JWT.sign(id, "10m");
-		const link = clientLink + token;
+		await OTP.findOneAndUpdate(
+			{ email: hubAdminExists.email },
+			{
+				email: hubAdminExists.email,
+				code,
+				hubId,
+				expiresAt: new Date(Date.now() + 5 * 60 * 1000),
+			},
+			{ upsert: true, new: true, setDefaultsOnInsert: true }
+		);
 
-		await resetEmail(email, link);
+		await resetPasswordOTPEmail(hubAdminExists.email, code);
 
-		res.status(OK).json({ message: "password reset email sent!" });
+		res.status(OK).json({ message: "password reset code sent!" });
 	} catch (error) {
 		logger.error(error);
 		res
 			.status(INTERNAL_SERVER_ERROR)
-			.json({ error: "Error sending password reset email" });
+			.json({ error: "Error sending password reset code" });
 	}
 };
 
 export const userHubResetPassword = async (req: GlobalRequest, res: GlobalResponse) => {
 	try {
-		const { token, password } = req.body;
+		const { email, code, password } = req.body;
 
-		if (!token || !password) {
-			res.status(BAD_REQUEST).json({ error: "send token and password" });
+		if (!email || !code || !password) {
+			res.status(BAD_REQUEST).json({ error: "email, code, and password are required" });
 			return;
 		}
 
-		const accessTokenUsed = await REDIS.get(`reset-access-token:${token}`);
-		if (accessTokenUsed) {
-			res.status(BAD_REQUEST).json({ error: "access token already used, request a new one to change your password" });
+		const otp = await OTP.findOne({ email: email.trim().toLowerCase(), code }).lean();
+		if (!otp) {
+			res.status(BAD_REQUEST).json({ error: "invalid or expired code" });
 			return;
 		}
 
-		const { id } = await JWT.verify(token) as { id: string };
-
-		const adminExists = await userHubAdmin.findById(id);
+		const adminExists = await userHubAdmin.findOne({ email: email.trim().toLowerCase() });
 		if (!adminExists) {
-			res.status(BAD_REQUEST).json({ error: "id associated with admin is invalid" });
+			res.status(NOT_FOUND).json({ error: "admin not found" });
 			return;
 		}
 
@@ -597,8 +611,9 @@ export const userHubResetPassword = async (req: GlobalRequest, res: GlobalRespon
 		adminExists.password = hashedPassword;
 		await adminExists.save();
 
-		await REDIS.set({ key: `reset-access-token:${token}`, data: { token }, ttl: 10 * 60 });
+		await OTP.deleteOne({ _id: otp._id });
 
+		const id = adminExists._id.toString();
 		const accessToken = JWT.sign(id);
 		const refreshToken = getRefreshToken(id);
 

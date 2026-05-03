@@ -177,6 +177,8 @@ export default function QuestEnvironment() {
           }
         } else if (miniQuest.tag === "portal") {
           await apiRequestV2("POST", "/api/quest/check-portal-task", { termId: id, id: miniQuest._id, questId, page: "quest" });
+        } else if (miniQuest.tag === "trust-name") {
+          await apiRequestV2("POST", "/api/quest/check-trust-name", { id: miniQuest._id, questId });
         }
       } catch (error: any) {
         console.error(error);
@@ -184,7 +186,7 @@ export default function QuestEnvironment() {
         throw new Error(error.message);
       }
 
-      if (miniQuest.tag !== "portal") {
+      if (miniQuest.tag !== "portal" && miniQuest.tag !== "trust-name") {
         const res = await apiRequest("POST", `/api/quest/claim-mini-quest`, { id: miniQuest._id, questId });
 
         if (!res.ok) return;
@@ -293,7 +295,8 @@ export default function QuestEnvironment() {
 
 
   const renderQuestRow = (quest: Quest, index: number) => {
-    const visited = visitedQuests.includes(quest._id);
+    const isTns = quest.tag === "trust-name";
+    const visited = visitedQuests.includes(quest._id) || isTns;
     const claimed = quest.done || claimedQuests.includes(quest._id);
     const pending = quest.status === "pending" || pendingQuests.includes(quest._id);
     const isRetry = quest.status === "retry";
@@ -328,7 +331,7 @@ export default function QuestEnvironment() {
               onClick={() => claimReward(quest)}
               className="px-5 py-2 rounded-full bg-purple-700 hover:bg-purple-800 text-sm font-semibold"
             >
-              Claim
+              {isTns ? "Verify" : "Claim"}
             </button>
           )}
 
@@ -350,7 +353,7 @@ export default function QuestEnvironment() {
             <span className="text-sm text-white font-semibold">Pending Verification</span>
           )}
 
-          {isRetry && !claimed && (
+          {isRetry && !claimed && !isTns && (
             <button
               onClick={() => visitQuest(quest)}
               className="px-5 py-2 rounded-full bg-orange-600 hover:bg-orange-700 text-sm font-semibold"

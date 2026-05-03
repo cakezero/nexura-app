@@ -150,6 +150,13 @@ export default function CampaignCreate() {
         );
 
       case "onchain":
+        if (selectedSubtype === "trust-name") {
+          return (
+            <div className="glass rounded-3xl p-4">
+              <p className="text-white/60 text-sm">Users will be automatically verified if they own a Trust Name (TNS).</p>
+            </div>
+          );
+        }
         return (
           <>
             <div>

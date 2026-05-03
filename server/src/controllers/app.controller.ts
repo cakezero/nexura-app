@@ -64,55 +64,79 @@ const getTrustProvider = () => {
 
 export const validateTrustNameTask = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
-    const { id, campaignId }: { id: string; campaignId: string } = req.body;
-    if (!id || !campaignId) {
-      res.status(BAD_REQUEST).json({ error: "id and campaignId are required" });
+    const { id, campaignId: campaignIdFromBody, questId: questIdFromBody }: { id: string; campaignId?: string; questId?: string } = req.body;
+    if (!id) {
+      res.status(BAD_REQUEST).json({ error: "task id is required" });
       return;
     }
 
-    const campaignQuestExists = await campaignQuestCompleted.findOne({
-      campaignQuest: id,
-      campaign: campaignId,
-      user: req.id,
-    });
+    // Try to find if it's a campaign quest or a mini quest
+    let parentId = campaignIdFromBody || questIdFromBody;
+    let isCampaign = !!campaignIdFromBody;
+    
+    const campaignQuestData = await campaignQuest.findById(id).lean();
+    const miniQuestData = !campaignQuestData ? await miniQuest.findById(id).lean() : null;
+
+    if (!campaignQuestData && !miniQuestData) {
+      res.status(NOT_FOUND).json({ error: "task not found" });
+      return;
+    }
+
+    if (campaignQuestData) {
+      parentId = parentId || campaignQuestData.campaign?.toString();
+      isCampaign = true;
+    } else if (miniQuestData) {
+      parentId = parentId || miniQuestData.quest?.toString();
+      isCampaign = false;
+    }
+
+    if (!parentId) {
+      res.status(BAD_REQUEST).json({ error: "id and (campaignId or questId) are required" });
+      return;
+    }
+
+    const filter = isCampaign 
+      ? { campaignQuest: id, campaign: parentId, user: req.id }
+      : { miniQuest: id, quest: parentId, user: req.id };
+    
+    const Model = isCampaign ? (campaignQuestCompleted as any) : (miniQuestCompleted as any);
+    const taskExists = await Model.findOne(filter);
 
     const provider = getTrustProvider();
 
     const hasTrustName = await provider.lookupAddress(req.user.address);
     if (!hasTrustName) {
-      if (!campaignQuestExists) {
-        await campaignQuestCompleted.create({
-          campaignQuest: id,
-          campaign: campaignId,
-          user: req.id,
+      if (!taskExists) {
+        await Model.create({
+          ...filter,
           done: false,
           status: "retry",
         });
       } else {
-        campaignQuestExists.done = false;
-        campaignQuestExists.status = "retry";
+        taskExists.done = false;
+        taskExists.status = "retry";
 
-        await campaignQuestExists.save();
+        await taskExists.save();
       }
 
-      res.status(BAD_REQUEST).json({ error: "user does not have a trust name" });
+      res.status(BAD_REQUEST).json({ error: "You don't have a Trust Name" });
       return;
     }
 
-    if (!campaignQuestExists) {
-      await campaignQuestCompleted.create({
-        campaignQuest: id,
-        campaign: campaignId,
-        user: req.id,
+    if (!taskExists) {
+      await Model.create({
+        ...filter,
         done: true,
         status: "done",
       });
     } else {
-      campaignQuestExists.done = true;
-      campaignQuestExists.status = "done";
+      taskExists.done = true;
+      taskExists.status = "done";
 
-      await campaignQuestExists.save();
+      await taskExists.save();
     }
+
+    await user.findByIdAndUpdate(req.id, { trustName: hasTrustName });
 
     res.status(OK).json({ message: "user has a trust name and completed the task" });
   } catch (error) {

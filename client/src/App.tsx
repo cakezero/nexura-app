@@ -56,6 +56,8 @@ import Docs from "./pages/Docs.tsx"
 import LessonPage from "./pages/LessonPage";
 import ResetHubPassword from "./pages/studio/ResetHubPassword.tsx";
 import AnalyticsBackground from "./components/AnalyticsBackground.tsx"
+import LessonCreate from "./pages/studio/LessonCreate";
+import Lessons from "./pages/studio/Lessons";
 
 function Router() {
    const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -117,6 +119,16 @@ function Router() {
       <Route path="/studio-dashboard/create-new-campaign">
         <StudioLayout title="Create Campaign" onLogout={handleLogout}>
           <CreateNewCampaigns />
+        </StudioLayout>
+      </Route>
+      <Route path="/studio-dashboard/create-lesson">
+        <StudioLayout title="Create Lesson" onLogout={handleLogout}>
+          <LessonCreate />
+        </StudioLayout>
+      </Route>
+      <Route path="/studio-dashboard/lessons-tab">
+        <StudioLayout title="Manage Lessons" onLogout={handleLogout}>
+          <Lessons />
         </StudioLayout>
       </Route>
       <Route path="/studio-dashboard/campaigns-tab">

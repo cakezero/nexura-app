@@ -59,9 +59,9 @@ export const createLesson = async (req: GlobalRequest, res: GlobalResponse) => {
 
     const disclaimer = typeof req.body.disclaimer === "string" ? req.body.disclaimer.trim() : "";
 
-    await lesson.create({ ...req.body, disclaimer, status: "draft", creator: req.admin.hub, creatorModel: page === "user" ? "users" : page !== "project" ? "admin" : "project" });
+    const newLesson = await lesson.create({ ...req.body, disclaimer, status: "draft", creator: req.admin.hub, creatorModel: page === "user" ? "users" : page !== "project" ? "admin" : "project" });
 
-    res.status(CREATED).json({ message: "lesson created" });
+    res.status(CREATED).json({ message: "lesson created", lesson: newLesson });
   } catch (error) {
     logger.error(error);
     res.status(INTERNAL_SERVER_ERROR).json({ error: "error creating lesson" });
@@ -132,19 +132,19 @@ export const updateLesson = async (req: GlobalRequest, res: GlobalResponse) => {
 
 export const createQuestion = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
-    const { success } = validateCreateQuestion(req.body);
-    if (!success) {
+    const { lesson: lessonId, question: questionText, options, solution } = req.body;
+    if (!lessonId || questionText === undefined || !Array.isArray(options) || solution === undefined) {
       res.status(BAD_REQUEST).json({ error: "Send the required values. Required values are: lesson id as 'lesson', question, options as array and solution" });
       return;
     }
 
-    const nextOrder = await getNextLessonContentOrder(req.body.lesson);
+    const nextOrder = await getNextLessonContentOrder(lessonId);
 
-    await question.create({ ...req.body, order: nextOrder });
+    const newQuestion = await question.create({ ...req.body, order: nextOrder });
 
-    await lesson.updateOne({ _id: req.body.lesson }, { $inc: { noOfQuestions: 1 } });
+    await lesson.updateOne({ _id: lessonId }, { $inc: { noOfQuestions: 1 } });
 
-    res.status(CREATED).json({ message: "question created" });
+    res.status(CREATED).json({ message: "question created", question: newQuestion });
   } catch (error) {
     logger.error(error);
     res.status(INTERNAL_SERVER_ERROR).json({ error: "error creating lesson question" });
@@ -218,16 +218,16 @@ export const updateQuestion = async (req: GlobalRequest, res: GlobalResponse) =>
 export const createMiniLesson = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
     const { text, lesson: lessonId } = req.body;
-    if (!text || !lessonId) {
+    if (text === undefined || text === null || !lessonId) {
       res.status(BAD_REQUEST).json({ error: "Send the required values. Required values are: lesson id as 'lesson' and text" });
       return;
     }
 
     const nextOrder = await getNextLessonContentOrder(lessonId);
 
-    await miniLesson.create({ ...req.body, order: nextOrder });
+    const newMiniLesson = await miniLesson.create({ ...req.body, order: nextOrder });
 
-    res.status(CREATED).json({ message: "mini lesson created" });
+    res.status(CREATED).json({ message: "mini lesson created", miniLesson: newMiniLesson });
   } catch (error) {
     logger.error(error);
     res.status(INTERNAL_SERVER_ERROR).json({ error: "error creating mini lesson" });
@@ -276,16 +276,16 @@ export const updateMiniLesson = async (req: GlobalRequest, res: GlobalResponse) 
 export const createVideoLesson = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
     const { url, lesson: lessonId } = req.body;
-    if (!url || !lessonId) {
+    if (url === undefined || url === null || !lessonId) {
       res.status(BAD_REQUEST).json({ error: "Send the required values. Required values are: lesson id as 'lesson' and url" });
       return;
     }
 
     const nextOrder = await getNextLessonContentOrder(lessonId);
 
-    await videoLesson.create({ ...req.body, order: nextOrder });
+    const newVideoLesson = await videoLesson.create({ ...req.body, order: nextOrder });
 
-    res.status(CREATED).json({ message: "video lesson created" });
+    res.status(CREATED).json({ message: "video lesson created", videoLesson: newVideoLesson });
   } catch (error) {
     logger.error(error);
     res.status(INTERNAL_SERVER_ERROR).json({ error: "error creating video lesson" });
@@ -420,6 +420,20 @@ export const getLessons = async (req: GlobalRequest, res: GlobalResponse) => {
 export const getAllLessons = async (_req: GlobalRequest, res: GlobalResponse) => {
   try {
     const lessons = await lesson.find().sort({ createdAt: 1 }).lean();
+    res.status(OK).json({ message: "lessons fetched!", lessons });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error getting lessons" });
+  }
+};
+
+export const getHubLessons = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    if (!req.admin?.hub) {
+      res.status(BAD_REQUEST).json({ error: "No hub found for admin" });
+      return;
+    }
+    const lessons = await lesson.find({ creator: req.admin.hub }).sort({ createdAt: 1 }).lean();
     res.status(OK).json({ message: "lessons fetched!", lessons });
   } catch (error) {
     logger.error(error);

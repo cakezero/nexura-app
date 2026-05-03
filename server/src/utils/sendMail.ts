@@ -94,6 +94,24 @@ export const resetEmail = async (email: string, link: string) => {
   }
 };
 
+export const resetPasswordOTPEmail = async (email: string, code: string) => {
+  try {
+    console.log(`[TEST] OTP for ${email}: ${code}`);
+    await transporter.sendMail({
+      from: EMAIL_USER,
+      to: email,
+      subject: "Password Reset Code",
+      template: "reset-otp",
+      context: {
+        code
+      },
+    } as MailOptions);
+  } catch (error: any) {
+    logger.error(error);
+    // throw new Error(error.message); // Don't throw for now so I can test the flow
+  }
+};
+
 export const sendAdminResetEmail = async (email: string, token: string, origin?: string) => {
   try {
     const baseUrl = (origin || ADMIN_URL).replace(/\/$/, "");

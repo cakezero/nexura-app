@@ -330,7 +330,7 @@ export default function CampaignEnvironment() {
           } else if (quest.tag === "portal") {
             await apiRequestV2("POST", "/api/quest/check-portal-task", { termId: id, id: quest._id, questId: campaignId, page: "campaign" });
           } else if (quest.tag === "trust-name") {
-            await apiRequestV2("POST", "/api/quest/check-trust-name", { id: quest._id, questId: campaignId });
+            await apiRequestV2("POST", "/api/quest/check-trust-name", { id: quest._id, campaignId });
           }
         // }
       } catch (error: any) {
@@ -567,7 +567,8 @@ export default function CampaignEnvironment() {
             quests.map((quest) => {
               const requiresProof = ["comment", "follow", "comment-x", "follow-x", "repost-x", "feedback", "create-post"].includes(quest.tag);
               const isFeedback = quest.tag === "feedback";
-              const visited = visitedQuests.includes(quest._id);
+              const isTns = quest.tag === "trust-name";
+              const visited = visitedQuests.includes(quest._id) || isTns;
               const claimed = quest.done || claimedQuests.includes(quest._id);
               const pending = quest.status === "pending" || pendingQuests.includes(quest._id);
               const failed = failedQuests.includes(quest._id);
@@ -612,7 +613,7 @@ export default function CampaignEnvironment() {
                           onClick={() => claimQuest(quest)}
                           className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-sm sm:text-base font-semibold bg-purple-700 hover:bg-purple-800 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          Claim
+                          {isTns ? "Verify" : "Claim"}
                         </button>
                       )}
                       {visited && !claimed && requiresProof && !pending && (
@@ -630,7 +631,7 @@ export default function CampaignEnvironment() {
                       {!claimed && pending && requiresProof && (
                         <span className="text-sm text-white font-semibold">Pending Verification</span>
                       )}
-                      {!claimed && retry && (
+                      {!claimed && retry && !isTns && (
                         <button
                           onClick={() => markQuestAsVisited(quest)}
                           className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-sm sm:text-base font-semibold bg-orange-600 hover:bg-orange-700"

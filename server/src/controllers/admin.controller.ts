@@ -2,10 +2,11 @@ import { updateAdminLastActivity } from "@/utils/adminActivityCron";
 import bcrypt from "bcrypt";
 import mongoose from "mongoose";
 import logger from "@/config/logger";
-import { quest } from "@/models/quests.model";
+import { quest, miniQuest } from "@/models/quests.model";
+import { lesson } from "@/models/lesson.model";
 import { admin } from "@/models/admin.model";
 import { BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND, NO_CONTENT, OK, UNAUTHORIZED } from "@/utils/status.utils";
-import { campaign as campaignModel } from "@/models/campaign.model";
+import { campaign as campaignModel, campaignCompleted } from "@/models/campaign.model";
 import { generateOTP, getRefreshToken, hashPassword, JWT, validateQuestData } from "@/utils/utils";
 import { sendAdminResetEmail, sendEmailToAdmin } from "@/utils/sendMail";
 import { campaignQuestCompleted, miniQuestCompleted } from "@/models/questsCompleted.models";
@@ -14,6 +15,7 @@ import { user } from "@/models/user.model";
 import { hub } from "@/models/hub.model";
 import { bannedUser } from "@/models/bannedUser.model";
 import { REDIS } from "@/utils/redis.utils";
+import { xpLog } from "@/models/xpLog.model";
 
 const MAX_ADMIN_LEADERBOARD_LIMIT = 500;
 const DEFAULT_ADMIN_LEADERBOARD_LIMIT = 500;
@@ -124,7 +126,29 @@ export const rewardXp = async (req: GlobalRequest, res: GlobalResponse) => {
 			return;
 		}
 
-		await user.updateOne({ address: address.toLowerCase() }, { $inc: { xp: parseInt(xp, 10), eventsWon: 1 } });
+		const xpAmount = parseInt(xp, 10);
+		const userExists = await user.findOne({ address: address.toLowerCase() });
+
+		if (userExists) {
+			await user.updateOne({ address: address.toLowerCase() }, { $inc: { xp: xpAmount, eventsWon: 1 } });
+			await xpLog.create({
+				address: address.toLowerCase(),
+				amount: xpAmount,
+				status: "success",
+				type: "single",
+				adminId: req.id ? new mongoose.Types.ObjectId(req.id) : undefined
+			});
+		} else {
+			await xpLog.create({
+				address: address.toLowerCase(),
+				amount: xpAmount,
+				status: "failed",
+				type: "single",
+				adminId: req.id ? new mongoose.Types.ObjectId(req.id) : undefined
+			});
+			res.status(NOT_FOUND).json({ error: "user not found" });
+			return;
+		}
 
 		res.status(OK).json({ message: "xp rewarded" });
 	} catch (error) {
@@ -188,6 +212,33 @@ export const rewardXpBatch = async (req: GlobalRequest, res: GlobalResponse) => 
 		const existingSet = new Set(existing.map((u) => (u.address || "").toLowerCase()));
 		const matched = normalized.filter((addr) => existingSet.has(addr));
 		const notFound = normalized.filter((addr) => !existingSet.has(addr));
+
+		const logs: any[] = [];
+		const adminObjId = req.id ? new mongoose.Types.ObjectId(req.id) : undefined;
+
+		for (const addr of matched) {
+			logs.push({
+				address: addr,
+				amount: xpAmount,
+				status: "success",
+				type: "batch",
+				adminId: adminObjId
+			});
+		}
+
+		for (const addr of notFound) {
+			logs.push({
+				address: addr,
+				amount: xpAmount,
+				status: "failed",
+				type: "batch",
+				adminId: adminObjId
+			});
+		}
+
+		if (logs.length > 0) {
+			await xpLog.insertMany(logs);
+		}
 
 		if (matched.length > 0) {
 			await user.updateMany(
@@ -529,6 +580,16 @@ export const getTasks = async (req: GlobalRequest, res: GlobalResponse) => {
     logger.error(error);
     res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching tasks" });
   }
+};
+
+export const getXpHistory = async (req: GlobalRequest, res: GlobalResponse) => {
+	try {
+		const history = await xpLog.find().sort({ timestamp: -1 }).limit(100).lean();
+		res.status(OK).json({ history });
+	} catch (error) {
+		logger.error(error);
+		res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching xp history" });
+	}
 };
 
 export const getBannedUsers = async (req: GlobalRequest, res: GlobalResponse) => {
@@ -982,3 +1043,64 @@ export const permanentlyDeleteStudioCampaign = async (req: GlobalRequest, res: G
     res.status(INTERNAL_SERVER_ERROR).json({ error: "error permanently deleting campaign" });
   }
 };
+
+export const getStudioQuests = async (_req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const quests = await quest
+      .find({ creatorModel: "project", status: { $ne: "Deleted" } })
+      .populate({ path: "creator", select: "name logo" })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const normalized = quests.map((q: any) => ({
+      _id: String(q._id),
+      title: q.title || "",
+      projectName: q.project_name || "",
+      status: q.status || "—",
+      starts_at: q.starts_at ?? null,
+      ends_at: q.ends_at ?? null,
+      reward: { xp: Number(q.reward ?? 0) },
+      creator: {
+        id: q.creator?._id ? String(q.creator._id) : "",
+        name: q.creator?.name || q.project_name || "Unknown",
+        logo: q.creator?.logo || q.project_image || "",
+      },
+      createdAt: q.createdAt ?? null,
+    }));
+
+    res.status(OK).json({ studioQuests: normalized });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching studio quests" });
+  }
+};
+
+export const getStudioLessons = async (_req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const lessonsList = await lesson
+      .find({ creatorModel: "project" })
+      .populate({ path: "creator", select: "name logo" })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const normalized = lessonsList.map((l: any) => ({
+      _id: String(l._id),
+      title: l.title || "",
+      projectName: l.creator?.name || "Hub",
+      status: l.status === "published" ? "Active" : "Save",
+      reward: { xp: Number(l.reward ?? 0) },
+      creator: {
+        id: l.creator?._id ? String(l.creator._id) : "",
+        name: l.creator?.name || "Unknown",
+        logo: l.creator?.logo || l.profileImage || "",
+      },
+      createdAt: l.createdAt ?? null,
+    }));
+
+    res.status(OK).json({ studioLessons: normalized });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching studio lessons" });
+  }
+};
+

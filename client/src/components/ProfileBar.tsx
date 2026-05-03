@@ -120,6 +120,7 @@ export default function ProfileBar() {
   const { user, signOut } = useAuth();
   const connected = Boolean(user) || walletConnected;
   const displayName = user?.username ?? null;
+  const trustName = user?.trustName ?? null;
   const hasServerProfile = Boolean(user);
 
   const { name: levelName, index: levelNumber } = hasServerProfile
@@ -214,7 +215,7 @@ useEffect(() => {
           <DropdownMenuContent className="w-56 sm:w-64 p-2 glass rounded-2xl sm:rounded-3xl border-white/10 animate-in fade-in zoom-in-95 duration-150"
             align="end" data-testid="profile-dropdown-menu">
             <DropdownMenuItem className="cursor-default p-3 text-base text-white">
-              <span>{address ? `${address.slice(0, 6)}...${address.slice(-4)}` : 'No wallet connected'}</span>
+              <span>{trustName || (address ? `${address.slice(0, 6)}...${address.slice(-4)}` : 'No wallet connected')}</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
@@ -240,12 +241,12 @@ useEffect(() => {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="px-3 py-2">
-              {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Profile"}
+              {trustName ? trustName : (address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Profile")}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48 p-2 glass rounded-3xl border-white/10">
             <DropdownMenuItem className="cursor-default p-2 text-base text-white">
-              <span>{address ? `${address.slice(0, 6)}...${address.slice(-4)}` : 'No wallet connected'}</span>
+              <span>{trustName || (address ? `${address.slice(0, 6)}...${address.slice(-4)}` : 'No wallet connected')}</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>

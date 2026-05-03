@@ -11,8 +11,8 @@ import { useToast } from "../../hooks/use-toast";
 export default function ResetHubPassword() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const token = useMemo(() => new URLSearchParams(window.location.search).get("token") ?? "", []);
-
+  const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -29,13 +29,8 @@ export default function ResetHubPassword() {
   const allPwdValid = Object.values(pwdChecks).every(Boolean);
 
   const handleResetPassword = async () => {
-    if (!token) {
-      setPageError("This reset link is invalid. Request a new password reset email.");
-      return;
-    }
-
-    if (!password || !confirmPassword) {
-      toast({ title: "Missing fields", description: "Please fill in both password fields.", variant: "destructive" });
+    if (!email || !code || !password || !confirmPassword) {
+      toast({ title: "Missing fields", description: "Please fill in all fields.", variant: "destructive" });
       return;
     }
 
@@ -61,9 +56,8 @@ export default function ResetHubPassword() {
       }>({
         method: "POST",
         endpoint: "/hub/reset-password",
-        data: { token, password },
+        data: { email, code, password },
       });
-
       const accessToken = (res.token ?? res.accessToken) as string | undefined;
       if (!accessToken || !res.admin) {
         throw new Error("No access token received");
@@ -136,6 +130,29 @@ export default function ResetHubPassword() {
           ) : null}
 
           <div className="space-y-4">
+            <div>
+              <label className="block text-xs text-white/50 mb-1 ml-1">Email Address</label>
+              <Input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter your email"
+                className="w-full bg-gray-800 text-white border-purple-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs text-white/50 mb-1 ml-1">Verification Code (OTP)</label>
+              <Input
+                type="text"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                placeholder="Enter 6-digit code"
+                maxLength={6}
+                className="w-full bg-gray-800 text-white border-purple-500"
+              />
+            </div>
+
             <div>
               <label className="block text-xs text-white/50 mb-1 ml-1">New Password</label>
               <div className="relative">
