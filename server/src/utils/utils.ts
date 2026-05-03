@@ -114,7 +114,8 @@ export const validateCampaignData = (reqData: any) => {
 					"follow-x",
 					"repost",
 					"repost-x",
-					"join",
+          "join",
+					"feedback",
 					"join-discord",
 					"message",
 					"message-discord",
@@ -141,14 +142,35 @@ export const validateCampaignData = (reqData: any) => {
 
 export const validateQuestData = (reqData: any) => {
 	const questSchema = z.object({
-		title: z.string().trim(),
+    title: z.string().trim(),
+		page: z.enum(["user", "project"]),
 		description: z.string().trim(),
-		category: z.enum(["one-time", "weekly"]),
-		reward: z.object({
-			xp: z.number(),
-			trust: z.number(),
-		}),
-		url: z.string().trim().optional(),
+		reward: z.number(),
+		campaignQuests: z.array(
+      z.object({
+        link: z.string().optional(),
+        quest: z.string(),
+        tag: z.enum([
+          "like",
+          "follow",
+          "follow-x",
+          "repost",
+          "repost-x",
+          "join",
+          "join-discord",
+          "message",
+          "message-discord",
+          "feedback",
+          "acquire-role-discord",
+          "send-message-discord",
+          "portal",
+          "comment",
+          "comment-x",
+          "other"
+        ]),
+      }),
+		),
+		category: z.enum(["twitter", "discord", "reddit", "instagram", "facebook", "other"]),
 	});
 
 	const parseData = questSchema.safeParse(reqData);
@@ -226,6 +248,19 @@ export const validateHubData = (reqData: any) => {
 	return parseData;
 };
 
+export const validateUserHubData = (reqData: any) => {
+	const useerHubSchema = z.object({
+		name: z.string().trim(),
+    description: z.string().trim(),
+		website: z.string().trim().optional(),
+		xAccount: z.string().trim().optional(),
+	});
+
+	const parseData = useerHubSchema.safeParse(reqData);
+
+	return parseData;
+};
+
 export const generateOTP = () => {
 	const code = crypto
 		.randomInt(0, 1000000000)
@@ -290,6 +325,22 @@ export const validateSaveCampaignData = (reqData: any) => {
 	});
 
 	const parseData = campaignSchema.safeParse(reqData);
+
+	return parseData;
+};
+
+export const validateSaveQuestData = (reqData: any) => {
+  const questSchema = z.object({
+		title: z.string().trim(),
+		description: z.string().trim(),
+		nameOfProject: z.string().trim(),
+    starts_at: z.string().trim(),
+		projectCoverImage: z.string().optional(),
+    ends_at: z.string().trim(),
+		page: z.enum(["user", "project"]),
+	});
+
+	const parseData = questSchema.safeParse(reqData);
 
 	return parseData;
 }; 
@@ -388,5 +439,4 @@ export const validateCreateQuestion = (reqData: any) => {
 
 	return parseData;
 }
-
 
