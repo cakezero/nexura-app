@@ -62,7 +62,7 @@ const campaignQuestSchema = new Schema({
 	},
 	tag: {
 		type: String,
-		enum: ["like", "follow", "follow-x", "repost", "repost-x", "join", "join-discord", "portal", "message", "message-discord", "acquire-role-discord", "send-message-discord", "comment", "comment-x", "feedback", "create-post", "other"],
+		enum: ["like", "follow", "follow-x", "trust-name", "repost", "repost-x", "join", "join-discord", "portal", "message", "message-discord", "acquire-role-discord", "send-message-discord", "comment", "comment-x", "feedback", "create-post", "other"],
 		required: true
 	},
 	followers: {
@@ -100,14 +100,34 @@ const questSchema = new Schema({
 	title: {
 		type: String,
 		required: true
-	},
+  },
+  project_image: {
+    type: String,
+    required: true
+  },
+  project_name: {
+    type: String,
+    required: true
+  },
+  projectCoverImage: {
+    type: String,
+    default: "/nexura-logo.png"
+  },
 	sub_title: {
 		type: String
 	},
 	noOfQuests: {
 		type: Number,
 		default: 0
-	},	
+  },
+  starts_at: {
+    type: String,
+    required: true
+  },
+  ends_at: {
+    type: String,
+    required: true
+	},
 	description: {
 		type: String,
 	},
@@ -116,28 +136,29 @@ const questSchema = new Schema({
 	},
 	status: {
 		type: String,
-		enum: ["active", "upcoming"],
-		default: "active"
+		enum: ["Active", "Scheduled", "Save"],
+		default: "Active"
 	},
 	questNumber: {
 		type: Number
 	},
 	reward: {
 		type: Number,
-		required: true,
+		default: 200,
 	},
 	link: {
 		type: String,
-	},
-	category: {
-		type: String,
-		enum: ["one-time", "weekly"],
-	},
-	expires: {
-		type: Date,
-		expires: "14d",
-		required: false,
-	},
+  },
+  creator: {
+    type: Schema.Types.ObjectId,
+    required: true,
+    refPath: 'creatorModel',
+  },
+  creatorModel: {
+    type: String,
+    required: true,
+    enum: ['user', 'project', 'admin'],
+  }
 }, { timestamps: true });
 
 export const quest = mongoose.model("quests", questSchema);

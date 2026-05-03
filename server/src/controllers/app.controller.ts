@@ -6,6 +6,7 @@ import { token } from "@/models/tokens.model";
 import { campaignQuest, miniQuest, quest } from "@/models/quests.model";
 import { user } from "@/models/user.model";
 import { hub } from "@/models/hub.model";
+import { TNSProvider } from "@samoris/tns-sdk";
 import { performIntuitionOnchainAction, serverWalletAddress } from "@/utils/account";
 import { BOT_TOKEN, network, STUDIO_FEE_CONTRACT, THIRD_PARTY_API_KEY } from "@/utils/env.utils";
 import {
@@ -50,6 +51,75 @@ export const getStudioPaymentConfig = async (_req: GlobalRequest, res: GlobalRes
     authorizedAddress: serverWalletAddress,
   });
 };
+
+const getTrustProvider = () => {
+  let trustProvider: TNSProvider | null = null;
+
+  if (!trustProvider) {
+    trustProvider = new TNSProvider();
+  }
+
+  return trustProvider;
+}
+
+export const validateTrustNameTask = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const { id, campaignId }: { id: string; campaignId: string } = req.body;
+    if (!id || !campaignId) {
+      res.status(BAD_REQUEST).json({ error: "id and campaignId are required" });
+      return;
+    }
+
+    const campaignQuestExists = await campaignQuestCompleted.findOne({
+      campaignQuest: id,
+      campaign: campaignId,
+      user: req.id,
+    });
+
+    const provider = getTrustProvider();
+
+    const hasTrustName = await provider.lookupAddress(req.user.address);
+    if (!hasTrustName) {
+      if (!campaignQuestExists) {
+        await campaignQuestCompleted.create({
+          campaignQuest: id,
+          campaign: campaignId,
+          user: req.id,
+          done: false,
+          status: "retry",
+        });
+      } else {
+        campaignQuestExists.done = false;
+        campaignQuestExists.status = "retry";
+
+        await campaignQuestExists.save();
+      }
+
+      res.status(BAD_REQUEST).json({ error: "user does not have a trust name" });
+      return;
+    }
+
+    if (!campaignQuestExists) {
+      await campaignQuestCompleted.create({
+        campaignQuest: id,
+        campaign: campaignId,
+        user: req.id,
+        done: true,
+        status: "done",
+      });
+    } else {
+      campaignQuestExists.done = true;
+      campaignQuestExists.status = "done";
+
+      await campaignQuestExists.save();
+    }
+
+    res.status(OK).json({ message: "user has a trust name and completed the task" });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error validating trust name task" });
+  }
+}
 
 export const allowNexonsMint = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
