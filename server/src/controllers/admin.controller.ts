@@ -592,6 +592,24 @@ export const getXpHistory = async (req: GlobalRequest, res: GlobalResponse) => {
 	}
 };
 
+export const searchUserXpHistory = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const { address } = req.query;
+    if (!address) {
+      res.status(BAD_REQUEST).json({ error: "address query parameter is required" });
+      return;
+    }
+
+    const normalizedAddress = String(address).trim().toLowerCase();
+    const history = await xpLog.find({ address: normalizedAddress }).sort({ timestamp: -1 }).limit(100).lean();
+
+    res.status(OK).json({ history });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error searching user xp history" });
+  }
+}
+
 export const getBannedUsers = async (req: GlobalRequest, res: GlobalResponse) => {
 	try {
 		const bannedUsers = (await bannedUser.find().sort({ createdAt: -1 }).lean()).map((entry) => ({
@@ -1104,3 +1122,4 @@ export const getStudioLessons = async (_req: GlobalRequest, res: GlobalResponse)
   }
 };
 
+// export const getXpHistory

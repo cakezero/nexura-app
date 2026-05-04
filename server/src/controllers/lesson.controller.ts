@@ -4,6 +4,7 @@ import { user } from "@/models/user.model";
 import { BAD_REQUEST, OK, NOT_FOUND, INTERNAL_SERVER_ERROR, CREATED, FORBIDDEN } from "@/utils/status.utils";
 import { uploadImg } from "@/utils/img.utils";
 import { validateCreateLesson, validateCreateQuestion } from "@/utils/utils";
+import { xpLog } from "@/models/xpLog.model";
 
 const getUploadedLessonImage = async (
   req: GlobalRequest,
@@ -381,6 +382,13 @@ export const rewardLessonXp = async (req: GlobalRequest, res: GlobalResponse) =>
 
     existingLessonProgress.status = "completed";
     existingLessonProgress.done = true;
+
+    await xpLog.create({
+			address: req.user.address,
+			amount: rewardAmount,
+			status: "success",
+			type: "lesson"
+    });
 
     await user.updateOne({ _id: id }, { $inc: { xp: rewardAmount, lessonsCompleted: 1 } });
     await existingLessonProgress.save();

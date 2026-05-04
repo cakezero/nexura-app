@@ -34,6 +34,7 @@ import mongoose from "mongoose";
 import { hub, userHub } from "@/models/hub.model";
 import { uploadImg } from "@/utils/img.utils";
 import { parseDate, normalizeCampaignDateInput } from "@/utils/dates";
+import { xpLog } from "@/models/xpLog.model";
 
 const DISCORD_CAMPAIGN_TAGS = new Set([
 	"join",
@@ -601,6 +602,13 @@ export const claimQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 
 		questUser.level = level;
 
+		await xpLog.create({
+			address: questUser.address,
+			amount: questFound.reward,
+			status: "success",
+			type: "quest"
+    });
+
 		await questUser.save();
 
 		res.status(OK).json({ message: "quest done!" });
@@ -663,6 +671,13 @@ export const claimEcosystemQuest = async (
 		const level = await updateLevel(ecosystemQuestUser.xp, ecosystemQuestUser.badges, ecosystemQuestUser._id.toString());
 
 		ecosystemQuestUser.level = level;
+
+		await xpLog.create({
+			address: ecosystemQuestUser.address,
+			amount: ecosystemQuestFound.reward,
+			status: "success",
+			type: "ecosystem-quest"
+    });
 
 		await ecosystemQuestToClaim.save();
 		await ecosystemQuestUser.save();

@@ -25,6 +25,7 @@ import {
   permanentlyDeleteStudioCampaign,
   getStudioQuests,
   getStudioLessons,
+  searchUserXpHistory,
 } from "@/controllers/admin.controller";
 import { fetchChannels, fetchRoles, fetchServers } from "@/controllers/hub.auth.controller";
 import { disconnectHubDiscord, getCampaign, getHub, saveCampaign, saveCampaignWithQuests, updateHub } from "@/controllers/hub.controller";
@@ -65,6 +66,7 @@ router
   .post("/manage-admin", manageAdmin)
   .post("/reward-xp", rewardXp)
   .post("/reward-xp-batch", rewardXpBatch)
+  .post("/search-xp-history", searchUserXpHistory)
   .post("/ban-user", banUser)
   .post("/unban-user", unBanUser)
   .get("/me", attachAdminCampaignHub, getHub)

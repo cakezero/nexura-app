@@ -4,8 +4,7 @@ const xpLogSchema = new mongoose.Schema({
   address: { type: String, required: true, lowercase: true },
   amount: { type: Number, required: true },
   status: { type: String, enum: ["success", "failed"], required: true },
-  type: { type: String, enum: ["single", "batch"], required: true },
-  adminId: { type: mongoose.Schema.Types.ObjectId, ref: "admin" },
+  type: { type: String, enum: ["single", "batch", "campaign", "referral", "ecosystem-quest", "quest", "daily-xp", "lesson"], required: true },
   timestamp: { type: Date, default: Date.now }
 });
 

@@ -35,6 +35,7 @@ import { campaign, campaignCompleted } from "@/models/campaign.model";
 import { dailySignIn } from "@/models/dailySignIn.model";
 import { startOfDayUTC, updateLevel, getAmountPaid } from "@/utils/utils";
 import { lesson, lessonCompleted } from "@/models/lesson.model";
+import { xpLog } from "@/models/xpLog.model";
 
 const client = new GraphQLClient(GRAPHQL_API_URL);
 
@@ -283,8 +284,17 @@ export const claimDepositXp = async (req: GlobalRequest, res: GlobalResponse) =>
       return;
     }
 
+    const depositXp = 500;
+
     trustUser.dailyTrustXpDate = exactDate as string;
-    trustUser.xp += 500;
+    trustUser.xp += depositXp;
+
+    await xpLog.create({
+			address: trustUser.address,
+			amount: depositXp,
+			status: "success",
+			type: "deposit-xp"
+		});
 
     await trustUser.save();
 
@@ -1449,7 +1459,9 @@ export const performDailySignIn = async (req: GlobalRequest, res: GlobalResponse
       userExists.streak = 1;
     }
 
-    userExists.xp += 20;
+    const dailyXpAmount = 20;
+
+    userExists.xp += dailyXpAmount;
     userExists.lastSignInDate = onlyDate;
 
     if (userExists.streak > (userExists.longestStreak || 0)) {
@@ -1462,6 +1474,13 @@ export const performDailySignIn = async (req: GlobalRequest, res: GlobalResponse
       userExists._id.toString(),
     );
     userExists.level = level;
+
+    await xpLog.create({
+			address: userExists.address,
+			amount: dailyXpAmount,
+			status: "success",
+			type: "daily-xp"
+		});
 
     await userExists.save();
 
@@ -1858,12 +1877,17 @@ export const claimReferreralReward = async (req: GlobalRequest, res: GlobalRespo
       return;
     }
 
+    let xpGiven = 0;
+
     if (referrer.tier === 0 && tier === 2) {
       referrer.xp += 5000;
+      xpGiven = 5000;
     } else if (referrer.tier === 0 && tier === 3) {
       referrer.xp += 10000;
+      xpGiven = 10000;
     } else {
       referrer.xp += xpByTier;
+      xpGiven = xpByTier;
     }
 
     referrer.tier = tier;
@@ -1871,6 +1895,13 @@ export const claimReferreralReward = async (req: GlobalRequest, res: GlobalRespo
     if (tier === 3) {
       referrer.refRewardClaimed = true;
     }
+
+    await xpLog.create({
+			address: referrer.address,
+			amount: xpGiven,
+			status: "success",
+			type: "referral"
+		});
 
     await referrer.save();
 

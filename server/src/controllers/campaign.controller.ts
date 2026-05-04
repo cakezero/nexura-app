@@ -19,6 +19,7 @@ import {
 import { validateCampaignData, updateLevel, checkPayment } from "@/utils/utils";
 import { campaignQuest } from "@/models/quests.model";
 import { ethers } from "ethers";
+import { xpLog } from "@/models/xpLog.model";
 
 interface IReward {
 	xp: number;
@@ -868,6 +869,13 @@ export const claimCampaignRewards = async (
 		const level = await updateLevel(userToReward.xp, userToReward.badges, userToReward._id.toString());
 		
 		userToReward.level = level;
+
+		await xpLog.create({
+			address: userToReward.address,
+			amount: xp,
+			status: "success",
+			type: "campaign"
+    });
 
 		await completedCampaign.save();
 		await campaignToClaimRewards.save();
