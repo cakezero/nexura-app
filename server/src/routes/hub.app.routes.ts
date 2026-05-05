@@ -7,7 +7,7 @@ import {
   reopenCampaign,
   updateCampaign
 } from "@/controllers/campaign.controller";
-import{ createQuest, saveQuest, saveQuestWithMiniQuests, deleteMiniQuest, deleteQuest } from "@/controllers/quest.controller";
+import { createQuest, saveQuest, saveQuestWithMiniQuests, deleteMiniQuest, deleteQuest, getHubQuests, publishQuest } from "@/controllers/quest.controller";
 import {
   addHubAdmin,
   deleteCampaignQuest,
@@ -48,6 +48,7 @@ import {
 } from "@/controllers/lesson.controller";
 import { Router } from "express";
 import { upload } from "@/config/multer";
+import { requireStudioPayment } from "@/controllers/studioPayment.controller";
 
 const router = Router();
 
@@ -55,11 +56,13 @@ router
   .patch("/save-campaign-quests", upload.single("coverImage"), saveCampaignWithQuests)
   .patch("/save-campaign", upload.single("coverImage"), saveCampaign)
   .get("/get-campaign", getCampaign)
+  .get("/get-quests", getHubQuests)
   .delete("/delete-hub", deleteHub)
   .delete("/delete-mini-quest", deleteMiniQuest)
   .post("/create-quest", upload.single("coverImage"), createQuest)
   .post("/save-quest", upload.single("coverImage"), saveQuest)
   .post("/save-mini-quest", upload.single("coverImage"), saveQuestWithMiniQuests)
+  .patch("/publish-quest", requireStudioPayment, publishQuest)
   .delete("/delete-quest", deleteQuest)
   .patch("/update-ids", updateIds)
   .delete("/remove-admin", removeHubAdmin)
@@ -93,7 +96,7 @@ router
   .patch("/update-video-lesson", updateVideoLesson)
   .delete("/delete-video-lesson", deleteVideoLesson)
   .patch("/reorder-lesson-content", reorderLessonContent)
-  .patch("/publish-lesson", publishLesson)
+  .patch("/publish-lesson", requireStudioPayment, publishLesson)
   .patch("/unpublish-lesson", unpublishLesson)
   .patch("/update-question-intro", updateQuestionIntro)
   .get("/get-lesson-details", getLessonDetailsForAdmin)

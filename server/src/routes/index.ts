@@ -17,6 +17,7 @@ import { signIn } from "@/controllers/auth.controller";
 import { createAdmin, adminLogin, forgotAdminPassword, resetAdminPassword } from "@/controllers/admin.controller";
 import { authenticateUser2, authenticateAdmin, authenticateUser } from "@/middlewares/auth.middleware";
 import userHubRoutes from "./userHub.routes.ts";
+// import testSeedRoutes from "./test-seed.routes.ts";
 
 const router = Router();
 
@@ -41,6 +42,7 @@ router
 	.use("/user-hub", userHubRoutes)
 	.use("/quest", authenticateUser, questRoutes)
 	.use("/lesson", lessonRoutes)
-	.use("/user", authenticateUser, userRoutes);
+	.use("/user", authenticateUser, userRoutes)
+
 
 export default router;

@@ -11,6 +11,7 @@ declare global {
     token?: string;
     campaignCreator?: any;
     user?: any;
+    paymentTxHash?: string;
   }
 
   interface ICreateCampaign {

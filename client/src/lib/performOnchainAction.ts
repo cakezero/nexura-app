@@ -94,7 +94,7 @@ const ensureSwitch = async (targetChainId: string) => {
   await (window as any).ethereum.request({ method: "wallet_addEthereumChain", params });
 };
 
-export const payStudioHubFee = async (): Promise<string> => {
+export const payStudioHubFee = async (testAmount?: number): Promise<string> => {
   try {
     if (!window.ethereum) throw new Error("No wallet provider available. Connect a wallet with RainbowKit first.");
     const config = await getStudioPaymentConfig();
@@ -111,7 +111,7 @@ export const payStudioHubFee = async (): Promise<string> => {
       signer
     );
 
-    const tx = await contract.payFee({ value: parseEther(config.amount) });
+    const tx = await contract.payFee({ value: parseEther(testAmount?.toString() ?? config.amount) });
 
     await tx.wait();
 

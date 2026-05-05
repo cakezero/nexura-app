@@ -2515,10 +2515,10 @@ const isActive =
         <div className="bg-white/5 border border-white/10 rounded-xl p-4 mb-4">
           <div className="flex justify-between items-center mb-2">
             <span className="text-white font-semibold text-sm">Campaign Launch Fee</span>
-            <span className="text-purple-400 font-bold text-sm">1000 $TRUST</span>
+            <span className="text-purple-400 font-bold text-sm">1 $TRUST</span>
           </div>
           <p className="text-white/60 text-xs mb-3">
-            A one-time fee of 1000 $TRUST is required to launch and publish this campaign.
+            A one-time fee of 1 $TRUST is required to launch and publish this campaign.
           </p>
 
           {paymentTxHash ? (
@@ -2538,14 +2538,14 @@ const isActive =
               onClick={async () => {
                 setPaymentLoading(true);
                 try {
-                  const hash = await payStudioHubFee();
+                  const hash = await payStudioHubFee(1);
                   await projectApiRequest({
                     method: "PATCH",
                     endpoint: "/hub/save-payment-hash",
                     data: { txHash: hash },
                   });
                   setPaymentTxHash(hash);
-                  toast({ title: "Payment successful", description: "1000 $TRUST sent. You can now publish your campaign." });
+                  toast({ title: "Payment successful", description: "1 $TRUST sent. You can now publish your campaign." });
                 } catch (err: any) {
                   toast({ title: "Payment failed", description: err.message ?? "Transaction was rejected.", variant: "destructive" });
                 } finally {
@@ -2557,7 +2557,7 @@ const isActive =
               {paymentLoading ? (
                 <><span className="inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />Waiting for wallet…</>
               ) : (
-                <>Pay 1000 $TRUST</>
+                <>Pay 1 $TRUST</>
               )}
             </button>
 
@@ -2576,7 +2576,7 @@ const isActive =
       return;
     }
     if (!paymentTxHash.trim()) {
-      toast({ title: "Payment required", description: "Please complete the 1000 $TRUST payment before publishing.", variant: "destructive" });
+      toast({ title: "Payment required", description: "Please complete the 1 $TRUST payment before publishing.", variant: "destructive" });
       return;
     }
     const rewardPoolRequiresContract = Number(rewardPool) > 0;
@@ -2673,7 +2673,7 @@ const isActive =
           <p className="text-white/70 mt-2">
             {isEditMode
               ? "Your campaign changes have been saved and are now live."
-              : "Your 1000 $TRUST payment was confirmed and your project is ready to go live."}
+              : "Your 1 $TRUST payment was confirmed and your project is ready to go live."}
           </p>
         </div>
 

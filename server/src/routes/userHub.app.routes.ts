@@ -1,5 +1,5 @@
 import { userHubLogout } from "@/controllers/hub.auth.controller";
-import { createUserHub } from "@/controllers/hub.controller";
+import { createUserHub, updateUserHub, deleteUserHub, getCampaignSubmissions, validateCampaignSubmissions, getUserHub } from "@/controllers/hub.controller";
 import {
   createLesson,
   publishLesson,
@@ -19,13 +19,19 @@ import {
   saveQuest,
   deleteMiniQuest,
   saveQuestWithMiniQuests,
+  getHubQuests,
 } from "@/controllers/quest.controller";
 import { Router } from "express";
+import { upload } from "@/config/multer";
 
 const router = Router();
 
 router
-  .post("/create-user-hub", createUserHub)
+  .post("/create-user-hub", upload.single("logo"), createUserHub)
+  .get("/get-quests", getHubQuests)
+  .get("/me", getUserHub)
+  .get("/quest-submissions", getCampaignSubmissions)
+  .post("/validate-quest-submissions", validateCampaignSubmissions)
   .post("/create-lesson", createLesson)
   .patch("/update-lesson", updateLesson)
   .delete("/delete-lesson", deleteLesson)
@@ -37,12 +43,12 @@ router
   .post("/create-question", createQuestion)
   .patch("/update-question", updateQuestion)
   .delete("/delete-question", deleteQuestion)
-  // .patch("/update-profile", updateUserHub)
-  // .delete("/delete-profile", deleteUserHub)
-  .post("/create-quest", createQuest)
+  .patch("/update-profile", upload.single("logo"), updateUserHub)
+  .delete("/delete-profile", deleteUserHub)
+  .post("/create-quest", upload.single("coverImage"), createQuest)
   .delete("/delete-mini-quest", deleteMiniQuest)
-  .post("/save-quest", saveQuest)
-  .post("/save-mini-quest", saveQuestWithMiniQuests)
+  .post("/save-quest", upload.single("coverImage"), saveQuest)
+  .post("/save-mini-quest", upload.single("coverImage"), saveQuestWithMiniQuests)
   .post("/logout", userHubLogout)
   .delete("/delete-quest", deleteQuest);
 

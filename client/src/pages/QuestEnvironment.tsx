@@ -33,6 +33,7 @@ export default function QuestEnvironment() {
   const [miniQuests, setMiniQuests] = useState<Quest[]>(questsInitial);
   const [totalXP, setTotalXP] = useState(0);
   const { user } = useAuth();
+  const [hubId, setHubId] = useState<string | null>(null);
   const [expandedQuestId, setExpandedQuestId] = useState<string | null>(null);
   const [proofLinks, setProofLinks] = useState<Record<string, string>>({});
 
@@ -71,7 +72,8 @@ export default function QuestEnvironment() {
         title: t,
         questNumber: quest_no,
         sub_title: st,
-        questCompleted: comp
+        questCompleted: comp,
+        hub,
       } = await apiRequestV2("GET", `/api/quest/fetch-mini-quests?id=${questId}`);
 
       setCompleted(comp);
@@ -81,6 +83,7 @@ export default function QuestEnvironment() {
       setQuestNumber(quest_no);
       setTitle(t);
       setSubTitle(st);
+      if (hub) setHubId(hub);
     })();
   }, []);
 
@@ -127,6 +130,9 @@ export default function QuestEnvironment() {
     return url.split("/").pop(); // return the last item in the array
   }
 
+  // Tags that require manual proof submission (not auto-verifiable)
+  const MANUAL_PROOF_TAGS = ["comment", "comment-x", "follow", "follow-x", "feedback", "other", "create-post"];
+
   const claimReward = async (miniQuest: Quest) => {
     try {
 
@@ -140,7 +146,7 @@ export default function QuestEnvironment() {
         return;
       }
 
-      if (miniQuest.tag === "comment") {
+      if (MANUAL_PROOF_TAGS.includes(miniQuest.tag)) {
         toast({
           title: "Manual verification required",
           description: "Submit proof instead.",
@@ -151,29 +157,25 @@ export default function QuestEnvironment() {
 
 
       const id = getId(miniQuest.link);
-      // const isSubmitProof = quest.tag === "comment";
 
       try {
-        // if (["follow", "repost"].includes(miniQuest.tag)) {
-        //   if (!user?.socialProfiles.x.connected) {
-        //     throw new Error("x not connected yet, go to profile to connect.");
-        //   }
-        //   const { success } = await apiRequestV2("POST", "/api/check-x", { id, tag: miniQuest.tag, questId: miniQuest._id, page: "quest" });
-        //   if (!success) {
-        //     // alert(`Kindly ${miniQuest.tag !== "follow" ? miniQuest.tag + " the post" : "follow the account"}`);
-        //     throw new Error(`Kindly ${miniQuest.tag !== "follow" ? miniQuest.tag + " the post" : "follow the account"}`);
-        //   }
-        // } else 
-        if (["join", "message"].includes(miniQuest.tag)) {
+        if (["join", "join-discord", "message", "message-discord", "send-message-discord"].includes(miniQuest.tag)) {
           if (!user?.socialProfiles.discord.connected) {
-            // toast({ title: "Error", description: "discord not connected yet, go to profile to connect", variant: "destructive" });
             throw new Error("discord not connected yet, go to profile to connect");
           }
 
           const { success } = await apiRequestV2("POST", "/api/check-discord", { questId, id: miniQuest._id, channelId: id, tag: miniQuest.tag });
           if (!success) {
-            // toast({ title: "Error", description: `Kindly ${miniQuest.tag} the discord channel`, variant: "destructive"});
             throw new Error(`Kindly ${miniQuest.tag} the discord channel`);
+          }
+        } else if (["acquire-role-discord"].includes(miniQuest.tag)) {
+          if (!user?.socialProfiles.discord.connected) {
+            throw new Error("discord not connected yet, go to profile to connect");
+          }
+
+          const { success } = await apiRequestV2("POST", "/api/check-discord", { questId, id: miniQuest._id, channelId: id, tag: miniQuest.tag });
+          if (!success) {
+            throw new Error("You must acquire the required role first");
           }
         } else if (miniQuest.tag === "portal") {
           await apiRequestV2("POST", "/api/quest/check-portal-task", { termId: id, id: miniQuest._id, questId, page: "quest" });
@@ -182,7 +184,6 @@ export default function QuestEnvironment() {
         }
       } catch (error: any) {
         console.error(error);
-        // toast({title: "Error", description: error.message, variant: "destructive" });
         throw new Error(error.message);
       }
 
@@ -200,7 +201,6 @@ export default function QuestEnvironment() {
         )
       );
 
-      // window.location.reload();
     } catch (error: any) {
       console.error(error);
       setMiniQuests(prev => prev.map(q => q._id === miniQuest._id ? { ...q, status: "retry" } : q));
@@ -258,23 +258,20 @@ export default function QuestEnvironment() {
     if (!link) {
       toast({
         title: "Missing link or username",
-        description: "Please paste your comment link or twitter username.",
+        description: "Please paste your proof link.",
         variant: "destructive",
       });
       return;
     }
 
     try {
-      if (!user?.socialProfiles.x.connected) {
-        throw new Error("X not connected yet, go to profile to connect.");
-      }
-
       await apiRequestV2("POST", "/api/quest/submit-quest", {
         questId,
         id: quest._id,
         submissionLink: link,
         page: "quest",
         tag: quest.tag,
+        hub: hubId,
       });
 
       toast({
@@ -300,7 +297,7 @@ export default function QuestEnvironment() {
     const claimed = quest.done || claimedQuests.includes(quest._id);
     const pending = quest.status === "pending" || pendingQuests.includes(quest._id);
     const isRetry = quest.status === "retry";
-    const isSubmitProof = ["comment", "follow"].includes(quest.tag);
+    const isSubmitProof = MANUAL_PROOF_TAGS.includes(quest.tag);
     const isExpanded = expandedQuestId === quest._id;
     const isPortalTask = quest.tag === "portal";
 

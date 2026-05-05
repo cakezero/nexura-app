@@ -133,7 +133,7 @@ const userHubSchema = new Schema({
   },
   logo: {
     type: String,
-    required: true
+    required: false
   },
   description: {
     type: String,
@@ -156,7 +156,7 @@ const userHubSchema = new Schema({
   superAdmin: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "user-hub-admins",
-    required: true
+    required: false
   },
   pendingTxHash: {
     type: String,

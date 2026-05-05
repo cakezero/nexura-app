@@ -21,8 +21,8 @@ import DiscordCallback from "./pages/DiscordCallback";
 import XCallback from "./pages/XCallback";
 import Levels from "./pages/Levels";
 import UserReferred from "./pages/UserReferred";
-import ProjectCreate from "./pages/studio/ProjectCreate";
-import ProjectDashboard from "./pages/project/ProjectDashboard";
+import ProjectCreate from "./pages/studio/project/ProjectCreate";
+// ProjectDashboard route removed - no longer used
 import NexuraSidebar from "./components/QuestflowSidebar";
 import ProfileBar from "./components/ProfileBar";
 import { WalletProvider } from "./lib/wallet";
@@ -33,43 +33,41 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import PortalClaims from "./pages/PortalClaims";
 import AnimatedBackground from "./components/AnimatedBackground";
 import Home from "./pages/Home.tsx";
-// import Analytics from "./pages/Analytics.tsx"; // main analytics page — temporarily replaced by dummy
-import Analyticss from "./pages/Analyticss.tsx";
+import Analytics from "./pages/Analytics.tsx";
 import NexuraStudio from "./pages/NexuraStudio.tsx";
-import CreateHub from "./pages/studio/CreateHub.tsx";
-import SignInToHub from "./pages/studio/SignInToHub.tsx";
-import TheHub from "./pages/studio/TheHub.tsx";
-import ConnectedDiscord from "./pages/studio/ConnectedDiscord.tsx";
-import StudioDashboard from "./pages/studio/StudioDashboard.tsx"
-import StudioLayout from "./pages/studio/StudioLayout.tsx"
+import CreateHub from "./pages/studio/project/CreateHub.tsx";
+import SignInToHub from "./pages/studio/project/SignInToHub.tsx";
+import TheHub from "./pages/studio/project/TheHub.tsx";
+import ConnectedDiscord from "./pages/studio/project/ConnectedDiscord.tsx";
+import StudioDashboard from "./pages/studio/project/StudioDashboard.tsx"
+import StudioLayout from "./pages/studio/project/StudioLayout.tsx"
 import CampaignsTab from "./components/admin/CampaignsTab.tsx";
 import { getStoredAccessToken, apiRequest } from './lib/config'
 import { clearProjectSession, getStoredProjectToken, projectApiRequest } from './lib/projectApi'
 import CreateNewCampaigns from "./components/admin/CreateNewCampaign.tsx";
 import MyCampaign from "./components/admin/MyCampaign.tsx"
 import AdminManagement from "./components/admin/AdminManagement.tsx";
-import AdminSignUp from "./pages/studio/AdminSignUp.tsx";
-import HubProfile from "./pages/studio/HubProfile.tsx";
+import AdminSignUp from "./pages/studio/project/AdminSignUp.tsx";
+import HubProfile from "./pages/studio/project/HubProfile.tsx";
 import ClaimDetails from "./pages/ClaimDetails";
-import ConnectDiscord from "./pages/studio/ConnectDiscord.tsx";
+import ConnectDiscord from "./pages/studio/project/ConnectDiscord.tsx";
 import Docs from "./pages/Docs.tsx"
 import LessonPage from "./pages/LessonPage";
-import ResetHubPassword from "./pages/studio/ResetHubPassword.tsx";
+import ResetHubPassword from "./pages/studio/project/ResetHubPassword.tsx";
 import AnalyticsBackground from "./components/AnalyticsBackground.tsx"
-import LessonCreate from "./pages/studio/LessonCreate";
-import Lessons from "./pages/studio/Lessons";
-import UserDashboard from "./pages/studio/UserDashboard.tsx";
-import CreateNewQuests from "./components/admin/CreateNewQuest.tsx";
-import UserLayout from "./pages/studio/UserLayout.tsx";
+import LessonCreate from "./pages/studio/project/LessonCreate";
+import Lessons from "./pages/studio/project/Lessons";
+import UserDashboard from "./pages/studio/user/UserDashboard.tsx";
+import UserLayout from "./pages/studio/user/UserLayout.tsx";
+import QuestCreate from "./pages/studio/user/QuestCreate.tsx";
 import SelectRole from "./pages/studio/SelectRole.tsx";
-import ProjectsHub from "./pages/studio/ProjectsHub.tsx";
-import UsersHub from "./pages/studio/UsersHub.tsx";
-import UsersCreate from "./pages/studio/UsersCreate.tsx";
-import UserSignup from "./pages/studio/UserSignup.tsx";
-import UserSignIn from "./pages/studio/UserSignin.tsx";
-import UserProfile from "./pages/studio/UserProfile.tsx"
+import ProjectsHub from "./pages/studio/project/ProjectsHub.tsx";
+import UsersHub from "./pages/studio/user/UsersHub.tsx";
+import UsersCreate from "./pages/studio/user/UsersCreate.tsx";
+import UserSignup from "./pages/studio/user/UserSignup.tsx";
+import UserSignIn from "./pages/studio/user/UserSignin.tsx";
+import UserProfile from "./pages/studio/user/UserProfile.tsx"
 import QuestsTab from "./components/admin/QuestsTab.tsx";
-import userDashboard from "./pages/studio/UserDashboard.tsx";
 import QuestCard from "./components/QuestCard.tsx";
 
 function Router() {
@@ -79,12 +77,18 @@ function Router() {
     // Clear admin session
     localStorage.removeItem('nexura-admin:token');
     localStorage.removeItem('nexura-admin:info');
+    localStorage.removeItem('nexura_user_session');
+    
     // Clear project session and call server logout if project is signed in
     if (getStoredProjectToken()) {
       projectApiRequest({ method: 'POST', endpoint: '/hub/logout' }).catch(() => {});
     }
+    
     clearProjectSession();
     setIsAuthenticated(false);
+    
+    // Force redirect to studio landing page to ensure all state is wiped
+    window.location.href = "/studio";
   }
 
   return (
@@ -109,7 +113,7 @@ function Router() {
       <Route path="/x/callback" component={XCallback} />
       <Route path="/campaigns/tasks" component={CampaignEnvironment} />
       <Route path="/quests/tasks-card" component={QuestEnvironment} />
-      <Route path="/analytics" component={Analyticss} />
+      <Route path="/analytics" component={Analytics} />
       <Route path="/portal-claims" component={PortalClaims} />
       <Route path="/portal-claims/:id" component={ClaimDetails} />
       <Route path="/studio" component={NexuraStudio} />
@@ -130,15 +134,17 @@ function Router() {
           <UserProfile />
         </UserLayout>
       </Route>
-      <Route path="/user-dashboard" component= {UserDashboard} />
+      <Route path="/user-dashboard">
+        <UserDashboard onLogout={handleLogout} />
+      </Route>
       <Route path="/user-dashboard/quests-tab">
         <UserLayout title="Create Campaign" onLogout={handleLogout}>
           <QuestsTab />
         </UserLayout>
       </Route>
       <Route path="/user-dashboard/create-new-quest">
-        <UserLayout title="Create Campaign" onLogout={handleLogout}>
-          <CreateNewQuests />
+        <UserLayout title="Create Quest" onLogout={handleLogout}>
+          <QuestCreate />
         </UserLayout>
       </Route>
       <Route path="/studio/projects/create" component={ProjectCreate} />
@@ -208,8 +214,7 @@ function Router() {
       </Route>
       <Route path="/studio/register" component={AdminSignUp} />
       <Route path="/studio/reset-password" component={ResetHubPassword} />
-      <Route path="/project/:projectId/*" component={ProjectDashboard} />
-      <Route path="/project/:projectId/:rest*" component={ProjectDashboard} />
+      {/* ProjectDashboard route removed - no longer used */}
       {/* Referral */}
       <Route path="/ref/:referrerCode" component={UserReferred} />
       {/* Fallback to 404 */}
@@ -265,7 +270,9 @@ function App() {
                   location.startsWith("/connect-discord") ||
                   location.startsWith("/project/connected-discord") ||
                   location.startsWith("/studio/register") ||
-                  location.startsWith("/studio/reset-password");
+                  location.startsWith("/studio/reset-password") ||
+                  location.startsWith("/studio/") ||
+                  location.startsWith("/projects/");
                 const isProject = location.startsWith("/project/");
                 const isProjectCreate = location.startsWith("/projects/create");
                 const isDocs = location.startsWith("/docs")

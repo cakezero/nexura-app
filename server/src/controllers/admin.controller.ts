@@ -1,4 +1,4 @@
-import { updateAdminLastActivity } from "@/utils/adminActivityCron";
+﻿import { updateAdminLastActivity } from "@/utils/adminActivityCron";
 import bcrypt from "bcrypt";
 import mongoose from "mongoose";
 import logger from "@/config/logger";
@@ -558,10 +558,120 @@ export const createAdmin = async (req: GlobalRequest, res: GlobalResponse) => {
 	}
 };
 
+export const getAdminQuestDetail = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const questId = req.query.id as string;
+    if (!questId) {
+      res.status(BAD_REQUEST).json({ error: "quest id is required" });
+      return;
+    }
+
+    const found = await quest.findById(questId).lean();
+    if (!found) {
+      res.status(NOT_FOUND).json({ error: "quest not found" });
+      return;
+    }
+
+    const now = new Date();
+    const parseDate = (val: unknown): Date | null => {
+      if (!val) return null;
+      const d = new Date(val as string | Date);
+      return isNaN(d.getTime()) ? null : d;
+    };
+
+    const s = parseDate(found.starts_at);
+    const e = parseDate(found.ends_at);
+    let temporalStatus = found.status ?? "Active";
+    if (e && e <= now) temporalStatus = "Ended";
+    else if (s && s > now) temporalStatus = "Scheduled";
+    else if (found.status !== "Save") temporalStatus = "Active";
+
+    const questTasks = ((found as any).campaignQuests || (found as any).quests || []).map((t: any) => ({
+      type: t.type || t.taskType || "",
+      platform: t.platform || "",
+      handleOrUrl: t.handleOrUrl || t.handle || "",
+      description: t.description || "",
+      evidence: t.evidence || "",
+      validation: t.validation || "Manual Validation",
+      verificationMode: t.verificationMode || "",
+      roleId: t.roleId || "",
+      channelId: t.channelId || "",
+      guildId: t.guildId || "",
+    }));
+
+    res.status(OK).json({
+      quest: {
+        _id: String(found._id),
+        title: found.title || "",
+        description: found.description || found.project_name || "",
+        status: temporalStatus,
+        starts_at: found.starts_at ?? null,
+        ends_at: found.ends_at ?? null,
+        reward: found.reward ?? 0,
+        page: (found as any).page ?? "",
+        projectCoverImage: found.projectCoverImage || found.project_image || "",
+        tasks: questTasks,
+      },
+    });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching quest detail" });
+  }
+};
+
+export const getAdminHubQuests = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const adminHub = req.admin?.hub ? String(req.admin.hub) : null;
+    if (!adminHub) {
+      res.status(BAD_REQUEST).json({ error: "admin has no associated hub" });
+      return;
+    }
+
+    const quests = await quest
+      .find({ hub: adminHub, status: { $ne: "Deleted" } })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const now = new Date();
+    const parseDate = (val: unknown): Date | null => {
+      if (!val) return null;
+      const d = new Date(val as string | Date);
+      return isNaN(d.getTime()) ? null : d;
+    };
+
+    const getStatus = (q: any) => {
+      if (q.status === "Save") return "Save";
+      if (q.status === "Deleted") return "Deleted";
+      const s = parseDate(q.starts_at);
+      const e = parseDate(q.ends_at);
+      if (e && e <= now) return "Ended";
+      if (s && s > now) return "Scheduled";
+      return "Active";
+    };
+
+    const normalized = quests.map((q: any) => ({
+      _id: String(q._id),
+      title: q.title || "",
+      description: q.description || q.project_name || "",
+      projectCoverImage: q.projectCoverImage || "",
+      status: getStatus(q),
+      starts_at: q.starts_at ?? null,
+      ends_at: q.ends_at ?? null,
+      reward: q.reward ?? 0,
+      page: q.page ?? "",
+    }));
+
+    res.status(OK).json({ quests: normalized });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching admin hub quests" });
+  }
+};
+
 export const getTasks = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
     // Submissions persist `hub` as a string (the hub's ObjectId stringified)
-    // — see quest.controller.ts:793. Match the admin's resolved hub instead
+    // â€” see quest.controller.ts:793. Match the admin's resolved hub instead
     // of the historical "nexura-hub" placeholder so multi-hub campaigns'
     // submissions actually surface in the dashboard.
     const adminHub = req.admin?.hub ? String(req.admin.hub) : null;
@@ -905,7 +1015,7 @@ export const getStudioCampaigns = async (_req: GlobalRequest, res: GlobalRespons
       _id: String(c._id),
       title: c.description || c.title || "",
       projectName: c.project_name || "",
-      status: c.status || "—",
+      status: c.status || "â€”",
       starts_at: c.starts_at ?? null,
       ends_at: c.ends_at ?? null,
       reward: {
@@ -967,7 +1077,7 @@ export const getDeletedStudioCampaigns = async (_req: GlobalRequest, res: Global
       _id: String(c._id),
       title: c.description || c.title || "",
       projectName: c.project_name || "",
-      status: c.status || "—",
+      status: c.status || "â€”",
       starts_at: c.starts_at ?? null,
       ends_at: c.ends_at ?? null,
       reward: {
@@ -1074,7 +1184,7 @@ export const getStudioQuests = async (_req: GlobalRequest, res: GlobalResponse) 
       _id: String(q._id),
       title: q.title || "",
       projectName: q.project_name || "",
-      status: q.status || "—",
+      status: q.status || "â€”",
       starts_at: q.starts_at ?? null,
       ends_at: q.ends_at ?? null,
       reward: { xp: Number(q.reward ?? 0) },
@@ -1119,6 +1229,60 @@ export const getStudioLessons = async (_req: GlobalRequest, res: GlobalResponse)
   } catch (error) {
     logger.error(error);
     res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching studio lessons" });
+  }
+};
+
+export const publishAdminQuest = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const { id } = req.query as { id: string };
+    if (!id) {
+      res.status(BAD_REQUEST).json({ error: "Quest ID is required" });
+      return;
+    }
+
+    const adminHub = req.admin?.hub ? String(req.admin.hub) : null;
+    if (!adminHub) {
+      res.status(BAD_REQUEST).json({ error: "Admin has no associated hub" });
+      return;
+    }
+
+    const questDoc = await quest.findById(id);
+    if (!questDoc) {
+      res.status(NOT_FOUND).json({ error: "Quest not found" });
+      return;
+    }
+
+    if (String(questDoc.hub) !== adminHub) {
+      res.status(FORBIDDEN).json({ error: "You are not allowed to publish this quest" });
+      return;
+    }
+
+    if (questDoc.status !== "Save") {
+      res.status(BAD_REQUEST).json({ error: "Quest is not in draft status" });
+      return;
+    }
+
+    const now = new Date();
+    let newStatus: "Active" | "Scheduled";
+
+    if (!questDoc.starts_at || new Date(questDoc.starts_at) <= now) {
+      newStatus = "Active";
+    } else {
+      newStatus = "Scheduled";
+    }
+
+    if (questDoc.ends_at && new Date(questDoc.ends_at) <= now) {
+      res.status(BAD_REQUEST).json({ error: "Cannot publish a quest that has already ended" });
+      return;
+    }
+
+    questDoc.status = newStatus;
+    await questDoc.save();
+
+    res.status(OK).json({ message: "Quest published successfully!" });
+  } catch (error: any) {
+    logger.error("Error publishing quest: " + error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: error?.message || "Error publishing quest" });
   }
 };
 

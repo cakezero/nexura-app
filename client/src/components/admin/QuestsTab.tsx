@@ -1,11 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card } from "../ui/card";
 import { Button } from "../ui/button";
 import { Link } from "wouter";
 import { RefreshCw, XCircle, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "../ui/dialog";
+import { projectApiRequest } from "../../lib/projectApi";
+import { userApiRequest } from "../../lib/userApi";
+import { useToast } from "../../hooks/use-toast";
+import { getStoredUserSession } from "../../lib/userSession";
 
 interface Quest {
   _id: string;
@@ -20,24 +24,44 @@ interface Quest {
 
 type PendingAction = { type: "delete" | "close"; id: string; title: string } | null;
 
-// MOCK DATA (since backend removed)
-const DUMMY_QUESTS: Quest[] = [
-  {
-    _id: "1",
-    title: "Test Quest",
-    description: "Engage with community",
-    starts_at: new Date().toISOString(),
-    ends_at: new Date().toISOString(),
-    status: "Active",
-    reward: { pool: 100 },
-  },
-];
+function getApiConfig() {
+  const session = getStoredUserSession();
+  return {
+    apiPrefix: session?.type === "user" ? "/user-hub" : "/hub",
+    apiRequest: session?.type === "user" ? userApiRequest : projectApiRequest,
+  };
+}
 
 export default function QuestsTab() {
   const [activeTab, setActiveTab] = useState<"all" | "active" | "upcoming" | "drafts" | "completed">("all");
-  const [quests] = useState<Quest[]>(DUMMY_QUESTS);
-  const [loading] = useState(false);
+  const [quests, setQuests] = useState<Quest[]>([]);
+  const [loading, setLoading] = useState(false);
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
+  const { toast } = useToast();
+
+  const fetchQuests = async () => {
+    try {
+      setLoading(true);
+      const { apiPrefix, apiRequest } = getApiConfig();
+      const res = await apiRequest<{ quests?: Quest[]; hubQuests?: Quest[] }>({
+        method: "GET",
+        endpoint: `/quests`,
+      });
+      setQuests(res.quests ?? res.hubQuests ?? []);
+    } catch (err: any) {
+      toast({
+        title: "Fetch failed",
+        description: err.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchQuests();
+  }, []);
 
   const now = new Date();
 
@@ -64,8 +88,22 @@ const tabs = [
   { id: "completed", label: "Completed", count: quests.filter(isCompleted).length },
 ];
 
-  const confirmAction = () => {
-    setPendingAction(null);
+  const confirmAction = async () => {
+    if (!pendingAction) return;
+    try {
+      const { apiPrefix, apiRequest } = getApiConfig();
+      await apiRequest({
+        method: "DELETE",
+        endpoint: `${apiPrefix}/delete-quest`,
+        params: { id: pendingAction.id },
+      });
+      setQuests((prev) => prev.filter((q) => q._id !== pendingAction.id));
+      toast({ title: "Quest closed", description: `"${pendingAction.title}" has been removed.` });
+    } catch (err: any) {
+      toast({ title: "Failed", description: err.message, variant: "destructive" });
+    } finally {
+      setPendingAction(null);
+    }
   };
 
   const QuestCard = ({ quest }: { quest: Quest }) => (
@@ -119,7 +157,7 @@ const tabs = [
             <p className="text-white/60">Manage your quests</p>
           </div>
 
-          <Button variant="ghost">
+          <Button variant="ghost" onClick={fetchQuests} disabled={loading}>
             <RefreshCw className={loading ? "animate-spin w-5 h-5" : "w-5 h-5"} />
           </Button>
         </div>
@@ -140,6 +178,8 @@ const tabs = [
     </button>
   ))}
 </div>
+
+
 
 
 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 auto-rows-fr">

@@ -23,13 +23,13 @@ import intuitionPortal from "@assets/intuitionPortal.jpg";
 import intuitionBets from "@assets/intuitionBets.jpg";
 import intuRank from "@assets/intuRank.jpg";
 import tnsLogo from "@assets/tnsLogo.jpg";
-import { DEV_CAMPAIGNS } from "../pages/Campaigns";
 
 export default function Discover() {
   const [activeTab, setActiveTab] = useState("all");
   const [refreshCountdown, setRefreshCountdown] = useState(0);
   const [serverOffset, setServerOffset] = useState(0);
   const [nowMs, setNowMs] = useState(Date.now());
+  const [trendingDapps, setTrendingDapps] = useState<any[]>([]);
   const [, setLocation] = useLocation();
 
   // Initialize and manage 24-hour refresh
@@ -80,6 +80,19 @@ export default function Discover() {
     };
   }, []);
 
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await apiRequestV2("GET", "/api/ecosystem-quests");
+        if (res.ecosystemQuests) {
+          setTrendingDapps(res.ecosystemQuests.slice(0, 3));
+        }
+      } catch (err) {
+        console.error("Failed to fetch ecosystem quests", err);
+      }
+    })();
+  }, []);
+
   const formatTime = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
@@ -98,23 +111,7 @@ export default function Discover() {
     retry: false,
   });
 
-  //   const allQuests =
-  //   questsData
-  //     ? [
-  //         ...(questsData.oneTimeQuests ?? []),
-  //         ...(questsData.weeklyQuests ?? []),
-  //         ...(questsData.featuredQuests ?? []),
-  //       ]
-  //     : [];
-
-  // const trendingQuests = allQuests
-  //   .filter((q: any) => q.status === "active")
-  //   .slice(0, 3);
-
-  const campaigns =
-    Array.isArray(campaignsData?.campaigns) && campaignsData.campaigns.length > 0
-      ? campaignsData.campaigns
-      : DEV_CAMPAIGNS;
+  const campaigns = Array.isArray(campaignsData?.campaigns) ? campaignsData.campaigns : [];
 
   const currentTime = nowMs + serverOffset;
   const isCompletedCampaign = (campaign: any) => !!campaign.ends_at && new Date(campaign.ends_at).getTime() <= currentTime;
@@ -129,16 +126,6 @@ export default function Discover() {
   const trendingCampaigns = campaigns
     .filter((c: any) => isActiveCampaign(c))
     .slice(0, 3);
-
-
-  const trendingDapps = [
-    { name: "Intuition Portal", logo: intuitionPortal, category: "Portal" },
-    // { name: "Intuition Bets", logo: intuitionBets, category: "Prediction Market" },
-    { name: "IntuRank", logo: intuRank, category: "DeFi" },
-    { name: "Sofia", logo: "/sofia2.jpg", category: "Extension" },
-    { name: "Trust Name Service", logo: tnsLogo, category: "Domain" },
-    // { name: "TrustSwap", logo: trustSwapLogo, category: "DeFi" },
-  ];
 
   return (
     <div className="min-h-screen bg-black text-white relative" data-testid="discover-page">

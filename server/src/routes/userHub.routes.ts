@@ -6,10 +6,10 @@ import { userHubAdminSignUp, userHubSignIn, userHubResetPassword, userHubForgotP
 const router = Router();
 
 router
-  .use("/", authenticateUserHub, userHubAppRoutes)
   .post("/sign-in", userHubSignIn)
   .post("/sign-up", userHubAdminSignUp)
   .post("/forgot-password", userHubForgotPassword)
-  .post("/reset-password", userHubResetPassword);
+  .post("/reset-password", userHubResetPassword)
+  .use("/", authenticateUserHub, userHubAppRoutes);
 
 export default router;

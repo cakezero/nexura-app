@@ -4,6 +4,7 @@ import { user } from "@/models/user.model";
 import { BAD_REQUEST, OK, NOT_FOUND, INTERNAL_SERVER_ERROR, CREATED, FORBIDDEN } from "@/utils/status.utils";
 import { uploadImg } from "@/utils/img.utils";
 import { validateCreateLesson, validateCreateQuestion } from "@/utils/utils";
+import { consumePaymentHash } from "@/controllers/studioPayment.controller";
 import { xpLog } from "@/models/xpLog.model";
 
 const getUploadedLessonImage = async (
@@ -463,6 +464,8 @@ export const publishLesson = async (req: GlobalRequest, res: GlobalResponse) => 
     }
     lessonExists.status = "published";
     await lessonExists.save();
+    // Consume the one-time payment hash after publishing
+    await consumePaymentHash(req.admin.hub);
     res.status(OK).json({ message: "lesson published" });
   } catch (error) {
     logger.error(error);

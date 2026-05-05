@@ -108,7 +108,7 @@ export const validateCampaignData = (reqData: any) => {
 			z.object({
 				link: z.string().optional(),
 				quest: z.string(),
-				tag: z.enum([
+					tag: z.enum([
 					"like",
 					"follow",
 					"follow-x",
@@ -124,6 +124,8 @@ export const validateCampaignData = (reqData: any) => {
 					"portal",
 					"comment",
 					"comment-x",
+					"trust-name",
+					"create-post",
 					"other"
 				]),
 				category: z.enum(["twitter", "discord", "reddit", "instagram", "facebook", "other"]),
@@ -166,6 +168,8 @@ export const validateQuestData = (reqData: any) => {
           "portal",
           "comment",
           "comment-x",
+          "trust-name",
+          "create-post",
           "other"
         ]),
       }),

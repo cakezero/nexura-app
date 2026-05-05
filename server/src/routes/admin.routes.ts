@@ -23,10 +23,14 @@ import {
   getDeletedStudioCampaigns,
   restoreStudioCampaign,
   permanentlyDeleteStudioCampaign,
+  getAdminHubQuests,
+  getAdminQuestDetail,
   getStudioQuests,
   getStudioLessons,
   searchUserXpHistory,
+  publishAdminQuest,
 } from "@/controllers/admin.controller";
+import { saveQuest } from "@/controllers/quest.controller";
 import { fetchChannels, fetchRoles, fetchServers } from "@/controllers/hub.auth.controller";
 import { disconnectHubDiscord, getCampaign, getHub, saveCampaign, saveCampaignWithQuests, updateHub } from "@/controllers/hub.controller";
 import {
@@ -52,6 +56,7 @@ import {
 import { upload } from "@/config/multer";
 import { attachAdminCampaignHub, requireAdminSuperadmin } from "@/middlewares/auth.middleware";
 import { publishAdminCampaign } from "@/controllers/adminCampaign.controller";
+import { noPaymentRequired } from "@/controllers/adminPublish.controller";
 import { addCampaignAddress, closeCampaign, deleteCampaign, fetchHubCampaigns, recordCampaignRewardsWithdrawal, reopenCampaign } from "@/controllers/campaign.controller";
 
 const router = Router();
@@ -80,7 +85,9 @@ router
   .patch("/save-campaign", requireAdminSuperadmin, attachAdminCampaignHub, upload.single("coverImage"), saveCampaign)
   .patch("/save-campaign-quests", requireAdminSuperadmin, attachAdminCampaignHub, upload.single("coverImage"), saveCampaignWithQuests)
   .patch("/add-campaign-address", requireAdminSuperadmin, attachAdminCampaignHub, addCampaignAddress)
-  .patch("/publish-campaign", requireAdminSuperadmin, attachAdminCampaignHub, publishAdminCampaign)
+  .patch("/publish-campaign", requireAdminSuperadmin, attachAdminCampaignHub, noPaymentRequired, publishAdminCampaign)
+  .patch("/publish-quest", requireAdminSuperadmin, attachAdminCampaignHub, noPaymentRequired, publishAdminQuest)
+  .patch("/save-quest", requireAdminSuperadmin, attachAdminCampaignHub, upload.single("coverImage"), saveQuest)
   .delete("/delete-campaign", requireAdminSuperadmin, attachAdminCampaignHub, deleteCampaign)
   .delete("/delete-quest", requireAdminSuperadmin, attachAdminCampaignHub, deleteCampaign)
   .patch("/close-campaign", requireAdminSuperadmin, attachAdminCampaignHub, closeCampaign)
@@ -105,6 +112,8 @@ router
   .get("/get-banned-users", getBannedUsers)
   .get("/get-xp-history", getXpHistory)
   .get("/get-admins", getAdmins)
+  .get("/get-admin-quests", attachAdminCampaignHub, getAdminHubQuests)
+  .get("/get-quest-detail", attachAdminCampaignHub, getAdminQuestDetail)
   .get("/get-quests", attachAdminCampaignHub, getTasks)
   .get("/user-summary", getUserSummary)
   .get("/leaderboard", getAdminLeaderboard)

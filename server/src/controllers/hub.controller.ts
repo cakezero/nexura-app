@@ -1042,12 +1042,25 @@ export const createUserHub = async (req: GlobalRequest, res: GlobalResponse) => 
     const website = String(req.body.website ?? "").trim();
     const xAccount = String(req.body.xAccount ?? "").trim();
 
+    const logoFile = req.file?.buffer;
+    if (!logoFile) {
+      res.status(BAD_REQUEST).json({ error: "logo is required" });
+      return;
+    }
+
+    const logoUrl = await uploadImg({
+      file: logoFile,
+      filename: req.file?.originalname as string,
+      folder: "user-hub-logos",
+      maxSize: 1 * 1024 ** 2,
+    });
+
     const createdHub = await userHub.create({
       name,
       description: req.body.description ?? "",
       website,
       xAccount,
-      logo: req.body.pfp,
+      logo: logoUrl,
       superAdmin: req.id,
     });
 
@@ -1067,4 +1080,75 @@ export const createUserHub = async (req: GlobalRequest, res: GlobalResponse) => 
       .json({ error: error?.message || "Error creating user hub" });
   }
 };
+
+export const updateUserHub = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const hubId = req.admin.hub;
+    if (!hubId) {
+      res.status(BAD_REQUEST).json({ error: "no hub associated with this account" });
+      return;
+    }
+
+    const { name, bio, xAccount } = req.body;
+    const logoFile = req.file?.buffer;
+
+    const updateFields: any = {};
+    if (name) updateFields.name = name;
+    if (bio) updateFields.description = bio;
+    if (xAccount) updateFields.xAccount = xAccount;
+
+    if (logoFile) {
+      updateFields.logo = await uploadImg({
+        file: logoFile,
+        filename: req.file?.originalname as string,
+        folder: "user-hub-logos",
+        maxSize: 1 * 1024 ** 2,
+      });
+    }
+
+    const updated = await userHub.findByIdAndUpdate(hubId, updateFields, { new: true });
+    if (!updated) {
+      res.status(NOT_FOUND).json({ error: "user hub not found" });
+      return;
+    }
+
+    res.status(OK).json({ message: "user hub updated!", hub: updated });
+  } catch (error: any) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: error?.message || "Error updating user hub" });
+  }
+};
+
+export const getUserHub = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const hubId = req.admin.hub;
+    const hubFound = await userHub.findById(hubId).lean() as any;
+    const adminHash = (req.admin as any).pendingTxHash ?? null;
+    const pendingTxHash = hubFound?.pendingTxHash ?? adminHash;
+    const adminInfo = { _id: req.id, name: req.admin.name, email: req.admin.email, role: "admin" };
+    res.status(OK).json({ hub: hubFound ? { ...hubFound, pendingTxHash } : { pendingTxHash }, admin: adminInfo });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "Error getting user hub" });
+  }
+};
+
+export const deleteUserHub = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const hubId = req.admin.hub;
+    if (!hubId) {
+      res.status(BAD_REQUEST).json({ error: "no hub associated with this account" });
+      return;
+    }
+
+    await userHub.findByIdAndDelete(hubId);
+    await userHubAdmin.findByIdAndUpdate(req.id, { $unset: { hub: "" } });
+
+    res.status(OK).json({ message: "user hub deleted successfully" });
+  } catch (error: any) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: error?.message || "Error deleting user hub" });
+  }
+};
+
 

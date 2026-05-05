@@ -58,12 +58,6 @@ export default function NexuraStudio() {
             Back to Explore
           </button>
 
-          <button
-            onClick={() => connectWallet({ noReload: true })}
-            className="px-3 py-2 rounded-full border border-white/80 text-white bg-transparent hover:bg-purple-600 hover:border-purple-600 transition-all text-xs sm:text-sm"
-          >
-            {isConnected && address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Connect Wallet"}
-          </button>
         </div>
 
         {/* Hero */}

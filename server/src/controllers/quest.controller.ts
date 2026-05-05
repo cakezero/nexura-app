@@ -107,6 +107,12 @@ export const fetchQuests = async (req: GlobalRequest, res: GlobalResponse) => {
 			mergedQuest.done = singleQuestCompleted ? singleQuestCompleted.done : false;
 			mergedQuest.joined = !!singleQuestCompleted;
 
+			const temporalStatus = getTemporalQuestStatus(singleQuest);
+			if (temporalStatus !== singleQuest.status) {
+				mergedQuest.status = temporalStatus;
+				mergedQuest.temporalStatus = temporalStatus;
+			}
+
 			quests.push(mergedQuest);
 		}
 
@@ -1233,3 +1239,104 @@ export const deleteMiniQuest = async (req: GlobalRequest, res: GlobalResponse) =
     res.status(INTERNAL_SERVER_ERROR).json({ error: "error deleting mini quest" });
   }
 }
+
+export const getTemporalQuestStatus = (doc: any): string | null => {
+  const now = new Date();
+  const startsAt = doc.starts_at ? new Date(doc.starts_at) : null;
+  const endsAt = doc.ends_at ? new Date(doc.ends_at) : null;
+  if (startsAt && startsAt > now) return "Scheduled";
+  if (endsAt && endsAt < now) return "Ended";
+  if (startsAt && startsAt <= now && (!endsAt || endsAt >= now)) return "Active";
+  return null;
+};
+
+import { consumePaymentHash } from "@/controllers/studioPayment.controller";
+
+export const publishQuest = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const { id } = req.query as { id: string };
+    if (!id) {
+      res.status(BAD_REQUEST).json({ error: "Quest ID is required" });
+      return;
+    }
+
+    const questDoc = await quest.findById(id);
+    if (!questDoc) {
+      res.status(NOT_FOUND).json({ error: "Quest not found" });
+      return;
+    }
+
+    const now = new Date();
+    let newStatus: "Active" | "Scheduled" | "Save" | "Ended";
+
+    if (!questDoc.starts_at || new Date(questDoc.starts_at) <= now) {
+      newStatus = "Active";
+    } else {
+      newStatus = "Scheduled";
+    }
+
+    if (questDoc.ends_at && new Date(questDoc.ends_at) <= now) {
+      res.status(BAD_REQUEST).json({ error: "Cannot publish a quest that has already ended" });
+      return;
+    }
+
+    questDoc.status = newStatus;
+    await questDoc.save();
+
+    await consumePaymentHash((req as any).admin?.hub);
+
+    res.status(OK).json({ message: "quest published!" });
+  } catch (error) {
+    logger.error("Error publishing quest: " + error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "Error publishing quest" });
+  }
+};
+
+export const getHubQuests = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const hubId = (req as any).hubId || (req as any).admin?.hub;
+    if (!hubId) {
+      res.status(BAD_REQUEST).json({ error: "No hub associated with this admin" });
+      return;
+    }
+    const quests = await quest.find({ hub: hubId, status: { $ne: "Deleted" } }).sort({ createdAt: -1 }).lean();
+    res.status(OK).json({ message: "Quests fetched!", quests });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "Error fetching hub quests" });
+  }
+};
+
+export const getAdminHubQuests = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const hubId = (req as any).hubId;
+    if (!hubId) {
+      res.status(BAD_REQUEST).json({ error: "No hub associated with this admin" });
+      return;
+    }
+    const quests = await quest.find({ hub: hubId, status: { $ne: "Deleted" } }).sort({ createdAt: -1 }).lean();
+    res.status(OK).json({ message: "Admin quests fetched!", quests });
+  } catch (error) {
+    logger.error("Error fetching admin hub quests: " + error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "Error fetching admin hub quests" });
+  }
+};
+
+export const getAdminQuestDetail = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const { id } = req.query as { id: string };
+    if (!id) {
+      res.status(BAD_REQUEST).json({ error: "Quest ID is required" });
+      return;
+    }
+    const q = await quest.findById(id).lean();
+    if (!q) {
+      res.status(NOT_FOUND).json({ error: "Quest not found" });
+      return;
+    }
+    res.status(OK).json({ message: "Quest detail fetched!", quest: q });
+  } catch (error) {
+    logger.error("Error fetching admin quest detail: " + error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "Error fetching admin quest detail" });
+  }
+};

@@ -18,18 +18,14 @@ export default function SignUpPopup({ mode = "user" as "user" | "project", actio
     setError(null);
     setLoading(true);
     try {
-      // Do not auto-open AppKit/Wagmi modal during signup/connect flows.
-      // The app exposes explicit UI for opening AppKit when desired.
-
-      // then attempt the connect flow (use-wallet will handle injected fallback)
       const connectedAddress = await connectWallet({ noReload: true });
       if (!connectedAddress) throw new Error("Wallet connection failed");
 
-      // Create a user or project account entry using the remote DB helpers.
+      // Do not auto-open AppKit/Wagmi modal during signup/connect flows.
+      // The app exposes explicit UI for opening AppKit when desired.
+
       if (mode === "user") {
-        // prefer server-driven session and profile check
         try {
-          // ping /api/me to let server create a minimal user via /auth/wallet if needed
           const meRes = await apiRequest('GET', '/api/user/profile').catch(() => null);
           if (meRes) {
             const json = await meRes.json().catch(() => ({}));
@@ -50,10 +46,8 @@ export default function SignUpPopup({ mode = "user" as "user" | "project", actio
           metadata: { createdAt: new Date().toISOString() },
         } as any);
         setOpen(false);
-        // Stay on current page instead of redirecting
         window.location.reload();
       } else {
-        // project mode: upsert project account then navigate to project creation or dashboard
         try {
           await createProjectAccount({
             address: connectedAddress,
@@ -62,7 +56,6 @@ export default function SignUpPopup({ mode = "user" as "user" | "project", actio
         } catch (e) {
           // ignore
         }
-        // check if the user already has projects
         try {
           const res = await apiRequest('GET', '/projects').catch(() => null);
           if (res) {
@@ -128,7 +121,12 @@ export default function SignUpPopup({ mode = "user" as "user" | "project", actio
       </Card>
     </div>
 
-    {error && <div className="text-sm text-red-500 mt-2">{error}</div>}
+    {error && (
+      <div className="flex items-start gap-2 text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg p-3 mt-2">
+        <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+        <span>{error}</span>
+      </div>
+    )}
   </DialogContent>
 </Dialog>
   );

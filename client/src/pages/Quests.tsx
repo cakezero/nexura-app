@@ -33,54 +33,6 @@ interface Quest {
   tag?: string;
 }
 
-export const DUMMY_QUESTS: Quest[] = [
-  {
-    _id: "tasks-card",
-    joined: true,
-    title: "Start Tasks",
-    sub_title: "Complete tasks to earn XP and unlock new features",
-    done: false,
-    description: "Complete unique tasks in the Nexura ecosystem and earn rewards",
-    project_name: "Intuition Ecosystem",
-    reward: "500",
-    project_image: "/quest-1.png",
-    starts_at: new Date().toISOString(),
-    ends_at: new Date(new Date().getTime() + 1000 * 60 * 60 * 24 * 365).toISOString(),
-    category: "Weekly",
-    status: "active"
-  },
-  {
-    _id: "social-card",
-    joined: true,
-    title: "Social Boost",
-    sub_title: "Engage on social platforms to earn rewards",
-    done: false,
-    description: "Like, share, and comment to earn XP",
-    project_name: "Nexura Social",
-    reward: "300",
-    project_image: "/quest-2.png",
-    starts_at: new Date().toISOString(),
-    ends_at: new Date(new Date().getTime() + 1000 * 60 * 60 * 24 * 180).toISOString(),
-    category: "Daily",
-    status: "active"
-  },
-  {
-    _id: "referral-card",
-    joined: true,
-    title: "Referral Sprint",
-    sub_title: "Invite friends and climb the leaderboard",
-    done: false,
-    description: "Earn XP for each successful referral",
-    project_name: "Nexura Referral",
-    reward: "800",
-    project_image: "/quest-3.png",
-    starts_at: new Date().toISOString(),
-    ends_at: new Date(new Date().getTime() + 1000 * 60 * 60 * 24 * 90).toISOString(),
-    category: "Weekly",
-    status: "active"
-  }
-];
-
 export default function Quests() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
@@ -122,17 +74,16 @@ export default function Quests() {
     localStorage.setItem('nexura:one-time-quest:claimed', JSON.stringify(value));
   }, [claimedTasks]);
 
-  const allQuests: Quest[] = data?.quests ?? DUMMY_QUESTS;
+  const allQuests: Quest[] = data?.quests ?? [];
 
-  const activeQuests = allQuests.filter((q) => q.status === "active");
-  const upcomingQuests = allQuests.filter((q) => q.status === "upcoming");
+  const activeQuests = allQuests.filter((q) => q.status?.toLowerCase() === "active");
+  const upcomingQuests = allQuests.filter((q) => q.status?.toLowerCase() === "upcoming");
 
   const startQuest = async (quest: Quest) => {
     if (!quest.joined) {
       try {
         await apiRequestV2("POST", "/api/quest/start-quest", {
           questId: quest._id,
-          category: quest.category.toLowerCase(),
         });
         toast({
           title: "Quest Started",

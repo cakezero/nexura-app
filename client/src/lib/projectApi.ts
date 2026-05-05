@@ -7,9 +7,15 @@ function getApiUrl(path: string) {
   return `${PROJECT_API_URL}/api${path}`;
 }
 
+import { getStoredUserToken, clearUserSession } from "./userSession";
+
 export function getStoredProjectToken(): string | null {
   try {
-    return localStorage.getItem("nexura-project:token") ?? localStorage.getItem("nexura:proj-token");
+    const projToken = localStorage.getItem("nexura-project:token") ?? localStorage.getItem("nexura:proj-token");
+    if (projToken) return projToken;
+    
+    // Fallback to user hub token
+    return getStoredUserToken();
   } catch {
     return null;
   }
@@ -38,6 +44,7 @@ export function clearProjectSession() {
   localStorage.removeItem("nexura:studio-discord-return");
   localStorage.removeItem("hubData");
   localStorage.removeItem("twitterData");
+  clearUserSession();
   // NOTE: nexura:wallet is intentionally NOT cleared here.
   // It belongs to the main app wallet connection (use-wallet.tsx),
   // not the studio/project session. Clearing it here would

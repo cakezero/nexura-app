@@ -48,7 +48,7 @@ export const getStudioPaymentConfig = async (_req: GlobalRequest, res: GlobalRes
     network,
     contractAddress: STUDIO_FEE_CONTRACT,
     chainId: network === "mainnet" ? "0x483" : "0x350b",
-    amount: "2",
+    amount: "1",
     authorizedAddress: serverWalletAddress,
   });
 };

@@ -136,7 +136,7 @@ const questSchema = new Schema({
 	},
 	status: {
 		type: String,
-		enum: ["Active", "Scheduled", "Save"],
+		enum: ["Active", "Scheduled", "Save", "Ended"],
 		default: "Active"
 	},
 	questNumber: {
@@ -171,9 +171,22 @@ const miniQuestSchema = new Schema({
 	guildId: {
 		type: String
 	},
+	roleId: {
+		type: String
+	},
+	channelId: {
+		type: String
+	},
+	verificationMode: {
+		type: String
+	},
+	category: {
+		type: String,
+		enum: ["twitter", "discord", "reddit", "instagram", "facebook", "other"],
+	},
 	tag: {
 		type: String,
-		enum: ["like", "follow", "message", "other", "portal", "comment", "repost", "trust-name"]
+		enum: ["like", "follow", "follow-x", "message", "message-discord", "other", "portal", "comment", "comment-x", "repost", "repost-x", "join", "join-discord", "acquire-role-discord", "send-message-discord", "feedback", "trust-name", "create-post"]
 	},
 	link: {
 		type: String
