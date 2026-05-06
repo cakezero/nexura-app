@@ -3,51 +3,40 @@
 import React, { useState } from "react";
 import AnimatedBackground from "../../../components/AnimatedBackground";
 import { CardTitle } from "../../../components/ui/card";
-import { Input } from "../../../components/ui/input";
-import { Textarea } from "../../../components/ui/textarea";
 import { useLocation } from "wouter";
-import { storeUserSession } from "../../../lib/userSession";
-import { projectApiRequest, base64ToBlob } from "../../../lib/projectApi";
 import { userApiRequest } from "../../../lib/userApi";
 import { useToast } from "../../../hooks/use-toast";
 
+function getUserProfile() {
+  try {
+    const raw = localStorage.getItem("user_profile");
+    if (!raw) return { name: "", avatar: "" };
+    const profile = JSON.parse(raw) as Record<string, unknown>;
+    return {
+      name: (profile.name as string) || (profile.username as string) || "",
+      avatar: (profile.profilePic as string) || "",
+    };
+  } catch {
+    return { name: "", avatar: "" };
+  }
+}
+
 export default function UsersHub() {
-  const [username, setUsername] = useState("");
-  const [bio, setBio] = useState("");
-  const [imagePreview, setImagePreview] = useState("");
   const [loading, setLoading] = useState(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = () => setImagePreview(reader.result as string);
-    reader.readAsDataURL(file);
-  };
+  const { name, avatar } = getUserProfile();
 
   const handleSubmit = async () => {
-    if (!username.trim()) {
-      toast({ title: "Missing fields", description: "Please enter a username.", variant: "destructive" });
-      return;
-    }
-
     setLoading(true);
 
     try {
       const fd = new FormData();
-      fd.append("name", username.trim());
-      fd.append("bio", bio || "");
-      if (imagePreview) {
-        fd.append("logo", base64ToBlob(imagePreview));
-      }
+      fd.append("name", name);
+      fd.append("description", "");
 
-      const res = await userApiRequest<{
-        message?: string;
-        hub?: any;
-      }>({
+      await userApiRequest({
         method: "POST",
         endpoint: "/user-hub/create-user-hub",
         formData: fd,
@@ -67,58 +56,39 @@ export default function UsersHub() {
     <div className="min-h-screen bg-black text-white p-4 sm:p-6 relative">
       <AnimatedBackground />
 
-      <div className="max-w-xl mx-auto relative z-10 space-y-6 bg-white/[0.03] border border-[#A760FF] rounded-2xl p-6">
+      <div className="max-w-xl mx-auto relative z-10 space-y-6 bg-white/[0.03] border border-[#A760FF] rounded-2xl p-6 text-center">
 
-        <CardTitle className="text-lg">Create User Profile</CardTitle>
+        <CardTitle className="text-lg">Create User Hub</CardTitle>
 
-        <div className="space-y-2">
-          <CardTitle className="text-xs">Username</CardTitle>
-          <Input
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="Enter your name..."
-            className="bg-gray-800 border-purple-500 text-white"
-          />
-        </div>
+        {avatar ? (
+          <img src={avatar} alt={name} className="w-24 h-24 mx-auto rounded-full object-cover border-2 border-purple-500" />
+        ) : (
+          <div className="w-24 h-24 mx-auto rounded-full bg-gray-800 border-2 border-purple-500 flex items-center justify-center text-white/40 text-xs">
+            No avatar
+          </div>
+        )}
 
-        <div className="space-y-2">
-          <CardTitle className="text-xs">Short bio</CardTitle>
-          <Textarea
-            value={bio}
-            onChange={(e) => setBio(e.target.value)}
-            placeholder="Tell us about yourself"
-            className="bg-gray-800 border-purple-500 text-white h-24"
-          />
-        </div>
+        <p className="text-white/60 text-sm">
+          Your hub will be created using your Nexura profile.
+        </p>
 
-        <div className="space-y-3">
-          <CardTitle className="text-xs text-center">Avatar</CardTitle>
-
-          <label className="w-full border-2 border-dashed border-purple-500 rounded-2xl p-8 bg-black cursor-pointer block">
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleImageChange}
-              className="hidden"
-            />
-
-            {imagePreview ? (
-              <img
-                src={imagePreview}
-                alt="Preview"
-                className="w-32 h-32 mx-auto rounded-xl object-cover"
-              />
-            ) : (
-              <p className="text-center text-white/60">Upload avatar</p>
-            )}
-          </label>
+        <div className="bg-gray-900 border border-purple-500/30 rounded-xl p-4 text-left space-y-2">
+          <div className="flex justify-between">
+            <span className="text-white/50 text-xs">Username</span>
+            <span className="text-white text-sm font-mono">{name || "—"}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-white/50 text-xs">Avatar</span>
+            <span className="text-white text-sm">{avatar ? "✓ Loaded" : "—"}</span>
+          </div>
         </div>
 
         <button
           onClick={handleSubmit}
-          className="w-full bg-[#8B3EFE] py-3 rounded-xl hover:opacity-90 transition"
+          disabled={loading || !name}
+          className="w-full bg-[#8B3EFE] py-3 rounded-xl hover:opacity-90 transition disabled:opacity-50"
         >
-          Save and Continue
+          {loading ? "Creating..." : "Create Hub"}
         </button>
 
       </div>

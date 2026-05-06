@@ -1,11 +1,11 @@
 import { cn } from "../../../lib/utils";
-import { Zap, Users, User, LogOut } from "lucide-react";
+import { Users, Zap, LogOut } from "lucide-react";
 import { useLocation } from "wouter";
 import AnimatedBackground from "../../../components/AnimatedBackground";
 import { useEffect, useState, useCallback } from "react";
 import { getStoredUserSession } from "../../../lib/userSession";
 
-type TabType = "userProfile" | "questsTab" | "questSubmissions";
+type TabType = "questsTab" | "questSubmissions";
 
 interface UserSidebarProps {
   activeTab: TabType;
@@ -18,37 +18,34 @@ export default function UserSidebar({ activeTab, onLogout }: UserSidebarProps) {
   const [userAvatar, setUserAvatar] = useState("/default-avatar.png");
   const [username, setUsername] = useState("@user");
 
-const syncUser = useCallback(() => {
-  const user = getStoredUserSession(); // ALWAYS fresh
+  const syncUser = useCallback(() => {
+    try {
+      const raw = localStorage.getItem("user_profile");
+      if (raw) {
+        const profile = JSON.parse(raw) as Record<string, unknown>;
+        setUsername((profile.name as string) || (profile.username as string) || "@user");
+        setUserAvatar((profile.profilePic as string) || "/default-avatar.png");
+      }
+    } catch {}
+  }, []);
 
-  if (user?.type === "user") {
-    setUsername(user.username || "@user");
-    setUserAvatar(user.avatar || "/default-avatar.png");
-  }
-}, []);
-
-useEffect(() => {
-  syncUser();
-
-  const handler = () => {
+  useEffect(() => {
     syncUser();
-  };
 
-  window.addEventListener("user-session-update", handler);
+    const handler = () => syncUser();
+    window.addEventListener("user-session-update", handler);
 
-  return () => {
-    window.removeEventListener("user-session-update", handler);
-  };
-}, []);
+    return () => {
+      window.removeEventListener("user-session-update", handler);
+    };
+  }, []);
 
   const sidebarItems: { title: string; icon: any; id: TabType }[] = [
-    { title: "Profile", icon: User, id: "userProfile" },
     { title: "Quests", icon: Users, id: "questsTab" },
     { title: "Dashboard", icon: Zap, id: "questSubmissions" },
   ];
 
   const routeByTab: Record<TabType, string> = {
-    userProfile: "/user-dashboard/user-profile",
     questsTab: "/user-dashboard/quests-tab",
     questSubmissions: "/user-dashboard",
   };

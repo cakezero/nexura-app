@@ -11,7 +11,7 @@ import { getStoredUserSession, storeUserSession } from "../../../lib/userSession
 import { projectApiRequest } from "../../../lib/projectApi";
 import { userApiRequest } from "../../../lib/userApi";
 
-type TabType = "userProfile" | "questSubmissions" | "questsTab";
+type TabType = "questSubmissions" | "questsTab";
 
 interface UserLayoutProps {
   children: React.ReactNode;
@@ -36,8 +36,7 @@ export default function UserLayout({
 
   // 🔥 derive active tab from URL
   const deriveTab = (): TabType => {
-    if (location.includes("user-profile")) return "userProfile";
-    if (location.includes("quests-tab") || location.includes("create-new-quest")) return "questsTab";
+if (location.includes("quests-tab") || location.includes("create-new-quest")) return "questsTab";
     if (location.includes("dashboard")) return "questSubmissions";
 
     return "questsTab";

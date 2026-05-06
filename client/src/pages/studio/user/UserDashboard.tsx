@@ -18,7 +18,6 @@ import { Check, X } from "lucide-react";
 import { TASKSS } from "../../../types/admin";
 import QuestSubmissions from "../../../components/admin/QuestsSubmissions.tsx";
 import QuestsTab from "../../../components/admin/QuestsTab.tsx";
-import UserProfile from "./UserProfile.tsx";
 
 import { getStoredUserSession } from "../../../lib/userSession";
 
@@ -26,7 +25,7 @@ interface StudioDashboardProps {
   onLogout: () => void;
 }
 
-type TabType = "userProfile" | "questsTab" | "questSubmissions";
+type TabType = "questsTab" | "questSubmissions";
 
 export default function userDashboard({ onLogout }: StudioDashboardProps) {
   const [location, setLocation] = useLocation();
@@ -34,13 +33,10 @@ export default function userDashboard({ onLogout }: StudioDashboardProps) {
   const apiPrefix = session?.type === "user" ? "/user-hub" : "/hub";
   const apiRequest = session?.type === "user" ? userApiRequest : projectApiRequest;
 
-  // ---------------- TAB DERIVATION (SOURCE: URL ONLY) ----------------
   const activeTab: TabType =
-    location.includes("/user-dashboard/user-profile")
-      ? "userProfile"
-      : location.includes("/user-dashboard/quests-tab")
-      ? "questsTab"
-      : "questSubmissions";
+    location.includes("/user-dashboard/quests-tab") ? "questsTab" : "questSubmissions";
+
+
 
   // ---------------- STATE ----------------
   const [viewedSubmissions, setViewedSubmissions] = useState<Set<string>>(new Set());
@@ -133,7 +129,7 @@ export default function userDashboard({ onLogout }: StudioDashboardProps) {
 
   // ---------------- NAVIGATION ----------------
   const navigate = (tab: TabType) => {
-    if (tab === "userProfile") setLocation("/user-dashboard/user-profile");
+  
     if (tab === "questsTab") setLocation("/user-dashboard/quests-tab");
     if (tab === "questSubmissions") setLocation("/user-dashboard");
   };
@@ -152,7 +148,6 @@ export default function userDashboard({ onLogout }: StudioDashboardProps) {
 
           <header className="hidden md:flex h-16 border-b border-white/10 items-center px-6">
             <h2 className="text-white font-semibold">
-              {activeTab === "userProfile" && "User Profile"}
               {activeTab === "questsTab" && "Quests"}
               {activeTab === "questSubmissions" && "Dashboard"}
             </h2>
@@ -177,10 +172,6 @@ export default function userDashboard({ onLogout }: StudioDashboardProps) {
 
             {activeTab === "questsTab" && (
               <QuestsTab />
-            )}
-
-            {activeTab === "userProfile" && (
-              <UserProfile />
             )}
 
           </main>

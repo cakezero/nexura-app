@@ -182,6 +182,14 @@ export default function UserSignup() {
               )}
             </div>
 
+            {/* Disclaimer */}
+            <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-3">
+              <p className="text-[11px] text-white/70 leading-relaxed">
+                <span className="font-semibold text-purple-400">ℹ Your Nexura profile powers your hub.</span><br />
+                Your username and profile picture are pulled from your main Nexura app profile. To update them, edit your profile in the main app settings and refresh this page.
+              </p>
+            </div>
+
             {/* Email */}
             <div>
               <CardTitle className="text-white text-base">Email Address</CardTitle>
