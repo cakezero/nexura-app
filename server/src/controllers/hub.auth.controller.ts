@@ -518,7 +518,7 @@ export const userHubAdminSignUp = async (req: GlobalRequest, res: GlobalResponse
 			maxAge: 30 * 24 * 60 * 60,
 		});
 
-		res.status(CREATED).json({ message: "user hub admin created", accessToken });
+		res.status(CREATED).json({ message: "user hub admin created", accessToken, admin: { _id: superAdmin._id.toString(), name: superAdmin.name, email: superAdmin.email, role: "superadmin", hub: superAdmin.hub || null } });
 	} catch (error: any) {
 		logger.error(error);
 		const isDuplicate = error?.code === 11000;

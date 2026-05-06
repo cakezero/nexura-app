@@ -11,7 +11,6 @@ import { useToast } from "../../../hooks/use-toast";
 import { useWallet } from "../../../hooks/use-wallet";
 import { storeUserSession } from "../../../lib/userSession";
 import { userApiRequest } from "../../../lib/userApi";
-import { getStoredUserInfo } from "../../../lib/userApi";
 
 export default function UserSignup() {
   const [email, setEmail] = useState("");
@@ -32,10 +31,16 @@ export default function UserSignup() {
   const { address: walletAddress, isConnected } = useWallet();
 
   // Get username from main app's user profile (stored when user signs in to main app)
-  const mainAppUserInfo = getStoredUserInfo();
-  const mainAppUsername = (mainAppUserInfo && typeof mainAppUserInfo === 'object' && ('name' in mainAppUserInfo || 'username' in mainAppUserInfo)) 
-    ? (mainAppUserInfo.name as string) || (mainAppUserInfo.username as string) || ""
-    : "";
+  const mainAppUsername = (() => {
+    try {
+      const raw = localStorage.getItem("user_profile");
+      if (!raw) return "";
+      const profile = JSON.parse(raw) as Record<string, unknown>;
+      return (profile.name as string) || (profile.username as string) || "";
+    } catch {
+      return "";
+    }
+  })();
 
   const generatedUsername = walletAddress
     ? `${walletAddress.substring(0, 6)}...${walletAddress.substring(walletAddress.length - 4)}`
@@ -166,9 +171,13 @@ export default function UserSignup() {
                 <p className="text-[10px] text-green-400 mt-0.5">
                   ✓ Loaded from your main app profile
                 </p>
-              ) : (
+              ) : walletAddress ? (
                 <p className="text-[10px] text-white/50 mt-0.5">
-                  Username will be derived from your wallet address
+                  Using wallet-derived username
+                </p>
+              ) : (
+                <p className="text-[10px] text-red-400 mt-0.5">
+                  ⚠ Wallet not connected — return and connect your wallet
                 </p>
               )}
             </div>

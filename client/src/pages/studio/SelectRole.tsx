@@ -4,13 +4,73 @@ import React, { useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { useLocation } from "wouter";
 import AnimatedBackground from "../../components/AnimatedBackground";
+import { useWallet } from "../../hooks/use-wallet";
+import { useToast } from "../../hooks/use-toast";
+
+function getMainAppUsername(): string {
+  try {
+    const raw = localStorage.getItem("user_profile");
+    if (!raw) return "";
+    const profile = JSON.parse(raw) as Record<string, unknown>;
+    return (profile.name as string) || (profile.username as string) || "";
+  } catch {
+    return "";
+  }
+}
 
 export default function SelectRole() {
   const [activeRole, setActiveRole] = useState<"project" | "user" | null>("project");
   const [, setLocation] = useLocation();
+  const { isConnected, connectWallet } = useWallet();
+  const { toast } = useToast();
+
+  const mainAppUsername = getMainAppUsername();
+
+  const handleUserSelect = async () => {
+    if (!isConnected) {
+      toast({
+        title: "Wallet not connected",
+        description: "Please connect your wallet before creating a user hub.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!mainAppUsername) {
+      toast({
+        title: "Username required",
+        description: "You need to set a username on the main app profile first. Sign in to Nexura and update your profile.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setActiveRole("user");
+  };
 
   const handleContinue = () => {
     if (!activeRole) return;
+
+    if (activeRole === "user") {
+      if (!isConnected) {
+        toast({
+          title: "Wallet not connected",
+          description: "Please connect your wallet before continuing.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!mainAppUsername) {
+        toast({
+          title: "Username required",
+          description: "You need to set a username on the main app profile first. Sign in to Nexura and update your profile.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     if (activeRole === "project") {
       setLocation("/studio/projects/create");
     } else {
@@ -29,27 +89,19 @@ export default function SelectRole() {
         />
       </div>
 
-      {/* Header Container */}
-      <div className="w-full flex justify-center sticky top-0 z-50">
-        <header className="w-full max-w-[1354px] h-[110px] shrink-0 backdrop-blur-[125px] bg-[rgba(255,255,255,0.03)] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] flex items-center justify-between px-8 md:px-[60px]">
-          <div className="flex items-center gap-6">
-            {/* Back Button */}
-            <button
-              onClick={() => setLocation("/studio")}
-              className="inline-flex items-center justify-center p-2 rounded-full border border-white/30 bg-black/30 hover:bg-black/50 text-white transition-colors cursor-pointer"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            
-            <img src="/studio/logo.png" alt="Nexura" className="h-[33px] w-auto pointer-events-none" />
-          </div>
-          
-          <img src="/studio/user-profile.png" alt="Profile" className="size-[50px] md:size-[70px] pointer-events-none" />
-        </header>
-      </div>
-
       {/* Main Content Area */}
-      <main className="relative z-10 flex-1 flex flex-col items-center pt-[54px] pb-10 px-4 shrink-0">
+      <main className="relative z-10 flex-1 flex flex-col items-center pt-[24px] pb-10 px-4 shrink-0">
+
+        {/* Back Button */}
+        <div className="w-full flex justify-start mb-4">
+          <button
+            onClick={() => setLocation("/studio")}
+            className="inline-flex items-center gap-2 px-3 py-2 rounded-full border border-white/30 bg-black/30 hover:bg-black/50 text-white text-xs sm:text-sm"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Explore
+          </button>
+        </div>
         
         {/* ORGANIZATION TOOL Badge */}
         <div className="flex items-center gap-[15px] bg-[#370953] border-2 border-[#572082] rounded-[21px] px-[18px] py-[8px] mb-[30px] h-[35px]">
@@ -102,7 +154,7 @@ export default function SelectRole() {
             {/* User Card */}
             <button
               type="button"
-              onClick={() => setActiveRole("user")}
+              onClick={handleUserSelect}
               className={`flex-none w-full max-w-[327px] h-[236px] rounded-[25.67px] p-0 flex flex-col items-center justify-center text-center border-[2.19px] transition-all duration-200 cursor-pointer overflow-hidden relative
                 ${activeRole === "user"
                   ? "bg-[#1C0B32] border-[#A760FF]"
