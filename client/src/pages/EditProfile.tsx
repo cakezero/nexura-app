@@ -17,6 +17,7 @@ import AnimatedBackground from "../components/AnimatedBackground";
 import { discordAuthUrl } from "../lib/constants";
 import { getAuthUrl } from "../lib/generateXAuthUrl";
 import { useWallet } from "../hooks/use-wallet";
+import { lookupTNSAddress } from "../services/tns";
 
 export default function EditProfile() {
   const [, setLocation] = useLocation();
@@ -30,6 +31,7 @@ export default function EditProfile() {
   ////////////// TRUST NAME INTEGRATION
   const [activeUsernameMode, setActiveUsernameMode] = useState("custom");
   const [searchLoading, setSearchLoading] = useState(false);
+  const [tnsName, setTnsName] = useState<string | null>(null);
 
 const getFinalUsername = (name, mode) => {
   if (!name) return "";
@@ -59,6 +61,36 @@ const getFinalUsername = (name, mode) => {
       });
     }
   }, [user]);
+
+  useEffect(() => {
+  if (activeUsernameMode !== "trust") return;
+  if (!address) return;
+
+  const runLookup = async () => {
+    setSearchLoading(true);
+
+    const name = await lookupTNSAddress(address);
+
+    setTnsName(name);
+    setSearchLoading(false);
+
+    if (name) {
+      // ONLY fill if user actually owns a .trust
+      setProfileData((prev) => ({
+        ...prev,
+        username: name.replace(".trust", "")
+      }));
+    } else {
+      // CLEAR input if no .trust exists
+      setProfileData((prev) => ({
+        ...prev,
+        username: ""
+      }));
+    }
+  };
+
+  runLookup();
+}, [activeUsernameMode, address]);
 
   const handleSave = async () => {
     try {
@@ -256,20 +288,6 @@ const getFinalUsername = (name, mode) => {
                       }`}
                       onClick={() => {
   setActiveUsernameMode(mode);
-
-  if (mode === "trust") {
-    const baseName =
-      user?.displayName ||
-      user?.username ||
-      (address
-        ? `${address.slice(0, 6)}...${address.slice(-4)}`
-        : "User");
-
-    setProfileData((prev) => ({
-      ...prev,
-      username: baseName,
-    }));
-  }
 }}
                     >
                       {mode === "trust" ? ".trust" : "custom"}
@@ -279,40 +297,84 @@ const getFinalUsername = (name, mode) => {
               </div>
 
               {activeUsernameMode === "trust" ? (
-                <div className="relative">
-                  <Input
-                    id="username"
-                    value={profileData.username}
-                    disabled
-                    onChange={(e) =>
-                      setProfileData((prev) => ({
-                        ...prev,
-                        username: e.target.value
-                      }))
-                    }
-                  />
+  <div className="relative">
+    <Input
+      id="username"
+      value={profileData.username}
+      disabled
+      onChange={(e) =>
+        setProfileData((prev) => ({
+          ...prev,
+          username: e.target.value
+        }))
+      }
+    />
 
-                  {searchLoading && (
-                    <div className="absolute inset-0 flex items-center justify-center text-xs text-gray-400 bg-black/20 rounded-md">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-                        Searching...
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <Input
-                  id="username"
-                  value={profileData.username}
-                  onChange={(e) =>
-                    setProfileData((prev) => ({
-                      ...prev,
-                      username: e.target.value
-                    }))
-                  }
-                />
-              )}
+    {searchLoading && (
+      <div className="absolute inset-0 flex items-center justify-center text-xs text-gray-400 bg-black/20 rounded-md">
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+          Searching...
+        </div>
+      </div>
+    )}
+    
+    {!searchLoading && (
+  <div className="mt-2 flex items-center justify-between gap-3">
+    {tnsName ? (
+      <>
+        {/* LEFT: detected badge */}
+        <div
+          className="flex items-center gap-2 px-2 py-1 rounded-md border"
+          style={{
+            backgroundColor: "#10B98133",
+            borderColor: "#10B9814D",
+            color: "#10B981",
+          }}
+        >
+          <span className="text-xs font-medium tracking-wide">
+            TRUST NAME DETECTED
+          </span>
+        </div>
+
+        {/* RIGHT: verified + message */}
+        <div className="flex items-center gap-2 text-sm text-green-500">
+          <img
+            src="/verified.png"
+            alt="verified"
+            className="w-4 h-4"
+          />
+          <span className="text-xs sm:text-sm">
+            Verified — This username is linked to your wallet
+          </span>
+        </div>
+      </>
+    ) : (
+      <p className="text-sm text-white">
+        No .trust username found for this wallet. Get your .trust username through{" "}
+        <a
+          href="#"
+          className="text-purple-400 underline hover:text-purple-300"
+        >
+          TNS
+        </a>
+      </p>
+    )}
+  </div>
+)}
+  </div>
+) : (
+  <Input
+    id="username"
+    value={profileData.username}
+    onChange={(e) =>
+      setProfileData((prev) => ({
+        ...prev,
+        username: e.target.value
+      }))
+    }
+  />
+)}
             </div>
 
             <Separator className="my-6" />
