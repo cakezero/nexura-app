@@ -16,11 +16,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
 import AnimatedBackground from "../components/AnimatedBackground";
 import { discordAuthUrl } from "../lib/constants";
 import { getAuthUrl } from "../lib/generateXAuthUrl";
+import { useWallet } from "../hooks/use-wallet";
 
 export default function EditProfile() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
+  const { isConnected, connectWallet, address, disconnect } = useWallet();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -239,7 +241,6 @@ const getFinalUsername = (name, mode) => {
           </CardHeader>
 
           <CardContent className="space-y-4">
-            {/* YOUR EXISTING USERNAME BLOCK (UNCHANGED) */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="username">Username</Label>
@@ -254,17 +255,22 @@ const getFinalUsername = (name, mode) => {
                           : "text-white/60 hover:text-white hover:bg-white/10"
                       }`}
                       onClick={() => {
-                        setActiveUsernameMode(mode);
+  setActiveUsernameMode(mode);
 
-                        if (mode === "trust") {
-  const baseName = user?.displayName 
+  if (mode === "trust") {
+    const baseName =
+      user?.displayName ||
+      user?.username ||
+      (address
+        ? `${address.slice(0, 6)}...${address.slice(-4)}`
+        : "User");
 
-  setProfileData((prev) => ({
-    ...prev,
-    username: baseName,
-  }));
-}
-                      }}
+    setProfileData((prev) => ({
+      ...prev,
+      username: baseName,
+    }));
+  }
+}}
                     >
                       {mode === "trust" ? ".trust" : "custom"}
                     </button>
