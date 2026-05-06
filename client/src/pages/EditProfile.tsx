@@ -350,7 +350,7 @@ const getFinalUsername = (name, mode) => {
         </div>
       </>
     ) : (
-      <p className="text-sm text-white">
+      <p className="text-xs text-red">
         Oops, no .trust username was found for this address. If you want one, you can get your .trust username through{" "}
         <a
           href="https://tns.intuition.box"
