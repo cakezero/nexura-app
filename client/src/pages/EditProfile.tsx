@@ -351,7 +351,7 @@ const getFinalUsername = (name, mode) => {
       </>
     ) : (
       <p className="text-sm text-white">
-        No .trust username found for this wallet. Get your .trust username through{" "}
+        Oops, no .trust username was found for this address. If you want one, you can get your .trust username through{" "}
         <a
           href="https://tns.intuition.box"
           className="text-purple-400 underline hover:text-purple-300"
