@@ -70,7 +70,10 @@ export default function UserSidebar({ activeTab, setActiveTab, onLogout }: UserS
                   alt="User"
                   className="w-full h-full object-cover"
                   onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = "none";
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = "none";
+                    target.parentElement!.classList.add("bg-purple-500/30", "flex", "items-center", "justify-center");
+                    target.parentElement!.innerHTML += `<span class="text-purple-300 text-sm font-bold">${username.charAt(0).toUpperCase()}</span>`;
                   }}
                 />
               ) : (
@@ -134,7 +137,10 @@ export default function UserSidebar({ activeTab, setActiveTab, onLogout }: UserS
                 alt="User"
                 className="w-full h-full object-cover"
                 onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = "none";
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = "none";
+                  target.parentElement!.classList.add("bg-purple-500/30", "flex", "items-center", "justify-center");
+                  target.parentElement!.innerHTML += `<span class="text-purple-300 text-[10px] font-bold">${username.charAt(0).toUpperCase()}</span>`;
                 }}
               />
             ) : (

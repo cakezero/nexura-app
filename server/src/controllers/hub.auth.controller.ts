@@ -592,7 +592,7 @@ export const userHubAdminSignUp = async (req: GlobalRequest, res: GlobalResponse
 			maxAge: 30 * 24 * 60 * 60,
 		});
 
-		res.status(CREATED).json({ message: "user hub admin created", accessToken, admin: { _id: superAdmin._id.toString(), name: superAdmin.name, email: superAdmin.email, role: "superadmin", hub: createdHub._id.toString() } });
+		res.status(CREATED).json({ message: "user hub admin created", accessToken, admin: { _id: superAdmin._id.toString(), name: superAdmin.name, email: superAdmin.email, role: "superadmin", hub: createdHub._id.toString() }, hub: { logo: createdHub.logo || "" } });
 	} catch (error: any) {
 		logger.error(error);
 		const isDuplicate = error?.code === 11000;

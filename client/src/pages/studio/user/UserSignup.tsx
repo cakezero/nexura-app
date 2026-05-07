@@ -97,6 +97,7 @@ export default function UserSignup() {
       const res = await userApiRequest<{
         accessToken?: string;
         admin?: { _id: string; name: string; email: string; role: string; hub: string };
+        hub?: { logo?: string };
       }>({
         method: "POST",
         endpoint: "/user-hub/sign-up",
@@ -116,6 +117,7 @@ export default function UserSignup() {
           name: res.admin?.name || walletAddress,
           email: res.admin?.email || email,
           hub: res.admin?.hub,
+          avatar: res.hub?.logo || "",
         };
 
         storeUserSession(userSession);
