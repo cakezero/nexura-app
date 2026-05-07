@@ -95,7 +95,7 @@ export const validateCampaignData = (reqData: any) => {
 	const campaignSchema = z.object({
 		title: z.string().trim(),
 		description: z.string().trim(),
-		nameOfProject: z.string().trim().optional(),
+		nameOfProject: z.string().trim(),
 		starts_at: z.string().trim(),
 		ends_at: z.string().trim(),
 		reward: z.object({

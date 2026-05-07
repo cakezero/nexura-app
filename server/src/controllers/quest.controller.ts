@@ -1050,6 +1050,10 @@ export const saveQuest = async (req: GlobalRequest, res: GlobalResponse) => {
       }
     }
 
+    if (!req.body.nameOfProject) {
+      req.body.nameOfProject = hubFound.name || "";
+    }
+
     // Parse miniQuests if provided
     let miniQuestsToSave: any[] | null = null;
     if (req.body.miniQuests !== undefined) {
