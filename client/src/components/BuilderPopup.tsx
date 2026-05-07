@@ -6,7 +6,7 @@ import { useWallet } from "../hooks/use-wallet";
 import { createUserFromWallet, createProjectAccount } from "../lib/remoteDb";
 import { apiRequest } from "../lib/queryClient";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "./ui/card";
-import { KeyRound } from "lucide-react";
+import { KeyRound, AlertTriangle } from "lucide-react";
 
 export default function SignUpPopup({ mode = "user" as "user" | "project", action = "signup" as "signup" | "signin", triggerLabel, }: { mode?: "user" | "project"; action?: "signup" | "signin"; triggerLabel?: string; }) {
   const { connectWallet, address, isConnected } = useWallet();

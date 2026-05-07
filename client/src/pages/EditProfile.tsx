@@ -33,7 +33,7 @@ export default function EditProfile() {
   const [searchLoading, setSearchLoading] = useState(false);
   const [tnsName, setTnsName] = useState<string | null>(null);
 
-const getFinalUsername = (name, mode) => {
+const getFinalUsername = (name: string, mode: string) => {
   if (!name) return "";
   return mode === "trust" ? `${name}.trust` : name;
 };

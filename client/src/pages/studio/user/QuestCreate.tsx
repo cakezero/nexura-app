@@ -906,12 +906,12 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
             <button
               className="mt-4 w-full py-2.5 px-4 rounded-xl bg-[#8B3EFE] text-white text-sm font-semibold hover:opacity-90 hover:shadow-[0_0_20px_rgba(131,58,253,0.5)] hover:-translate-y-0.5 active:translate-y-0 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:translate-y-0 disabled:shadow-none"
               onClick={async () => {
-                if (!paymentTxHash.trim()) {
+                if (!paymentTxHash?.trim()) {
                   toast({ title: "Payment required", description: "Please complete the 1 $TRUST payment before publishing.", variant: "destructive" });
                   return;
                 }
                 setShowPublishModal(false);
-                await handlePublish(paymentTxHash);
+                await handlePublish();
               }}
               disabled={!paymentTxHash}
             >
