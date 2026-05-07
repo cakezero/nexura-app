@@ -160,6 +160,10 @@ const questSchema = new Schema({
     type: String,
     required: true,
     enum: ['user', 'project', 'admin'],
+  },
+  hub: {
+    type: Schema.Types.ObjectId,
+    ref: 'user-hubs',
   }
 }, { timestamps: true });
 
