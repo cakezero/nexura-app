@@ -878,7 +878,7 @@ if (error) {
   
     newQuest.creatorModel = page === "user" ? "user" : page !== "project" ? "admin" : "project";
 
-    newQuest.status = req.body.status || "Save";
+    newQuest.status = req.body.status || "Active";
 
     createdHub.questsCreated += 1;
 
@@ -1141,7 +1141,7 @@ export const saveQuest = async (req: GlobalRequest, res: GlobalResponse) => {
     }
 
     // Recalculate status atomically when dates change on a published campaign
-    if (questFound.status !== "Save") {
+    if (questFound.status !== "Save" || updateFields.status === undefined) {
       const now = new Date();
 
       const newStartsAt = updateFields.starts_at
