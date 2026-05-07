@@ -45,7 +45,7 @@ export default function QuestsTab() {
       const { apiPrefix, apiRequest } = getApiConfig();
       const res = await apiRequest<{ quests?: Quest[]; hubQuests?: Quest[] }>({
         method: "GET",
-        endpoint: `/quests`,
+        endpoint: `/${apiPrefix}/get-quests`,
       });
       setQuests(res.quests ?? res.hubQuests ?? []);
     } catch (err: any) {
