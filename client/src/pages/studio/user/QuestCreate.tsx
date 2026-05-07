@@ -153,7 +153,8 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
     if (tag === "portal") return "Portal Claims";
     if (tag === "feedback") return "Give Feedback";
     if (tag === "trust-name") return "Own a TNS";
-    return "Create a Post"; // "other" and all others default
+    if (tag === "create-post") return "Create a Post";
+    return "Others";
   };
 
   const typeToTag = (type: string) => {
@@ -161,8 +162,9 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
     if (type === "Follow on X") return "follow-x";
     if (type === "Portal Claims") return "portal";
     if (type === "Give Feedback") return "feedback";
-    if (type === "Create a Post") return "other";
+    if (type === "Create a Post") return "create-post";
     if (type === "Own a TNS") return "trust-name";
+    if (type === "Others") return "other";
     return "other";
   };
 
