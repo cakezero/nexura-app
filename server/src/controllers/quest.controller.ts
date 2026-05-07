@@ -755,7 +755,7 @@ export const submitQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 			return;
 		}
 
-		if (!userExists.socialProfiles?.x?.connected && false) {
+		if (!userExists.socialProfiles?.x?.connected) {
 			res.status(BAD_REQUEST).json({ error: "user x profile not linked" });
 			return;
     }
