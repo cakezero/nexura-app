@@ -167,7 +167,7 @@ export const quest = mongoose.model("quests", questSchema);
 const miniQuestSchema = new Schema({
 	text: {
 		type: String,
-		required: true,
+		default: ""
 	},
 	guildId: {
 		type: String
