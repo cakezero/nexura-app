@@ -1,10 +1,10 @@
 import { cn } from "../../../lib/utils";
-import { Zap, Users, LogOut } from "lucide-react";
+import { Zap, Users, LogOut, BookOpen } from "lucide-react";
 import { useLocation } from "wouter";
 import { useEffect, useState, useCallback } from "react";
 import { getStoredUserSession } from "../../../lib/userSession";
 
-type TabType = "questsTab" | "questSubmissions";
+type TabType = "questsTab" | "questSubmissions" | "lessonsTab";
 
 interface UserSidebarProps {
   activeTab: TabType;
@@ -36,11 +36,13 @@ export default function UserSidebar({ activeTab, setActiveTab, onLogout }: UserS
 
   const sidebarItems: { title: string; icon: any; id: TabType }[] = [
     { title: "Quests", icon: Users, id: "questsTab" },
+    { title: "Lessons", icon: BookOpen, id: "lessonsTab" },
     { title: "Dashboard", icon: Zap, id: "questSubmissions" },
   ];
 
   const routeByTab: Record<TabType, string> = {
     questsTab: "/user-dashboard/quests-tab",
+    lessonsTab: "/user-dashboard/lessons-tab",
     questSubmissions: "/user-dashboard",
   };
 

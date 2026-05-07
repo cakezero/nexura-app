@@ -143,6 +143,16 @@ function Router() {
           <QuestCreate />
         </UserLayout>
       </Route>
+      <Route path="/user-dashboard/lessons-tab">
+        <UserLayout title="Lessons" onLogout={handleLogout}>
+          <Lessons />
+        </UserLayout>
+      </Route>
+      <Route path="/user-dashboard/create-lesson">
+        <UserLayout title="Create Lesson" onLogout={handleLogout}>
+          <LessonCreate />
+        </UserLayout>
+      </Route>
       <Route path="/studio/projects/create" component={ProjectCreate} />
       <Route path="/projects/create/create-hub" component={CreateHub} />
       <Route path="/projects/create/signin-to-hub" component={SignInToHub} />

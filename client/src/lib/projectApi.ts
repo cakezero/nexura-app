@@ -7,7 +7,7 @@ function getApiUrl(path: string) {
   return `${PROJECT_API_URL}/api${path}`;
 }
 
-import { getStoredUserToken, clearUserSession } from "./userSession";
+import { getStoredUserToken, clearUserSession, getStoredUserSession } from "./userSession";
 
 export function getStoredProjectToken(): string | null {
   try {
@@ -85,14 +85,21 @@ export const projectApiRequest = async <T = unknown>({
   formData?: FormData;
   params?: Record<string, string>;
 }): Promise<T> => {
-  const token = getStoredProjectToken();
+  const userSession = getStoredUserSession();
+  const isUser = userSession?.type === "user";
+
+  const token = isUser ? (getStoredUserToken() ?? getStoredProjectToken()) : getStoredProjectToken();
+
+  let adjustedEndpoint = endpoint;
+  if (isUser && adjustedEndpoint.includes("/hub/")) {
+    adjustedEndpoint = adjustedEndpoint.replace("/hub/", "/user-hub/");
+  }
 
   const headers: Record<string, string> = {};
   if (token) headers["Authorization"] = `Bearer ${token}`;
-  // Do NOT set Content-Type for FormData – the browser sets the correct boundary.
   if (!formData) headers["Content-Type"] = "application/json";
 
-  let url = getApiUrl(endpoint);
+  let url = getApiUrl(adjustedEndpoint);
   if (params && Object.keys(params).length > 0) {
     url += `?${new URLSearchParams(params).toString()}`;
   }

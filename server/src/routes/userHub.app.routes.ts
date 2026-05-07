@@ -12,6 +12,12 @@ import {
   deleteMiniLesson,
   updateLesson,
   updateMiniLesson,
+  createVideoLesson,
+  updateVideoLesson,
+  deleteVideoLesson,
+  reorderLessonContent,
+  getLessonDetailsForAdmin,
+  getHubLessons,
 } from "@/controllers/lesson.controller";
 import {
   createQuest,
@@ -43,6 +49,12 @@ router
   .post("/create-question", createQuestion)
   .patch("/update-question", updateQuestion)
   .delete("/delete-question", deleteQuestion)
+  .get("/get-lessons", getHubLessons)
+  .get("/get-lesson-details", getLessonDetailsForAdmin)
+  .post("/create-video-lesson", createVideoLesson)
+  .patch("/update-video-lesson", updateVideoLesson)
+  .delete("/delete-video-lesson", deleteVideoLesson)
+  .patch("/reorder-lesson-content", reorderLessonContent)
   .patch("/update-profile", upload.single("logo"), updateUserHub)
   .delete("/delete-profile", deleteUserHub)
   .post("/create-quest", upload.single("coverImage"), createQuest)

@@ -8,7 +8,7 @@ import { getStoredUserSession, storeUserSession } from "../../../lib/userSession
 import { projectApiRequest } from "../../../lib/projectApi";
 import { userApiRequest } from "../../../lib/userApi";
 
-type TabType = "questSubmissions" | "questsTab";
+type TabType = "questSubmissions" | "questsTab" | "lessonsTab";
 
 interface UserLayoutProps {
   children: React.ReactNode;
@@ -29,6 +29,7 @@ export default function UserLayout({
 
   const deriveTab = (): TabType => {
     if (location.includes("quests-tab") || location.includes("create-new-quest")) return "questsTab";
+    if (location.includes("lessons-tab") || location.includes("create-lesson")) return "lessonsTab";
     if (location.includes("dashboard")) return "questSubmissions";
     return "questsTab";
   };
