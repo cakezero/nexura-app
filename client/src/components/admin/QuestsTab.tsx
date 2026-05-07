@@ -95,7 +95,7 @@ const tabs = [
       const { apiPrefix, apiRequest } = getApiConfig();
       await apiRequest({
         method: "DELETE",
-        endpoint: `${apiPrefix}/delete-quest`,
+        endpoint: `/${apiPrefix}/delete-quest`,
         params: { id: pendingAction.id },
       });
       setQuests((prev) => prev.filter((q) => q._id !== pendingAction.id));
