@@ -23,7 +23,8 @@ const ecosystemQuestSchema = new Schema({
 	},
 	category: {
 		type: String,
-		required: true,
+		required: false,
+		default: "quests",
 		enum: [
 			"defi",
 			"lending protocols",
