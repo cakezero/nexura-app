@@ -544,7 +544,7 @@ export const validateCampaignSubmissions = async (req: GlobalRequest, res: Globa
 
     let model;
 
-    if (userSubmission.page === "quest") {
+    if (userSubmission.page === "quest" || userSubmission.page === "user") {
       model = await miniQuestCompleted.findOne({ _id: userSubmission.questCompleted, status: { $in: ["pending", "retry"] } });
       if (!model) {
         res.status(NOT_FOUND).json({ error: "mini quest already completed or id is invalid" });
