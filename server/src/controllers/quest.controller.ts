@@ -878,7 +878,7 @@ if (error) {
   
     newQuest.creatorModel = page === "user" ? "user" : page !== "project" ? "admin" : "project";
 
-    newQuest.status = "Active";
+    newQuest.status = req.body.status || "Save";
 
     createdHub.questsCreated += 1;
 
@@ -907,7 +907,7 @@ if (error) {
 		await newQuest.save();
 		await createdHub.save();
   
-		res.status(CREATED).json({ message: "quest created!" });
+		res.status(CREATED).json({ message: "quest created!", questId: newQuest._id });
   } catch(error) {
     logger.error(error);
     res.status(INTERNAL_SERVER_ERROR).json({ error: "error creating quest" });
