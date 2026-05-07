@@ -871,6 +871,10 @@ if (error) {
       requestData.reward = Number((requestData as any).xp);
     }
 
+    if (!(requestData as any).sub_title) {
+      (requestData as any).sub_title = requestData.description || createdHub.description || "";
+    }
+
 		const newQuest = new quest(requestData);
 
     newQuest.creator = createdHub._id;
@@ -1094,7 +1098,7 @@ export const saveQuest = async (req: GlobalRequest, res: GlobalResponse) => {
         ...req.body,
         project_image: hubFound.logo ?? "pending",
         project_name: hubFound.name ?? req.body.nameOfProject ?? "",
-        sub_title: req.body.description ?? "",
+        sub_title: req.body.description || hubFound.description || "",
         questNumber: questCount + 1,
         projectCoverImage: req.body.coverImage ?? "pending",
         creator: req.admin.hub,
