@@ -22,7 +22,7 @@ export default function UserSidebar({ activeTab, setActiveTab, onLogout }: UserS
       const session = getStoredUserSession();
       if (session) {
         setUsername(session.username || session.name || "@user");
-        setUserAvatar(session.avatar || "/default-avatar.png");
+        setUserAvatar(session.avatar || "");
       }
     } catch {}
   }, []);
@@ -64,14 +64,20 @@ export default function UserSidebar({ activeTab, setActiveTab, onLogout }: UserS
         <div className="p-4 border-b border-white/10">
           <div className="flex items-center gap-3 border-2 border-purple-500 rounded-2xl px-3 py-2">
             <div className="w-10 h-10 rounded-2xl overflow-hidden flex-shrink-0">
-              <img
-                src={userAvatar}
-                alt="User"
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = "/default-avatar.png";
-                }}
-              />
+              {userAvatar ? (
+                <img
+                  src={userAvatar}
+                  alt="User"
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = "none";
+                  }}
+                />
+              ) : (
+                <div className="w-full h-full bg-purple-500/30 flex items-center justify-center text-purple-300 text-sm font-bold">
+                  {username.charAt(0).toUpperCase()}
+                </div>
+              )}
             </div>
             <div className="flex flex-col min-w-0">
               <span className="text-white/60 text-xs">User</span>
@@ -122,14 +128,20 @@ export default function UserSidebar({ activeTab, setActiveTab, onLogout }: UserS
 
         <div className="flex items-center gap-2 border border-purple-500 rounded-xl px-2 py-1 max-w-[55%] min-w-0">
           <div className="w-6 h-6 rounded-lg overflow-hidden flex-shrink-0">
-            <img
-              src={userAvatar}
-              alt="User"
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = "/default-avatar.png";
-              }}
-            />
+            {userAvatar ? (
+              <img
+                src={userAvatar}
+                alt="User"
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = "none";
+                }}
+              />
+            ) : (
+              <div className="w-full h-full bg-purple-500/30 flex items-center justify-center text-purple-300 text-[10px] font-bold">
+                {username.charAt(0).toUpperCase()}
+              </div>
+            )}
           </div>
           <span className="text-white text-xs font-semibold truncate">{username}</span>
         </div>

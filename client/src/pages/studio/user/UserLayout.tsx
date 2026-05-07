@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useLocation } from "wouter";
 import { Bell } from "lucide-react";
 import { Button } from "../../../components/ui/button";
@@ -73,7 +73,7 @@ export default function UserLayout({
         }
       })();
     }
-  }, [apiPrefix, user?.token]);
+  }, [user?.token]);
 
   const handleLogout = () => {
     onLogout?.();
