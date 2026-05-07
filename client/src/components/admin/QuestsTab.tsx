@@ -27,7 +27,7 @@ type PendingAction = { type: "delete" | "close"; id: string; title: string } | n
 function getApiConfig() {
   const session = getStoredUserSession();
   return {
-    apiPrefix: session?.type === "user" ? "/user-hub" : "/hub",
+    apiPrefix: session?.type === "user" ? "user-hub" : "hub",
     apiRequest: session?.type === "user" ? userApiRequest : projectApiRequest,
   };
 }
