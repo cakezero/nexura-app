@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
-import { Bell, Menu, X } from "lucide-react";
+import { Bell } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import AnimatedBackground from "../../../components/AnimatedBackground";
 import UserSidebar from "./userSidebar";
@@ -22,7 +22,6 @@ export default function UserLayout({
   onLogout,
 }: UserLayoutProps) {
   const [location, setLocation] = useLocation();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const user = getStoredUserSession();
   const apiPrefix = user?.type === "user" ? "/user-hub" : "/hub";
@@ -89,58 +88,16 @@ export default function UserLayout({
       </div>
 
       <div className="relative z-10 flex h-screen flex-col md:flex-row">
-        {/* Mobile overlay backdrop */}
-        {sidebarOpen && (
-          <div
-            className="fixed inset-0 bg-black/60 z-40 md:hidden"
-            onClick={() => setSidebarOpen(false)}
-          />
-        )}
-
-        {/* Sidebar — fixed overlay on mobile, static on desktop */}
-        <div
-          className={`
-            fixed inset-y-0 left-0 z-50 transform transition-transform duration-300 ease-in-out
-            md:relative md:translate-x-0 md:z-10
-            ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
-          `}
-        >
-          <UserSidebar
-            activeTab={activeTab}
-            onLogout={() => { handleLogout(); setSidebarOpen(false); }}
-            onNavigate={() => setSidebarOpen(false)}
-          />
-        </div>
+        <UserSidebar activeTab={activeTab} setActiveTab={setActiveTab} onLogout={onLogout} />
 
         {/* MAIN CONTENT */}
         <div className="flex-1 flex flex-col overflow-hidden">
           <AnimatedBackground />
 
-          {/* Mobile header */}
-          <header className="flex md:hidden h-14 border-b border-white/10 items-center justify-between px-4 backdrop-blur-sm bg-black/30">
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="text-white/80 hover:text-white p-1"
-            >
-              <Menu className="w-5 h-5" />
-            </button>
-            <h2 className="text-sm font-semibold text-white truncate mx-2">{title}</h2>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleLogout}
-              className="text-white/70 hover:text-white hover:text-red-400 text-xs"
-            >
-              Logout
-            </Button>
-          </header>
-
           {/* Desktop header */}
           <header className="hidden md:flex h-16 border-b border-white/10 items-center justify-between px-6 backdrop-blur-sm bg-black/30">
             <div className="flex items-center gap-4 flex-1">
-              <h2 className="text-lg font-semibold text-white whitespace-nowrap min-w-[200px]">
-                {title}
-              </h2>
+              <h2 className="text-lg font-semibold text-white whitespace-nowrap min-w-[200px]">{title}</h2>
             </div>
             <div className="flex items-center gap-4">
               <Button variant="ghost" size="icon" className="text-white/70 hover:text-white hover:bg-white/5">
@@ -158,8 +115,8 @@ export default function UserLayout({
             </div>
           </header>
 
-          {/* CONTENT AREA */}
-          <main className="flex-1 overflow-y-auto pt-4 pb-8 px-4 md:pt-8 md:pb-8 md:px-8 relative bg-black/20">
+          {/* CONTENT AREA — padded for mobile top bar + bottom nav */}
+          <main className="flex-1 overflow-y-auto pt-14 pb-20 px-4 md:pt-8 md:pb-8 md:px-8 relative bg-black/20">
             <div className="max-w-7xl mx-auto">{children}</div>
           </main>
         </div>

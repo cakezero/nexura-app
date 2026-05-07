@@ -1,5 +1,5 @@
 import { cn } from "../../../lib/utils";
-import { Users, Zap, LogOut } from "lucide-react";
+import { Zap, Users, LogOut } from "lucide-react";
 import { useLocation } from "wouter";
 import { useEffect, useState, useCallback } from "react";
 import { getStoredUserSession } from "../../../lib/userSession";
@@ -8,11 +8,11 @@ type TabType = "questsTab" | "questSubmissions";
 
 interface UserSidebarProps {
   activeTab: TabType;
+  setActiveTab: (tab: TabType) => void;
   onLogout?: () => void;
-  onNavigate?: () => void;
 }
 
-export default function UserSidebar({ activeTab, onLogout, onNavigate }: UserSidebarProps) {
+export default function UserSidebar({ activeTab, setActiveTab, onLogout }: UserSidebarProps) {
   const [, setLocation] = useLocation();
   const [userAvatar, setUserAvatar] = useState("/default-avatar.png");
   const [username, setUsername] = useState("@user");
@@ -44,65 +44,128 @@ export default function UserSidebar({ activeTab, onLogout, onNavigate }: UserSid
     questSubmissions: "/user-dashboard",
   };
 
-  return (
-    <aside className="w-60 h-full flex flex-col bg-black/60 backdrop-blur-md border-r border-white/10">
-      {/* Logo / Brand */}
-      <div className="flex items-center h-16 border-b border-white/10 px-4">
-        <div className="w-8 h-8 rounded-lg bg-[#8B3EFE] flex items-center justify-center text-white font-bold text-sm">
-          N
-        </div>
-        <span className="ml-3 text-white font-semibold text-sm">Nexura</span>
-      </div>
+  const navigate = (id: TabType) => {
+    setActiveTab(id);
+    setLocation(routeByTab[id]);
+  };
 
-      {/* Nav Items */}
-      <nav className="flex-1 py-4 space-y-1 px-3 overflow-y-auto">
-        {sidebarItems.map((item) => {
-          const isActive = activeTab === item.id;
-          return (
+  return (
+    <>
+      {/* ── Desktop sidebar ── */}
+      <div className="w-[16rem] border-r border-white/10 hidden md:flex flex-col z-20">
+        {/* Logo */}
+        <div className="p-5 border-b border-white/10">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-[#8B3EFE] flex items-center justify-center text-white font-bold text-sm">
+              N
+            </div>
+            <span className="text-white font-semibold text-sm">Nexura</span>
+          </div>
+        </div>
+
+        {/* User profile pill */}
+        <div className="p-4 border-b border-white/10">
+          <div className="flex items-center gap-3 border-2 border-purple-500 rounded-2xl px-3 py-2">
+            <div className="w-10 h-10 rounded-2xl overflow-hidden flex-shrink-0">
+              <img
+                src={userAvatar}
+                alt="User"
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = "/default-avatar.png";
+                }}
+              />
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="text-white/60 text-xs">User</span>
+              <span className="text-white font-semibold text-sm truncate">{username}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Navigation tabs */}
+        <nav className="flex-1 py-4 px-2 space-y-1">
+          {sidebarItems.map((item) => (
             <button
               key={item.id}
-              onClick={() => {
-                setLocation(routeByTab[item.id]);
-                onNavigate?.();
-              }}
+              onClick={() => navigate(item.id)}
               className={cn(
-                "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors",
-                isActive
-                  ? "bg-[#8B3EFE] text-white"
-                  : "text-white/60 hover:text-white hover:bg-white/10"
+                "w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 group",
+                activeTab === item.id
+                  ? "text-[#8B3EFE] bg-white/5"
+                  : "text-white hover:bg-purple-600/20 hover:text-purple-300"
               )}
             >
-              <item.icon className="w-5 h-5" />
-              <span>{item.title}</span>
+              <item.icon
+                className={cn(
+                  "w-5 h-5 transition-colors",
+                  activeTab === item.id ? "text-[#8B3EFE]" : "text-white group-hover:text-purple-300"
+                )}
+              />
+              {item.title}
             </button>
-          );
-        })}
-      </nav>
+          ))}
+        </nav>
 
-      {/* User Profile Section */}
-      <div className="border-t border-white/10 p-4">
-        <div className="flex items-center gap-3">
-          <img
-            src={userAvatar}
-            alt={username}
-            className="w-9 h-9 rounded-full object-cover flex-shrink-0"
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = "/default-avatar.png";
-            }}
-          />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm text-white font-medium truncate">{username}</p>
-          </div>
-          {onLogout && (
-            <button
-              onClick={onLogout}
-              className="text-white/50 hover:text-red-400 transition-colors flex-shrink-0"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
-          )}
+        {/* Logout */}
+        <div className="p-4 border-t border-white/10">
+          <button
+            onClick={onLogout}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-red-400 hover:bg-red-400/10 transition-all duration-200"
+          >
+            <LogOut className="w-5 h-5" />
+            <span>Logout</span>
+          </button>
         </div>
       </div>
-    </aside>
+
+      {/* ── Mobile top bar ── */}
+      <div className="md:hidden fixed top-0 left-0 right-0 z-30 flex items-center justify-between px-4 py-3 bg-black/80 backdrop-blur-xl border-b border-white/10">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-[#8B3EFE] flex items-center justify-center text-white font-bold text-xs">
+            N
+          </div>
+          <span className="text-white font-semibold text-sm">Nexura</span>
+        </div>
+
+        <div className="flex items-center gap-2 border border-purple-500 rounded-xl px-2 py-1 max-w-[55%] min-w-0">
+          <div className="w-6 h-6 rounded-lg overflow-hidden flex-shrink-0">
+            <img
+              src={userAvatar}
+              alt="User"
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = "/default-avatar.png";
+              }}
+            />
+          </div>
+          <span className="text-white text-xs font-semibold truncate">{username}</span>
+        </div>
+      </div>
+
+      {/* ── Mobile bottom nav bar ── */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 flex bg-black/90 backdrop-blur-xl border-t border-white/10">
+        {sidebarItems.map((item) => (
+          <button
+            key={item.id}
+            onClick={() => navigate(item.id)}
+            className={cn(
+              "flex-1 flex flex-col items-center justify-center gap-1 py-3 text-[10px] font-medium transition-colors",
+              activeTab === item.id ? "text-[#8B3EFE]" : "text-white hover:text-purple-300"
+            )}
+          >
+            <item.icon className="w-5 h-5" />
+            <span>{item.title}</span>
+          </button>
+        ))}
+        <button
+          onClick={onLogout}
+          className="flex-1 flex flex-col items-center justify-center gap-1 py-3 text-[10px] font-medium text-red-400/50"
+        >
+          <LogOut className="w-5 h-5" />
+          <span>Logout</span>
+        </button>
+      </nav>
+    </>
   );
 }
