@@ -65,7 +65,7 @@ export default function UsersHub() {
 
       toast({ title: "Hub created!", description: "Your user hub has been created successfully." });
 
-      setLocation("/user-dashboard/user-profile");
+      setLocation("/user-dashboard/quests-tab");
     } catch (err: any) {
       toast({ title: "Creation failed", description: err.message, variant: "destructive" });
     } finally {
