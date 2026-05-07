@@ -63,6 +63,8 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
   });
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [error, setError] = useState("");
+  const [urlError, setUrlError] = useState("");
+  const [descError, setDescError] = useState("");
 
   const [questName, setQuestName] = useState("");
   const [questDescription, setQuestDescription] = useState("");
@@ -256,16 +258,20 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
 
   const handleSaveTask = () => {
     if (!newTask.type || !newTask.description) {
-      setError("Type and description are required.");
+      setDescError("Task description is required.");
       return;
     }
 
     // Validate URL for Twitter/X tasks
-    if (newTask.type === "Comment on X" || newTask.type === "Follow on X" || newTask.type === "Create a Post") {
+    if (newTask.type === "Comment on X" || newTask.type === "Follow on X") {
+      if (!newTask.handleOrUrl) {
+        setUrlError("URL is required for this task type.");
+        return;
+      }
       if (newTask.handleOrUrl) {
         const twitterRegex = /^(https?:\/\/)?(www\.)?(x\.com|twitter\.com)\/.+/i;
         if (!twitterRegex.test(newTask.handleOrUrl)) {
-          setError("For Twitter/X tasks, only x.com or twitter.com URLs are allowed.");
+          setUrlError("Only x.com or twitter.com URLs are allowed.");
           return;
         }
       }
@@ -293,7 +299,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
       roleId: "",
       channelId: "",
     });
-    setError("");
+    setUrlError(""); setDescError("");
   };
 
   return (
@@ -733,19 +739,19 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                   <input
                     type="text"
                     placeholder={
-                      newTask.platform === "Twitter" || ["Comment on X", "Follow on X", "Create a Post"].includes(newTask.type)
+                      newTask.type === "Comment on X" || newTask.type === "Follow on X"
                         ? "Enter URL (x.com or twitter.com)"
-                        : "Enter Twitter/X handle or URL (x.com or twitter.com)"
+                        : "Enter URL or handle"
                     }
                     value={newTask.handleOrUrl}
                     onChange={(e) => {
-                      setError("");
+                      setUrlError(""); setDescError("");
                       setNewTask({ ...newTask, handleOrUrl: e.target.value });
                     }}
                     className={`w-full p-2 rounded-lg bg-white/5 text-white border ${error ? 'border-red-500' : 'border-white/10'} focus:outline-none focus:border-purple-500`}
                   />
                   {error && (newTask.type === "Comment on X" || newTask.type === "Follow on X" || newTask.type === "Create a Post") && (
-                    <p className="text-red-400 text-xs mt-1">{error}</p>
+                    <p className="text-red-400 text-xs mt-1">{urlError}</p>
                   )}
                 </div>
               )}
@@ -823,7 +829,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                 </div>
               )}
 
-              {error && <p className="text-red-400 text-sm mt-3">{error}</p>}
+              {descError && <p className="text-red-400 text-sm mt-1">{descError}</p>}
             </div>
 
             {/* Submit Button */}
