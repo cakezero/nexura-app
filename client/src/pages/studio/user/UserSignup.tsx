@@ -125,7 +125,7 @@ export default function UserSignup() {
           description: "Welcome to Nexura Studio.",
         });
 
-        setLocation("/studio/users-hub");
+        setLocation("/user-dashboard/quests-tab");
       } else {
         throw new Error("Signup failed - no token received");
       }

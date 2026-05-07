@@ -1296,7 +1296,7 @@ export const getHubQuests = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
     const hubId = (req as any).hubId || (req as any).admin?.hub;
     if (!hubId) {
-      res.status(OK).json({ message: "No hub yet", quests: [] });
+      res.status(BAD_REQUEST).json({ error: "No hub associated with this admin" });
       return;
     }
     const quests = await quest.find({ hub: hubId, status: { $ne: "Deleted" } }).sort({ createdAt: -1 }).lean();

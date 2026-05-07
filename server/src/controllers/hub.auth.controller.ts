@@ -19,7 +19,7 @@ import {
 	DISCORD_CLIENT_SECRET,
 	BOT_TOKEN,
 } from "@/utils/env.utils";
-import { hubAdmin, hub, userHubAdmin } from "@/models/hub.model";
+import { hubAdmin, hub, userHubAdmin, userHub } from "@/models/hub.model";
 import bcrypt from "bcrypt";
 import axios from "axios";
 import { resetEmail, resetPasswordOTPEmail } from "@/utils/sendMail";
@@ -71,7 +71,7 @@ export const signIn = async (req: GlobalRequest, res: GlobalResponse) => {
 				name: adminExists.name,
 				email: adminExists.email,
 				role: adminExists.role,
-				hub: adminExists.hub,
+				hub: hubId,
 			},
 		});
 	} catch (error) {
@@ -406,7 +406,7 @@ export const resetPassword = async (req: GlobalRequest, res: GlobalResponse) => 
 				name: adminExists.name,
 				email: adminExists.email,
 				role: adminExists.role,
-				hub: adminExists.hub,
+				hub: hubId,
 			},
 		});
 	} catch (error) {
@@ -456,6 +456,21 @@ export const userHubSignIn = async (req: GlobalRequest, res: GlobalResponse) => 
 		}
 
 		const id = adminExists._id.toString();
+
+    // Auto-create hub if admin has none
+    let hubId = adminExists.hub;
+    if (!hubId) {
+      const createdHub = await userHub.create({
+        name: adminExists.name,
+        description: "",
+        website: "",
+        xAccount: "",
+        logo: "",
+        superAdmin: adminExists._id,
+      });
+      hubId = createdHub._id;
+      await userHubAdmin.findByIdAndUpdate(adminExists._id, { hub: hubId });
+    }
 
 		const accessToken = JWT.sign(id);
 		const refreshToken = getRefreshToken(id);
@@ -509,6 +524,19 @@ export const userHubAdminSignUp = async (req: GlobalRequest, res: GlobalResponse
       password: hashedPassword,
     });
 
+    // Create a hub for the new admin immediately
+    const createdHub = await userHub.create({
+      name: name.trim(),
+      description: "",
+      website: "",
+      xAccount: "",
+      logo: "",
+      superAdmin: superAdmin._id,
+    });
+
+    // Link the hub to the admin
+    await userHubAdmin.findByIdAndUpdate(superAdmin._id, { hub: createdHub._id });
+
 		const accessToken = JWT.sign(superAdmin._id.toString());
 		const refreshToken = getRefreshToken(superAdmin._id.toString());
 
@@ -518,7 +546,7 @@ export const userHubAdminSignUp = async (req: GlobalRequest, res: GlobalResponse
 			maxAge: 30 * 24 * 60 * 60,
 		});
 
-		res.status(CREATED).json({ message: "user hub admin created", accessToken, admin: { _id: superAdmin._id.toString(), name: superAdmin.name, email: superAdmin.email, role: "superadmin", hub: superAdmin.hub || null } });
+		res.status(CREATED).json({ message: "user hub admin created", accessToken, admin: { _id: superAdmin._id.toString(), name: superAdmin.name, email: superAdmin.email, role: "superadmin", hub: createdHub._id.toString() } });
 	} catch (error: any) {
 		logger.error(error);
 		const isDuplicate = error?.code === 11000;
