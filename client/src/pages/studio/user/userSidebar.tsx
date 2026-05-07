@@ -1,7 +1,6 @@
 import { cn } from "../../../lib/utils";
 import { Users, Zap, LogOut } from "lucide-react";
 import { useLocation } from "wouter";
-import AnimatedBackground from "../../../components/AnimatedBackground";
 import { useEffect, useState, useCallback } from "react";
 import { getStoredUserSession } from "../../../lib/userSession";
 
@@ -20,11 +19,10 @@ export default function UserSidebar({ activeTab, onLogout }: UserSidebarProps) {
 
   const syncUser = useCallback(() => {
     try {
-      const raw = localStorage.getItem("user_profile");
-      if (raw) {
-        const profile = JSON.parse(raw) as Record<string, unknown>;
-        setUsername((profile.name as string) || (profile.username as string) || "@user");
-        setUserAvatar((profile.profilePic as string) || "/default-avatar.png");
+      const session = getStoredUserSession();
+      if (session) {
+        setUsername(session.username || session.name || "@user");
+        setUserAvatar(session.avatar || "/default-avatar.png");
       }
     } catch {}
   }, []);
@@ -50,96 +48,64 @@ export default function UserSidebar({ activeTab, onLogout }: UserSidebarProps) {
     questSubmissions: "/user-dashboard",
   };
 
-  const navigate = (id: TabType) => {
-    setLocation(routeByTab[id]);
-  };
-
   return (
-    <>
-      <div className="w-[16rem] border-r border-white/10 hidden md:flex flex-col z-20">
-        <div className="p-6 border-b border-white/10 relative">
-          <AnimatedBackground className="absolute inset-0 z-0" />
-
-          <div className="flex items-center mb-4 relative z-10">
-            <img src="/nexura-logo.png" alt="Nexura" className="w-40 h-auto" />
-          </div>
-
-          <button className="flex items-center gap-3 border-2 border-purple-500 rounded-2xl px-3 py-2 relative z-10 w-full min-w-0 hover:bg-white/5 transition-colors text-left">
-            <div className="w-10 h-10 rounded-2xl overflow-hidden flex-shrink-0">
-              <img
-                src={userAvatar}
-                alt="User Avatar"
-                className="w-full h-full object-cover"
-              />
-            </div>
-
-            <div className="flex flex-col min-w-0">
-              <span className="text-white/60 text-xs">User</span>
-              <span className="text-white font-semibold text-sm truncate">
-                {username}
-              </span>
-            </div>
-          </button>
+    <aside className="w-16 md:w-60 flex flex-col bg-black/40 border-r border-white/10 backdrop-blur-md">
+      {/* Logo / Brand */}
+      <div className="flex items-center justify-center md:justify-start h-16 border-b border-white/10 px-4">
+        <div className="w-8 h-8 rounded-lg bg-[#8B3EFE] flex items-center justify-center text-white font-bold text-sm">
+          N
         </div>
+        <span className="hidden md:block ml-3 text-white font-semibold text-sm">
+          Nexura
+        </span>
+      </div>
 
-        <nav className="flex-1 py-4 px-2 space-y-1">
-          {sidebarItems.map((item) => (
+      {/* Nav Items */}
+      <nav className="flex-1 py-4 space-y-1 px-2 overflow-y-auto">
+        {sidebarItems.map((item) => {
+          const isActive = activeTab === item.id;
+          return (
             <button
               key={item.id}
-              onClick={() => navigate(item.id)}
+              onClick={() => setLocation(routeByTab[item.id])}
               className={cn(
-                "w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all",
-                activeTab === item.id
-                  ? "text-[#9a58ff] bg-white/5"
-                  : "text-white hover:bg-purple-600/20"
+                "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors",
+                isActive
+                  ? "bg-[#8B3EFE] text-white"
+                  : "text-white/60 hover:text-white hover:bg-white/10"
               )}
             >
               <item.icon className="w-5 h-5" />
-              {item.title}
+              <span className="hidden md:block">{item.title}</span>
             </button>
-          ))}
-        </nav>
-
-        {/* LOGOUT BUTTON */}
-        <div className="p-4 border-t border-white/10">
-          <button
-            onClick={onLogout}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-red-400 hover:bg-red-400/10 transition-all"
-          >
-            <LogOut className="w-5 h-5" />
-            <span>Logout</span>
-          </button>
-        </div>
-      </div>
-
-      <div className="md:hidden fixed top-0 left-0 right-0 z-30 flex items-center justify-between px-4 py-3 bg-black/80 backdrop-blur-xl border-b border-white/10">
-        <img src="/nexura-logo.png" alt="Nexura" className="h-7 w-auto" />
-
-        <div className="flex items-center gap-2 border border-purple-500 rounded-xl px-2 py-1 max-w-[55%] min-w-0">
-          <div className="w-6 h-6 rounded-lg overflow-hidden flex-shrink-0">
-            <img src={userAvatar} alt="User" className="w-full h-full object-cover" />
-          </div>
-          <span className="text-white text-xs font-semibold truncate">
-            {username}
-          </span>
-        </div>
-      </div>
-
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 flex bg-black/90 backdrop-blur-xl border-t border-white/10">
-        {sidebarItems.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => navigate(item.id)}
-            className={cn(
-              "flex-1 flex flex-col items-center justify-center gap-1 py-3 text-[10px] font-medium",
-              activeTab === item.id ? "text-[#9a58ff]" : "text-white"
-            )}
-          >
-            <item.icon className="w-5 h-5" />
-            <span>{item.title}</span>
-          </button>
-        ))}
+          );
+        })}
       </nav>
-    </>
+
+      {/* User Profile Section */}
+      <div className="border-t border-white/10 p-4">
+        <div className="flex items-center gap-3">
+          <img
+            src={userAvatar}
+            alt={username}
+            className="w-8 h-8 rounded-full object-cover"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = "/default-avatar.png";
+            }}
+          />
+          <div className="hidden md:block flex-1 min-w-0">
+            <p className="text-sm text-white font-medium truncate">{username}</p>
+          </div>
+          {onLogout && (
+            <button
+              onClick={onLogout}
+              className="text-white/50 hover:text-red-400 transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      </div>
+    </aside>
   );
 }

@@ -1,32 +1,50 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import AnimatedBackground from "../../../components/AnimatedBackground";
 import { CardTitle } from "../../../components/ui/card";
+import { ArrowLeft, AlertTriangle, Loader2 } from "lucide-react";
 import { useLocation } from "wouter";
 import { userApiRequest } from "../../../lib/userApi";
 import { useToast } from "../../../hooks/use-toast";
-
-function getUserProfile() {
-  try {
-    const raw = localStorage.getItem("user_profile");
-    if (!raw) return { name: "", avatar: "" };
-    const profile = JSON.parse(raw) as Record<string, unknown>;
-    return {
-      name: (profile.name as string) || (profile.username as string) || "",
-      avatar: (profile.profilePic as string) || "",
-    };
-  } catch {
-    return { name: "", avatar: "" };
-  }
-}
+import { useWallet } from "../../../hooks/use-wallet";
 
 export default function UsersHub() {
   const [loading, setLoading] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [name, setName] = useState("");
+  const [avatar, setAvatar] = useState("");
+  const [profileError, setProfileError] = useState("");
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { address } = useWallet();
 
-  const { name, avatar } = getUserProfile();
+  useEffect(() => {
+    if (!address) {
+      setProfileLoading(false);
+      setProfileError("Connect your wallet to continue.");
+      return;
+    }
+
+    fetch(`${import.meta.env.VITE_API_URL}/api/user-hub/profile-by-wallet?address=${address}`)
+      .then((res) => {
+        if (!res.ok) throw new Error("No user found");
+        return res.json();
+      })
+      .then((data: { username: string; profilePic: string }) => {
+        setName(data.username || "");
+        setAvatar(data.profilePic || "");
+        if (!data.username || !data.profilePic) {
+          setProfileError("You need a username and profile picture on the main app before creating your hub.");
+        }
+      })
+      .catch(() => {
+        setProfileError("No Nexura profile found for this wallet. Sign in to the main app and set up your profile first.");
+      })
+      .finally(() => setProfileLoading(false));
+  }, [address]);
+
+  const canCreate = name && avatar && !profileError;
 
   const handleSubmit = async () => {
     setLoading(true);
@@ -56,11 +74,27 @@ export default function UsersHub() {
     <div className="min-h-screen bg-black text-white p-4 sm:p-6 relative">
       <AnimatedBackground />
 
+      {/* Back Button */}
+      <div className="w-full flex justify-start mb-4">
+        <button
+          onClick={() => setLocation("/studio/select-role")}
+          className="inline-flex items-center gap-2 px-3 py-2 rounded-full border border-white/30 bg-black/30 hover:bg-black/50 text-white text-xs sm:text-sm"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          Back to Studio
+        </button>
+      </div>
+
       <div className="max-w-xl mx-auto relative z-10 space-y-6 bg-white/[0.03] border border-[#A760FF] rounded-2xl p-6 text-center">
 
         <CardTitle className="text-lg">Create User Hub</CardTitle>
 
-        {avatar ? (
+        {profileLoading ? (
+          <div className="flex flex-col items-center justify-center py-8 gap-3">
+            <Loader2 className="w-6 h-6 text-purple-400 animate-spin" />
+            <p className="text-white/50 text-sm">Fetching your profile...</p>
+          </div>
+        ) : avatar ? (
           <img src={avatar} alt={name} className="w-24 h-24 mx-auto rounded-full object-cover border-2 border-purple-500" />
         ) : (
           <div className="w-24 h-24 mx-auto rounded-full bg-gray-800 border-2 border-purple-500 flex items-center justify-center text-white/40 text-xs">
@@ -72,21 +106,30 @@ export default function UsersHub() {
           Your hub will be created using your Nexura profile.
         </p>
 
-        <div className="bg-gray-900 border border-purple-500/30 rounded-xl p-4 text-left space-y-2">
-          <div className="flex justify-between">
-            <span className="text-white/50 text-xs">Username</span>
-            <span className="text-white text-sm font-mono">{name || "—"}</span>
+        {profileError && (
+          <div className="flex items-start gap-3 bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-left">
+            <AlertTriangle className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" />
+            <p className="text-red-300 text-sm">{profileError}</p>
           </div>
-          <div className="flex justify-between">
-            <span className="text-white/50 text-xs">Avatar</span>
-            <span className="text-white text-sm">{avatar ? "✓ Loaded" : "—"}</span>
+        )}
+
+        {!profileLoading && !profileError && (
+          <div className="bg-gray-900 border border-purple-500/30 rounded-xl p-4 text-left space-y-2">
+            <div className="flex justify-between">
+              <span className="text-white/50 text-xs">Username</span>
+              <span className="text-white text-sm font-mono">{name || "—"}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-white/50 text-xs">Avatar</span>
+              <span className="text-white text-sm">{avatar ? "✓ Loaded" : "—"}</span>
+            </div>
           </div>
-        </div>
+        )}
 
         <button
           onClick={handleSubmit}
-          disabled={loading || !name}
-          className="w-full bg-[#8B3EFE] py-3 rounded-xl hover:opacity-90 transition disabled:opacity-50"
+          disabled={loading || !canCreate}
+          className="w-full bg-[#8B3EFE] py-3 rounded-xl hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? "Creating..." : "Create Hub"}
         </button>

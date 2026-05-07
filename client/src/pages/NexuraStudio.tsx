@@ -107,8 +107,7 @@ export default function NexuraStudio() {
 </h1>
 
 <p className="text-sm sm:text-base max-w-lg leading-relaxed mb-5 font-semibold">
-  The all-in-one platform for builders to launch campaigns, distribute rewards,
-  and grow their community on the Intuition network.
+  A tool for projects and users on Intuition, built for intentional engagement and meaningful quests and campaigns.
 </p>
 
           {/* CTA */}

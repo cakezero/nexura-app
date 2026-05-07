@@ -127,18 +127,21 @@ export default function UserSignIn() {
     <div className="min-h-screen bg-black text-white overflow-auto p-4 sm:p-6 relative">
       <AnimatedBackground />
 
-      <div className="max-w-md mx-auto relative z-10 space-y-6">
-        {/* Back Button */}
+      {/* Back Button */}
+      <div className="w-full flex justify-start mb-4 relative z-10">
         <button
           onClick={() => setLocation("/studio/users/create")}
-          className="absolute top-4 left-4 inline-flex items-center gap-2 px-3 py-2 rounded-full border border-white/30 bg-black/30 hover:bg-black/50 text-white text-xs sm:text-sm"
+          className="inline-flex items-center gap-2 px-3 py-2 rounded-full border border-white/30 bg-black/30 hover:bg-black/50 text-white text-xs sm:text-sm"
         >
-          <ArrowLeft className="w-4 h-4" />
-          Back
+          <ArrowLeft className="w-3.5 h-3.5" />
+          Back to Studio
         </button>
+      </div>
+
+      <div className="max-w-md mx-auto relative z-10 space-y-6">
 
         {/* Header */}
-        <div className="text-center py-4 sm:py-6 px-2 sm:px-0 pt-12">
+        <div className="text-center py-4 sm:py-6 px-2 sm:px-0">
           <h1 className="text-xl sm:text-2xl font-bold mb-2">
             User Sign In
           </h1>

@@ -4,12 +4,26 @@ import React from "react";
 import AnimatedBackground from "../../../components/AnimatedBackground";
 import { Card, CardTitle, CardDescription } from "../../../components/ui/card";
 import { Button } from "../../../components/ui/button";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
+import { ArrowLeft } from "lucide-react";
 
 export default function UsersCreate() {
+  const [, setLocation] = useLocation();
+
   return (
     <div className="min-h-screen bg-black text-white overflow-auto p-1 sm:p-2 relative">
       <AnimatedBackground />
+
+      {/* Back Button */}
+      <div className="w-full flex justify-start mb-4 relative z-10">
+        <button
+          onClick={() => setLocation("/studio/select-role")}
+          className="inline-flex items-center gap-2 px-3 py-2 rounded-full border border-white/30 bg-black/30 hover:bg-black/50 text-white text-xs sm:text-sm"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          Back to Studio
+        </button>
+      </div>
 
       <div className="max-w-2xl mx-auto relative z-10 space-y-8">
 

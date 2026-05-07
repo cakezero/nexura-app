@@ -5,7 +5,7 @@ import AnimatedBackground from "../../../components/AnimatedBackground";
 import { Card, CardTitle, CardDescription, CardFooter } from "../../../components/ui/card";
 import { Input } from "../../../components/ui/input";
 import { Button } from "../../../components/ui/button";
-import { ArrowLeft, ArrowRight, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, ArrowRight, Eye, EyeOff, Loader2 } from "lucide-react";
 import { useLocation } from "wouter";
 import { useToast } from "../../../hooks/use-toast";
 import { useWallet } from "../../../hooks/use-wallet";
@@ -26,28 +26,39 @@ export default function UserSignup() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [mainAppUsername, setMainAppUsername] = useState("");
+
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { address: walletAddress, isConnected } = useWallet();
 
-  // Get username from main app's user profile (stored when user signs in to main app)
-  const mainAppUsername = (() => {
-    try {
-      const raw = localStorage.getItem("user_profile");
-      if (!raw) return "";
-      const profile = JSON.parse(raw) as Record<string, unknown>;
-      return (profile.name as string) || (profile.username as string) || "";
-    } catch {
-      return "";
+  // Fetch username from server
+  useEffect(() => {
+    if (!walletAddress) {
+      setProfileLoading(false);
+      return;
     }
-  })();
+
+    fetch(`${import.meta.env.VITE_API_URL}/api/user-hub/profile-by-wallet?address=${walletAddress}`)
+      .then((res) => {
+        if (!res.ok) throw new Error("No user found");
+        return res.json();
+      })
+      .then((data: { username: string }) => {
+        setMainAppUsername(data.username || "");
+      })
+      .catch(() => {
+        setMainAppUsername("");
+      })
+      .finally(() => setProfileLoading(false));
+  }, [walletAddress]);
 
   const generatedUsername = walletAddress
     ? `${walletAddress.substring(0, 6)}...${walletAddress.substring(walletAddress.length - 4)}`
     : "";
 
-  // Display the main app username if available, otherwise show wallet-derived username
-  const displayUsername = mainAppUsername || generatedUsername;
+  const displayUsername = profileLoading ? "Loading..." : mainAppUsername || generatedUsername;
 
   const handleSignUp = async () => {
     if (!email || !password || !confirmPassword) {
@@ -80,7 +91,6 @@ export default function UserSignup() {
     setCreating(true);
 
     try {
-      // Use the username from main app profile, or fallback to wallet address
       const usernameToUse = mainAppUsername || walletAddress;
       
       const res = await userApiRequest<{
@@ -102,7 +112,7 @@ export default function UserSignup() {
           type: "user",
           role: res.admin?.role || "user",
           userId: res.admin?._id,
-          name: res.admin?.name || walletAddress,  // Use wallet address as name
+          name: res.admin?.name || walletAddress,
           email: res.admin?.email || email,
           hub: res.admin?.hub,
         };
@@ -133,18 +143,20 @@ export default function UserSignup() {
     <div className="min-h-screen bg-black text-white overflow-auto p-4 sm:p-6 relative">
       <AnimatedBackground />
 
-      <div className="max-w-md mx-auto relative z-10 space-y-6">
-        {/* Back Button */}
+      {/* Back Button */}
+      <div className="w-full flex justify-start mb-4">
         <button
           onClick={() => setLocation("/studio/users/create")}
-          className="inline-flex items-center gap-2 px-3 py-2 rounded-full border border-white/30 bg-black/30 hover:bg-black/50 text-white text-xs sm:text-sm absolute top-4 left-4"
+          className="inline-flex items-center gap-2 px-3 py-2 rounded-full border border-white/30 bg-black/30 hover:bg-black/50 text-white text-xs sm:text-sm"
         >
-          <ArrowLeft className="w-4 h-4" />
-          Back
+          <ArrowLeft className="w-3.5 h-3.5" />
+          Back to Studio
         </button>
+      </div>
 
+      <div className="max-w-md mx-auto relative z-10 space-y-6">
         {/* Header */}
-        <div className="text-center py-2 px-2 sm:px-0 pt-10">
+        <div className="text-center py-2 px-2 sm:px-0">
           <h1 className="text-lg sm:text-xl font-bold mb-1">
             User Credentials
           </h1>
@@ -158,35 +170,40 @@ export default function UserSignup() {
 
           <div className="space-y-4">
 
-            {/* Username (Auto-filled from main app profile) */}
+            {/* Username (Auto-filled from server) */}
             <div>
               <CardTitle className="text-white text-base">Username</CardTitle>
-              <Input
-                value={displayUsername}
-                readOnly
-                placeholder="Connect wallet and sign in to main app first"
-                className="mt-1 w-full rounded-lg bg-gray-800 text-white border-purple-500 opacity-70 cursor-not-allowed font-mono text-xs h-9"
-              />
+              <div className="relative mt-1">
+                <Input
+                  value={displayUsername}
+                  readOnly
+                  placeholder="Connect wallet to see username"
+                  className="w-full rounded-lg bg-gray-800 text-white border-purple-500 opacity-70 cursor-not-allowed font-mono text-xs h-9"
+                />
+                {profileLoading && (
+                  <Loader2 className="absolute right-2.5 top-2 w-4 h-4 text-purple-400 animate-spin" />
+                )}
+              </div>
               {mainAppUsername ? (
                 <p className="text-[10px] text-green-400 mt-0.5">
                   ✓ Loaded from your main app profile
                 </p>
-              ) : walletAddress ? (
+              ) : walletAddress && !profileLoading ? (
                 <p className="text-[10px] text-white/50 mt-0.5">
-                  Using wallet-derived username
+                  Using wallet-derived username — set a username on the main app for your profile name
                 </p>
-              ) : (
+              ) : !walletAddress ? (
                 <p className="text-[10px] text-red-400 mt-0.5">
                   ⚠ Wallet not connected — return and connect your wallet
                 </p>
-              )}
+              ) : null}
             </div>
 
             {/* Disclaimer */}
             <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-3">
               <p className="text-[11px] text-white/70 leading-relaxed">
                 <span className="font-semibold text-purple-400">ℹ Your Nexura profile powers your hub.</span><br />
-                Your username and profile picture are pulled from your main Nexura app profile. To update them, edit your profile in the main app settings and refresh this page.
+                Your username and profile picture are pulled from your main Nexura app profile. To update them, edit your profile in the main app settings.
               </p>
             </div>
 

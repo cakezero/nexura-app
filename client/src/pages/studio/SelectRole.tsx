@@ -1,76 +1,15 @@
 "use client";
 
 import React, { useState } from "react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useLocation } from "wouter";
-import AnimatedBackground from "../../components/AnimatedBackground";
-import { useWallet } from "../../hooks/use-wallet";
-import { useToast } from "../../hooks/use-toast";
-
-function getMainAppUsername(): string {
-  try {
-    const raw = localStorage.getItem("user_profile");
-    if (!raw) return "";
-    const profile = JSON.parse(raw) as Record<string, unknown>;
-    return (profile.name as string) || (profile.username as string) || "";
-  } catch {
-    return "";
-  }
-}
 
 export default function SelectRole() {
-  const [activeRole, setActiveRole] = useState<"project" | "user" | null>("project");
+  const [activeRole, setActiveRole] = useState<"project" | "user" | null>(null);
   const [, setLocation] = useLocation();
-  const { isConnected } = useWallet();
-  const { toast } = useToast();
-
-  const mainAppUsername = getMainAppUsername();
-
-  const handleUserSelect = async () => {
-    if (!isConnected) {
-      toast({
-        title: "Wallet not connected",
-        description: "Please connect your wallet before creating a user hub.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!mainAppUsername) {
-      toast({
-        title: "Username required",
-        description: "You need to set a username on the main app profile first. Sign in to Nexura and update your profile.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setActiveRole("user");
-  };
 
   const handleContinue = () => {
     if (!activeRole) return;
-
-    if (activeRole === "user") {
-      if (!isConnected) {
-        toast({
-          title: "Wallet not connected",
-          description: "Please connect your wallet before continuing.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (!mainAppUsername) {
-        toast({
-          title: "Username required",
-          description: "You need to set a username on the main app profile first. Sign in to Nexura and update your profile.",
-          variant: "destructive",
-        });
-        return;
-      }
-    }
-
     if (activeRole === "project") {
       setLocation("/studio/projects/create");
     } else {
@@ -154,7 +93,7 @@ export default function SelectRole() {
             {/* User Card */}
             <button
               type="button"
-              onClick={handleUserSelect}
+              onClick={() => setActiveRole("user")}
               className={`flex-none w-full max-w-[260px] h-[180px] rounded-2xl p-0 flex flex-col items-center justify-center text-center border-2 transition-all duration-200 cursor-pointer overflow-hidden relative
                 ${activeRole === "user"
                   ? "bg-[#1C0B32] border-[#A760FF]"
@@ -181,16 +120,16 @@ export default function SelectRole() {
           <button
             onClick={handleContinue}
             disabled={!activeRole}
-            className={`w-[180px] h-[42px] rounded-xl font-semibold text-sm text-white flex items-center justify-center transition-all duration-200
+            className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-transparent border text-white font-semibold text-xs transition-all duration-200
               ${activeRole
-                ? "bg-[#8B3EFE] hover:brightness-110 cursor-pointer"
-                : "bg-[#8B3EFE]/50 cursor-not-allowed"
+                ? "border-white hover:bg-purple-600 hover:border-purple-600 hover:shadow-[0_0_20px_rgba(131,58,253,0.7)] hover:scale-[1.03] active:scale-[0.98]"
+                : "border-white/20 text-white/30 cursor-not-allowed"
               }`}
           >
             Continue
+            <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
-
       </main>
     </div>
   );

@@ -1,5 +1,6 @@
 import { OTP } from '@/models/otp.model';
 import { hub, hubAdmin, userHub, userHubAdmin } from '@/models/hub.model';
+import { user } from '@/models/user.model';
 import { addHubAdminEmail } from '@/utils/sendMail';
 import { BAD_REQUEST, INTERNAL_SERVER_ERROR, CREATED, OK, NO_CONTENT, NOT_FOUND, FORBIDDEN } from '@/utils/status.utils';
 import { CLIENT_URL } from '@/utils/env.utils';
@@ -1152,3 +1153,24 @@ export const deleteUserHub = async (req: GlobalRequest, res: GlobalResponse) => 
 };
 
 
+
+export const getUserProfileByWallet = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const { address } = req.query as { address?: string };
+    if (!address) {
+      res.status(BAD_REQUEST).json({ error: "address query param is required" });
+      return;
+    }
+
+    const userFound = await user.findOne({ address: address.toLowerCase() }, { username: 1, profilePic: 1 }).lean();
+    if (!userFound) {
+      res.status(NOT_FOUND).json({ error: "no user found for this wallet" });
+      return;
+    }
+
+    res.status(OK).json({ username: userFound.username, profilePic: userFound.profilePic || "" });
+  } catch (error: any) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: error?.message || "Error fetching user profile" });
+  }
+};

@@ -6,7 +6,7 @@ import { CardTitle } from "../../../components/ui/card";
 import { Input } from "../../../components/ui/input";
 import { Textarea } from "../../../components/ui/textarea";
 import { Button } from "../../../components/ui/button";
-import { Globe, Twitter } from "lucide-react";
+import { ArrowLeft, Globe, Twitter } from "lucide-react";
 import { useLocation } from "wouter";
 import { projectApiRequest, base64ToBlob } from "../../../lib/projectApi";
 import { useToast } from "../../../hooks/use-toast";
@@ -67,6 +67,17 @@ export default function ProjectsHub() {
   return (
     <div className="min-h-screen bg-black text-white p-4 sm:p-6 relative">
       <AnimatedBackground />
+
+      {/* Back Button */}
+      <div className="w-full flex justify-start mb-4 relative z-10">
+        <button
+          onClick={() => setLocation("/studio/select-role")}
+          className="inline-flex items-center gap-2 px-3 py-2 rounded-full border border-white/30 bg-black/30 hover:bg-black/50 text-white text-xs sm:text-sm"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          Back to Studio
+        </button>
+      </div>
 
       <div className="max-w-xl mx-auto relative z-10 space-y-6 bg-white/[0.03] border border-[#A760FF] rounded-2xl p-6">
 
