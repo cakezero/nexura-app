@@ -1310,7 +1310,7 @@ export const getHubQuests = async (req: GlobalRequest, res: GlobalResponse) => {
       res.status(BAD_REQUEST).json({ error: "No hub associated with this admin" });
       return;
     }
-    const quests = await quest.find({ hub: hubId, status: { $ne: "Deleted" } }).sort({ createdAt: -1 }).lean();
+    const quests = await quest.find({ creator: hubId, status: { $ne: "Deleted" } }).sort({ createdAt: -1 }).lean();
     res.status(OK).json({ message: "Quests fetched!", quests });
   } catch (error) {
     logger.error(error);
@@ -1325,7 +1325,7 @@ export const getAdminHubQuests = async (req: GlobalRequest, res: GlobalResponse)
       res.status(BAD_REQUEST).json({ error: "No hub associated with this admin" });
       return;
     }
-    const quests = await quest.find({ hub: hubId, status: { $ne: "Deleted" } }).sort({ createdAt: -1 }).lean();
+    const quests = await quest.find({ creator: hubId, status: { $ne: "Deleted" } }).sort({ createdAt: -1 }).lean();
     res.status(OK).json({ message: "Admin quests fetched!", quests });
   } catch (error) {
     logger.error("Error fetching admin hub quests: " + error);
