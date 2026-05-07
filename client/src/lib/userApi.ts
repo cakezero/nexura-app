@@ -4,7 +4,8 @@ import { toUserFriendlyErrorMessage } from "./errorMessages";
 const USER_API_URL = (BACKEND_URL ?? "") as string;
 
 function getApiUrl(path: string) {
-  return `${USER_API_URL}/api${path}`;
+  const cleanPath = path.startsWith("/") ? path : `/${path}`;
+  return `${USER_API_URL}/api${cleanPath}`;
 }
 
 export function getStoredUserToken(): string | null {
