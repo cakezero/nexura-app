@@ -106,11 +106,14 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
         
         if (found.projectCoverImage) setCoverImagePreview(found.projectCoverImage);
 
-        // Load mini quests (tasks)
-        if (found.miniQuests) {
-          setTasks(found.miniQuests.map((q: any) => ({
+        // Load mini quests (tasks) from separate collection
+          const miniRes = await fetch(`${import.meta.env.VITE_BACKEND_URL || ""}/api/quest/fetch-mini-quests?id=${editId}`, {
+            headers: { Authorization: `Bearer ${session?.token}` },
+          });
+          const miniData = await miniRes.json();
+          setTasks((miniData.miniQuests || []).map((q: any) => ({
             _id: q._id,
-            type: q.tag, // Needs mapping back to readable type if necessary
+            type: tagToType(q.tag),
             platform: q.category === "twitter" ? "Twitter" : "",
             handleOrUrl: q.link ?? "",
             description: q.quest ?? "",
@@ -121,7 +124,6 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
             channelId: q.channelId ?? "",
 
           })));
-        }
       } catch (err) {
         console.error("Failed to load quest", err);
       }
@@ -142,6 +144,15 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
   const toIsoDateTime = (date: string, time: string) => {
     if (!date) return "";
     return `${date}T${time || "00:00"}:00.000Z`;
+  };
+
+  const tagToType = (tag: string) => {
+    if (tag === "comment-x") return "Comment on X";
+    if (tag === "follow-x") return "Follow on X";
+    if (tag === "portal") return "Portal Claims";
+    if (tag === "feedback") return "Give Feedback";
+    if (tag === "trust-name") return "Own a TNS";
+    return "Create a Post"; // "other" and all others default
   };
 
   const typeToTag = (type: string) => {
