@@ -187,7 +187,7 @@ const tabs = [
   {/* CREATE CARD (only on ALL tab) */}
   {activeTab === "all" && (
     <Link href="/user-dashboard/create-new-quest">
-      <div className="h-full w-full flex flex-col items-center justify-center border border-dashed border-purple-500 rounded-xl bg-black/20 hover:bg-black/30 transition cursor-pointer">
+      <div className="h-full w-full flex flex-col items-center justify-center border border-dashed border-purple-500 rounded-xl bg-black/20 hover:bg-black/30 transition cursor-pointer p-6 min-h-[200px]">
         <div className="w-10 h-10 flex items-center justify-center rounded-full bg-purple-500/20 text-purple-400 text-xl font-bold">
           +
         </div>

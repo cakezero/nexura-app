@@ -57,12 +57,7 @@ export default function UserSidebar({ activeTab, setActiveTab, onLogout }: UserS
       <div className="w-[16rem] border-r border-white/10 hidden md:flex flex-col z-20">
         {/* Logo */}
         <div className="p-5 border-b border-white/10">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-[#8B3EFE] flex items-center justify-center text-white font-bold text-sm">
-              N
-            </div>
-            <span className="text-white font-semibold text-sm">Nexura</span>
-          </div>
+          <img src="/nexura-logo.png" alt="Nexura" className="w-32 h-auto" />
         </div>
 
         {/* User profile pill */}
@@ -123,12 +118,7 @@ export default function UserSidebar({ activeTab, setActiveTab, onLogout }: UserS
 
       {/* ── Mobile top bar ── */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-30 flex items-center justify-between px-4 py-3 bg-black/80 backdrop-blur-xl border-b border-white/10">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-[#8B3EFE] flex items-center justify-center text-white font-bold text-xs">
-            N
-          </div>
-          <span className="text-white font-semibold text-sm">Nexura</span>
-        </div>
+        <img src="/nexura-logo.png" alt="Nexura" className="h-6 w-auto" />
 
         <div className="flex items-center gap-2 border border-purple-500 rounded-xl px-2 py-1 max-w-[55%] min-w-0">
           <div className="w-6 h-6 rounded-lg overflow-hidden flex-shrink-0">

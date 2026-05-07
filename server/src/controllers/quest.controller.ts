@@ -811,7 +811,25 @@ export const createQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 
     const hubUserId = req.admin.hub;
 
-    const { error } = validateQuestData(req.body);
+    // Normalize frontend field names to match backend expectations
+    if (!requestData.reward && req.body.xp) {
+      requestData.reward = Number(req.body.xp);
+    }
+    if (!requestData.campaignQuests && req.body.miniQuests) {
+      try {
+        const parsed = typeof req.body.miniQuests === "string" ? JSON.parse(req.body.miniQuests) : req.body.miniQuests;
+        requestData.campaignQuests = Array.isArray(parsed) ? parsed.map((t: any) => ({
+          link: t.link || "#",
+          quest: t.quest || t.description || "",
+          tag: t.tag || "other",
+        })) : [];
+      } catch { requestData.campaignQuests = []; }
+    }
+    if (!requestData.category && Array.isArray(requestData.campaignQuests) && requestData.campaignQuests.length > 0) {
+      requestData.category = requestData.campaignQuests[0].category || "other";
+    }
+
+    const { error } = validateQuestData(requestData);
     if (error) {
       const emptyFields = getMissingFields(error);
       res.status(BAD_REQUEST).json({ error: `Missing required fields: ${emptyFields}` });
@@ -840,19 +858,15 @@ export const createQuest = async (req: GlobalRequest, res: GlobalResponse) => {
   		}
     }
 
-		if (!coverImageAsFile) {
-			res
-				.status(BAD_REQUEST)
-				.json({ error: "hub cover image is required" });
-			return;
-		}
-
-		const projectCoverImageUrl = await uploadImg({
-			file: coverImageAsFile,
-			filename: req.file?.originalname as string,
-			folder: "cover-images",
-			maxSize: 2 * 1024 ** 2, // 2 MB
-		});
+		let projectCoverImageUrl = createdHub.logo || "";
+    if (coverImageAsFile) {
+      projectCoverImageUrl = await uploadImg({
+        file: coverImageAsFile,
+        filename: req.file?.originalname as string,
+        folder: "cover-images",
+        maxSize: 2 * 1024 ** 2, // 2 MB
+      });
+    }
 
 		const startsAt = parseDate(requestData.starts_at);
 		const endsAt = parseDate(requestData.ends_at);

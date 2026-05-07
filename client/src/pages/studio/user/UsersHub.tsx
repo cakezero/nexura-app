@@ -88,24 +88,24 @@ export default function UsersHub() {
         </button>
       </div>
 
-      <div className="max-w-xl mx-auto relative z-10 space-y-6 bg-white/[0.03] border border-[#A760FF] rounded-2xl p-6 text-center">
+      <div className="max-w-md mx-auto relative z-10 space-y-4 bg-white/[0.03] border border-[#A760FF] rounded-2xl p-5 text-center">
 
-        <CardTitle className="text-lg">Create User Hub</CardTitle>
+        <CardTitle className="text-base">Create User Hub</CardTitle>
 
         {profileLoading ? (
-          <div className="flex flex-col items-center justify-center py-8 gap-3">
-            <Loader2 className="w-6 h-6 text-purple-400 animate-spin" />
-            <p className="text-white/50 text-sm">Fetching your profile...</p>
+          <div className="flex flex-col items-center justify-center py-6 gap-3">
+            <Loader2 className="w-5 h-5 text-purple-400 animate-spin" />
+            <p className="text-white/50 text-xs">Fetching your profile...</p>
           </div>
         ) : avatar ? (
-          <img src={avatar} alt={name} className="w-24 h-24 mx-auto rounded-full object-cover border-2 border-purple-500" />
+          <img src={avatar} alt={name} className="w-16 h-16 mx-auto rounded-full object-cover border-2 border-purple-500" />
         ) : (
-          <div className="w-24 h-24 mx-auto rounded-full bg-gray-800 border-2 border-purple-500 flex items-center justify-center text-white/40 text-xs">
+          <div className="w-16 h-16 mx-auto rounded-full bg-gray-800 border-2 border-purple-500 flex items-center justify-center text-white/40 text-xs">
             No avatar
           </div>
         )}
 
-        <p className="text-white/60 text-sm">
+        <p className="text-white/60 text-xs">
           Your hub will be created using your Nexura profile.
         </p>
 
