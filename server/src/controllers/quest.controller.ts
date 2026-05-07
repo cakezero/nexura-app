@@ -897,10 +897,10 @@ if (error) {
 		const manyData: any[] = [];
 
 		if (miniQuestsFromBody.length > 0) {
-			for (const quest of miniQuestsFromBody) {
-				quest.quest = newQuest._id;
-  
-				manyData.push(quest);
+			for (const mq of miniQuestsFromBody) {
+				mq.text = mq.quest || mq.text || "";
+				mq.quest = newQuest._id;
+				manyData.push(mq);
 			}
 
 			await miniQuest.insertMany(manyData);
@@ -1186,6 +1186,10 @@ export const saveQuest = async (req: GlobalRequest, res: GlobalResponse) => {
         await miniQuest.bulkWrite(
           miniQuestsToUpdate.map((q: any) => {
             const { _id, ...rest } = q;
+            if (rest.quest && !rest.text) {
+              rest.text = rest.quest;
+            }
+            delete rest.quest;
 
             const updatePayload = { ...rest, quest: id };
 
@@ -1202,7 +1206,7 @@ export const saveQuest = async (req: GlobalRequest, res: GlobalResponse) => {
       if (miniQuestsToInsert.length > 0) {
         await miniQuest.insertMany(
           miniQuestsToInsert.map((q: any) => (
-              { ...q, quest: id }
+              { ...q, text: q.quest || q.text || "", quest: id }
           ))
         );
       }

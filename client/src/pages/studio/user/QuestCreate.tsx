@@ -116,7 +116,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
             type: tagToType(q.tag),
             platform: q.category === "twitter" ? "Twitter" : "",
             handleOrUrl: q.link ?? "",
-            description: q.quest ?? "",
+            description: q.text || q.quest || "",
             evidence: "",
             validation: "Manual Validation",
             verificationMode: q.verificationMode ?? "",
