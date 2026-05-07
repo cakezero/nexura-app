@@ -82,11 +82,12 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
 
     (async () => {
       try {
-        const res = await apiRequest<{ hubQuests?: any[] }>({
+        const res = await apiRequest<{ quests?: any[]; hubQuests?: any[] }>({
           method: "GET",
           endpoint: `${apiPrefix}/get-quests`,
         });
-        const found = (res.hubQuests ?? []).find((q: any) => q._id === editId);
+        const allQuests = res.quests ?? res.hubQuests ?? [];
+        const found = allQuests.find((q: any) => q._id === editId);
         if (!found) return;
 
         setQuestId(editId);

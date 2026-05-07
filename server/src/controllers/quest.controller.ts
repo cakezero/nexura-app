@@ -840,25 +840,26 @@ if (error) {
   		}
     }
 
-		if (coverImageAsFile) {
-			const projectCoverImageUrl = await uploadImg({
-				file: coverImageAsFile,
-				filename: req.file?.originalname as string,
-				folder: "cover-images",
-				maxSize: 2 * 1024 ** 2,
-			});
-			requestData.projectCoverImage = projectCoverImageUrl;
+		if (!coverImageAsFile) {
+			res
+				.status(BAD_REQUEST)
+				.json({ error: "hub cover image is required" });
+			return;
 		}
 
-		if (!requestData.projectCoverImage) {
-			requestData.projectCoverImage = "pending";
-		}
+		const projectCoverImageUrl = await uploadImg({
+			file: coverImageAsFile,
+			filename: req.file?.originalname as string,
+			folder: "cover-images",
+			maxSize: 2 * 1024 ** 2, // 2 MB
+		});
 
 		const startsAt = parseDate(requestData.starts_at);
 		const endsAt = parseDate(requestData.ends_at);
 		if (startsAt) requestData.starts_at = startsAt;
 		if (endsAt) requestData.ends_at = endsAt;
 
+		requestData.projectCoverImage = projectCoverImageUrl;
 
 		requestData.project_image = createdHub.logo;
     if (!requestData.project_name) {
