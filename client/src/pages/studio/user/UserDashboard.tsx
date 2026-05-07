@@ -13,7 +13,6 @@ import QuestSubmissions from "../../../components/admin/QuestsSubmissions.tsx";
 import { getStoredUserSession } from "../../../lib/userSession";
 import { userApiRequest } from "../../../lib/userApi";
 import { projectApiRequest } from "../../../lib/projectApi";
-import { StatsOverview } from "../../../components/admin/StatsOverview";
 
 export default function userDashboard() {
   const session = getStoredUserSession();
@@ -88,8 +87,6 @@ export default function userDashboard() {
 
   return (
     <>
-      <StatsOverview tasks={questTasks as any} />
-
       <QuestSubmissions
         tasks={questTasks}
         loading={loading}

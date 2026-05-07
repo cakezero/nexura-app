@@ -43,7 +43,7 @@ export default function UserLayout({
     if (!user?.type || user.type !== "user") {
       setLocation("/discover");
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     if (user?.token) {
