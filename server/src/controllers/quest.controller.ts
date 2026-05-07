@@ -755,7 +755,7 @@ export const submitQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 			return;
 		}
 
-		if (!userExists.socialProfiles?.x) {
+		if (!userExists.socialProfiles?.x?.connected && false) {
 			res.status(BAD_REQUEST).json({ error: "user x profile not linked" });
 			return;
     }
@@ -797,7 +797,7 @@ export const submitQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 			notComplete = await campaignQuestCompleted.create({ campaign: questId, campaignQuest: id, user: userId });
 		}
 
-		await submission.create({ submissionLink, hub: hubId ?? "nexura-hub", taskType: tag, address: userExists.address, username: userExists.socialProfiles?.x?.username, miniQuestId: id, user: userId, page, questCompleted: notComplete._id });
+		await submission.create({ submissionLink, hub: hubId ?? "nexura-hub", taskType: tag, address: userExists.address, username: userExists.socialProfiles?.x?.username || userExists.username, miniQuestId: id, user: userId, page, questCompleted: notComplete._id });
 
 		res.status(OK).json({ message: "quest submitted" });
 	} catch (error: any) {
