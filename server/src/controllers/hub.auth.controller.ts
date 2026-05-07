@@ -20,6 +20,7 @@ import {
 	BOT_TOKEN,
 } from "@/utils/env.utils";
 import { hubAdmin, hub, userHubAdmin, userHub } from "@/models/hub.model";
+import { user } from "@/models/user.model";
 import bcrypt from "bcrypt";
 import axios from "axios";
 import { resetEmail, resetPasswordOTPEmail } from "@/utils/sendMail";
@@ -460,13 +461,18 @@ export const userHubSignIn = async (req: GlobalRequest, res: GlobalResponse) => 
     // Auto-create hub if admin has none
     let hubId = (adminExists as any).hub;
     if (!hubId) {
+      let logoUrl = "";
+      try {
+        const mainUser = await user.findOne({ username: adminExists.name }).lean();
+        logoUrl = (mainUser as any)?.profilePic || "";
+      } catch {}
       try {
         const createdHub = await userHub.create({
           name: adminExists.name,
           description: "",
           website: "",
           xAccount: "",
-          logo: "",
+          logo: logoUrl,
           superAdmin: adminExists._id,
         });
         hubId = createdHub._id;
@@ -541,6 +547,13 @@ export const userHubAdminSignUp = async (req: GlobalRequest, res: GlobalResponse
       password: hashedPassword,
     });
 
+    // Fetch main app profile picture for hub logo
+    let logoUrl = "";
+    try {
+      const mainUser = await user.findOne({ username: name.trim() }).lean();
+      logoUrl = (mainUser as any)?.profilePic || "";
+    } catch {}
+
     // Create a hub for the new admin immediately (handle name conflicts)
     let createdHub;
     try {
@@ -549,7 +562,7 @@ export const userHubAdminSignUp = async (req: GlobalRequest, res: GlobalResponse
         description: "",
         website: "",
         xAccount: "",
-        logo: "",
+        logo: logoUrl,
         superAdmin: superAdmin._id,
       });
     } catch (createErr: any) {
