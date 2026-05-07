@@ -9,11 +9,11 @@ type TabType = "questsTab" | "questSubmissions";
 interface UserSidebarProps {
   activeTab: TabType;
   onLogout?: () => void;
+  onNavigate?: () => void;
 }
 
-export default function UserSidebar({ activeTab, onLogout }: UserSidebarProps) {
+export default function UserSidebar({ activeTab, onLogout, onNavigate }: UserSidebarProps) {
   const [, setLocation] = useLocation();
-
   const [userAvatar, setUserAvatar] = useState("/default-avatar.png");
   const [username, setUsername] = useState("@user");
 
@@ -29,13 +29,9 @@ export default function UserSidebar({ activeTab, onLogout }: UserSidebarProps) {
 
   useEffect(() => {
     syncUser();
-
     const handler = () => syncUser();
     window.addEventListener("user-session-update", handler);
-
-    return () => {
-      window.removeEventListener("user-session-update", handler);
-    };
+    return () => window.removeEventListener("user-session-update", handler);
   }, []);
 
   const sidebarItems: { title: string; icon: any; id: TabType }[] = [
@@ -49,25 +45,26 @@ export default function UserSidebar({ activeTab, onLogout }: UserSidebarProps) {
   };
 
   return (
-    <aside className="w-16 md:w-60 flex flex-col bg-black/40 border-r border-white/10 backdrop-blur-md">
+    <aside className="w-60 h-full flex flex-col bg-black/60 backdrop-blur-md border-r border-white/10">
       {/* Logo / Brand */}
-      <div className="flex items-center justify-center md:justify-start h-16 border-b border-white/10 px-4">
+      <div className="flex items-center h-16 border-b border-white/10 px-4">
         <div className="w-8 h-8 rounded-lg bg-[#8B3EFE] flex items-center justify-center text-white font-bold text-sm">
           N
         </div>
-        <span className="hidden md:block ml-3 text-white font-semibold text-sm">
-          Nexura
-        </span>
+        <span className="ml-3 text-white font-semibold text-sm">Nexura</span>
       </div>
 
       {/* Nav Items */}
-      <nav className="flex-1 py-4 space-y-1 px-2 overflow-y-auto">
+      <nav className="flex-1 py-4 space-y-1 px-3 overflow-y-auto">
         {sidebarItems.map((item) => {
           const isActive = activeTab === item.id;
           return (
             <button
               key={item.id}
-              onClick={() => setLocation(routeByTab[item.id])}
+              onClick={() => {
+                setLocation(routeByTab[item.id]);
+                onNavigate?.();
+              }}
               className={cn(
                 "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors",
                 isActive
@@ -76,7 +73,7 @@ export default function UserSidebar({ activeTab, onLogout }: UserSidebarProps) {
               )}
             >
               <item.icon className="w-5 h-5" />
-              <span className="hidden md:block">{item.title}</span>
+              <span>{item.title}</span>
             </button>
           );
         })}
@@ -88,18 +85,18 @@ export default function UserSidebar({ activeTab, onLogout }: UserSidebarProps) {
           <img
             src={userAvatar}
             alt={username}
-            className="w-8 h-8 rounded-full object-cover"
+            className="w-9 h-9 rounded-full object-cover flex-shrink-0"
             onError={(e) => {
               (e.target as HTMLImageElement).src = "/default-avatar.png";
             }}
           />
-          <div className="hidden md:block flex-1 min-w-0">
+          <div className="flex-1 min-w-0">
             <p className="text-sm text-white font-medium truncate">{username}</p>
           </div>
           {onLogout && (
             <button
               onClick={onLogout}
-              className="text-white/50 hover:text-red-400 transition-colors"
+              className="text-white/50 hover:text-red-400 transition-colors flex-shrink-0"
             >
               <LogOut className="w-4 h-4" />
             </button>
