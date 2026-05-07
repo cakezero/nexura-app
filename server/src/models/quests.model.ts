@@ -104,11 +104,11 @@ const questSchema = new Schema({
   },
   project_image: {
     type: String,
-    required: true
+    default: ""
   },
   project_name: {
     type: String,
-    required: true
+    default: ""
   },
   projectCoverImage: {
     type: String,

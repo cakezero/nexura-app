@@ -858,6 +858,9 @@ ror) {
 		requestData.projectCoverImage = projectCoverImageUrl;
 
 		requestData.project_image = createdHub.logo;
+    if (!requestData.project_name) {
+      requestData.project_name = createdHub.name || "";
+    }
 
     // Use xp from frontend form as reward
     if (!requestData.reward && requestData.xp) {
