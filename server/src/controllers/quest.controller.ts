@@ -761,7 +761,9 @@ export const submitQuest = async (req: GlobalRequest, res: GlobalResponse) => {
     }
 		
     if (hubId) {
-  		const hubExists = await hub.findById(hubId);
+  		const hubExists = page === "user"
+        ? await userHub.findById(hubId)
+        : await hub.findById(hubId);
   		if (!hubExists) {
   			res.status(BAD_REQUEST).json({ error: "hub does not exist" });
   			return;
