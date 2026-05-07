@@ -460,15 +460,32 @@ export const userHubSignIn = async (req: GlobalRequest, res: GlobalResponse) => 
     // Auto-create hub if admin has none
     let hubId = adminExists.hub;
     if (!hubId) {
-      const createdHub = await userHub.create({
-        name: adminExists.name,
-        description: "",
-        website: "",
-        xAccount: "",
-        logo: "",
-        superAdmin: adminExists._id,
-      });
-      hubId = createdHub._id;
+      try {
+        const createdHub = await userHub.create({
+          name: adminExists.name,
+          description: "",
+          website: "",
+          xAccount: "",
+          logo: "",
+          superAdmin: adminExists._id,
+        });
+        hubId = createdHub._id;
+      } catch (createErr: any) {
+        // Name conflict - use a unique name
+        if (createErr?.code === 11000) {
+          const fallbackHub = await userHub.create({
+            name: `${adminExists.name}-${adminExists._id.toString().slice(-6)}`,
+            description: "",
+            website: "",
+            xAccount: "",
+            logo: "",
+            superAdmin: adminExists._id,
+          });
+          hubId = fallbackHub._id;
+        } else {
+          throw createErr;
+        }
+      }
       await userHubAdmin.findByIdAndUpdate(adminExists._id, { hub: hubId });
     }
 
@@ -488,7 +505,7 @@ export const userHubSignIn = async (req: GlobalRequest, res: GlobalResponse) => 
 				_id: adminExists._id,
 				name: adminExists.name,
 				email: adminExists.email,
-				hub: adminExists.hub,
+				hub: hubId,
 			},
 		});
 	} catch (error) {
@@ -524,15 +541,31 @@ export const userHubAdminSignUp = async (req: GlobalRequest, res: GlobalResponse
       password: hashedPassword,
     });
 
-    // Create a hub for the new admin immediately
-    const createdHub = await userHub.create({
-      name: name.trim(),
-      description: "",
-      website: "",
-      xAccount: "",
-      logo: "",
-      superAdmin: superAdmin._id,
-    });
+    // Create a hub for the new admin immediately (handle name conflicts)
+    let createdHub;
+    try {
+      createdHub = await userHub.create({
+        name: name.trim(),
+        description: "",
+        website: "",
+        xAccount: "",
+        logo: "",
+        superAdmin: superAdmin._id,
+      });
+    } catch (createErr: any) {
+      if (createErr?.code === 11000) {
+        createdHub = await userHub.create({
+          name: `${name.trim()}-${superAdmin._id.toString().slice(-6)}`,
+          description: "",
+          website: "",
+          xAccount: "",
+          logo: "",
+          superAdmin: superAdmin._id,
+        });
+      } else {
+        throw createErr;
+      }
+    }
 
     // Link the hub to the admin
     await userHubAdmin.findByIdAndUpdate(superAdmin._id, { hub: createdHub._id });
