@@ -1043,28 +1043,14 @@ export const createUserHub = async (req: GlobalRequest, res: GlobalResponse) => 
     const website = String(req.body.website ?? "").trim();
     const xAccount = String(req.body.xAccount ?? "").trim();
 
-        const logoFile = req.file?.buffer;
+            const hubAdminDoc = await userHubAdmin.findById(req.id).lean();
+    const adminName = (hubAdminDoc as any)?.name;
     let logoUrl = "";
-
-    if (logoFile) {
-      logoUrl = await uploadImg({
-        file: logoFile,
-        filename: req.file?.originalname as string,
-        folder: "user-hub-logos",
-        maxSize: 1 * 1024 ** 2,
-      });
-    } else {
-      const adminDoc = await userHubAdmin.findById(req.id).lean();
-      const adminName = (adminDoc as any)?.name;
-      if (adminName) {
-        const mainUser = await user.findOne({ username: adminName }).lean();
-        logoUrl = (mainUser as any)?.profilePic || "";
-      }
-      if (!logoUrl) {
-        logoUrl = "https://i.pravatar.cc/150?img=1";
-      }
+    if (adminName) {
+      const mainUser = await user.findOne({ username: adminName }).lean();
+      logoUrl = (mainUser as any)?.profilePic || "";
     }
-    const createdHub = await userHub.create({
+const createdHub = await userHub.create({
       name,
       description: req.body.description ?? "",
       website,
