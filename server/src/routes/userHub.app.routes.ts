@@ -26,6 +26,7 @@ import {
   deleteMiniQuest,
   saveQuestWithMiniQuests,
   getHubQuests,
+  publishQuest,
 } from "@/controllers/quest.controller";
 import { Router } from "express";
 import { upload } from "@/config/multer";
@@ -46,6 +47,7 @@ router
   .delete("/delete-mini-lesson", deleteMiniLesson)
   .post("/publish-lesson", publishLesson)
   .post("/unpublish-lesson", unpublishLesson)
+  .patch("/publish-quest", publishQuest)
   .post("/create-question", createQuestion)
   .patch("/update-question", updateQuestion)
   .delete("/delete-question", deleteQuestion)
