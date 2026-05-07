@@ -112,7 +112,7 @@ const questSchema = new Schema({
   },
   projectCoverImage: {
     type: String,
-    default: "/nexura-logo.png"
+    required: true
   },
 	sub_title: {
 		type: String
@@ -131,6 +131,7 @@ const questSchema = new Schema({
 	},
 	description: {
 		type: String,
+		required: true
 	},
 	tag: {
 		type: String

@@ -840,15 +840,19 @@ ror) {
   		}
     }
 
-		let projectCoverImageUrl = createdHub.logo || "";
-    if (coverImageAsFile) {
-      projectCoverImageUrl = await uploadImg({
-        file: coverImageAsFile,
-        filename: req.file?.originalname as string,
-        folder: "cover-images",
-        maxSize: 2 * 1024 ** 2, // 2 MB
-      });
-    }
+		if (!coverImageAsFile) {
+			res
+				.status(BAD_REQUEST)
+				.json({ error: "hub cover image is required" });
+			return;
+		}
+
+		const projectCoverImageUrl = await uploadImg({
+			file: coverImageAsFile,
+			filename: req.file?.originalname as string,
+			folder: "cover-images",
+			maxSize: 2 * 1024 ** 2, // 2 MB
+		});
 
 		const startsAt = parseDate(requestData.starts_at);
 		const endsAt = parseDate(requestData.ends_at);
