@@ -147,7 +147,8 @@ export const validateQuestData = (reqData: any) => {
     title: z.string().trim(),
 		page: z.enum(["user", "project"]),
 		description: z.string().trim(),
-		reward: z.number(),
+		xp: z.union([z.string(), z.number()]).optional(),
+		reward: z.union([z.string(), z.number()]).optional(),
 		campaignQuests: z.array(
       z.object({
         link: z.string().optional(),
@@ -173,8 +174,8 @@ export const validateQuestData = (reqData: any) => {
           "other"
         ]),
       }),
-		),
-		category: z.enum(["twitter", "discord", "reddit", "instagram", "facebook", "other"]),
+		).optional(),
+		category: z.enum(["twitter", "discord", "reddit", "instagram", "facebook", "other"]).optional(),
 	});
 
 	const parseData = questSchema.safeParse(reqData);

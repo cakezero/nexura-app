@@ -811,26 +811,8 @@ export const createQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 
     const hubUserId = req.admin.hub;
 
-    // Normalize frontend field names to match backend expectations
-    if (!requestData.reward && req.body.xp) {
-      requestData.reward = Number(req.body.xp);
-    }
-    if (!requestData.campaignQuests && req.body.miniQuests) {
-      try {
-        const parsed = typeof req.body.miniQuests === "string" ? JSON.parse(req.body.miniQuests) : req.body.miniQuests;
-        requestData.campaignQuests = Array.isArray(parsed) ? parsed.map((t: any) => ({
-          link: t.link || "#",
-          quest: t.quest || t.description || "",
-          tag: t.tag || "other",
-        })) : [];
-      } catch { requestData.campaignQuests = []; }
-    }
-    if (!requestData.category && Array.isArray(requestData.campaignQuests) && requestData.campaignQuests.length > 0) {
-      requestData.category = requestData.campaignQuests[0].category || "other";
-    }
-
-    const { error } = validateQuestData(requestData);
-    if (error) {
+  const { error } = validateQuestData(req.body);
+ror) {
       const emptyFields = getMissingFields(error);
       res.status(BAD_REQUEST).json({ error: `Missing required fields: ${emptyFields}` });
       return;
@@ -877,6 +859,11 @@ export const createQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 
 		requestData.project_image = createdHub.logo;
 
+    // Use xp from frontend form as reward
+    if (!requestData.reward && requestData.xp) {
+      requestData.reward = Number(requestData.xp);
+    }
+
 		const newQuest = new quest(requestData);
 
     newQuest.creator = createdHub._id;
@@ -889,7 +876,10 @@ export const createQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 
     newQuest.questNumber = createdHub.questsCreated;
 
-		const miniQuestsFromBody = req.body.miniQuests as Record<string, any>[];
+		const rawMiniQuests = req.body.miniQuests;
+		const miniQuestsFromBody: Record<string, any>[] = typeof rawMiniQuests === "string"
+      ? (() => { try { return JSON.parse(rawMiniQuests); } catch { return []; } })()
+      : (Array.isArray(rawMiniQuests) ? rawMiniQuests : []);
 
 		const manyData: any[] = [];
 
