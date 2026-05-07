@@ -533,13 +533,13 @@ export const claimMiniQuest = async (req: GlobalRequest, res: GlobalResponse) =>
 			return
 		}
 
-		if (miniQuestExists.status !== "pending") {
-			res.status(BAD_REQUEST).json({ error: "quest needs to be marked as pending before it can be caimed" });
+		if (miniQuestExists.done === true) {
+			res.status(FORBIDDEN).json({ error: "quest already claimed" });
 			return;
 		}
 
-		if (miniQuestExists.done === true) {
-			res.status(FORBIDDEN).json({ error: "quest already claimed" });
+		if (miniQuestExists.status !== "done" && miniQuestExists.status !== "pending") {
+			res.status(BAD_REQUEST).json({ error: "quest needs to be marked as pending before it can be caimed" });
 			return;
 		}
 
