@@ -889,10 +889,6 @@ if (error) {
       ? (() => { try { return JSON.parse(rawMiniQuests); } catch { return []; } })()
       : (Array.isArray(rawMiniQuests) ? rawMiniQuests : []);
 
-    if (miniQuestsFromBody.length < 3) {
-      res.status(BAD_REQUEST).json({ error: "At least 3 tasks are required to create a quest" });
-      return;
-    }
 
 		const manyData: any[] = [];
 
