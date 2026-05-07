@@ -51,7 +51,7 @@ export default function NexuraStudio() {
 <div className="relative flex flex-col min-h-screen overflow-hidden">
         <div className="w-full flex items-center justify-between px-4 sm:px-6 pt-4">
           <button
-            onClick={() => setLocation("/discover")}
+            onClick={() => window.location.href = "/discover"}
             className="inline-flex items-center gap-2 px-3 py-2 rounded-full border border-white/30 bg-black/30 hover:bg-black/50 text-white text-xs sm:text-sm"
           >
             <ArrowLeft className="w-4 h-4" />
