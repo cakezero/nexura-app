@@ -129,7 +129,9 @@ function Router() {
       <Route path="/studio/users/user-signup" component={UserSignup} />
       <Route path="/studio/users/user-signin" component={UserSignIn} />
       <Route path="/user-dashboard">
-        <UserDashboard onLogout={handleLogout} />
+        <UserLayout title="Dashboard" onLogout={handleLogout}>
+          <UserDashboard />
+        </UserLayout>
       </Route>
       <Route path="/user-dashboard/quests-tab">
         <UserLayout title="Create Campaign" onLogout={handleLogout}>
