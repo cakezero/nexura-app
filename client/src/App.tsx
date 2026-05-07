@@ -168,16 +168,6 @@ function Router() {
           <Lessons />
         </StudioLayout>
       </Route>
-      <Route path="/studio-dashboard/quests-tab">
-        <StudioLayout title="Quests" onLogout={handleLogout}>
-          <QuestsTab />
-        </StudioLayout>
-      </Route>
-      <Route path="/studio-dashboard/create-quest">
-        <StudioLayout title="Create Quest" onLogout={handleLogout}>
-          <QuestCreate />
-        </StudioLayout>
-      </Route>
       <Route path="/studio-dashboard/campaigns-tab">
         <StudioLayout title="Campaigns" onLogout={handleLogout}>
           <CampaignsTab />

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Card } from "../ui/card";
 import { Button } from "../ui/button";
-import { Link, useLocation } from "wouter";
+import { Link } from "wouter";
 import { RefreshCw, XCircle, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "../ui/dialog";
 import { projectApiRequest } from "../../lib/projectApi";
@@ -38,10 +38,6 @@ export default function QuestsTab() {
   const [loading, setLoading] = useState(false);
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const { toast } = useToast();
-  const [location] = useLocation();
-  const createLink = location.startsWith("/studio-dashboard")
-    ? "/studio-dashboard/create-quest"
-    : "/user-dashboard/create-new-quest";
 
   const fetchQuests = async () => {
     try {
@@ -190,7 +186,7 @@ const tabs = [
 
   {/* CREATE CARD (only on ALL tab) */}
   {activeTab === "all" && (
-    <Link href={createLink}>
+    <Link href="/user-dashboard/create-new-quest">
       <div className="h-full w-full flex flex-col items-center justify-center border border-dashed border-purple-500 rounded-xl bg-black/20 hover:bg-black/30 transition cursor-pointer">
         <div className="w-10 h-10 flex items-center justify-center rounded-full bg-purple-500/20 text-purple-400 text-xl font-bold">
           +

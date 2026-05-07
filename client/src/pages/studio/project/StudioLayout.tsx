@@ -7,7 +7,7 @@ import StudioSidebar from "./StudioSidebar";
 import { isProjectSignedIn, clearProjectSession, projectApiRequest } from "../../../lib/projectApi";
 import { getStoredProjectToken } from "../../../lib/projectApi";
 
-type TabType = "hubProfile" | "campaignSubmissions" | "adminManagement" | "campaignsTab" | "questsTab" | "lessonsTab";
+type TabType = "hubProfile" | "campaignSubmissions" | "adminManagement" | "campaignsTab" | "lessonsTab";
 
 interface StudioLayoutProps {
   children: React.ReactNode;
@@ -27,7 +27,6 @@ export default function StudioLayout({ children, title = "Nexura Studio", onLogo
     if (location.includes("hub-profile")) return "hubProfile";
     if (location.includes("admin-management")) return "adminManagement";
     if (location === "/studio-dashboard") return "campaignSubmissions";
-    if (location.includes("create-quest")) return "questsTab";
     if (location.includes("create-lesson")) return "lessonsTab";
     if (location.includes("campaigns-tab") || location.includes("create-new-campaign") || location.includes("my-campaign"))
       return "campaignsTab";
