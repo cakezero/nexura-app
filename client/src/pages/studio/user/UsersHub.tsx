@@ -9,6 +9,7 @@ import { useLocation } from "wouter";
 import { userApiRequest } from "../../../lib/userApi";
 import { useToast } from "../../../hooks/use-toast";
 import { useWallet } from "../../../hooks/use-wallet";
+import { BACKEND_URL } from "../../../lib/constants";
 
 export default function UsersHub() {
   const [loading, setLoading] = useState(false);
@@ -28,7 +29,7 @@ export default function UsersHub() {
       return;
     }
 
-    fetch(`${import.meta.env.VITE_API_URL}/api/user-hub/profile-by-wallet?address=${address}`)
+    fetch(`${BACKEND_URL}/api/user-hub/profile-by-wallet?address=${address}`)
       .then((res) => {
         if (!res.ok) throw new Error("No user found");
         return res.json();

@@ -11,6 +11,7 @@ import { useToast } from "../../../hooks/use-toast";
 import { useWallet } from "../../../hooks/use-wallet";
 import { storeUserSession } from "../../../lib/userSession";
 import { userApiRequest } from "../../../lib/userApi";
+import { BACKEND_URL } from "../../../lib/constants";
 
 export default function UserSignup() {
   const [email, setEmail] = useState("");
@@ -40,7 +41,7 @@ export default function UserSignup() {
       return;
     }
 
-    fetch(`${import.meta.env.VITE_API_URL}/api/user-hub/profile-by-wallet?address=${walletAddress}`)
+    fetch(`${BACKEND_URL}/api/user-hub/profile-by-wallet?address=${walletAddress}`)
       .then((res) => {
         if (!res.ok) throw new Error("No user found");
         return res.json();
