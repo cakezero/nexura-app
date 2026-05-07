@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Card } from "../ui/card";
 import { Button } from "../ui/button";
-import { Link } from "wouter";
+import { useLocation } from "wouter";
 import { RefreshCw, XCircle, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "../ui/dialog";
 import { projectApiRequest } from "../../lib/projectApi";
@@ -37,6 +37,7 @@ export default function QuestsTab() {
   const [quests, setQuests] = useState<Quest[]>([]);
   const [loading, setLoading] = useState(false);
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
 
   const fetchQuests = async () => {
@@ -124,7 +125,10 @@ const tabs = [
         )}
 
         <div className="flex gap-2 mt-2">
-          <Button className="bg-[#8B3EFE] text-white text-xs w-full">
+          <Button
+            className="bg-[#8B3EFE] text-white text-xs w-full"
+            onClick={() => setLocation(`/user-dashboard/create-new-quest?edit=${quest._id}`)}
+          >
             View
           </Button>
 
@@ -186,7 +190,7 @@ const tabs = [
 
   {/* CREATE CARD (only on ALL tab) */}
   {activeTab === "all" && (
-    <Link href="/user-dashboard/create-new-quest">
+    <div onClick={() => setLocation("/user-dashboard/create-new-quest")}>
       <div className="h-full w-full flex flex-col items-center justify-center border border-dashed border-purple-500 rounded-xl bg-black/20 hover:bg-black/30 transition cursor-pointer p-6 min-h-[200px]">
         <div className="w-10 h-10 flex items-center justify-center rounded-full bg-purple-500/20 text-purple-400 text-xl font-bold">
           +
@@ -200,7 +204,7 @@ const tabs = [
           Launch new quest
         </p>
       </div>
-    </Link>
+    </div>
   )}
 
   {/* QUEST CARDS */}
