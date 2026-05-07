@@ -179,7 +179,7 @@ export const startQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 			return;
 		}
 
-		await questCompleted.create({ quest: questId, user: req.id, done: false });
+		await questCompleted.create({ quest: questId, user: req.id, done: false, category: "one-time" });
 
 		res.status(OK).json({ message: "quest started" });
 	} catch (error) {
@@ -888,6 +888,11 @@ if (error) {
 		const miniQuestsFromBody: Record<string, any>[] = typeof rawMiniQuests === "string"
       ? (() => { try { return JSON.parse(rawMiniQuests); } catch { return []; } })()
       : (Array.isArray(rawMiniQuests) ? rawMiniQuests : []);
+
+    if (miniQuestsFromBody.length < 3) {
+      res.status(BAD_REQUEST).json({ error: "At least 3 tasks are required to create a quest" });
+      return;
+    }
 
 		const manyData: any[] = [];
 
