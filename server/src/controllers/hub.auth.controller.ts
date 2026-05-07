@@ -71,7 +71,7 @@ export const signIn = async (req: GlobalRequest, res: GlobalResponse) => {
 				name: adminExists.name,
 				email: adminExists.email,
 				role: adminExists.role,
-				hub: hubId,
+				hub: adminExists.hub,
 			},
 		});
 	} catch (error) {
@@ -406,7 +406,7 @@ export const resetPassword = async (req: GlobalRequest, res: GlobalResponse) => 
 				name: adminExists.name,
 				email: adminExists.email,
 				role: adminExists.role,
-				hub: hubId,
+				hub: adminExists.hub,
 			},
 		});
 	} catch (error) {
@@ -458,7 +458,7 @@ export const userHubSignIn = async (req: GlobalRequest, res: GlobalResponse) => 
 		const id = adminExists._id.toString();
 
     // Auto-create hub if admin has none
-    let hubId = adminExists.hub;
+    let hubId = (adminExists as any).hub;
     if (!hubId) {
       try {
         const createdHub = await userHub.create({
@@ -505,7 +505,7 @@ export const userHubSignIn = async (req: GlobalRequest, res: GlobalResponse) => 
 				_id: adminExists._id,
 				name: adminExists.name,
 				email: adminExists.email,
-				hub: hubId,
+				hub: adminExists.hub,
 			},
 		});
 	} catch (error) {

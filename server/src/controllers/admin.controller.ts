@@ -5,7 +5,7 @@ import logger from "@/config/logger";
 import { quest, miniQuest } from "@/models/quests.model";
 import { lesson } from "@/models/lesson.model";
 import { admin } from "@/models/admin.model";
-import { BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND, NO_CONTENT, OK, UNAUTHORIZED } from "@/utils/status.utils";
+import { BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND, NO_CONTENT, OK, UNAUTHORIZED, FORBIDDEN } from "@/utils/status.utils";
 import { campaign as campaignModel, campaignCompleted } from "@/models/campaign.model";
 import { generateOTP, getRefreshToken, hashPassword, JWT, validateQuestData } from "@/utils/utils";
 import { sendAdminResetEmail, sendEmailToAdmin } from "@/utils/sendMail";
@@ -1252,7 +1252,7 @@ export const publishAdminQuest = async (req: GlobalRequest, res: GlobalResponse)
       return;
     }
 
-    if (String(questDoc.hub) !== adminHub) {
+    if (String(questDoc.creator) !== adminHub) {
       res.status(FORBIDDEN).json({ error: "You are not allowed to publish this quest" });
       return;
     }

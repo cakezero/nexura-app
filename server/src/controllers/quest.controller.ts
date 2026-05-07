@@ -812,7 +812,7 @@ export const createQuest = async (req: GlobalRequest, res: GlobalResponse) => {
     const hubUserId = req.admin.hub;
 
   const { error } = validateQuestData(req.body);
-ror) {
+if (error) {
       const emptyFields = getMissingFields(error);
       res.status(BAD_REQUEST).json({ error: `Missing required fields: ${emptyFields}` });
       return;
@@ -867,8 +867,8 @@ ror) {
     }
 
     // Use xp from frontend form as reward
-    if (!requestData.reward && requestData.xp) {
-      requestData.reward = Number(requestData.xp);
+    if (!requestData.reward && (requestData as any).xp) {
+      requestData.reward = Number((requestData as any).xp);
     }
 
 		const newQuest = new quest(requestData);
