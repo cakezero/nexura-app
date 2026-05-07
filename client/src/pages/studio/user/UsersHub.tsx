@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import AnimatedBackground from "../../../components/AnimatedBackground";
 import { CardTitle } from "../../../components/ui/card";
+import { Textarea } from "../../../components/ui/textarea";
 import { ArrowLeft, AlertTriangle, Loader2 } from "lucide-react";
 import { useLocation } from "wouter";
 import { userApiRequest } from "../../../lib/userApi";
@@ -15,6 +16,7 @@ export default function UsersHub() {
   const [name, setName] = useState("");
   const [avatar, setAvatar] = useState("");
   const [profileError, setProfileError] = useState("");
+  const [description, setDescription] = useState("");
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { address } = useWallet();
@@ -52,7 +54,7 @@ export default function UsersHub() {
     try {
       const fd = new FormData();
       fd.append("name", name);
-      fd.append("description", "");
+      fd.append("description", description);
 
       await userApiRequest({
         method: "POST",
@@ -114,6 +116,7 @@ export default function UsersHub() {
         )}
 
         {!profileLoading && !profileError && (
+          <>
           <div className="bg-gray-900 border border-purple-500/30 rounded-xl p-4 text-left space-y-2">
             <div className="flex justify-between">
               <span className="text-white/50 text-xs">Username</span>
@@ -124,6 +127,18 @@ export default function UsersHub() {
               <span className="text-white text-sm">{avatar ? "✓ Loaded" : "—"}</span>
             </div>
           </div>
+
+          <div className="text-left space-y-1">
+            <span className="text-white/60 text-xs">Short Bio</span>
+            <Textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Tell people about yourself... (this will be your hub description)"
+              maxLength={300}
+              className="bg-gray-800 border-purple-500 text-white h-24"
+            />
+          </div>
+          </>
         )}
 
         <button
