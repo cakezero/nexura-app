@@ -30,6 +30,7 @@ interface Lesson {
 }
 
 export default function Lessons() {
+  const createLessonUrl = location.pathname.startsWith("/user-dashboard") ? "/user-dashboard/create-lesson" : "/studio-dashboard/create-lesson";
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [loading, setLoading] = useState(true);
   const [publishingId, setPublishingId] = useState("");
@@ -123,7 +124,7 @@ export default function Lessons() {
           <p className="text-white/60 mt-1">Create and manage educational content for your hub.</p>
         </div>
         <Button 
-          onClick={() => setLocation("/studio-dashboard/create-lesson")}
+          onClick={() => setLocation(createLessonUrl)}
           className="bg-[#8a3ffc] hover:bg-[#7a2feb] text-white gap-2"
         >
           <Plus className="w-4 h-4" />
@@ -147,7 +148,7 @@ export default function Lessons() {
             You haven't created any lessons yet. Get started by creating your first educational module.
           </p>
           <Button 
-            onClick={() => setLocation("/studio-dashboard/create-lesson")}
+            onClick={() => setLocation(createLessonUrl)}
             variant="outline" 
             className="mt-6 border-white/10 text-white hover:bg-white/5"
           >
@@ -207,7 +208,7 @@ export default function Lessons() {
                 {/* Actions */}
                 <div className="mt-5 grid grid-cols-2 gap-2">
                   <Button 
-                    onClick={() => setLocation(`/studio-dashboard/create-lesson?edit=${lesson._id}`)}
+                    onClick={() => setLocation(`${createLessonUrl}?edit=${lesson._id}`)}
                     variant="outline"
                     className="border-white/10 text-white hover:bg-white/5 gap-2 text-xs"
                   >

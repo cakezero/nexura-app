@@ -1463,7 +1463,7 @@ export default function CreateLesson({
           </div>
           <Button
             variant="outline"
-            onClick={() => setLocation("/studio-dashboard/lessons-tab")}
+            onClick={() => setLocation(location.pathname.startsWith("/user-dashboard") ? "/user-dashboard/lessons-tab" : "/studio-dashboard/lessons-tab")}
             className="border-white/10 text-white hover:bg-white/5 gap-2"
           >
             <ChevronLeft className="w-4 h-4" />
