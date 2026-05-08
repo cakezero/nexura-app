@@ -1114,6 +1114,7 @@ export const saveQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 
       const body = {
         ...req.body,
+        description: req.body.description || hubFound.description || "Untitled Quest",
         project_image: hubFound.logo ?? "pending",
         project_name: hubFound.name ?? req.body.nameOfProject ?? "",
         sub_title: req.body.description || hubFound.description || "",
@@ -1174,7 +1175,13 @@ export const saveQuest = async (req: GlobalRequest, res: GlobalResponse) => {
     const { miniQuests: _mq, isDraft: _d, existingCoverImage: _e, hubCoverImage: _h, nameOfProject: _n, ...updateFields } = req.body;
 
     if (updateFields.description !== undefined) {
-      updateFields.sub_title = String(updateFields.description ?? "").trim();
+      const trimmed = String(updateFields.description ?? "").trim();
+      if (trimmed) {
+        updateFields.description = trimmed;
+        updateFields.sub_title = trimmed;
+      } else {
+        delete updateFields.description;
+      }
     }
 
     const incomingNameOfProject = typeof req.body.nameOfProject === "string"
