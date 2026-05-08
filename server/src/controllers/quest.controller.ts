@@ -1234,9 +1234,9 @@ export const saveQuest = async (req: GlobalRequest, res: GlobalResponse) => {
     }
 
     res.status(OK).json({ questId: id });
-  } catch (error) {
+  } catch (error: any) {
     logger.error(error);
-    res.status(INTERNAL_SERVER_ERROR).json({ error: "error saving quest" });
+    res.status(INTERNAL_SERVER_ERROR).json({ error: error?.message || "error saving quest" });
   }
 }
 
