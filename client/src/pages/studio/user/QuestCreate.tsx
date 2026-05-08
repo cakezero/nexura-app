@@ -21,6 +21,7 @@ type Task = {
   type: string;
   platform: string;
   handleOrUrl: string;
+  title: string;
   description: string;
   evidence: string;
   validation: string;
@@ -54,6 +55,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
     type: "",
     platform: "",
     handleOrUrl: "",
+    title: "",
     description: "",
     evidence: "",
     validation: "Manual Validation",
@@ -114,19 +116,23 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
             headers: { Authorization: `Bearer ${session?.token}` },
           });
           const miniData = await miniRes.json();
-          setTasks((miniData.miniQuests || []).map((q: any) => ({
-            _id: q._id,
-            type: tagToType(q.tag),
-            platform: q.category === "twitter" ? "Twitter" : "",
-            handleOrUrl: q.link ?? "",
-            description: q.text || q.quest || "",
-            evidence: "",
-            validation: "Manual Validation",
-            verificationMode: q.verificationMode ?? "",
-            roleId: q.roleId ?? "",
-            channelId: q.channelId ?? "",
-
-          })));
+          setTasks((miniData.miniQuests || []).map((q: any) => {
+            const fullText = q.text || q.quest || "";
+            const [title, ...descParts] = fullText.split("\n");
+            return {
+              _id: q._id,
+              type: tagToType(q.tag),
+              platform: q.category === "twitter" ? "Twitter" : "",
+              handleOrUrl: q.link ?? "",
+              title: title || tagToType(q.tag),
+              description: descParts.join("\n") || "",
+              evidence: "",
+              validation: "Manual Validation",
+              verificationMode: q.verificationMode ?? "",
+              roleId: q.roleId ?? "",
+              channelId: q.channelId ?? "",
+            };
+          }));
       } catch (err) {
         console.error("Failed to load quest", err);
       }
@@ -182,7 +188,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
 
     const miniQuests = tasks.map(t => ({
       _id: t._id,
-      quest: t.description || t.type,
+      quest: t.title + (t.description ? "\n" + t.description : ""),
       link: t.handleOrUrl || "#",
       tag: typeToTag(t.type),
       category: t.platform.toLowerCase(),
@@ -256,8 +262,8 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
   };
 
   const handleSaveTask = () => {
-    if (!newTask.type || !newTask.description) {
-      setDescError("Task description is required.");
+    if (!newTask.type || !newTask.title || !newTask.description) {
+      toast({ title: "Incomplete", description: "Task type, title, and description are required.", variant: "destructive" });
       return;
     }
 
@@ -291,6 +297,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
       type: "",
       platform: "",
       handleOrUrl: "",
+      title: "",
       description: "",
       evidence: "",
       validation: "Manual Validation",
@@ -438,7 +445,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
               type="button"
               onClick={() => {
                 setEditingIndex(null);
-                setNewTask({ _id: undefined, type: "", platform: "", handleOrUrl: "", description: "", evidence: "", validation: "Manual Validation", verificationMode: "", roleId: "", channelId: "" });
+                setNewTask({ _id: undefined, type: "", platform: "", handleOrUrl: "", title: "", description: "", evidence: "", validation: "Manual Validation", verificationMode: "", roleId: "", channelId: "" });
                 setShowModal(true);
               }}
               className="absolute -top-10 right-0 px-3 py-1 bg-[#8B3EFE] text-white hover:bg-[#7b35e6] rounded-lg text-sm font-semibold flex items-center gap-2"
@@ -457,7 +464,10 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                 {tasks.map((task, index) => (
                   <div key={index} className="flex items-center justify-between gap-4 rounded-lg border-2 border-purple-500 px-4 py-3 bg-white/5">
                     <div className="flex items-center justify-center w-8 h-8 bg-gray-600 rounded-full font-semibold">{index + 1}</div>
-                    <p className="flex-1">{task.description || task.type}</p>
+                    <div className="flex-1">
+                      <p className="font-semibold text-purple-400">{task.title}</p>
+                      <p className="text-sm text-white/70">{task.description}</p>
+                    </div>
                     <div className="flex gap-2">
                       <Button type="button" variant="ghost" size="sm" onClick={() => { setEditingIndex(index); setNewTask(task); setShowModal(true); }}>Edit</Button>
                       <Button type="button" variant="ghost" size="sm" onClick={() => setTasks(tasks.filter((_, i) => i !== index))}>Delete</Button>
@@ -573,7 +583,8 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <p className="text-white">{task.description || task.type}</p>
+                      <p className="text-white font-semibold">{task.title}</p>
+                      <p className="text-white/60 text-sm">{task.description || task.type}</p>
                       {task.verificationMode && (
                         <p className="text-xs text-white/50 truncate">
                           {task.verificationMode === "image_upload" ? "📷 Image proof" : 
@@ -657,157 +668,170 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
 
       {/* Task Modal */}
       {showModal && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-[#0d0d14] w-full max-w-xl border border-purple-500/20 p-6 rounded-2xl relative shadow-[0_0_60px_rgba(131,58,253,0.2)]">
+        <div className="fixed inset-0 flex items-center justify-center z-50 bg-[#070315]/90 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="bg-[#070315] w-full max-w-[910px] border border-[#8b3efe] rounded-[10px] relative shadow-[0_0_60px_rgba(139,62,254,0.1)] overflow-hidden">
             
-            {/* Close Button */}
-            <button
-              onClick={() => setShowModal(false)}
-              className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-all text-lg leading-none"
-            >
-              ×
-            </button>
-
-            <h2 className="text-xl font-semibold text-white mb-6">
-              Add New Task
-            </h2>
-
-            {/* TOP SECTION */}
-            <div className="grid grid-cols-2 gap-6 mb-6">
-              {/* Task Type */}
-              <div>
-                <label className="text-sm text-white/70 mb-2 block">Task Type</label>
-                <select
-                  className="w-full p-2 rounded-lg bg-[#0d0d14] text-white border border-white/10 focus:outline-none focus:border-purple-500 [&>option]:bg-[#0d0d14]"
-                  value={newTask.type}
-                  onChange={(e) => {
-                    const type = e.target.value;
-                    const isTwitter = type === "Comment on X" || type === "Follow on X";
-                    const isCreatePost = type === "Create a Post";
-                    const isTns = type === "Own a TNS";
-                    setNewTask({
-                      ...newTask,
-                      type,
-                      platform: isTwitter || isCreatePost ? "Twitter" : (isTns ? "" : newTask.platform),
-                      validation: isTns ? "Auto Verified" : "Manual Validation",
-                      verificationMode: isCreatePost ? "submit_link" : newTask.verificationMode,
-                      handleOrUrl: isTns ? "" : newTask.handleOrUrl,
-                    });
-                  }}
-                >
-                  <option value="">Select task</option>
-                  <option value="Comment on X">Comment on X</option>
-                  <option value="Follow on X">Follow on X</option>
-                  <option value="Create a Post">Create a Post</option>
-                  <option value="Own a TNS">Own a TNS</option>
-                  <option value="Portal Claims">Portal Claims</option>
-                  <option value="Give Feedback">Give Feedback</option>
-                </select>
+            {/* Header */}
+            <div className="bg-[#1b113c] h-[80px] flex items-center justify-between px-10 relative">
+              <div className="flex flex-col justify-center">
+                <h2 className="text-[20px] font-bold text-white font-['Geist',sans-serif] leading-[20px]">Configure Tasks</h2>
+                <p className="text-[15px] font-semibold text-white/70 font-['Geist',sans-serif] leading-[20px] mt-1">Define the specifics for your quest tasks</p>
               </div>
+              <button
+                onClick={() => setShowModal(false)}
+                className="absolute right-10 top-1/2 -translate-y-1/2 text-white/60 hover:text-white transition-all"
+              >
+                <img src="https://www.figma.com/api/mcp/asset/0c1a04f9-e18d-4dfc-9aa9-fd9beeebae82" alt="Close" className="w-5 h-5" />
+              </button>
+            </div>
 
-              {/* Platform */}
-              {newTask.type && newTask.type !== "Portal Claims" && newTask.type !== "Give Feedback" && newTask.type !== "Own a TNS" && (
-                <div>
-                  <label className="text-sm text-white/70 mb-2 block">Platform</label>
-                  <div className="flex gap-3">
+            <div className="p-10 space-y-8">
+              {/* TOP SECTION: TYPE & PLATFORM */}
+              <div className="flex gap-[114px]">
+                {/* Task Type */}
+                <div className="w-[405px] space-y-[14px]">
+                  <label className="text-[15px] font-bold text-white/70 uppercase font-['Geist',sans-serif] leading-[18.2px]">TASK TYPE</label>
+                  <div className="relative">
+                    <select
+                      className="w-full h-[40px] px-5 rounded-[16px] bg-[#060210] text-[14px] text-white/60 border border-[#833afd] focus:outline-none appearance-none font-medium font-['Geist',sans-serif]"
+                      value={newTask.type}
+                      onChange={(e) => {
+                        const type = e.target.value;
+                        const isTwitter = type === "Comment on X" || type === "Follow on X";
+                        const isCreatePost = type === "Create a Post";
+                        const isTns = type === "Own a TNS";
+                        setNewTask({
+                          ...newTask,
+                          type,
+                          platform: isTwitter || isCreatePost ? "Twitter" : (isTns ? "" : newTask.platform),
+                          validation: isTns ? "Auto Verified" : "Manual Validation",
+                          verificationMode: isCreatePost ? "submit_link" : (isTwitter ? "submit_link" : newTask.verificationMode),
+                        });
+                      }}
+                    >
+                      <option value="">Others</option>
+                      <option value="Comment on X">Comment on X</option>
+                      <option value="Follow on X">Follow on X</option>
+                      <option value="Create a Post">Create a Post</option>
+                      <option value="Own a TNS">Own a TNS</option>
+                      <option value="Portal Claims">Portal Claims</option>
+                      <option value="Give Feedback">Give Feedback</option>
+                    </select>
+                    <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none rotate-90">
+                      <img src="https://www.figma.com/api/mcp/asset/13e665cc-77c8-45d0-8f14-25dd7fa6f060" alt="" className="w-[9px] h-[9px]" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Platform */}
+                <div className="w-[311px] space-y-[14px]">
+                  <label className="text-[15px] font-bold text-white/70 uppercase font-['Geist',sans-serif] leading-[18.2px]">PLATFORM</label>
+                  <div className="flex">
                     <button
                       type="button"
-                      onClick={() => setNewTask({ ...newTask, platform: "Twitter" })}
-                      className={`flex-1 border py-2 rounded-lg transition ${
-                        newTask.platform === "Twitter"
-                          ? "bg-[#8B3EFE] text-white border-purple-500"
-                          : "bg-purple-900 border-purple-800 text-white hover:border-purple-500"
-                      }`}
+                      className="h-[40px] w-[146px] rounded-[8px] flex items-center justify-center gap-[5px] transition border border-[#8b3efe] bg-[#8b3efe]/17 text-white"
+                      onClick={() => setNewTask({...newTask, platform: "Twitter"})}
                     >
-                      Twitter
+                      <img src="https://www.figma.com/api/mcp/asset/7c040d25-e34c-42b8-8ee9-10bddba75bba" alt="" className="w-[14px] h-[14px]" />
+                      <span className="text-[12px] font-bold font-['Geist',sans-serif] leading-[20px]">Custom/External</span>
                     </button>
-
                   </div>
                 </div>
-              )}
-            </div>
-
-            {/* TASK DETAILS CARD */}
-            <div className="bg-white/5 p-5 rounded-xl mb-6 border border-white/10">
-              
-              {/* Handle or URL */}
-              {newTask.type !== "Create a Post" && newTask.type !== "Own a TNS" && (
-                <div className="mb-4">
-                  <label className="text-sm text-white/70 mb-2 block">Handle / URL</label>
-                  <input
-                    type="text"
-                    placeholder={
-                      newTask.type === "Comment on X" || newTask.type === "Follow on X"
-                        ? "Enter URL (x.com or twitter.com)"
-                        : "Enter URL or handle"
-                    }
-                    value={newTask.handleOrUrl}
-                    onChange={(e) => {
-                      setUrlError(""); setDescError("");
-                      setNewTask({ ...newTask, handleOrUrl: e.target.value });
-                    }}
-                    className={`w-full p-2 rounded-lg bg-white/5 text-white border ${error ? 'border-red-500' : 'border-white/10'} focus:outline-none focus:border-purple-500`}
-                  />
-                  {error && (newTask.type === "Comment on X" || newTask.type === "Follow on X" || newTask.type === "Create a Post") && (
-                    <p className="text-red-400 text-xs mt-1">{urlError}</p>
-                  )}
-                </div>
-              )}
-
-              {/* Task Description */}
-              <div className="mb-4">
-                <label className="text-sm text-white/70 mb-2 block">Task Description</label>
-                <input
-                  type="text"
-                  placeholder="Task instructions..."
-                  value={newTask.description}
-                  onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
-                  className="w-full p-2 rounded-lg bg-white/5 text-white border border-white/10 focus:outline-none focus:border-purple-500"
-                />
               </div>
 
-                          {/* Portal Claims Badge */}
-              {newTask.type === "Portal Claims" && (
-                <div className="flex items-center gap-3 rounded-lg bg-purple-900/50 border border-purple-500/50 px-4 py-3">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-purple-400 flex-shrink-0">
-                    <path fillRule="evenodd" d="M8.603 3.799A4.49 4.49 0 0 1 12 2.25c1.357 0 2.573.6 3.397 1.549a4.49 4.49 0 0 1 3.498 1.307 4.491 4.491 0 0 1 1.307 3.497A4.49 4.49 0 0 1 21.75 12a4.49 4.49 0 0 1-1.549 3.397 4.491 4.491 0 0 1-1.307 3.497 4.491 4.491 0 0 1-3.497 1.307A4.49 4.49 0 0 1 12 21.75a4.49 4.49 0 0 1-3.397-1.549 4.49 4.49 0 0 1-3.498-1.306 4.491 4.491 0 0 1-1.307-3.498A4.49 4.49 0 0 1 2.25 12c0-1.357.6-2.573 1.549-3.397a4.49 4.49 0 0 1 1.307-3.497 4.49 4.49 0 0 1 3.497-1.307Zm7.007 6.387a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z" clipRule="evenodd" />
-                  </svg>
-                  <div>
-                    <p className="text-sm text-purple-300 font-medium">Auto-verified via Portal</p>
-                    <p className="text-xs text-white/50 mt-0.5">Completion is verified automatically after the user completes the task.</p>
+              {/* TASK DETAILS SECTION */}
+              <div className="space-y-[16px]">
+                <label className="text-[15px] font-bold text-white/70 uppercase font-['Geist',sans-serif] leading-[18.2px]">TASK DETAILS</label>
+                <div className="bg-[#060210] border border-[#833afd] rounded-[16px] h-[248px] p-5 flex flex-col justify-center gap-[6px]">
+                  <div className="space-y-2">
+                    <label className="text-[14px] font-medium text-white/80 font-['Geist',sans-serif] leading-[18.2px]">Task Title</label>
+                    <input
+                      type="text"
+                      placeholder="e.g...Visit this website "
+                      className="w-full h-[37px] px-[15px] rounded-[8px] bg-[#1d0d3d] text-[12px] text-white/80 placeholder:text-white/50 border-none focus:ring-1 focus:ring-[#8b3efe] outline-none font-['Geist',sans-serif]"
+                      value={newTask.title}
+                      onChange={(e) => setNewTask({...newTask, title: e.target.value})}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[14px] font-medium text-white/80 font-['Geist',sans-serif] leading-[18.2px]">Task Description</label>
+                    <input
+                      type="text"
+                      placeholder="Explain what the user needs to do"
+                      className="w-full h-[37px] px-[15px] rounded-[8px] bg-[#1d0d3d] text-[12px] text-white/80 placeholder:text-white/50 border-none focus:ring-1 focus:ring-[#8b3efe] outline-none font-['Geist',sans-serif]"
+                      value={newTask.description}
+                      onChange={(e) => setNewTask({...newTask, description: e.target.value})}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[14px] font-medium text-white/80 font-['Geist',sans-serif] leading-[18.2px]">Task URL</label>
+                    <input
+                      type="text"
+                      placeholder="Input URL"
+                      className="w-full h-[37px] px-[15px] rounded-[8px] bg-[#1d0d3d] text-[12px] text-white/80 placeholder:text-white/50 border-none focus:ring-1 focus:ring-[#8b3efe] outline-none font-['Geist',sans-serif]"
+                      value={newTask.handleOrUrl}
+                      onChange={(e) => {
+                        setUrlError("");
+                        setNewTask({...newTask, handleOrUrl: e.target.value});
+                      }}
+                    />
+                    {urlError && <p className="text-red-400 text-[10px] absolute mt-1">{urlError}</p>}
                   </div>
                 </div>
-              )}
+              </div>
 
-              {/* TNS Name Badge */}
-              {newTask.type === "Own a TNS" && (
-                <div className="flex items-center gap-3 rounded-lg bg-emerald-900/50 border border-emerald-500/50 px-4 py-3">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-emerald-400 flex-shrink-0">
-                    <path fillRule="evenodd" d="M8.603 3.799A4.49 4.49 0 0 1 12 2.25c1.357 0 2.573.6 3.397 1.549a4.49 4.49 0 0 1 3.498 1.307 4.491 4.491 0 0 1 1.307 3.497A4.49 4.49 0 0 1 21.75 12a4.49 4.49 0 0 1-1.549 3.397 4.491 4.491 0 0 1-1.307 3.497 4.491 4.491 0 0 1-3.497 1.307A4.49 4.49 0 0 1 12 21.75a4.49 4.49 0 0 1-3.397-1.549 4.49 4.49 0 0 1-3.498-1.306 4.491 4.491 0 0 1-1.307-3.498A4.49 4.49 0 0 1 2.25 12c0-1.357.6-2.573 1.549-3.397a4.49 4.49 0 0 1 1.307-3.497 4.49 4.49 0 0 1 3.497-1.307Zm7.007 6.387a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z" clipRule="evenodd" />
-                  </svg>
-                  <div>
-                    <p className="text-sm text-emerald-300 font-medium">Auto-verified via TNS</p>
-                    <p className="text-xs text-white/50 mt-0.5">Users will be automatically verified if they own a Trust Name (TNS).</p>
+              {/* FOOTER SECTION: EVIDENCE & VALIDATION */}
+              <div className="flex gap-[43px] pb-10">
+                {/* Evidence Upload */}
+                <div className="w-[421px] space-y-[10px]">
+                  <label className="text-[15px] font-bold text-white/70 uppercase font-['Geist',sans-serif] leading-[18.2px]">EVIDENCE UPLOAD MANAGEMENT</label>
+                  <div className="relative">
+                    <select
+                      className="w-full h-[33px] px-5 rounded-[16px] bg-[#060210] text-[14px] text-white/60 border border-[#833afd] focus:outline-none appearance-none font-medium font-['Geist',sans-serif]"
+                      value={newTask.verificationMode}
+                      onChange={(e) => setNewTask({...newTask, verificationMode: e.target.value})}
+                    >
+                      <option value="">No evidence required</option>
+                      <option value="image_upload">Submit screenshot</option>
+                      <option value="submit_link">Submit link</option>
+                      <option value="auto">Auto verify</option>
+                    </select>
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none rotate-90">
+                      <img src="https://www.figma.com/api/mcp/asset/13e665cc-77c8-45d0-8f14-25dd7fa6f060" alt="" className="w-[9px] h-[9px]" />
+                    </div>
                   </div>
                 </div>
-              )}
 
-
-
-              {descError && <p className="text-red-400 text-sm mt-1">{descError}</p>}
+                {/* Validation Type */}
+                <div className="w-[242px] space-y-[10px]">
+                  <label className="text-[15px] font-bold text-white/70 uppercase font-['Geist',sans-serif] leading-[18.2px]">VALIDATION TYPE</label>
+                  <div className="relative flex items-center h-[33px] px-5 rounded-[16px] bg-[#060210] border border-[#833afd]">
+                    <span className="text-[14px] font-medium text-white/60 font-['Geist',sans-serif] leading-[18.2px]">Manual Validation</span>
+                    <div className="ml-auto w-[18px] h-[18px]">
+                      <img src="https://www.figma.com/api/mcp/asset/83d9f6c8-52e3-4dab-8f17-4e93db83c5c7" alt="Check" className="w-full h-full" />
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            {/* Submit Button */}
-            <button
-              type="button"
-              className="w-full py-2.5 bg-[#8B3EFE] text-white rounded-lg font-semibold hover:bg-[#7b35e6] transition flex items-center justify-center gap-2"
-              onClick={handleSaveTask}
-            >
-              {editingIndex !== null ? "Update Task" : "Add Task"}
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
+            {/* Bottom Bar */}
+            <div className="bg-[#1b113c] h-[80px] flex items-center justify-between px-10">
+              <button
+                type="button"
+                className="text-[15px] font-semibold text-white/70 hover:text-white transition-all font-['Geist',sans-serif] leading-[20px]"
+                onClick={() => setShowModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="w-[146px] h-[35px] bg-[#8b3efe] rounded-[15px] text-[14px] font-bold text-white hover:bg-[#7b35e6] transition-all font-['Geist',sans-serif] leading-[20px]"
+                onClick={handleSaveTask}
+              >
+                {editingIndex !== null ? "Update Task" : "Save Task"}
+              </button>
+            </div>
           </div>
         </div>
       )}

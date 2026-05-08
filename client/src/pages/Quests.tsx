@@ -1,17 +1,12 @@
-"use client";
-
 import { useEffect, useState } from "react";
-import { Button } from "../components/ui/button";
-import { Badge } from "../components/ui/badge";
-import { Card } from "../components/ui/card";
-import { ExternalLink, Clock } from "lucide-react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import AnimatedBackground from "../components/AnimatedBackground";
-import { apiRequestV2, getStoredAccessToken } from "../lib/queryClient";
+import { apiRequestV2 } from "../lib/queryClient";
 import { useToast } from "../hooks/use-toast";
 import { useAuth } from "../lib/auth";
 import { motion } from "framer-motion";
+import QuestCard from "../components/QuestCard";
 
 interface Quest {
   _id: string;
@@ -149,6 +144,15 @@ export default function Quests() {
   }
 
   const renderQuestCard = (quest: Quest, isActive: boolean = true, index: number = 0) => {
+    const formatDate = (dateStr?: string) => {
+      if (!dateStr) return "N/A";
+      return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    };
+
+    const durationText = isActive 
+      ? (quest.starts_at && quest.ends_at ? `${formatDate(quest.starts_at)} - ${formatDate(quest.ends_at)}` : "Ongoing")
+      : (countdowns[quest._id] ? `Starts in ${countdowns[quest._id]}` : "Coming Soon");
+
     return (
       <motion.div
         key={quest._id}
@@ -156,72 +160,18 @@ export default function Quests() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.45, delay: index * 0.08, ease: "easeOut" }}
       >
-        <Card className="bg-[#0d1117] border border-white/5 rounded-xl overflow-hidden transition hover:shadow-lg flex flex-col">
-          {/* Image / Badge Section */}
-          <div className="relative w-full h-44 sm:h-40 flex-shrink-0">
-            <img
-              src={quest.project_image ?? "/quest-1.png"}
-              alt={quest.title}
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-            <div className="absolute top-2 right-2">
-              <Badge className="text-xs">{isActive ? "Active" : "Scheduled"}</Badge>
-            </div>
-            {/* <div className="absolute top-3 left-3 text-xs text-white/80 font-medium">
-              {quest.category}
-            </div> */}
-          </div>
-
-          {/* Content */}
-          <div className="p-4 sm:p-5 flex flex-col gap-3 flex-1">
-            <h2 className="text-lg sm:text-xl font-semibold text-white line-clamp-2">
-              {quest.title}
-            </h2>
-
-            <p className="text-xs sm:text-sm text-white/90 line-clamp-2">
-              {quest.sub_title}
-            </p>
-
-            {/* {quest.project_name && ( */}
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Project:</span>
-                <span className="text-white">{quest.project_name ?? "Intuition Ecosystem"}</span>
-              </div>
-            {/* )} */}
-
-            {!isActive && countdowns[quest._id] && (
-              <p className="text-purple-400 text-xs mb-2">
-                Starts in {countdowns[quest._id]}
-              </p>
-            )}
-
-            <div className="flex justify-between text-sm items-center">
-              <span className="text-gray-500">Reward:</span>
-              <span className="text-white font-semibold">{quest.reward} XP</span>
-            </div>
-
-            <Button
-              className="w-full bg-gradient-to-r from-purple-700 via-purple-800 to-indigo-900 
-                hover:from-purple-600 hover:via-purple-700 hover:to-indigo-800
-                text-white font-medium rounded-lg mt-2 py-2 flex items-center justify-center space-x-2 
-                active:scale-[0.98] transition-all"
-              onClick={() => startQuest(quest)}
-            >
-              {isActive ? (
-                <>
-                  <ExternalLink className="w-4 h-4" />
-                  <span>{quest.joined ? "Continue Quest" : "Start Task"}</span>
-                </>
-              ) : (
-                <>
-                  <Clock className="w-4 h-4" />
-                  <span>Coming Soon</span>
-                </>
-              )}
-            </Button>
-          </div>
-        </Card>
+        <QuestCard
+          title={quest.title}
+          description={quest.sub_title}
+          projectName={quest.project_name || "Intuition Ecosystem"}
+          projectLogo={quest.project_image || "/quest-1.png"}
+          heroImage={quest.project_image || "/quest-1.png"}
+          rewards={`${quest.reward} XP`}
+          duration={durationText}
+          questId={quest._id}
+          isLocked={!isActive}
+          lockLevel={1}
+        />
       </motion.div>
     );
   };
@@ -247,9 +197,9 @@ export default function Quests() {
         {isLoading ? (
           <div className="text-center py-12 text-white/60">Loading quests...</div>
         ) : activeQuests.length === 0 ? (
-          <Card className="glass glass-hover rounded-3xl p-8 text-center">
+          <div className="bg-white/5 border border-white/10 rounded-3xl p-8 text-center backdrop-blur-md">
             <p className="text-white/60">No active quests at the moment. Check back soon!</p>
-          </Card>
+          </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {activeQuests.map((quest, i) => renderQuestCard(quest, true, i))}
