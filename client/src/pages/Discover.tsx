@@ -9,13 +9,7 @@ import { apiRequestV2 } from "../lib/queryClient";
 import CampaignCard from "../components/CampaignCard";
 import LessonCard from "../components/LessonCard";
 import QuestCard from "../components/QuestCard";
-
-// Images
-import intuitionPortal from "@assets/intuitionPortal.jpg";
-// import intuitionBets from "@assets/intuitionBets.jpg";
-import Sofia from "/ecosystem/Sofia.jpg"
-import intuRank from "@assets/intuRank.jpg";
-import tnsLogo from "@assets/tnsLogo.jpg";
+import EcosystemCard from "../components/EcosystemCard";
 
 export default function Discover() {
   const [activeFilter, setActiveFilter] = useState("all");
@@ -111,56 +105,35 @@ export default function Discover() {
     .filter((c: any) => isActiveCampaign(c))
     .slice(0, 3);
 
-  // Unified cards
-  const discoverCards = [
-    {
-      id: 1,
-      title: "Intuition Portal",
-      description:
-        "Explore the Intuition ecosystem through the main portal and discover builders across the network.",
-      category: "Portal",
-      image: intuitionPortal,
-      route: "/ecosystem-dapps",
-    },
+  const { data: dappsData } = useQuery({
+  queryKey: ["/api/ecosystem-dapps"],
+  queryFn: async () => {
+    const res = await apiRequest("GET", "/api/ecosystem-dapps");
+    return res.json();
+  },
+});
 
-    {
-      id: 2,
-      title: "Trust Name Service",
-      description:
-        "Create human-readable identities and simplify interaction across the ecosystem.",
-      category: "Domain Name",
-      image: tnsLogo,
-      route: "/ecosystem-dapps",
-    },
+const [dapps, setDapps] = useState<any[]>([]);
 
-    {
-      id: 3,
-      title: "IntuRank",
-      description:
-        "Track rankings, influence, and ecosystem reputation inside the Intuition network.",
-      category: "Reputation",
-      image: intuRank,
-      route: "/ecosystem-dapps",
-    },
+useEffect(() => {
+  (async () => {
+    try {
+      const { ecosystemQuests } = await apiRequestV2(
+        "GET",
+        "/api/ecosystem-quests"
+      );
 
-        {
-      id: 4,
-      title: "Sofia",
-      description:
-        "Participate in prediction systems powered by social knowledge and onchain intelligence.",
-      category: "Reputation",
-      image: Sofia,
-      route: "/ecosystem-dapps",
-    },
-  ];
+      setDapps(ecosystemQuests || []);
+    } catch (err) {
+      console.error("Failed to fetch ecosystem dapps", err);
+    }
+  })();
+}, []);
 
-  const filteredCards =
-    activeFilter === "all"
-      ? discoverCards
-      : discoverCards.filter(
-          (card) =>
-            card.category.toLowerCase() === activeFilter
-        );
+  const filteredDapps =
+  activeFilter === "all" || activeFilter === "dapps"
+    ? dapps
+    : [];
 
         //// fetch lessons
         const { data: lessonsData } = useQuery({
@@ -271,20 +244,37 @@ const quests = questsData?.quests ?? [];
 
           {/* Top Label */}
           <div className="mb-4 flex items-center gap-2">
-            <div className="h-1.5 w-1.5 rounded-full bg-purple-400 animate-pulse" />
+  <div
+    className="h-1.5 w-1.5 rounded-full animate-pulse"
+    style={{
+      background: "#FF8CD9",
+      boxShadow: "0 0 10px #FF8CD9, 0 0 20px #B184C4",
+    }}
+  />
 
-            <span className="text-xs font-semibold uppercase tracking-widest text-purple-400">
-              Explore
-            </span>
-          </div>
+  <span
+    className="text-sm font-semibold uppercase tracking-widest bg-clip-text text-transparent"
+    style={{
+      backgroundImage: "linear-gradient(to right, #B184C4, #FF8CD9)",
+      textShadow: "0 0 18px rgba(255, 140, 217, 0.35)",
+    }}
+  >
+    Explore
+  </span>
+</div>
 
-          {/* Filters */}
+         {/* Filters */}
 <div className="mb-5 flex flex-wrap items-center gap-2">
   {[
     {
       key: "all",
       label: "All",
       icon: null,
+    },
+    {
+      key: "dapps",
+      label: "dApps",
+      icon: "/ecosystem-dapps.png",
     },
     {
       key: "campaigns",
@@ -305,12 +295,19 @@ const quests = questsData?.quests ?? [];
     <button
       key={filter.key}
       onClick={() => setActiveFilter(filter.key)}
-      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 border
+      className={`
+        flex items-center gap-1.5
+        px-3 py-1.5
+        rounded-full
+        text-xs font-medium
+        transition-all duration-200
+        border
         ${
           activeFilter === filter.key
-            ? "bg-purple-500 border-purple-500 text-white"
-            : "bg-white/5 border-white/10 text-white/60 hover:text-white hover:border-white/20"
-        }`}
+            ? "border-[#B65FC8] text-white"
+            : "border-[#00E1A233] text-white/60 hover:text-white hover:border-[#00E1A266]"
+        }
+      `}
     >
       {filter.icon && (
         <img
@@ -325,55 +322,69 @@ const quests = questsData?.quests ?? [];
   ))}
 </div>
 
-          {/* Apps & Projects */}
-          <section className="mb-8">
-  <div className="flex items-start justify-between mb-3 gap-2">
-    <div>
-      <h2 className="text-base md:text-lg font-semibold">
-        Apps and Projects
-      </h2>
+{/* Apps & Projects */}
+{(activeFilter === "all" || activeFilter === "dapps") && (
+  <section className="mb-8">
+    <div className="flex items-start justify-between mb-3 gap-2">
+      <div>
+        <h2 className="text-base md:text-lg font-semibold">
+          Apps and Projects
+        </h2>
 
-      <p className="text-[11px] md:text-xs text-white/60 mt-1 max-w-xl">
-        Discover projects building on the Intuition knowledge network.
-      </p>
+        <p className="text-[11px] md:text-xs text-white/60 mt-1 max-w-xl">
+          Discover projects building on the Intuition knowledge network.
+        </p>
+      </div>
+
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => setLocation("/ecosystem-dapps")}
+        className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] text-white/80 hover:text-white hover:bg-[#00E1A24D] transition"
+      >
+        <span>View all protocols</span>
+
+        <img
+          src="/arrow-right.png"
+          alt="arrow right"
+          className="w-3.5 h-3.5 opacity-80 transition"
+        />
+      </Button>
     </div>
 
-<Button
-  variant="ghost"
-  size="sm"
-  onClick={() => setLocation("/ecosystem-dapps")}
-  className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] text-white/80 hover:text-white hover:bg-white/5"
->
-  <span>View all protocols</span>
+    <div className="ticker-container">
+      <div className="ticker gap-3">
 
-  <img
-    src="/arrow-right.png"
-    alt="arrow right"
-    className="w-3.5 h-3.5 opacity-80 group-hover:opacity-100 transition"
-  />
-</Button>
-  </div>
+        {/* First set */}
+        {filteredDapps.map((dapp: any, index: number) => (
+          <div
+            key={dapp._id}
+            className="w-[260px] shrink-0"
+          >
+            <EcosystemCard
+              dapp={dapp}
+              index={index}
+            />
+          </div>
+        ))}
 
-<div className="ticker-container">
-  <div className="ticker gap-3">
-    
-    {/* First set */}
-    {filteredCards.map((card) => (
-      <div key={card.id} className="w-[260px] shrink-0">
-        <DiscoverCard card={card} />
+        {/* Duplicate set */}
+        {filteredDapps.map((dapp: any, index: number) => (
+          <div
+            key={`${dapp._id}-dup`}
+            className="w-[260px] shrink-0"
+          >
+            <EcosystemCard
+              dapp={dapp}
+              index={index}
+            />
+          </div>
+        ))}
+
       </div>
-    ))}
-
-    {/* Duplicate set for seamless loop */}
-    {filteredCards.map((card) => (
-      <div key={`${card.id}-dup`} className="w-[260px] shrink-0">
-        <DiscoverCard card={card} />
-      </div>
-    ))}
-
-  </div>
-</div>
-</section>
+    </div>
+  </section>
+)}
 
 {/* Campaigns */}
 {(activeFilter === "all" ||
@@ -382,48 +393,97 @@ const quests = questsData?.quests ?? [];
     <div className="flex items-start justify-between mb-3 gap-2">
       <div>
         <h2 className="text-base md:text-lg font-semibold">
-          Trending Campaigns
+          Active Campaigns
         </h2>
 
         <p className="text-[11px] md:text-xs text-white/60 mt-1 max-w-xl">
-          Complete campaigns, earn rewards, and participate in the growing Intuition ecosystem.
+          Explore and participate in active campaigns
         </p>
       </div>
 
       <Button
-  variant="ghost"
-  size="sm"
-  onClick={() => setLocation("/campaigns")}
-  className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] text-white/80 hover:text-white hover:bg-white/5"
->
-  <span>View all campaigns</span>
+        variant="ghost"
+        size="sm"
+        onClick={() => setLocation("/campaigns")}
+       className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] text-white/80 hover:text-white hover:bg-[#00E1A24D] transition"
+      >
+        <span>View all campaigns</span>
 
-  <img
-    src="/arrow-right.png"
-    alt="arrow right"
-    className="w-3.5 h-3.5 opacity-80 group-hover:opacity-100 transition"
-  />
-</Button>
+        <img
+          src="/arrow-right.png"
+          alt="arrow right"
+          className="w-3.5 h-3.5 opacity-80 group-hover:opacity-100 transition"
+        />
+      </Button>
     </div>
 
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-      {trendingCampaigns.length > 0 ? (
-  trendingCampaigns.map((campaign: any, index: number) => (
-    <div
-      key={campaign._id ?? index}
-      className={`animate-slide-up delay-${(index + 1) * 100}`}
-    >
-      <div className="rounded-2xl border border-white/10 overflow-hidden">
-        <CampaignCard {...campaign} from="explore" />
+    {trendingCampaigns.length > 0 ? (
+      trendingCampaigns.length > 3 ? (
+        <div className="ticker-container">
+          <div className="ticker gap-3">
+
+            {/* First set */}
+            {trendingCampaigns.map(
+              (campaign: any, index: number) => (
+                <div
+                  key={campaign._id ?? index}
+                  className="w-[260px] shrink-0"
+                >
+                  <div className="rounded-2xl border border-white/10 overflow-hidden">
+                    <CampaignCard
+                      {...campaign}
+                      from="explore"
+                    />
+                  </div>
+                </div>
+              )
+            )}
+
+            {/* Duplicate set */}
+            {trendingCampaigns.map(
+              (campaign: any, index: number) => (
+                <div
+                  key={`${campaign._id}-dup`}
+                  className="w-[260px] shrink-0"
+                >
+                  <div className="rounded-2xl border border-white/10 overflow-hidden">
+                    <CampaignCard
+                      {...campaign}
+                      from="explore"
+                    />
+                  </div>
+                </div>
+              )
+            )}
+
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-3 gap-2">
+          {trendingCampaigns.map(
+            (campaign: any, index: number) => (
+              <div
+                key={campaign._id ?? index}
+                className={`animate-slide-up delay-${
+                  (index + 1) * 100
+                }`}
+              >
+                <div className="rounded-2xl border border-white/10 overflow-hidden">
+                  <CampaignCard
+                    {...campaign}
+                    from="explore"
+                  />
+                </div>
+              </div>
+            )
+          )}
+        </div>
+      )
+    ) : (
+      <div className="col-span-2 md:col-span-4 rounded-2xl border border-white/10 bg-[#0B0B0B] p-6 text-center text-white/60 text-sm">
+        No active campaigns at the moment.
       </div>
-    </div>
-  ))
-) : (
-  <div className="col-span-2 md:col-span-4 rounded-2xl border border-white/10 bg-[#0B0B0B] p-6 text-center text-white/60 text-sm">
-    No active campaigns at the moment.
-  </div>
-)}
-    </div>
+    )}
   </section>
 )}
 
@@ -433,11 +493,11 @@ const quests = questsData?.quests ?? [];
     <div className="flex items-start justify-between mb-4 gap-4">
       <div>
         <h2 className="text-base md:text-lg font-semibold">
-          Learning
+          Active Lessons
         </h2>
 
         <p className="text-[11px] md:text-xs text-white/60 mt-1 max-w-xl">
-          Learn how Intuition works through guides, tutorials, and ecosystem walkthroughs.
+        Explore and participate in active lessons 
         </p>
       </div>
 
@@ -445,7 +505,7 @@ const quests = questsData?.quests ?? [];
   variant="ghost"
   size="sm"
   onClick={() => setLocation("/learn")}
-  className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] text-white/80 hover:text-white hover:bg-white/5"
+className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] text-white/80 hover:text-white hover:bg-[#00E1A24D] transition"
 >
   <span>View all lessons</span>
 
@@ -459,7 +519,7 @@ const quests = questsData?.quests ?? [];
 
     {/* GRID */}
     {lessons?.length > 0 ? (
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
         {lessons.map((lesson: any) => (
           <LessonCard key={lesson._id} lesson={lesson} />
         ))}
@@ -524,16 +584,31 @@ const quests = questsData?.quests ?? [];
   ))}
 </div>
 
+<div className="mt-2 text-xs text-white/50">
+  Track deeper engagement insights.{" "}
+  <span
+    onClick={() => setLocation("/analytics")}
+    className="inline-flex items-center gap-1 text-[#00E1A2] cursor-pointer hover:opacity-80 transition"
+  >
+    View detailed analytics
+    <img
+      src="/color-arrow-right.png"
+      alt="arrow"
+      className="w-3.5 h-3.5"
+    />
+  </span>
+</div>
+
 {(activeFilter === "all" || activeFilter === "quests") && (
   <section className="mb-8">
     <div className="flex items-start justify-between mb-3 mt-8 gap-2">
       <div>
         <h2 className="text-base md:text-lg font-semibold">
-          Trending Quests
+          Active Quests
         </h2>
 
         <p className="text-xs text-white/60 mt-1 max-w-xl">
-          Complete quests and earn ecosystem rewards.
+          Explore and participate in active quests
         </p>
       </div>
 
@@ -541,21 +616,27 @@ const quests = questsData?.quests ?? [];
         variant="ghost"
         size="sm"
         onClick={() => setLocation("/quests")}
-        className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] text-white/80 hover:text-white hover:bg-white/5"
+        className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] text-white/80 hover:text-white hover:bg-[#00E1A24D] transition"
       >
         <span>View all quests</span>
 
         <img
           src="/arrow-right.png"
           alt="arrow right"
-          className="w-3.5 h-3.5 opacity-80 transition"
+          className="w-3.5 h-3.5"
         />
       </Button>
     </div>
 
-    {quests?.length > 0 ? (
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-        {quests.slice(0, 4).map((quest: any) => (
+    {/* EMPTY STATE */}
+    {quests.length === 0 ? (
+      <div className="rounded-2xl border border-white/10 bg-[#170F1F] p-6 text-center text-white/60 text-sm">
+        Quests coming soon...
+      </div>
+    ) : quests.length <= 3 ? (
+      /* GRID MODE (≤ 3) */
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+        {quests.slice(0, 3).map((quest: any) => (
           <QuestCard
             key={quest._id}
             questId={quest._id}
@@ -571,14 +652,47 @@ const quests = questsData?.quests ?? [];
         ))}
       </div>
     ) : (
-      <div className="col-span-2 md:col-span-4 rounded-2xl border border-white/10 bg-[#170F1F] p-6 text-center text-white/60 text-sm">
-        No quests available yet. New quests will appear here soon.
+      /* TICKER MODE (> 3) */
+      <div className="overflow-hidden">
+        <div className="flex gap-2 w-max animate-ticker">
+
+          {quests.map((quest: any) => (
+            <div key={quest._id} className="w-[260px] shrink-0">
+              <QuestCard
+                questId={quest._id}
+                title={quest.title}
+                description={quest.description}
+                projectName={quest.projectName}
+                projectLogo={quest.projectLogo}
+                heroImage={quest.heroImage}
+                participants={quest.participants}
+                rewards={quest.rewards}
+                duration={quest.duration}
+              />
+            </div>
+          ))}
+
+          {quests.map((quest: any) => (
+            <div key={`${quest._id}-dup`} className="w-[260px] shrink-0">
+              <QuestCard
+                questId={quest._id}
+                title={quest.title}
+                description={quest.description}
+                projectName={quest.projectName}
+                projectLogo={quest.projectLogo}
+                heroImage={quest.heroImage}
+                participants={quest.participants}
+                rewards={quest.rewards}
+                duration={quest.duration}
+              />
+            </div>
+          ))}
+
+        </div>
       </div>
     )}
   </section>
 )}
-
-          
         </div>
       </div>
     </div>

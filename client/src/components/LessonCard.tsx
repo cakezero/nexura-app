@@ -33,10 +33,10 @@ export default function LessonCard({ lesson }: LessonCardProps) {
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
         />
 
-        {/* XP Badge */}
-        <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-semibold text-[#00E1A2] bg-[#00E1A24D] border border-[#00E1A233]">
-  {lesson.noOfQuestions} questions
-</div>
+        {/* ACTIVE Badge */}
+        <div className="absolute top-3 right-3 px-2 py-1 rounded-full text-[10px] font-semibold text-[#00E1A2] bg-[#00E1A24D] border border-[#00E1A233]">
+          ACTIVE
+        </div>
       </div>
 
       {/* CONTENT */}
@@ -54,13 +54,13 @@ export default function LessonCard({ lesson }: LessonCardProps) {
         {/* META */}
         <div className="flex items-center justify-between pt-2">
           <span className="flex items-center gap-1 text-[10px] text-[#8A97B0] bg-[#111827] px-2 py-1 rounded-md">
-  <img src="/xp-iconn.png" className="w-3 h-3" />
-  {lesson.reward} XP
-</span>
+            <img src="/xp-iconn.png" className="w-4 h-4" />
+            {lesson.reward} XP
+          </span>
 
           <button className="flex items-center gap-1 bg-[#8B3EFE] text-white text-[11px] px-3 py-1.5 rounded-full hover:opacity-90 transition">
             Start
-            <img src="/next-arrow.png" className="w-2 h-4" />
+            <img src="/arrow-right.png" className="w-3 h-4" />
           </button>
         </div>
       </div>
