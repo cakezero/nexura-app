@@ -1102,6 +1102,10 @@ export const saveQuest = async (req: GlobalRequest, res: GlobalResponse) => {
     }
 
     const { id } = req.query as { id: string };
+    if (id && !mongoose.Types.ObjectId.isValid(id)) {
+      res.status(BAD_REQUEST).json({ error: "invalid quest id" });
+      return;
+    }
     if (!id) {
       // Fill in defaults for required model fields not yet provided in a draft
       const [questCount] = await Promise.all([
