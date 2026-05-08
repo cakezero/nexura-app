@@ -1,15 +1,14 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Card } from "../ui/card";
 import { Link, useLocation } from "wouter";
 import { projectApiRequest, getStoredProjectInfo } from "../../lib/projectApi";
 import { useToast } from "../../hooks/use-toast";
 import { useWallet } from "../../hooks/use-wallet";
-import { ArrowDownToLine, RefreshCw, Trash2, XCircle, Loader2, Clock } from "lucide-react";
+import { RefreshCw, Loader2 } from "lucide-react";
 import { Button } from "../ui/button";
 import { apiRequestV2 } from "../../lib/queryClient";
-import { closeRewardCampaign, getRewardCampaignCreator, getRewardContractBalance, syncRewardContractStartDate } from "../../lib/performOnchainAction";
+import { closeRewardCampaign, getRewardCampaignCreator, getRewardContractBalance } from "../../lib/performOnchainAction";
 import { formatEther } from "viem";
 import {
   Dialog,
@@ -19,6 +18,8 @@ import {
   DialogDescription,
   DialogFooter,
 } from "../ui/dialog";
+
+import QuestCard from "../QuestCard";
 
 interface Campaign {
   _id: string;
@@ -63,6 +64,7 @@ export default function CampaignsTab() {
   const info = getStoredProjectInfo();
   const isSuperAdmin = (info?.role as string) === "superadmin";
   const isHubAdmin = isSuperAdmin || (info?.role as string) === "admin";
+  
   const formatTrustAmount = (amountWei: bigint) => {
     const formatted = formatEther(amountWei);
     const numeric = Number(formatted);
@@ -114,6 +116,7 @@ export default function CampaignsTab() {
     if (isDraft(c) || isScheduled(c) || isCompleted(c)) return false;
     return true;
   };
+
   useEffect(() => {
     const currentNow = new Date(Date.now() + serverOffset);
     const completedRewardCampaigns = campaigns.filter((campaign) => {
@@ -326,7 +329,7 @@ export default function CampaignsTab() {
     { id: "completed", label: "Completed", count: campaigns.filter((c) => isCompleted(c)).length },
   ];
 
-  const CampaignCard = ({ campaign }: { campaign: Campaign }) => {
+  const renderCampaignCard = (campaign: Campaign) => {
     const draft = isDraft(campaign);
     const scheduled = isScheduled(campaign);
     const completed = isCompleted(campaign);
@@ -334,7 +337,7 @@ export default function CampaignsTab() {
     const rewardBalance = rewardBalances[campaign._id];
     const rewardBalanceKnown = rewardBalance !== undefined;
     const hasRewardsContract = !!campaign.contractAddress && Number(campaign.reward?.pool ?? 0) > 0;
-    const hasWithdrawableRemainder = completed && hasRewardsContract && rewardBalanceKnown && rewardBalance > 0n;
+    
     let status = "Published";
     let statusColor = "bg-green-500";
 
@@ -351,98 +354,46 @@ export default function CampaignsTab() {
 
     const formatDate = (dateStr: string) => {
       const date = new Date(dateStr);
-      return date.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+      return date.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
     };
 
+    const durationText = scheduled && countdowns[campaign._id]
+      ? `Starts in ${countdowns[campaign._id]}`
+      : `${formatDate(campaign.starts_at)} - ${formatDate(campaign.ends_at)}`;
+
+    const rewardText = Number(campaign.reward?.pool ?? 0) > 0 
+      ? `${campaign.reward?.pool} TRUST`
+      : campaign.reward?.xp ? `${campaign.reward.xp} XP` : "Rewards";
+
+    const extraDescription = completed && hasRewardsContract && rewardBalanceKnown
+      ? (rewardBalance! > 0n ? `Contract remainder: ${formatTrustAmount(rewardBalance!)} TRUST` : "Reward contract settled")
+      : "";
+
     return (
-      <Card className="w-full h-full bg-gray-900 text-white rounded-xl overflow-hidden shadow-lg flex flex-col">
-        {campaign.projectCoverImage ? (
-          <img src={campaign.projectCoverImage} alt={campaign.description || campaign.title} className="w-full h-28 object-cover" />
-        ) : (
-          <div className="w-full h-28 bg-gray-700 flex items-center justify-center">
-            <span className="text-white/50 text-xs">No Image</span>
-          </div>
-        )}
-
-        <div className="p-3 flex flex-1 flex-col gap-1.5">
-          <h3 className="font-bold text-sm truncate" title={campaign.description || campaign.title}>
-            {campaign.description || campaign.title}
-          </h3>
-          <p className="text-white/70 text-xs">
-            {formatDate(campaign.starts_at)} - {formatDate(campaign.ends_at)}
-          </p>
-          {Number(campaign.reward?.pool ?? 0) > 0 && (
-            <p className="text-purple-400 text-xs font-medium">Reward Pool: {campaign.reward?.pool} TRUST</p>
-          )}
-          {completed && hasRewardsContract && (
-            <p className="text-emerald-300 text-xs font-medium">
-              {rewardBalanceKnown
-                ? rewardBalance! > 0n
-                  ? `Contract remainder: ${formatTrustAmount(rewardBalance!)} TRUST`
-                  : "Reward contract settled"
-                : "Checking reward contract..."}
-            </p>
-          )}
-
-          <div className="mt-auto flex flex-col gap-2 pt-3">
-            <div className="flex gap-1.5 flex-wrap">
-              <button
-                className="flex-1 px-2 py-1.5 text-xs bg-[#8B3EFE] rounded-lg hover:bg-[#7b35e6] transition"
-                onClick={() => setLocation(`/studio-dashboard/create-new-campaign?edit=${campaign._id}`)}
-              >
-                {isSuperAdmin ? "View Details" : "View"}
-              </button>
-
-              {isSuperAdmin && !draft && !completed && (
-                <button
-                  title="Close campaign"
-                  className="px-2 py-1.5 text-xs bg-yellow-600/20 text-yellow-400 rounded-lg hover:bg-yellow-600/30 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                  onClick={() => setPendingAction({ type: "close", id: campaign._id, title: campaign.description || campaign.title })}
-                  disabled={closingId === campaign._id || deletingId === campaign._id}
-                >
-                  {closingId === campaign._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
-                </button>
-              )}
-
-              {isHubAdmin && completed && hasRewardsContract && !rewardsContractSettled && (
-                <button
-                  title="Withdraw contract remainder"
-                  className="px-3 py-1.5 text-xs bg-emerald-600/20 text-emerald-300 rounded-lg hover:bg-emerald-600/30 transition disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1.5"
-                  onClick={() => void handleWithdrawRemainder(campaign)}
-                  disabled={
-                    withdrawingId === campaign._id ||
-                    deletingId === campaign._id ||
-                    closingId === campaign._id
-                  }
-                >
-                  {withdrawingId === campaign._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowDownToLine className="w-4 h-4" />}
-                  <span>{withdrawingId === campaign._id ? "Withdrawing..." : "Withdraw"}</span>
-                </button>
-              )}
-
-              {isSuperAdmin && (draft || completed) && (
-                <button
-                  title="Delete campaign"
-                  className="px-2 py-1.5 text-xs bg-red-600/20 text-red-400 rounded-lg hover:bg-red-600/30 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                  onClick={() => setPendingAction({ type: "delete", id: campaign._id, title: campaign.description || campaign.title })}
-                  disabled={deletingId === campaign._id || closingId === campaign._id}
-                >
-                  {deletingId === campaign._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                </button>
-              )}
-            </div>
-
-            {scheduled ? (
-              <div className="flex items-center gap-1 px-2 py-0.5 text-[10px] rounded self-start bg-black/40 border border-purple-500/30">
-                <Clock className="w-3 h-3 text-purple-400 animate-pulse" />
-                <span className="text-purple-300 font-mono font-semibold">{countdowns[campaign._id] || "Loading..."}</span>
-              </div>
-            ) : (
-              <span className={`px-2 py-0.5 text-[10px] rounded self-start ${statusColor}`}>{status}</span>
-            )}
-          </div>
-        </div>
-      </Card>
+      <QuestCard
+        key={campaign._id}
+        questId={campaign._id}
+        title={campaign.title}
+        description={(campaign.description || "Campaign") + (extraDescription ? ` | ${extraDescription}` : "")}
+        projectName={campaign.nameOfProject || "My Project"}
+        projectLogo={campaign.projectCoverImage || "/campaign.png"}
+        heroImage={campaign.projectCoverImage || "/campaign.png"}
+        rewards={rewardText}
+        duration={durationText}
+        status={status}
+        statusColor={statusColor}
+        showClose={isSuperAdmin && !draft && !completed}
+        showWithdraw={isHubAdmin && completed && hasRewardsContract && !rewardsContractSettled}
+        showDelete={isSuperAdmin && (draft || completed)}
+        isClosing={closingId === campaign._id}
+        isDeleting={deletingId === campaign._id}
+        isWithdrawing={withdrawingId === campaign._id}
+        onClose={(id) => setPendingAction({ type: "close", id, title: campaign.description || campaign.title })}
+        onDelete={(id) => setPendingAction({ type: "delete", id, title: campaign.description || campaign.title })}
+        onWithdraw={() => void handleWithdrawRemainder(campaign)}
+        rewardPoolLabel="REWARD POOL:"
+        from="studio"
+      />
     );
   };
 
@@ -500,7 +451,7 @@ export default function CampaignsTab() {
             {filteredCampaigns.length === 0 ? (
               <p className="text-white/60 col-span-full">No campaigns found.</p>
             ) : (
-              filteredCampaigns.map((c) => <CampaignCard key={c._id} campaign={c} />)
+              filteredCampaigns.map((c) => renderCampaignCard(c))
             )}
           </div>
         )}

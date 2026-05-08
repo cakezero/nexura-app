@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { Trash2, Calendar } from "lucide-react";
+import { Trash2, Calendar, XCircle, ArrowDownToLine, Loader2 } from "lucide-react";
 
 interface QuestCardProps {
   title: string;
@@ -16,7 +16,17 @@ interface QuestCardProps {
   from?: string;
   duration?: string;
   onDelete?: (id: string) => void;
+  onClose?: (id: string) => void;
+  onWithdraw?: (id: string) => void;
   showDelete?: boolean;
+  showClose?: boolean;
+  showWithdraw?: boolean;
+  isDeleting?: boolean;
+  isClosing?: boolean;
+  isWithdrawing?: boolean;
+  status?: string;
+  statusColor?: string;
+  rewardPoolLabel?: string;
 }
 
 export default function QuestCard({
@@ -34,7 +44,17 @@ export default function QuestCard({
   from,
   duration = "Mar 1 - Mar 30",
   onDelete,
-  showDelete = false
+  onClose,
+  onWithdraw,
+  showDelete = false,
+  showClose = false,
+  showWithdraw = false,
+  isDeleting = false,
+  isClosing = false,
+  isWithdrawing = false,
+  status,
+  statusColor,
+  rewardPoolLabel = "REWARD POOL:"
 }: QuestCardProps) {
   const [, setLocation] = useLocation();
 
@@ -111,46 +131,77 @@ export default function QuestCard({
 
           {/* Reward Pool */}
           <div className="flex items-center justify-between" data-node-id="3583:2064">
-            <span className="text-[10px] font-medium text-white/70 uppercase leading-[17px]">REWARD POOL:</span>
-            <span className="text-[10px] font-semibold text-white leading-[18.2px]">{rewards || "500 XP"}</span>
+            <span className="text-[10px] font-medium text-white/70 uppercase leading-[17px]">{rewardPoolLabel}</span>
+            <span className="text-[10px] font-semibold text-white leading-[18.2px] truncate max-w-[150px]">{rewards || "500 XP"}</span>
           </div>
 
-          {/* Project */}
+          {/* Project / Participants */}
           <div className="flex items-center justify-between" data-node-id="3583:2074">
-            <span className="text-[10px] font-medium text-white/70 uppercase leading-[17px]">PROJECT:</span>
+            <span className="text-[10px] font-medium text-white/70 uppercase leading-[17px]">
+              {participants !== undefined ? "PARTICIPANTS:" : "PROJECT:"}
+            </span>
             <span className="text-[10px] font-semibold text-white leading-[18.2px] truncate max-w-[150px]">
-              {projectName}
+              {participants !== undefined ? participants.toLocaleString() : projectName}
             </span>
           </div>
         </div>
       </div>
 
       {/* Action Footer */}
-      <div className="absolute bottom-[15px] left-[11px] right-[11px] flex items-center gap-[6px]">
-        {/* View Details Button */}
-        <button
-          onClick={handleClick}
-          disabled={isLocked}
-          className={`flex-1 h-[35px] rounded-[12px] bg-gradient-to-r from-[#8a3ffc] to-[#522696] flex items-center justify-center transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed`}
-          data-node-id="3276:2992"
-        >
-          <span className="text-[12px] font-semibold text-white font-['Geist',sans-serif] leading-[18.2px]">
-            View Details
-          </span>
-        </button>
-
-        {/* Delete Button (Optional, matches Figma) */}
-        {showDelete && (
+      <div className="absolute bottom-[15px] left-[11px] right-[11px] flex flex-col gap-2">
+        <div className="flex items-center gap-[6px]">
+          {/* View Details Button */}
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              if (questId && onDelete) onDelete(questId);
-            }}
-            className="w-[37px] h-[35px] bg-[#e84a4a]/20 rounded-[10px] flex items-center justify-center transition-colors hover:bg-[#e84a4a]/40"
-            data-node-id="3604:68"
+            onClick={handleClick}
+            disabled={isLocked}
+            className={`flex-1 h-[35px] rounded-[12px] bg-gradient-to-r from-[#8a3ffc] to-[#522696] flex items-center justify-center transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed`}
+            data-node-id="3276:2992"
           >
-            <Trash2 className="w-[20px] h-[20px] text-[#e84a4a]" />
+            <span className="text-[12px] font-semibold text-white font-['Geist',sans-serif] leading-[18.2px]">
+              {status === "Draft" ? "Edit" : "View Details"}
+            </span>
           </button>
+
+          <div className="flex gap-1.5">
+            {showClose && (
+              <button
+                onClick={(e) => { e.stopPropagation(); if (questId && onClose) onClose(questId); }}
+                disabled={isClosing || isDeleting}
+                className="w-[35px] h-[35px] bg-yellow-600/20 rounded-[10px] flex items-center justify-center transition-colors hover:bg-yellow-600/40 text-yellow-400"
+              >
+                {isClosing ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
+              </button>
+            )}
+
+            {showWithdraw && (
+              <button
+                onClick={(e) => { e.stopPropagation(); if (questId && onWithdraw) onWithdraw(questId); }}
+                disabled={isWithdrawing || isDeleting || isClosing}
+                className="w-[35px] h-[35px] bg-emerald-600/20 rounded-[10px] flex items-center justify-center transition-colors hover:bg-emerald-600/40 text-emerald-300"
+              >
+                {isWithdrawing ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowDownToLine className="w-4 h-4" />}
+              </button>
+            )}
+
+            {showDelete && (
+              <button
+                onClick={(e) => { e.stopPropagation(); if (questId && onDelete) onDelete(questId); }}
+                disabled={isDeleting || isClosing}
+                className="w-[35px] h-[35px] bg-[#e84a4a]/20 rounded-[10px] flex items-center justify-center transition-colors hover:bg-[#e84a4a]/40"
+              >
+                {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-[20px] h-[20px] text-[#e84a4a]" />}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Status indicator (if needed) */}
+        {status && !isLocked && (
+          <div className="flex items-center gap-1">
+             <span className={`px-2 py-0.5 text-[8px] rounded uppercase font-bold tracking-wider ${statusColor || "bg-purple-500"}`}>
+               {status}
+             </span>
+          </div>
         )}
       </div>
     </div>

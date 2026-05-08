@@ -112,7 +112,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
         if (found.projectCoverImage) setCoverImagePreview(found.projectCoverImage);
 
         // Load mini quests (tasks) from separate collection
-          const miniRes = await fetch(`${import.meta.env.VITE_BACKEND_URL || ""}/api/quest/fetch-mini-quests?id=${editId}`, {
+          const miniRes = await fetch(`${(import.meta as any).env.VITE_BACKEND_URL || ""}/api/quest/fetch-mini-quests?id=${editId}`, {
             headers: { Authorization: `Bearer ${session?.token}` },
           });
           const miniData = await miniRes.json();

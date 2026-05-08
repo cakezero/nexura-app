@@ -11,6 +11,8 @@ import { userApiRequest } from "../../lib/userApi";
 import { useToast } from "../../hooks/use-toast";
 import { getStoredUserSession } from "../../lib/userSession";
 
+import QuestCard from "../QuestCard";
+
 interface Quest {
   _id: string;
   title: string;
@@ -155,54 +157,54 @@ const tabs = [
     }
   };
 
-  const QuestCard = ({ quest }: { quest: Quest }) => (
-    <Card className="w-full bg-gray-900 text-white rounded-xl overflow-hidden flex flex-col">
-      {quest.projectCoverImage ? (
-        <img src={quest.projectCoverImage} className="w-full h-28 object-cover" />
-      ) : (
-        <div className="w-full h-28 bg-gray-700 flex items-center justify-center">
-          <span className="text-white/50 text-xs">No Image</span>
-        </div>
-      )}
+  const renderQuestCard = (quest: Quest) => {
+    const draft = isDraft(quest);
+    const scheduled = isScheduled(quest);
+    const completed = isCompleted(quest);
 
-      <div className="p-3 flex flex-col gap-2">
-        <h3 className="font-bold text-sm">{quest.description || quest.title}</h3>
+    let status = "Published";
+    let statusColor = "bg-green-500";
 
-        {isScheduled(quest) && countdowns[quest._id] && (
-          <p className="text-purple-400 text-xs flex items-center gap-1">
-            Starts in {countdowns[quest._id]}
-          </p>
-        )}
+    if (draft) {
+      status = "Draft";
+      statusColor = "bg-yellow-500";
+    } else if (scheduled) {
+      status = "Upcoming";
+      statusColor = "bg-blue-500";
+    } else if (completed) {
+      status = "Completed";
+      statusColor = "bg-gray-500";
+    }
 
-        {Number(quest.reward?.pool ?? 0) > 0 && (
-          <p className="text-purple-400 text-xs">Reward: {quest.reward?.pool} TRUST</p>
-        )}
+    const formatDate = (dateStr: string) => {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+    };
 
-        <div className="flex gap-2 mt-2">
-          <Button
-            className="bg-[#8B3EFE] text-white text-xs w-full"
-            onClick={() => setLocation(`/user-dashboard/create-new-quest?edit=${quest._id}`)}
-          >
-            View
-          </Button>
+    const durationText = scheduled && countdowns[quest._id] 
+      ? `Starts in ${countdowns[quest._id]}`
+      : `${formatDate(quest.starts_at)} - ${formatDate(quest.ends_at)}`;
 
-          <Button
-            variant="ghost"
-            className="text-yellow-400"
-            onClick={() =>
-              setPendingAction({
-                type: "close",
-                id: quest._id,
-                title: quest.description || quest.title,
-              })
-            }
-          >
-            <XCircle className="w-4 h-4" />
-          </Button>
-        </div>
-      </div>
-    </Card>
-  );
+    return (
+      <QuestCard
+        key={quest._id}
+        questId={quest._id}
+        title={quest.title}
+        description={quest.description || "Quest"}
+        projectName="My Project"
+        projectLogo={quest.projectCoverImage || "/quest-1.png"}
+        heroImage={quest.projectCoverImage || "/quest-1.png"}
+        rewards={quest.reward?.pool ? `${quest.reward.pool} TRUST` : "XP Rewards"}
+        duration={durationText}
+        status={status}
+        statusColor={statusColor}
+        showClose={!draft && !completed}
+        onClose={(id) => setPendingAction({ type: "close", id, title: quest.description || quest.title })}
+        onDelete={(id) => setPendingAction({ type: "delete", id, title: quest.description || quest.title })}
+        showDelete={draft || completed}
+      />
+    );
+  };
 
   return (
     <>
@@ -262,9 +264,7 @@ const tabs = [
   )}
 
   {/* QUEST CARDS */}
-  {filteredQuests.map((q) => (
-    <QuestCard key={q._id} quest={q} />
-  ))}
+  {filteredQuests.map((q) => renderQuestCard(q))}
 
 </div>
 </div>

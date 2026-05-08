@@ -17,6 +17,8 @@ import { useToast } from "../hooks/use-toast";
 import { useAuth } from "../lib/auth";
 import { useWallet } from "../hooks/use-wallet";
 
+import QuestCard from "../components/QuestCard";
+
 interface HubInfo {
   id?: string;
   name: string;
@@ -258,22 +260,12 @@ export default function Campaigns() {
   const renderCampaignCard = (campaign: Campaign, state: "active" | "upcoming" | "ended") => {
     const isActive = state === "active";
     const isUpcoming = state === "upcoming";
-    let metadata: any = {};
-    try {
-      metadata = campaign.metadata ? JSON.parse(campaign.metadata) : {};
-    } catch {
-      metadata = {};
-    }
+    const isEnded = state === "ended";
 
-    const starts_atFormatted = campaign.starts_at
-      ? new Date(campaign.starts_at).toLocaleDateString("en-GB", { day: "numeric", month: "long" })
-      : "";
-    const ends_atFormatted = campaign.ends_at
-      ? new Date(campaign.ends_at).toLocaleDateString("en-GB", { day: "numeric", month: "long" })
-      : "TBA";
     const allowedParticipants = campaign.maxParticipants && campaign.maxParticipants > 0
       ? campaign.maxParticipants
       : campaign.participants;
+
     const trustReward = (campaign.reward?.trustTokens && campaign.reward.trustTokens > 0)
       ? campaign.reward.trustTokens
       : (campaign.reward?.trust && campaign.reward.trust > 0)
@@ -283,164 +275,44 @@ export default function Campaigns() {
       : (campaign.totalTrustAvailable && allowedParticipants > 0)
       ? Number((campaign.totalTrustAvailable / allowedParticipants).toFixed(2))
       : 0;
+    
     const hasTrustReward = Number(campaign.reward?.pool ?? campaign.totalTrustAvailable ?? 0) > 0;
-    const hubInfo: HubInfo = campaign.hubInfo ?? {
-      name: campaign.project_name || "Unknown Project",
-      description: "",
-      logo: "",
-      website: "",
-      xAccount: "",
-      discordServer: "",
-      guildId: "",
+    
+    const rewardText = hasTrustReward && Number(campaign.reward?.xp) > 0
+      ? `${trustReward} TRUST + ${campaign.reward.xp} XP`
+      : hasTrustReward
+      ? `${trustReward} TRUST`
+      : `${campaign.reward.xp || 0} XP`;
+
+    const formatDate = (dateStr?: string) => {
+      if (!dateStr) return "TBA";
+      return new Date(dateStr).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
     };
 
+    const durationText = isActive 
+      ? (campaign.starts_at && campaign.ends_at ? `${formatDate(campaign.starts_at)} - ${formatDate(campaign.ends_at)}` : "Ongoing")
+      : isUpcoming ? (countdowns[campaign._id] ? `Starts in ${countdowns[campaign._id]}` : "Coming Soon")
+      : "Campaign Ended";
+
+    let status = isActive ? "Active" : isUpcoming ? "Upcoming" : "Ended";
+    let statusColor = isActive ? "bg-green-500" : isUpcoming ? "bg-blue-500" : "bg-gray-500";
+
     return (
-      <Card
+      <QuestCard
         key={campaign._id}
-        className="bg-[#0d1117] h-full border border-white/5 rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition flex flex-col"
-      >
-        {/* Campaign Banner */}
-        <div className="relative h-36 bg-black w-full">
-          {campaign.projectCoverImage && (
-            <img
-              src={campaign.projectCoverImage}
-              alt={campaign.description || campaign.title}
-              className="w-full h-full object-cover rounded-t-2xl"
-            />
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-
-          {/* Status Badge / Countdown */}
-          <div className="absolute top-2 right-2">
-            {isActive ? (
-              <Badge className="bg-green-500/20 text-green-400 border border-green-500/30 text-[0.65rem] sm:text-xs">
-                Active
-              </Badge>
-            ) : isUpcoming ? (
-              <div className="bg-black/60 backdrop-blur-sm border border-purple-500/30 rounded-lg px-2 py-1 flex items-center gap-1.5">
-                <Clock className="w-3 h-3 text-purple-400 animate-pulse" />
-                <span className="text-purple-300 text-[0.6rem] sm:text-xs font-mono font-semibold">
-                  {countdowns[campaign._id] || "Loading..."}
-                </span>
-              </div>
-            ) : (
-              <Badge className="bg-gray-500/20 text-gray-200 border border-gray-500/30 text-[0.65rem] sm:text-xs">
-                Ended
-              </Badge>
-            )}
-          </div>
-
-          {/* Category */}
-          {metadata.category && (
-            <div className="absolute top-2 left-2 text-[0.65rem] sm:text-xs text-white/80 font-medium">
-              {metadata.category}
-            </div>
-          )}
-        </div>
-
-        {/* Campaign Details */}
-        <div className="p-3 sm:p-4 flex flex-1 flex-col space-y-1.5">
-          <h2
-          className="text-sm font-semibold text-white leading-snug line-clamp-2 min-h-[2.25rem] break-words"
-          title={campaign.description || campaign.title}
-          >
-          {campaign.description || campaign.title}
-          </h2>
-
-          <div className="flex flex-row justify-between text-xs gap-1 items-center">
-            <span className="text-gray-500">Project:</span>
-            <button
-              type="button"
-              className="text-white underline-offset-2 hover:underline line-clamp-1 break-all max-w-[65%] text-right"
-              title={hubInfo.name}
-              onClick={(e) => {
-                e.stopPropagation();
-                setSelectedHub(hubInfo);
-              }}
-            >
-              {hubInfo.name}
-            </button>
-          </div>
-
-          <div className="flex flex-row justify-between text-xs gap-1 items-center">
-            <span className="text-gray-500">Participants:</span>
-            <span className="text-white flex items-center gap-1">
-              <Users className="w-3 h-3" />
-              {allowedParticipants.toLocaleString()}
-            </span>
-          </div>
-
-          {(Number(campaign.reward?.xp) > 0 || hasTrustReward) && (
-            <div className="flex flex-row justify-between text-xs items-center">
-              <span className="text-gray-500">Reward:</span>
-              <span className="text-white flex items-center gap-1 text-right">
-                {hasTrustReward && Number(campaign.reward?.xp) > 0
-                  ? `${trustReward} TRUST + ${campaign.reward.xp} XP`
-                  : hasTrustReward
-                  ? `${trustReward} TRUST`
-                  : `${campaign.reward.xp} XP`}
-              </span>
-            </div>
-          )}
-
-          {Number(campaign.reward?.pool) > 0 && (
-            <div className="flex flex-row justify-between text-xs items-center">
-              <span className="text-gray-500">Reward Pool:</span>
-              <span className="text-white flex items-center gap-1 text-right">
-                {campaign.reward.pool} TRUST (FCFS)
-              </span>
-            </div>
-          )}
-
-          {campaign.starts_at && (
-            <div className="flex flex-row justify-between text-xs items-center">
-              <span className="text-gray-500">Duration:</span>
-              <span className="text-white flex items-center gap-1">
-                <Clock className="w-3 h-3" />
-                {starts_atFormatted} – {ends_atFormatted}
-              </span>
-            </div>
-          )}
-
-          <Button
-            className={`w-full mt-auto pt-2 py-2 text-xs font-medium rounded-xl ${loadingCampaign === campaign._id
-              ? "bg-gray-600 cursor-not-allowed text-gray-300"
-              : isActive
-                ? "bg-[#1f6feb] hover:bg-[#388bfd] text-white"
-                : "bg-gray-600 cursor-not-allowed text-gray-300"
-              }`}
-            onClick={(e) => {
-              e.stopPropagation();
-              goToCampaign(campaign, isActive);
-            }}
-            disabled={loadingCampaign === campaign._id || !isActive}
-          >
-            {loadingCampaign === campaign._id ? (
-              <>Joining...</>
-            ) : isActive && campaign.joined ? (
-              <>
-                <ExternalLink className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                View Campaign
-              </>
-            ) : isActive && (!walletConnected || !user) ? (
-              <>Connect Wallet</>
-            ) : isActive ? (
-              <>
-                <ExternalLink className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                Join Campaign
-              </>
-            ) : isUpcoming ? (
-              <>
-                <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" /> Starts in {countdowns[campaign._id] || "..."}
-              </>
-            ) : (
-              <>
-                <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" /> Campaign Ended
-              </>
-            )}
-          </Button>
-        </div>
-      </Card>
+        questId={campaign._id}
+        title={campaign.title}
+        description={campaign.description}
+        projectName={campaign.project_name || "Nexura Ecosystem"}
+        projectLogo={campaign.projectCoverImage || "/campaign.png"}
+        heroImage={campaign.projectCoverImage || "/campaign.png"}
+        rewards={rewardText}
+        duration={durationText}
+        participants={allowedParticipants}
+        status={status}
+        statusColor={statusColor}
+        from="explore"
+      />
     );
   };
 
