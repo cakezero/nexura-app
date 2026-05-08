@@ -23,10 +23,10 @@ export default function LessonCard({ lesson }: LessonCardProps) {
   return (
     <div
       onClick={handleClick}
-      className="cursor-pointer overflow-hidden rounded-2xl border border-white/10 bg-[#0B0B0B] hover:bg-[#0F0F0F] transition-all duration-300 group"
+      className="cursor-pointer overflow-hidden rounded-2xl border border-white/10 bg-[#0B0B0B] hover:bg-[#0F0F0F] transition-all duration-300 group h-[320px] flex flex-col"
     >
       {/* IMAGE */}
-      <div className="relative h-32 md:h-36 overflow-hidden">
+      <div className="relative h-32 md:h-36 overflow-hidden shrink-0">
         <img
           src={lesson.coverImage || "/learn-image.png"}
           alt={lesson.title}
@@ -40,19 +40,19 @@ export default function LessonCard({ lesson }: LessonCardProps) {
       </div>
 
       {/* CONTENT */}
-      <div className="p-4 space-y-3 bg-[#170F1F]">
+      <div className="p-4 space-y-3 bg-[#170F1F] flex flex-col flex-1">
         {/* TITLE */}
         <h3 className="text-sm md:text-base font-semibold text-white truncate">
           {lesson.title}
         </h3>
 
         {/* DESCRIPTION */}
-        <p className="text-xs text-white/60 line-clamp-2">
+        <p className="text-xs text-white/60 line-clamp-2 flex-1">
           {lesson.description}
         </p>
 
         {/* META */}
-        <div className="flex items-center justify-between pt-2">
+        <div className="flex items-center justify-between pt-2 mt-auto">
           <span className="flex items-center gap-1 text-[10px] text-[#8A97B0] bg-[#111827] px-2 py-1 rounded-md">
             <img src="/xp-iconn.png" className="w-4 h-4" />
             {lesson.reward} XP
