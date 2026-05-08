@@ -28,7 +28,6 @@ export default function CampaignCard({
   title,
   description,
   project_name,
-  projectLogo,
   projectCoverImage,
   participants,
   maxParticipants,
@@ -41,138 +40,117 @@ export default function CampaignCard({
   from
 }: CampaignCardProps) {
   const [, setLocation] = useLocation();
+
   const formatParticipants = (count: number) => {
-    if (count >= 1000000) {
-      return `${(count / 1000000).toFixed(1)}M`;
-    } else if (count >= 1000) {
-      return `${(count / 1000).toFixed(1)}K`;
-    }
+    if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
+    if (count >= 1000) return `${(count / 1000).toFixed(1)}K`;
     return count.toString();
   };
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit'
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
     });
   };
 
   const handleClick = () => {
     if (_id && isLive) {
-      const url = from ? `/campaign/${_id}?from=${from}` : `/campaign/${_id}`;
+      const url = from
+        ? `/campaign/${_id}?from=${from}`
+        : `/campaign/${_id}`;
       setLocation(url);
     }
   };
 
-  const allowedParticipants = maxParticipants && maxParticipants > 0 ? maxParticipants : participants;
+  const allowedParticipants =
+    maxParticipants && maxParticipants > 0
+      ? maxParticipants
+      : participants;
+
   const trustReward = reward
-    ? ((Number(reward.trustTokens) > 0)
+    ? Number(reward.trustTokens) > 0
       ? Number(reward.trustTokens)
-      : (Number(reward.trust) > 0)
+      : Number(reward.trust) > 0
       ? Number(reward.trust)
-      : (Number(reward.pool) > 0 && allowedParticipants > 0)
+      : Number(reward.pool) > 0 && allowedParticipants > 0
       ? Number((Number(reward.pool) / allowedParticipants).toFixed(2))
-      : (totalTrustAvailable && totalTrustAvailable > 0 && allowedParticipants > 0)
+      : totalTrustAvailable && totalTrustAvailable > 0 && allowedParticipants > 0
       ? Number((totalTrustAvailable / allowedParticipants).toFixed(2))
-      : 0)
+      : 0
     : 0;
 
   return (
     <Card
-      className="overflow-hidden glass glass-hover cursor-pointer group relative rounded-3xl hover:-translate-y-1 transition-all duration-300"
       onClick={handleClick}
-      data-testid={`campaign-card-${title.toLowerCase().replace(/\s+/g, '-')}`}
+      className="overflow-hidden cursor-pointer group relative rounded-2xl border border-white/10 bg-[#0B0B0B] hover:bg-[#0F0F0F] transition-all duration-300"
     >
-      <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-
-      {/* Hero Image */}
-      <div className="relative h-48 overflow-hidden">
+      {/* Image */}
+      <div className="relative h-36 md:h-40 overflow-hidden">
         <img
           src={projectCoverImage}
           alt={title}
-          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
 
-        {/* Participant Count Overlay */}
-        <div className="absolute top-4 right-4 bg-black/50 backdrop-blur-sm rounded-lg px-3 py-1">
-          <span className="text-white font-bold">{formatParticipants(participants ?? 0)}</span>
+        {/* Active Badge */}
+        <div className="absolute top-3 right-3 px-2 py-1 rounded-full text-[10px] font-semibold text-[#00E1A2] bg-[#00E1A24D]">
+          {isLive ? "Active" : "Ended"}
         </div>
 
-        {/* Status Badge */}
-        <div className="absolute bottom-4 right-4">
-          <Badge
-            variant={isLive ? "default" : "secondary"}
-            className={isLive ? "bg-green-500 text-white" : "bg-gray-500 text-white"}
-          >
-            {isLive ? "Live" : "Ended"}
-          </Badge>
+        {/* Participants */}
+        <div className="absolute bottom-3 right-3 text-xs text-white bg-black/40 px-2 py-1 rounded-md">
+          {formatParticipants(participants ?? 0)}
         </div>
       </div>
 
       {/* Content */}
-      <div className="p-6">
-        {/* Project Info */}
-        {/* <div className="flex items-center space-x-2 mb-3">
-          <img
-            src={projectLogo}
-            alt={project_name}
-            className="w-6 h-6 rounded-full"
-          />
-          <span className="text-sm text-muted-foreground">{project_name}</span>
-        </div> */}
-
-        <h3
-          className="text-lg font-bold text-card-foreground mb-2 truncate"
-          title={title}
-        >
+      <div className="p-4 space-y-3 bg-[#170F1F]">
+        {/* Title */}
+        <h3 className="text-base font-semibold text-white truncate">
           {title}
         </h3>
+
+        {/* Description */}
         {description && (
-          <p
-            className="text-sm text-muted-foreground mb-4 line-clamp-2 min-h-10"
-            title={description}
-          >
+          <p className="text-xs text-white/60 line-clamp-2">
             {description}
           </p>
         )}
 
-        {/* Date Range */}
-        {/* <div className="flex items-center space-x-4 mb-4">
-          <div className="text-center">
-            <div className="text-sm font-bold text-card-foreground">
-              {formatDate(starts_at).split(',')[0].split(' ')[0]}
-            </div>
-            <div className="text-lg font-bold text-card-foreground">
-              {formatDate(starts_at).split(' ')[1]}
-            </div>
-          </div>
-          <div className="flex-1 text-xs text-muted-foreground">
-          </div>
-        </div> */}
+        {/* Duration */}
+        <div className="flex items-center gap-2 text-[10px] text-[#8A97B0] bg-[#111827] px-2 py-1 rounded-md w-fit">
+          <img src="/calendar.png" className="w-3 h-3" />
+          {formatDate(starts_at)} - {formatDate(ends_at)}
+        </div>
 
-        {/* Reward Pool */}
-        {reward && (Number(reward.xp) > 0 || trustReward > 0) && (
-          <div className="border-t border-card-border pt-4">
-            <div className="text-sm text-muted-foreground mb-1">Rewards</div>
-            <div className="flex items-center space-x-2">
-              {Number(reward.xp) > 0 && (
-                <span className="text-blue-500 font-bold">{reward.xp} XP</span>
-              )}
-              {Number(reward.xp) > 0 && trustReward > 0 && (
-                <span className="text-muted-foreground">+</span>
-              )}
-              {trustReward > 0 && (
-                <div className="flex items-center space-x-1">
-                  <span className="font-bold text-card-foreground">{trustReward} TRUST</span>
-                </div>
-              )}
-            </div>
+        {/* Bottom Row */}
+        <div className="flex items-center justify-between pt-2">
+          {/* Rewards */}
+          <div className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-md border border-[#D4BBFF33] bg-[#D4BBFF1A]">
+            <img src="/xp-iconn.png" className="w-6 h-6" />
+            {reward?.xp && Number(reward.xp) > 0 && (
+              <span className="text-[#D4BBFF] font-semibold">
+                {reward.xp} XP
+              </span>
+            )}
+
+            {trustReward > 0 && (
+              <span className="text-white font-semibold">
+                + {trustReward} TRUST
+              </span>
+            )}
           </div>
-        )}
+
+          {/* Start Button */}
+          <button className="flex items-center gap-1 bg-[#8B3EFE] text-white text-[11px] px-3 py-1.5 rounded-full hover:opacity-90 transition">
+            START
+            <img src="/next-arrow.png" className="w-2 h-3" />
+          </button>
+        </div>
       </div>
     </Card>
   );
