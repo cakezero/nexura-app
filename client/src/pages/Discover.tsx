@@ -517,87 +517,114 @@ className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] te
 </Button>
     </div>
 
-    {/* GRID */}
     {lessons?.length > 0 ? (
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-        {lessons.map((lesson: any) => (
-          <LessonCard key={lesson._id} lesson={lesson} />
-        ))}
-      </div>
-    ) : (
-      <div className="rounded-2xl border border-white/10 bg-[#0B0B0B] p-6 text-center">
-        <h3 className="text-sm font-semibold text-white mb-1">
-          Learning Hub
-        </h3>
+  lessons.length <= 3 ? (
+    /* GRID MODE */
+    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+      {lessons.map((lesson: any) => (
+        <LessonCard key={lesson._id} lesson={lesson} />
+      ))}
+    </div>
+  ) : (
+    /* TICKER MODE */
+    <div className="ticker-container overflow-hidden">
+      <div className="ticker flex gap-2 w-max">
 
-        <p className="text-[11px] text-white/60 max-w-md mx-auto">
-          Educational content, onboarding guides, tutorials, and walkthroughs will appear here soon.
-        </p>
+        {/* first set */}
+        {lessons.map((lesson: any) => (
+          <div key={lesson._id} className="w-[260px] shrink-0">
+            <LessonCard lesson={lesson} />
+          </div>
+        ))}
+
+        {/* duplicate set */}
+        {lessons.map((lesson: any) => (
+          <div key={`${lesson._id}-dup`} className="w-[260px] shrink-0">
+            <LessonCard lesson={lesson} />
+          </div>
+        ))}
+
       </div>
-    )}
+    </div>
+  )
+) : (
+  <div className="rounded-2xl border border-white/10 bg-[#0B0B0B] p-6 text-center">
+    <h3 className="text-sm font-semibold text-white mb-1">
+      Learning Hub
+    </h3>
+
+    <p className="text-[11px] text-white/60 max-w-md mx-auto">
+      Educational content, onboarding guides, tutorials, and walkthroughs will appear here soon.
+    </p>
+  </div>
+)}
   </section>
 )}
 
-<div
-  className="
-    w-full
-    flex
-    rounded-3xl
-    border border-white/10
-    bg-[#170F1F]
-    overflow-hidden
-  "
-  style={{
-    backdropFilter: "blur(8px)",
-    WebkitBackdropFilter: "blur(8px)",
-    boxShadow: "inset 0 0 22px rgba(131, 58, 253, 0.12)",
-  }}
->
-  {analyticsCards.map((card, idx) => (
-    <div
-      key={idx}
-      className="
-        flex-1
-        flex flex-col items-center justify-center
-        py-4 px-3
-        text-center
-        relative
-      "
-    >
-      {/* VALUE */}
-      <div className="text-lg sm:text-xl font-semibold text-white leading-none">
-        {typeof card.value === "number"
-          ? card.value.toLocaleString()
-          : card.value}
-      </div>
-
-      {/* LABEL */}
-      <div className="text-[10px] tracking-widest uppercase text-white/50 mt-1">
-        {card.title}
-      </div>
-
-      {/* FULL CELL DIVIDER (REAL BOX SEPARATION) */}
-      {idx !== analyticsCards.length - 1 && (
-        <div className="absolute right-0 top-0 h-full w-px bg-white/10" />
-      )}
-    </div>
-  ))}
-</div>
-
-<div className="mt-2 text-xs text-white/50">
-  Track deeper engagement insights.{" "}
-  <span
-    onClick={() => setLocation("/analytics")}
-    className="inline-flex items-center gap-1 text-[#00E1A2] cursor-pointer hover:opacity-80 transition"
+{activeFilter === "all" && (
+  <div
+    className="
+      w-full
+      flex
+      rounded-3xl
+      border border-white/10
+      bg-[#170F1F]
+      overflow-hidden
+    "
+    style={{
+      backdropFilter: "blur(8px)",
+      WebkitBackdropFilter: "blur(8px)",
+      boxShadow: "inset 0 0 22px rgba(131, 58, 253, 0.12)",
+    }}
   >
-    View detailed analytics
-    <img
-      src="/color-arrow-right.png"
-      alt="arrow"
-      className="w-3.5 h-3.5"
-    />
-  </span>
-</div>
+    {analyticsCards.map((card, idx) => (
+      <div
+        key={idx}
+        className="
+          flex-1
+          flex flex-col items-center justify-center
+          py-4 px-3
+          text-center
+          relative
+        "
+      >
+        {/* VALUE */}
+        <div className="text-lg sm:text-xl font-semibold text-white leading-none">
+          {typeof card.value === "number"
+            ? card.value.toLocaleString()
+            : card.value}
+        </div>
+
+        {/* LABEL */}
+        <div className="text-[10px] tracking-widest uppercase text-white/50 mt-1">
+          {card.title}
+        </div>
+
+        {/* DIVIDER */}
+        {idx !== analyticsCards.length - 1 && (
+          <div className="absolute right-0 top-0 h-full w-px bg-white/10" />
+        )}
+      </div>
+    ))}
+  </div>
+)}
+
+{activeFilter === "all" && (
+  <div className="mt-2 text-xs text-white/50">
+    Track deeper engagement insights.{" "}
+    <span
+      onClick={() => setLocation("/analytics")}
+      className="inline-flex items-center gap-1 text-[#00E1A2] cursor-pointer hover:opacity-80 transition"
+    >
+      View detailed analytics
+      <img
+        src="/color-arrow-right.png"
+        alt="arrow"
+        className="w-3.5 h-3.5"
+      />
+    </span>
+  </div>
+)}
 
 {(activeFilter === "all" || activeFilter === "quests") && (
   <section className="mb-8">
@@ -634,9 +661,9 @@ className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] te
         Quests coming soon...
       </div>
     ) : quests.length <= 3 ? (
-      /* GRID MODE (≤ 3) */
+      /* GRID MODE */
       <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-        {quests.slice(0, 3).map((quest: any) => (
+        {quests.map((quest: any) => (
           <QuestCard
             key={quest._id}
             questId={quest._id}
@@ -652,7 +679,7 @@ className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] te
         ))}
       </div>
     ) : (
-      /* TICKER MODE (> 3) */
+      /* TICKER MODE */
       <div className="overflow-hidden">
         <div className="flex gap-2 w-max animate-ticker">
 
