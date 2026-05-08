@@ -626,6 +626,7 @@ className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] te
   </div>
 )}
 
+{/* QUESTS */}
 {(activeFilter === "all" || activeFilter === "quests") && (
   <section className="mb-8">
     <div className="flex items-start justify-between mb-3 mt-8 gap-2">
@@ -646,7 +647,7 @@ className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] te
         className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] text-white/80 hover:text-white hover:bg-[#00E1A24D] transition"
       >
         <span>View all quests</span>
-        <img src="/arrow-right.png" alt="arrow right" className="w-3.5 h-3.5" />
+        <img src="/arrow-right.png" className="w-3.5 h-3.5" />
       </Button>
     </div>
 
@@ -674,12 +675,27 @@ className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] te
         ))}
       </div>
     ) : (
-      /* TICKER MODE */
-      <div className="overflow-hidden">
-        <div className="flex gap-2 w-max animate-ticker">
+      /* TICKER MODE (FIXED - MATCH LESSONS STYLE) */
+      <div className="ticker-container overflow-hidden">
+        <div className="ticker flex gap-2 w-max">
 
-          {[...quests, ...quests].map((quest: any, i: number) => (
-            <div key={`${quest._id}-${i}`} className="w-[260px] shrink-0">
+          {quests.map((quest: any) => (
+            <div key={quest._id} className="w-[260px] shrink-0">
+              <QuestCard
+                questId={quest._id}
+                title={quest.title}
+                description={quest.description}
+                projectName={quest.projectName || quest.project_name}
+                projectLogo={quest.project_image || "/quest-1.png"}
+                heroImage={quest.project_image || "/quest-1.png"}
+                rewards={`${quest.reward || quest.rewards || 0} XP`}
+                duration={quest.duration || "Ongoing"}
+              />
+            </div>
+          ))}
+
+          {quests.map((quest: any) => (
+            <div key={`${quest._id}-dup`} className="w-[260px] shrink-0">
               <QuestCard
                 questId={quest._id}
                 title={quest.title}
