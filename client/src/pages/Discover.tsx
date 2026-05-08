@@ -646,17 +646,12 @@ className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] te
         className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] text-white/80 hover:text-white hover:bg-[#00E1A24D] transition"
       >
         <span>View all quests</span>
-
-        <img
-          src="/arrow-right.png"
-          alt="arrow right"
-          className="w-3.5 h-3.5"
-        />
+        <img src="/arrow-right.png" alt="arrow right" className="w-3.5 h-3.5" />
       </Button>
     </div>
 
     {/* EMPTY STATE */}
-    {quests.length === 0 ? (
+    {quests?.length === 0 ? (
       <div className="rounded-2xl border border-white/10 bg-[#170F1F] p-6 text-center text-white/60 text-sm">
         Quests coming soon...
       </div>
@@ -664,17 +659,18 @@ className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] te
       /* GRID MODE */
       <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
         {quests.map((quest: any) => (
-          <QuestCard
-            key={quest._id}
-            questId={quest._id}
-            title={quest.title}
-            description={quest.description}
-            projectName={quest.projectName}
-            projectLogo={quest.projectLogo}
-            heroImage={quest.heroImage}
-            rewards={quest.rewards}
-            duration={quest.duration}
-          />
+          <div key={quest._id} className="w-full">
+            <QuestCard
+              questId={quest._id}
+              title={quest.title}
+              description={quest.description}
+              projectName={quest.projectName || quest.project_name}
+              projectLogo={quest.project_image || "/quest-1.png"}
+              heroImage={quest.project_image || "/quest-1.png"}
+              rewards={`${quest.reward || quest.rewards || 0} XP`}
+              duration={quest.duration || "Ongoing"}
+            />
+          </div>
         ))}
       </div>
     ) : (
@@ -682,32 +678,17 @@ className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] te
       <div className="overflow-hidden">
         <div className="flex gap-2 w-max animate-ticker">
 
-          {quests.map((quest: any) => (
-            <div key={quest._id} className="w-[260px] shrink-0">
+          {[...quests, ...quests].map((quest: any, i: number) => (
+            <div key={`${quest._id}-${i}`} className="w-[260px] shrink-0">
               <QuestCard
                 questId={quest._id}
                 title={quest.title}
                 description={quest.description}
-                projectName={quest.projectName}
-                projectLogo={quest.projectLogo}
-                heroImage={quest.heroImage}
-                rewards={quest.rewards}
-                duration={quest.duration}
-              />
-            </div>
-          ))}
-
-          {quests.map((quest: any) => (
-            <div key={`${quest._id}-dup`} className="w-[260px] shrink-0">
-              <QuestCard
-                questId={quest._id}
-                title={quest.title}
-                description={quest.description}
-                projectName={quest.projectName}
-                projectLogo={quest.projectLogo}
-                heroImage={quest.heroImage}
-                rewards={quest.rewards}
-                duration={quest.duration}
+                projectName={quest.projectName || quest.project_name}
+                projectLogo={quest.project_image || "/quest-1.png"}
+                heroImage={quest.project_image || "/quest-1.png"}
+                rewards={`${quest.reward || quest.rewards || 0} XP`}
+                duration={quest.duration || "Ongoing"}
               />
             </div>
           ))}
