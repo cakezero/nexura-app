@@ -110,10 +110,20 @@ export const fetchQuests = async (req: GlobalRequest, res: GlobalResponse) => {
 			const temporalStatus = getTemporalQuestStatus(singleQuest);
 			if (temporalStatus !== singleQuest.status) {
 				mergedQuest.status = temporalStatus;
-				mergedQuest.temporalStatus = temporalStatus;
+				(mergedQuest as any)._needsStatusUpdate = temporalStatus;
 			}
 
 			quests.push(mergedQuest);
+		}
+
+		// Persist updated statuses
+		const statusUpdates = quests.filter((q: any) => q._needsStatusUpdate).map((q: any) => ({ _id: q._id, status: q._needsStatusUpdate }));
+		if (statusUpdates.length > 0) {
+			await quest.bulkWrite(
+				statusUpdates.map(({ _id, status }) => ({
+					updateOne: { filter: { _id }, update: { $set: { status } } },
+				}))
+			);
 		}
 
 		res
@@ -1317,20 +1327,40 @@ export const publishQuest = async (req: GlobalRequest, res: GlobalResponse) => {
   }
 };
 
-export const getHubQuests = async (req: GlobalRequest, res: GlobalResponse) => {
-  try {
-    const hubId = (req as any).hubId || (req as any).admin?.hub;
-    if (!hubId) {
-      res.status(BAD_REQUEST).json({ error: "No hub associated with this admin" });
-      return;
+  export const getHubQuests = async (req: GlobalRequest, res: GlobalResponse) => {
+    try {
+      const hubId = (req as any).hubId || (req as any).admin?.hub;
+      if (!hubId) {
+        res.status(BAD_REQUEST).json({ error: "No hub associated with this admin" });
+        return;
+      }
+      const quests = await quest.find({ hub: hubId, status: { $ne: "Deleted" } }).sort({ createdAt: -1 }).lean();
+
+      // Recalculate temporal status and persist changes (like campaigns)
+      const statusUpdates: any[] = [];
+      const normalizedQuests = quests.map((q: any) => {
+        const temporal = getTemporalQuestStatus(q);
+        if (temporal && temporal !== q.status && q.status !== "Save" && q.status !== "Ended") {
+          statusUpdates.push({ _id: q._id, status: temporal });
+          return { ...q, status: temporal };
+        }
+        return q;
+      });
+
+      if (statusUpdates.length > 0) {
+        await quest.bulkWrite(
+          statusUpdates.map(({ _id, status }) => ({
+            updateOne: { filter: { _id }, update: { $set: { status } } },
+          }))
+        );
+      }
+
+      res.status(OK).json({ message: "Quests fetched!", quests: normalizedQuests });
+    } catch (error) {
+      logger.error(error);
+      res.status(INTERNAL_SERVER_ERROR).json({ error: "Error fetching hub quests" });
     }
-    const quests = await quest.find({ hub: hubId, status: { $ne: "Deleted" } }).sort({ createdAt: -1 }).lean();
-    res.status(OK).json({ message: "Quests fetched!", quests });
-  } catch (error) {
-    logger.error(error);
-    res.status(INTERNAL_SERVER_ERROR).json({ error: "Error fetching hub quests" });
-  }
-};
+  };
 
 export const getAdminHubQuests = async (req: GlobalRequest, res: GlobalResponse) => {
   try {

@@ -42,6 +42,21 @@ export default function Quests() {
   const [visitedTasks, setVisitedTasks] = useState<string[]>(() => {
     return JSON.parse(localStorage.getItem('nexura:one-time-quest:visited') || '[]')[userId] || [];
   });
+  const [serverOffset, setServerOffset] = useState(0);
+  const [countdowns, setCountdowns] = useState<Record<string, string>>({});
+
+  // Server time sync
+  useEffect(() => {
+    const getServerTime = async () => {
+      try {
+        const res = await fetch("https://nexura-app.onrender.com/api/server-time");
+        const data = await res.json();
+        setServerOffset(data.serverTime - Date.now());
+      } catch { /* ignore */ }
+    };
+    getServerTime();
+  }, []);
+
   const [claimedTasks, setClaimedTasks] = useState<string[]>(() => {
     return JSON.parse(localStorage.getItem('nexura:one-time-quest:claimed') || '[]')[userId] || [];
   });
@@ -76,8 +91,38 @@ export default function Quests() {
 
   const allQuests: Quest[] = data?.quests ?? [];
 
-  const activeQuests = allQuests.filter((q) => q.status?.toLowerCase() === "active");
-  const upcomingQuests = allQuests.filter((q) => q.status?.toLowerCase() === "upcoming");
+    const isScheduled = (q: Quest) => {
+    const nowMs = Date.now() + serverOffset;
+    return q.status === "Scheduled" || (!!q.starts_at && new Date(q.starts_at).getTime() > nowMs && q.status !== "Ended" && q.status !== "Save");
+  };
+
+  const activeQuests = allQuests.filter((q) => q.status === "Active" || (!isScheduled(q) && q.status !== "Ended" && q.status !== "Save"));
+  const scheduledQuests = allQuests.filter(isScheduled);
+
+  // Countdown timer
+  useEffect(() => {
+    if (scheduledQuests.length === 0) return;
+    const tick = () => {
+      const n = Date.now() + serverOffset;
+      const newCountdowns: Record<string, string> = {};
+      for (const q of scheduledQuests) {
+        const diff = new Date(q.starts_at!).getTime() - n;
+        if (diff <= 0) {
+          newCountdowns[q._id] = "Starting...";
+        } else {
+          const d = Math.floor(diff / 86400000);
+          const h = Math.floor((diff % 86400000) / 3600000);
+          const m = Math.floor((diff % 3600000) / 60000);
+          const s = Math.floor((diff % 60000) / 1000);
+          newCountdowns[q._id] = d > 0 ? `${d}d ${h}h ${m}m ${s}s` : `${h}h ${m}m ${s}s`;
+        }
+      }
+      setCountdowns(newCountdowns);
+    };
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [scheduledQuests.length, serverOffset]);
 
   const startQuest = async (quest: Quest) => {
     if (!quest.joined) {
@@ -121,7 +166,7 @@ export default function Quests() {
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
             <div className="absolute top-2 right-2">
-              <Badge className="text-xs">{isActive ? "Active" : "Soon"}</Badge>
+              <Badge className="text-xs">{isActive ? "Active" : "Scheduled"}</Badge>
             </div>
             {/* <div className="absolute top-3 left-3 text-xs text-white/80 font-medium">
               {quest.category}
@@ -144,6 +189,12 @@ export default function Quests() {
                 <span className="text-white">{quest.project_name ?? "Intuition Ecosystem"}</span>
               </div>
             {/* )} */}
+
+            {!isActive && countdowns[quest._id] && (
+              <p className="text-purple-400 text-xs mb-2">
+                Starts in {countdowns[quest._id]}
+              </p>
+            )}
 
             <div className="flex justify-between text-sm items-center">
               <span className="text-gray-500">Reward:</span>
@@ -206,11 +257,11 @@ export default function Quests() {
         )}
 
         {/* Upcoming Quests */}
-        {upcomingQuests.length > 0 && (
+        {scheduledQuests.length > 0 && (
           <div className="space-y-4 sm:space-y-6 mt-8 sm:mt-12">
-            <h2 className="text-lg sm:text-2xl font-semibold text-white">Upcoming Quest(s)</h2>
+            <h2 className="text-lg sm:text-2xl font-semibold text-white">Scheduled Quests</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-              {upcomingQuests.map((quest, i) => renderQuestCard(quest, false, i))}
+              {scheduledQuests.map((quest, i) => renderQuestCard(quest, false, i))}
             </div>
           </div>
         )}

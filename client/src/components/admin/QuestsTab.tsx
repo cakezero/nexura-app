@@ -33,7 +33,9 @@ function getApiConfig() {
 }
 
 export default function QuestsTab() {
-  const [activeTab, setActiveTab] = useState<"all" | "active" | "upcoming" | "drafts" | "completed">("all");
+  const [activeTab, setActiveTab] = useState<"all" | "active" | "scheduled" | "drafts" | "completed">("all");
+  const [serverOffset, setServerOffset] = useState(0);
+  const [countdowns, setCountdowns] = useState<Record<string, string>>({});
   const [quests, setQuests] = useState<Quest[]>([]);
   const [loading, setLoading] = useState(false);
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
@@ -64,19 +66,64 @@ export default function QuestsTab() {
     fetchQuests();
   }, []);
 
-  const now = new Date();
+  // Server time sync for accurate Scheduled/Active switching
+  useEffect(() => {
+    const getServerTime = async () => {
+      try {
+        const res = await fetch("https://nexura-app.onrender.com/api/server-time");
+        const data = await res.json();
+        setServerOffset(data.serverTime - Date.now());
+      } catch { /* ignore */ }
+    };
+    getServerTime();
+  }, []);
+
+  const isScheduled = (c: Quest) => {
+    const nowMs = Date.now() + serverOffset;
+    return c.status !== "Ended" && c.status !== "Save" && !!c.starts_at && new Date(c.starts_at).getTime() > nowMs;
+  };
 
   const isDraft = (c: Quest) => c.status === "Save";
 
 const isCompleted = (c: Quest) =>
-  c.status === "Ended" || new Date(c.ends_at) <= new Date();
+  c.status === "Ended" || new Date(c.ends_at).getTime() <= Date.now() + serverOffset;
 
 const isActive = (c: Quest) =>
-  !isDraft(c) && !isCompleted(c);
+  !isDraft(c) && !isCompleted(c) && !isScheduled(c);
+
+  // Countdown timer for scheduled quests — auto-reloads when countdown expires
+  useEffect(() => {
+    const scheduled = quests.filter(isScheduled);
+    if (scheduled.length === 0) return;
+    const tick = () => {
+      const n = Date.now() + serverOffset;
+      const newCountdowns: Record<string, string> = {};
+      let anyExpired = false;
+      for (const q of scheduled) {
+        const diff = new Date(q.starts_at!).getTime() - n;
+        if (diff <= 0) {
+          anyExpired = true;
+          newCountdowns[q._id] = "Starting...";
+        } else {
+          const d = Math.floor(diff / 86400000);
+          const h = Math.floor((diff % 86400000) / 3600000);
+          const m = Math.floor((diff % 3600000) / 60000);
+          const s = Math.floor((diff % 60000) / 1000);
+          newCountdowns[q._id] = d > 0 ? `${d}d ${h}h ${m}m ${s}s` : `${h}h ${m}m ${s}s`;
+        }
+      }
+      setCountdowns(newCountdowns);
+      if (anyExpired) fetchQuests();
+    };
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [quests.filter(isScheduled).length, serverOffset]);
 
 const filteredQuests = quests.filter((c) => {
   if (activeTab === "all") return true;
   if (activeTab === "active") return isActive(c);
+  if (activeTab === "scheduled") return isScheduled(c);
   if (activeTab === "drafts") return isDraft(c);
   if (activeTab === "completed") return isCompleted(c);
   return true;
@@ -85,6 +132,7 @@ const filteredQuests = quests.filter((c) => {
 const tabs = [
   { id: "all", label: "All Quests", count: quests.length },
   { id: "active", label: "Active", count: quests.filter(isActive).length },
+  { id: "scheduled", label: "Scheduled", count: quests.filter(isScheduled).length },
   { id: "drafts", label: "Drafts", count: quests.filter(isDraft).length },
   { id: "completed", label: "Completed", count: quests.filter(isCompleted).length },
 ];
@@ -119,6 +167,12 @@ const tabs = [
 
       <div className="p-3 flex flex-col gap-2">
         <h3 className="font-bold text-sm">{quest.description || quest.title}</h3>
+
+        {isScheduled(quest) && countdowns[quest._id] && (
+          <p className="text-purple-400 text-xs flex items-center gap-1">
+            Starts in {countdowns[quest._id]}
+          </p>
+        )}
 
         {Number(quest.reward?.pool ?? 0) > 0 && (
           <p className="text-purple-400 text-xs">Reward: {quest.reward?.pool} TRUST</p>
