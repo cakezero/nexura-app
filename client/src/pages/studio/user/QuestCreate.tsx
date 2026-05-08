@@ -156,7 +156,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
     if (tag === "feedback") return "Give Feedback";
     if (tag === "trust-name") return "Own a TNS";
     if (tag === "create-post") return "Create a Post";
-    return "Others";
+    return "";
   };
 
   const typeToTag = (type: string) => {
@@ -166,8 +166,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
     if (type === "Give Feedback") return "feedback";
     if (type === "Create a Post") return "create-post";
     if (type === "Own a TNS") return "trust-name";
-    if (type === "Others") return "other";
-    return "other";
+    return "";
   };
 
   const buildQuestFormData = (isDraft: boolean): FormData => {
@@ -703,12 +702,11 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                   <option value="Own a TNS">Own a TNS</option>
                   <option value="Portal Claims">Portal Claims</option>
                   <option value="Give Feedback">Give Feedback</option>
-                  <option value="others">Others</option>
                 </select>
               </div>
 
               {/* Platform */}
-              {newTask.type && newTask.type !== "Portal Claims" && newTask.type !== "Give Feedback" && newTask.type !== "others" && newTask.type !== "Own a TNS" && (
+              {newTask.type && newTask.type !== "Portal Claims" && newTask.type !== "Give Feedback" && newTask.type !== "Own a TNS" && (
                 <div>
                   <label className="text-sm text-white/70 mb-2 block">Platform</label>
                   <div className="flex gap-3">
@@ -794,40 +792,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                 </div>
               )}
 
-              {/* Verification Mode for Others */}
-              {newTask.type === "others" && (
-                <div>
-                  <label className="text-sm text-white/70 mb-2 block">Verification Mode</label>
-                  <div className="flex gap-3">
-                    {[
-                      { value: "image_upload", label: "📷 Image Upload", hint: "User uploads a screenshot" },
-                      { value: "submit_link", label: "🔗 Submit Link", hint: "User submits a URL" },
-                      { value: "auto", label: "⚡ Auto (link click)", hint: "Verified when link is clicked" },
-                    ].map(({ value, label, hint }) => (
-                      <button
-                        key={value}
-                        type="button"
-                        title={hint}
-                        onClick={() => setNewTask({ ...newTask, verificationMode: value, evidence: value !== "auto" ? value : "", validation: value === "auto" ? "Auto Verified" : "Manual Validation" })}
-                        className={`flex-1 border py-2 px-2 rounded-lg text-xs transition ${
-                          newTask.verificationMode === value
-                            ? "bg-[#8B3EFE] text-white border-purple-500"
-                            : "bg-purple-950 border-purple-800 text-white/70 hover:border-purple-500"
-                        }`}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                  {newTask.verificationMode && (
-                    <p className="text-xs text-white/40 mt-2">
-                      {newTask.verificationMode === "image_upload" && "Users will upload a screenshot as proof."}
-                      {newTask.verificationMode === "submit_link" && "Users will submit a link to prove completion."}
-                      {newTask.verificationMode === "auto" && "Task is marked complete as soon as the user clicks the link."}
-                    </p>
-                  )}
-                </div>
-              )}
+
 
               {descError && <p className="text-red-400 text-sm mt-1">{descError}</p>}
             </div>

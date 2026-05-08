@@ -131,7 +131,7 @@ export default function QuestEnvironment() {
   }
 
   // Tags that require manual proof submission (not auto-verifiable)
-  const MANUAL_PROOF_TAGS = ["comment", "comment-x", "follow", "follow-x", "feedback", "other", "create-post"];
+  const MANUAL_PROOF_TAGS = ["comment", "comment-x", "follow", "follow-x", "feedback", "create-post"];
 
   const claimReward = async (miniQuest: Quest) => {
     try {

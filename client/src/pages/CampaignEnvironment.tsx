@@ -133,7 +133,7 @@ export default function CampaignEnvironment() {
         quest: q.quest,
         status: q.status,
         reward: q.reward ?? 0,
-        tag: q.tag ?? "other", // default to "other" if missing
+        tag: q.tag ?? "feedback", // default to "other" if missing
         link: q.link ?? "#",
         guildId: q.guildId ?? q.metadata?.guildId ?? "",
         roleId: q.roleId ?? q.metadata?.roleId ?? "",
