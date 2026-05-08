@@ -184,11 +184,11 @@ const analyticsCards = data
     ]
   : [];
 
-  const { data: questsData } = useQuery({
-  queryKey: ["/api/quests"],
+const { data: questsData, isLoading, error } = useQuery({
+  queryKey: ["quests"],
   queryFn: async () => {
-    const res = await apiRequest("GET", "/api/quests");
-    return res.json();
+    const res = await apiRequestV2("GET", "/api/quests");
+    return res;
   },
 });
 
@@ -672,7 +672,6 @@ className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] te
             projectName={quest.projectName}
             projectLogo={quest.projectLogo}
             heroImage={quest.heroImage}
-            participants={quest.participants}
             rewards={quest.rewards}
             duration={quest.duration}
           />
@@ -692,7 +691,6 @@ className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] te
                 projectName={quest.projectName}
                 projectLogo={quest.projectLogo}
                 heroImage={quest.heroImage}
-                participants={quest.participants}
                 rewards={quest.rewards}
                 duration={quest.duration}
               />
@@ -708,7 +706,6 @@ className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] te
                 projectName={quest.projectName}
                 projectLogo={quest.projectLogo}
                 heroImage={quest.heroImage}
-                participants={quest.participants}
                 rewards={quest.rewards}
                 duration={quest.duration}
               />
