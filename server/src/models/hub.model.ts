@@ -108,6 +108,13 @@ const hubAdminSchema = new mongoose.Schema({
     enum: ["superadmin", "admin"],
     required: true
   },
+  emailVerified: {
+    type: Boolean,
+    default: false
+  },
+  otp: {
+    type: Number,
+  },
   hub: {
     type: Schema.Types.ObjectId,
     ref: 'hubs',
@@ -179,6 +186,10 @@ const userHubAdminSchema = new mongoose.Schema({
   name: {
     type: String,
     required: true,
+  },
+  emailVerified: {
+    type: Boolean,
+    default: false
   },
   hub: {
     type: Schema.Types.ObjectId,

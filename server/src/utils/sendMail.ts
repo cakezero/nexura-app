@@ -161,3 +161,19 @@ export const addHubAdminEmail = async (email: string, code: string, origin?: str
     throw new Error(error.message);
   }
 };
+
+export const sendOTPConfirmEmail = async ({ email, code }: { email: string, code: string }) => {
+  try {
+    await transporter.sendMail({
+      from: EMAIL_USER,
+      to: email,
+      subject: "Your Nexura Verification Code",
+      template: "confirm-email",
+      context: {
+        code,
+      },
+    } as MailOptions);
+  } catch (error: any) {
+    throw new Error(error.message);
+  }
+};

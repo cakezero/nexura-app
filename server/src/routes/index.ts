@@ -18,6 +18,7 @@ import { createAdmin, adminLogin, forgotAdminPassword, resetAdminPassword } from
 import { authenticateUser2, authenticateAdmin, authenticateUser } from "@/middlewares/auth.middleware";
 import userHubRoutes from "./userHub.routes.ts";
 // import testSeedRoutes from "./test-seed.routes.ts";
+import { confirmHubEmailValidation, validateHubEmail } from "@/controllers/hub.auth.controller.ts";
 
 const router = Router();
 
@@ -41,8 +42,9 @@ router
   .use("/hub", hubRoutes)
 	.use("/user-hub", userHubRoutes)
 	.use("/quest", authenticateUser, questRoutes)
-	.use("/lesson", lessonRoutes)
-	.use("/user", authenticateUser, userRoutes)
-
+  .use("/lesson", lessonRoutes)
+  .post("/hub-auth/validate-email", validateHubEmail)
+	.post("/auth/confirm-hub-email-validation", confirmHubEmailValidation)
+	.use("/user", authenticateUser, userRoutes);
 
 export default router;

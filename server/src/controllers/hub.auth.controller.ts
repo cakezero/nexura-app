@@ -1,4 +1,4 @@
-import { BAD_REQUEST, OK, INTERNAL_SERVER_ERROR, CREATED, NOT_FOUND } from "@/utils/status.utils";
+import { BAD_REQUEST, OK, INTERNAL_SERVER_ERROR, CREATED, NOT_FOUND, FORBIDDEN } from "@/utils/status.utils";
 import {
 	validateHubAdminData,
 	getMissingFields,
@@ -23,7 +23,7 @@ import { hubAdmin, hub, userHubAdmin, userHub } from "@/models/hub.model";
 import { user } from "@/models/user.model";
 import bcrypt from "bcrypt";
 import axios from "axios";
-import { resetEmail, resetPasswordOTPEmail } from "@/utils/sendMail";
+import { resetEmail, sendOTPConfirmEmail, resetPasswordOTPEmail } from "@/utils/sendMail";
 import { OTP } from "@/models/otp.model";
 import { REDIS } from "@/utils/redis.utils";
 
@@ -94,7 +94,9 @@ export const superAdminSignUp = async (req: GlobalRequest, res: GlobalResponse) 
 
     const { name, email, password } = req.body;
 
-    const emailExists = await hubAdmin.exists({ email: email.trim().toLowerCase() });
+    const strippedEmail = email.trim().toLowerCase();
+
+    const emailExists = await hubAdmin.exists({ email: strippedEmail });
     if (emailExists) {
       res.status(BAD_REQUEST).json({ error: "An account with this email already exists. Please sign in instead." });
       return;
@@ -102,23 +104,20 @@ export const superAdminSignUp = async (req: GlobalRequest, res: GlobalResponse) 
 
     const hashedPassword = await hashPassword(password);
 
-		const superAdmin = await hubAdmin.create({
+		await hubAdmin.create({
       name: name.trim(),
-      email: email.trim().toLowerCase(),
+      email: strippedEmail,
       password: hashedPassword,
       role: "superadmin",
     });
 
-		const accessToken = JWT.sign(superAdmin._id.toString());
-		const refreshToken = getRefreshToken(superAdmin._id.toString());
+		const code = generateOTP();
 
-		res.cookie("hubRefreshToken", refreshToken, {
-			httpOnly: true,
-			secure: true,
-			maxAge: 30 * 24 * 60 * 60,
-		});
+    await OTP.create({ code, email: strippedEmail, role: "superadmin" });
 
-		res.status(CREATED).json({ message: "super admin created", accessToken });
+    await sendOTPConfirmEmail({ email: strippedEmail, code });
+
+    res.status(CREATED).json({ message: "super admin created" });
 	} catch (error: any) {
 		logger.error(error);
 		const isDuplicate = error?.code === 11000;
@@ -328,29 +327,25 @@ export const forgotPassword = async (req: GlobalRequest, res: GlobalResponse) =>
 		if (!email) {
 			res.status(BAD_REQUEST).json({ error: "email is required" });
 			return;
-		}
+    }
 
-		const hubAdminExists = await hubAdmin.findOne({ email: email.trim().toLowerCase() }).lean();
+    const strippedEmail = email.trim().toLowerCase();
+
+		const hubAdminExists = await hubAdmin.exists({ email: strippedEmail }).lean();
 		if (!hubAdminExists) {
 			res.status(NOT_FOUND).json({ error: "email associated with admin is invalid or does not exist" });
 			return;
 		}
 
 		const code = generateOTP();
-		const hubId = hubAdminExists.hub?.toString();
 
-		await OTP.findOneAndUpdate(
-			{ email: hubAdminExists.email },
-			{
-				email: hubAdminExists.email,
-				code,
-				hubId,
-				expiresAt: new Date(Date.now() + 5 * 60 * 1000),
-			},
-			{ upsert: true, new: true, setDefaultsOnInsert: true }
-		);
+		await OTP.create({
+			email: strippedEmail,
+			code,
+			expiresAt: new Date(Date.now() + 5 * 60 * 1000),
+		});
 
-		await resetPasswordOTPEmail(hubAdminExists.email, code);
+		await resetPasswordOTPEmail(strippedEmail, code);
 
 		res.status(OK).json({ message: "password reset code sent!" });
 	} catch (error: any) {
@@ -533,7 +528,9 @@ export const userHubAdminSignUp = async (req: GlobalRequest, res: GlobalResponse
 
     const { name, email, password } = req.body;
 
-    const emailExists = await userHubAdmin.exists({ email: email.trim().toLowerCase() });
+    const strippedEmail = email.trim().toLowerCase();
+
+    const emailExists = await userHubAdmin.exists({ email: strippedEmail });
     if (emailExists) {
       res.status(BAD_REQUEST).json({ error: "An account with this email already exists. Please sign in instead." });
       return;
@@ -541,12 +538,13 @@ export const userHubAdminSignUp = async (req: GlobalRequest, res: GlobalResponse
 
     const hashedPassword = await hashPassword(password);
 
-		const superAdmin = await userHubAdmin.create({
+	  await userHubAdmin.create({
       name: name.trim(),
-      email: email.trim().toLowerCase(),
+      email: strippedEmail,
       password: hashedPassword,
     });
 
+<<<<<<< Updated upstream
     // Fetch main app profile picture for hub logo
     let logoUrl = "";
     try {
@@ -585,14 +583,19 @@ export const userHubAdminSignUp = async (req: GlobalRequest, res: GlobalResponse
 
 		const accessToken = JWT.sign(superAdmin._id.toString());
 		const refreshToken = getRefreshToken(superAdmin._id.toString());
+=======
+		const code = generateOTP();
+>>>>>>> Stashed changes
 
-		res.cookie("userHubRefreshToken", refreshToken, {
-			httpOnly: true,
-			secure: true,
-			maxAge: 30 * 24 * 60 * 60,
-		});
+    await OTP.create({ code, email: strippedEmail, role: "superadmin" });
 
+<<<<<<< Updated upstream
 		res.status(CREATED).json({ message: "user hub admin created", accessToken, admin: { _id: superAdmin._id.toString(), name: superAdmin.name, email: superAdmin.email, role: "superadmin", hub: createdHub._id.toString() }, hub: { logo: createdHub.logo || "" } });
+=======
+    await sendOTPConfirmEmail({ email: strippedEmail, code });
+
+		res.status(CREATED).json({ message: "user hub admin created" });
+>>>>>>> Stashed changes
 	} catch (error: any) {
 		logger.error(error);
 		const isDuplicate = error?.code === 11000;
@@ -714,3 +717,95 @@ export const userHubResetPassword = async (req: GlobalRequest, res: GlobalRespon
 			.json({ error: "Error resetting admin password" });
 	}
 };
+
+export const validateHubEmail = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const { email, page } = req.query as { page: string, email: string };
+
+    if (!email) {
+      res.status(BAD_REQUEST).json({ error: "send the email to validate" });
+      return;
+    }
+
+    const strippedEmail = email.trim().toLowerCase();
+
+    let emailVerified: any | null = null;
+    if (page === "user") {
+      emailVerified = await userHubAdmin.exists({ email: strippedEmail, emailVerified: true });
+    } else {
+      emailVerified = await hubAdmin.exists({ email: strippedEmail, emailVerified: true });
+    }
+
+    if (emailVerified) {
+      res.status(FORBIDDEN).json({ error: "email already verified, kindly log in" });
+      return;
+    }
+
+    const code = generateOTP();
+
+    await OTP.create({ code, email: strippedEmail, role: emailVerified.role });
+
+    await sendOTPConfirmEmail({ email: strippedEmail, code });
+
+    res.status(OK).json({ message: "otp for email confirmation sent!" });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error sending otp for email confirmation" });
+  }
+}
+
+export const confirmHubEmailValidation = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const { code, email } = req.body;
+    if (!code && !email) {
+      res.status(BAD_REQUEST).json({ error: "send email and otp code" });
+      return;
+    }
+
+    const strippedEmail = email.trim().toLowerCase();
+
+    const otpFound = await OTP.exists({ email: strippedEmail, code }).lean();
+    if (!otpFound) {
+      res.status(NOT_FOUND).json({ error: "otp does not exist, is invalid or has expired" });
+      return;
+    }
+
+    const now = new Date();
+
+		if (otpFound.expiresAt < now) {
+			res.status(BAD_REQUEST).json({ error: "otp has expired" });
+			return;
+		};
+
+    let accessToken;
+
+    if (otpFound.page === "user") {
+      await userHubAdmin.updateOne({ email: strippedEmail }, { emailVerified: true });
+
+      accessToken = JWT.sign(otpFound.userId);
+  		const refreshToken = getRefreshToken(otpFound.userId);
+
+  		res.cookie("userHubRefreshToken", refreshToken, {
+  			httpOnly: true,
+  			secure: true,
+  			maxAge: 30 * 24 * 60 * 60,
+  		});
+    } else {
+      await hubAdmin.updateOne({ email: strippedEmail }, { emailVerified: true });
+      
+      accessToken = JWT.sign(otpFound.userId);
+  		const refreshToken = getRefreshToken(otpFound.userId);
+
+  		res.cookie("hubRefreshToken", refreshToken, {
+  			httpOnly: true,
+  			secure: true,
+  			maxAge: 30 * 24 * 60 * 60,
+  		});
+    }
+
+    res.status(OK).json({ message: "email confirmed", accessToken })
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error confirming otp for email validation" });
+  }
+}
