@@ -324,7 +324,7 @@ const formatNumber = (num: number) => {
   )}
 </div>
 
- <div className="mt-12 flex flex-col sm:flex-row gap-2 sm:gap-4 w-full">
+<div className="mt-12 flex flex-col sm:flex-row gap-2 sm:gap-4 w-full">
   {cards.map((card, idx) => (
 <div
   key={idx}

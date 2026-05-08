@@ -8,7 +8,7 @@ import AnimatedBackground from "../components/AnimatedBackground";
 import { apiRequestV2 } from "../lib/queryClient";
 import CampaignCard from "../components/CampaignCard";
 import LessonCard from "../components/LessonCard";
-import AnalyticsCard from "../components/AnalyticsCard";
+import QuestCard from "../components/QuestCard";
 
 // Images
 import intuitionPortal from "@assets/intuitionPortal.jpg";
@@ -175,72 +175,51 @@ export default function Discover() {
 const lessons = Array.isArray(lessonsData?.lessons)
   ? lessonsData.lessons.filter((l: any) => l.status === "published")
   : [];
-
-  const ranges = ["Last 24 Hrs", "Last 7 days", "Last 30 days", "All Time"] as const;
-  type Range = (typeof ranges)[number];
-
-  const formatNumber = (num: number) => {
-  if (num >= 1000000)
-    return `${(num / 1000000).toFixed(num % 1000000 === 0 ? 0 : 1)}M`;
-
-  if (num >= 1000)
-    return `${(num / 1000).toFixed(num % 1000 === 0 ? 0 : 1)}k`;
-
-  return num.toString();
-};
+  
 
   const { data } = useQuery({
-  queryKey: ["/api/analytics"],
+  queryKey: ["/api/get-analytics"],
   queryFn: async () => {
-    const res = await apiRequest("GET", "/api/analytics");
+    const res = await apiRequest("GET", "/api/get-analytics");
+    const json = await res.json();
+    return json.analytics ?? json; 
+  },
+});
+
+const analyticsCards = data
+  ? [
+      {
+        title: "Total Users",
+        value: data.user.totalUsers,
+      },
+      {
+        title: "Active Users",
+        value: data.user.activeUsersWeekly,
+      },
+      {
+        title: "New Users",
+        value: data.user.users24h,
+      },
+      {
+        title: "Quests Created",
+        value: data.totalQuests,
+      },
+      {
+        title: "Campaigns Created",
+        value: data.totalCampaigns,
+      },
+    ]
+  : [];
+
+  const { data: questsData } = useQuery({
+  queryKey: ["/api/quests"],
+  queryFn: async () => {
+    const res = await apiRequest("GET", "/api/quests");
     return res.json();
   },
 });
 
-// Derive range-specific values from API data
-  const totalUsersForRange: Record<Range, number> = {
-    "Last 24 Hrs": data?.user.users24h ?? 0,
-    "Last 7 days": data?.user.users7d ?? 0,
-    "Last 30 days": data?.user.users30d ?? 0,
-    "All Time": data?.user.totalUsers ?? 0,
-  };
-
-  const activeUsersForRange: Record<Range, number> = {
-    "Last 24 Hrs": data?.user.users24h ?? 0,
-    "Last 7 days": data?.user.activeUsersWeekly ?? 0,
-    "Last 30 days": data?.user.activeUsersMonthly ?? 0,
-    "All Time": data?.user.totalUsers ?? 0,
-  };
-
-  const [activeRange, setActiveRange] = useState<Range>("Last 24 Hrs");
-
-  const analyticsCards = [
-  {
-    title: "Total Users",
-    value: data?.user?.totalUsers ?? 0,
-    icon: "referrals.png",
-  },
-  {
-    title: "Active Users",
-    value: formatNumber(activeUsersForRange[activeRange] ?? 0),
-    icon: "approved.png",
-  },
-  {
-    title: "New Users",
-    value: formatNumber(totalUsersForRange[activeRange] ?? 0),
-    icon: "new-users.png",
-  },
-  {
-    title: "Quests Created",
-    value: data?.totalQuests ?? 0,
-    icon: "quest-iconx.png",
-  },
-  {
-    title: "Campaigns Created",
-    value: data?.totalCampaigns ?? 0,
-    icon: "campaign_icon.png",
-  },
-];
+const quests = questsData?.quests ?? [];
 
   const DiscoverCard = ({ card }: any) => {
   return (
@@ -359,24 +338,41 @@ const lessons = Array.isArray(lessonsData?.lessons)
       </p>
     </div>
 
-    <Button
-      variant="ghost"
-      size="sm"
-      className="text-xs h-7 px-2"
-      onClick={() => setLocation("/ecosystem-dapps")}
-    >
-      Show all
-    </Button>
+<Button
+  variant="ghost"
+  size="sm"
+  onClick={() => setLocation("/ecosystem-dapps")}
+  className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] text-white/80 hover:text-white hover:bg-white/5"
+>
+  <span>View all protocols</span>
+
+  <img
+    src="/arrow-right.png"
+    alt="arrow right"
+    className="w-3.5 h-3.5 opacity-80 group-hover:opacity-100 transition"
+  />
+</Button>
   </div>
 
-  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+<div className="ticker-container">
+  <div className="ticker gap-3">
+    
+    {/* First set */}
     {filteredCards.map((card) => (
-      <DiscoverCard
-        key={card.id}
-        card={card}
-      />
+      <div key={card.id} className="w-[260px] shrink-0">
+        <DiscoverCard card={card} />
+      </div>
     ))}
+
+    {/* Duplicate set for seamless loop */}
+    {filteredCards.map((card) => (
+      <div key={`${card.id}-dup`} className="w-[260px] shrink-0">
+        <DiscoverCard card={card} />
+      </div>
+    ))}
+
   </div>
+</div>
 </section>
 
 {/* Campaigns */}
@@ -395,33 +391,38 @@ const lessons = Array.isArray(lessonsData?.lessons)
       </div>
 
       <Button
-        variant="ghost"
-        size="sm"
-        className="text-xs h-7 px-2"
-        onClick={() => setLocation("/campaigns")}
-      >
-        Show all
-      </Button>
+  variant="ghost"
+  size="sm"
+  onClick={() => setLocation("/campaigns")}
+  className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] text-white/80 hover:text-white hover:bg-white/5"
+>
+  <span>View all campaigns</span>
+
+  <img
+    src="/arrow-right.png"
+    alt="arrow right"
+    className="w-3.5 h-3.5 opacity-80 group-hover:opacity-100 transition"
+  />
+</Button>
     </div>
 
     <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-      {trendingCampaigns.map(
-        (campaign: any, index: number) => (
-          <div
-            key={campaign._id ?? index}
-            className={`animate-slide-up delay-${
-              (index + 1) * 100
-            }`}
-          >
-            <div className="rounded-2xl border border-white/10 overflow-hidden">
-              <CampaignCard
-                {...campaign}
-                from="explore"
-              />
-            </div>
-          </div>
-        )
-      )}
+      {trendingCampaigns.length > 0 ? (
+  trendingCampaigns.map((campaign: any, index: number) => (
+    <div
+      key={campaign._id ?? index}
+      className={`animate-slide-up delay-${(index + 1) * 100}`}
+    >
+      <div className="rounded-2xl border border-white/10 overflow-hidden">
+        <CampaignCard {...campaign} from="explore" />
+      </div>
+    </div>
+  ))
+) : (
+  <div className="col-span-2 md:col-span-4 rounded-2xl border border-white/10 bg-[#0B0B0B] p-6 text-center text-white/60 text-sm">
+    No active campaigns at the moment.
+  </div>
+)}
     </div>
   </section>
 )}
@@ -441,12 +442,19 @@ const lessons = Array.isArray(lessonsData?.lessons)
       </div>
 
       <Button
-        variant="ghost"
-        size="sm"
-        className="text-xs h-7 px-2"
-      >
-        Coming soon
-      </Button>
+  variant="ghost"
+  size="sm"
+  onClick={() => setLocation("/learn")}
+  className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] text-white/80 hover:text-white hover:bg-white/5"
+>
+  <span>View all lessons</span>
+
+  <img
+    src="/arrow-right.png"
+    alt="arrow right"
+    className="w-3.5 h-3.5 opacity-80 group-hover:opacity-100 transition"
+  />
+</Button>
     </div>
 
     {/* GRID */}
@@ -470,38 +478,105 @@ const lessons = Array.isArray(lessonsData?.lessons)
   </section>
 )}
 
-{/* Analytics */}
-<section className="mb-8">
-  <div className="flex items-start justify-between mb-3 gap-2">
-    <div>
-      <h2 className="text-base md:text-lg font-semibold">
-        Analytics
-      </h2>
-
-      <p className="text-[11px] md:text-xs text-white/60 mt-1 max-w-xl">
-        Live ecosystem metrics across users, quests, and campaigns.
-      </p>
-    </div>
-  </div>
-
-  <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-    {analyticsCards.map((card, index) => (
-      <div
-        key={index}
-        className="rounded-2xl border border-white/10 bg-[#080808] p-3 flex flex-col gap-2"
-      >
-        <div className="flex items-center gap-2 text-[11px] text-white/60">
-          <img src={`/${card.icon}`} className="w-4 h-4" />
-          <span>{card.title}</span>
-        </div>
-
-        <div className="text-lg font-bold text-white">
-          {card.value}
-        </div>
+<div
+  className="
+    w-full
+    flex
+    rounded-3xl
+    border border-white/10
+    bg-[#170F1F]
+    overflow-hidden
+  "
+  style={{
+    backdropFilter: "blur(8px)",
+    WebkitBackdropFilter: "blur(8px)",
+    boxShadow: "inset 0 0 22px rgba(131, 58, 253, 0.12)",
+  }}
+>
+  {analyticsCards.map((card, idx) => (
+    <div
+      key={idx}
+      className="
+        flex-1
+        flex flex-col items-center justify-center
+        py-4 px-3
+        text-center
+        relative
+      "
+    >
+      {/* VALUE */}
+      <div className="text-lg sm:text-xl font-semibold text-white leading-none">
+        {typeof card.value === "number"
+          ? card.value.toLocaleString()
+          : card.value}
       </div>
-    ))}
-  </div>
-</section>
+
+      {/* LABEL */}
+      <div className="text-[10px] tracking-widest uppercase text-white/50 mt-1">
+        {card.title}
+      </div>
+
+      {/* FULL CELL DIVIDER (REAL BOX SEPARATION) */}
+      {idx !== analyticsCards.length - 1 && (
+        <div className="absolute right-0 top-0 h-full w-px bg-white/10" />
+      )}
+    </div>
+  ))}
+</div>
+
+{(activeFilter === "all" || activeFilter === "quests") && (
+  <section className="mb-8">
+    <div className="flex items-start justify-between mb-3 mt-8 gap-2">
+      <div>
+        <h2 className="text-base md:text-lg font-semibold">
+          Trending Quests
+        </h2>
+
+        <p className="text-xs text-white/60 mt-1 max-w-xl">
+          Complete quests and earn ecosystem rewards.
+        </p>
+      </div>
+
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => setLocation("/quests")}
+        className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] text-white/80 hover:text-white hover:bg-white/5"
+      >
+        <span>View all quests</span>
+
+        <img
+          src="/arrow-right.png"
+          alt="arrow right"
+          className="w-3.5 h-3.5 opacity-80 transition"
+        />
+      </Button>
+    </div>
+
+    {quests?.length > 0 ? (
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        {quests.slice(0, 4).map((quest: any) => (
+          <QuestCard
+            key={quest._id}
+            questId={quest._id}
+            title={quest.title}
+            description={quest.description}
+            projectName={quest.projectName}
+            projectLogo={quest.projectLogo}
+            heroImage={quest.heroImage}
+            participants={quest.participants}
+            rewards={quest.rewards}
+            duration={quest.duration}
+          />
+        ))}
+      </div>
+    ) : (
+      <div className="col-span-2 md:col-span-4 rounded-2xl border border-white/10 bg-[#170F1F] p-6 text-center text-white/60 text-sm">
+        No quests available yet. New quests will appear here soon.
+      </div>
+    )}
+  </section>
+)}
 
           
         </div>
