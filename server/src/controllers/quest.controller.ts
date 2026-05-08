@@ -1144,7 +1144,30 @@ export const saveQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 
     const questFound = await quest.findById(id).lean();
     if (!questFound) {
-      res.status(NOT_FOUND).json({ error: "quest not found" });
+      const questCount = await quest.countDocuments({ creator: req.id });
+      const body = {
+        ...req.body,
+        project_image: hubFound.logo ?? "pending",
+        project_name: hubFound.name ?? req.body.nameOfProject ?? "",
+        sub_title: req.body.description || hubFound.description || "",
+        questNumber: questCount + 1,
+        projectCoverImage: req.body.coverImage ?? "pending",
+        creator: req.admin.hub,
+        creatorModel: page === "user" ? "user" : "project",
+      };
+
+      const newQuest = await quest.create(body);
+
+      if (miniQuestsToSave !== null) {
+        if (miniQuestsToSave.length > 0) {
+          await miniQuest.insertMany(
+            miniQuestsToSave.map((q: any) => ({ ...q, text: q.quest || q.text || "", quest: newQuest._id }))
+          );
+        }
+        await quest.findByIdAndUpdate(newQuest._id, { noOfQuests: miniQuestsToSave.length });
+      }
+
+      res.status(CREATED).json({ questId: newQuest._id });
       return;
     }
 
