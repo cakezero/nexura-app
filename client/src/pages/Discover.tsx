@@ -673,55 +673,88 @@ className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] te
     ) : quests.length <= 3 ? (
       /* GRID MODE */
       <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-        {quests.map((quest: any) => (
-          <div key={quest._id} className="w-full">
-            <QuestCard
-              questId={quest._id}
-              title={quest.title}
-              description={quest.description}
-              projectName={quest.projectName || quest.project_name}
-              projectLogo={quest.project_image || "/quest-1.png"}
-              heroImage={quest.project_image || "/quest-1.png"}
-              rewards={`${quest.reward || quest.rewards || 0} XP`}
-              duration={quest.duration || "Ongoing"}
-            />
-          </div>
-        ))}
+        {quests.map((quest: any) => {
+          const cleanDuration =
+            quest.starts_at && quest.ends_at
+              ? undefined
+              : quest.duration === "Ongoing"
+              ? undefined
+              : quest.duration || undefined;
+
+          return (
+            <div key={quest._id} className="w-full">
+              <QuestCard
+                questId={quest._id}
+                title={quest.title}
+                description={quest.description}
+                projectName={quest.projectName || quest.project_name}
+                projectLogo={quest.project_image || "/quest-1.png"}
+                heroImage={quest.project_image || "/quest-1.png"}
+                rewards={`${quest.reward || quest.rewards || 0} XP`}
+                duration={cleanDuration}
+                starts_at={quest.starts_at}
+                ends_at={quest.ends_at}
+              />
+            </div>
+          );
+        })}
       </div>
     ) : (
-      /* TICKER MODE (FIXED - MATCH LESSONS STYLE) */
+      /* TICKER MODE */
       <div className="ticker-container-1 overflow-hidden">
         <div className="ticker-1 flex gap-2 w-max">
 
-    {quests.map((quest: any) => (
-      <div key={quest._id} className="w-[260px] shrink-0">
-        <QuestCard
-          questId={quest._id}
-          title={quest.title}
-          description={quest.description}
-          projectName={quest.projectName || quest.project_name}
-          projectLogo={quest.project_image || "/quest-1.png"}
-          heroImage={quest.project_image || "/quest-1.png"}
-          rewards={`${quest.reward || quest.rewards || 0} XP`}
-          duration={quest.duration || "Ongoing"}
-        />
-      </div>
-    ))}
+          {quests.map((quest: any) => {
+            const cleanDuration =
+              quest.starts_at && quest.ends_at
+                ? undefined
+                : quest.duration === "Ongoing"
+                ? undefined
+                : quest.duration || undefined;
 
-        {quests.map((quest: any) => (
-      <div key={`${quest._id}-dup`} className="w-[260px] shrink-0">
-        <QuestCard
-          questId={quest._id}
-          title={quest.title}
-          description={quest.description}
-          projectName={quest.projectName || quest.project_name}
-          projectLogo={quest.project_image || "/quest-1.png"}
-          heroImage={quest.project_image || "/quest-1.png"}
-          rewards={`${quest.reward || quest.rewards || 0} XP`}
-          duration={quest.duration || "Ongoing"}
-        />
-      </div>
-    ))}
+            return (
+              <div key={quest._id} className="w-[260px] shrink-0">
+                <QuestCard
+                  questId={quest._id}
+                  title={quest.title}
+                  description={quest.description}
+                  projectName={quest.projectName || quest.project_name}
+                  projectLogo={quest.project_image || "/quest-1.png"}
+                  heroImage={quest.project_image || "/quest-1.png"}
+                  rewards={`${quest.reward || quest.rewards || 0} XP`}
+                  duration={cleanDuration}
+                  starts_at={quest.starts_at}
+                  ends_at={quest.ends_at}
+                />
+              </div>
+            );
+          })}
+
+          {quests.map((quest: any) => {
+            const cleanDuration =
+              quest.starts_at && quest.ends_at
+                ? undefined
+                : quest.duration === "Ongoing"
+                ? undefined
+                : quest.duration || undefined;
+
+            return (
+              <div key={`${quest._id}-dup`} className="w-[260px] shrink-0">
+                <QuestCard
+                  questId={quest._id}
+                  title={quest.title}
+                  description={quest.description}
+                  projectName={quest.projectName || quest.project_name}
+                  projectLogo={quest.project_image || "/quest-1.png"}
+                  heroImage={quest.project_image || "/quest-1.png"}
+                  rewards={`${quest.reward || quest.rewards || 0} XP`}
+                  duration={cleanDuration}
+                  starts_at={quest.starts_at}
+                  ends_at={quest.ends_at}
+                />
+              </div>
+            );
+          })}
 
         </div>
       </div>
