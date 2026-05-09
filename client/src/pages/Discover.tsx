@@ -530,8 +530,8 @@ className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] te
     </div>
   ) : (
     /* TICKER MODE */
-    <div className="ticker-container overflow-hidden">
-      <div className="ticker flex gap-2 w-max">
+    <div className="ticker-container-2 overflow-hidden">
+      <div className="ticker-2 flex gap-2 w-max">
 
            {/* first set */}
     {lessons.map((lesson: any) => (
