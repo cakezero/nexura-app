@@ -797,10 +797,10 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
             <div className="bg-white/5 border border-white/10 rounded-xl p-4 mb-4">
               <div className="flex justify-between items-center mb-2">
                 <span className="text-white font-semibold text-sm">Quest Launch Fee</span>
-                <span className="text-purple-400 font-bold text-sm">1 $TRUST</span>
+                <span className="text-purple-400 font-bold text-sm">0.1 $TRUST</span>
               </div>
               <p className="text-white/60 text-xs mb-3">
-                A one-time fee of 1 $TRUST is required to launch and publish this quest.
+                A one-time fee of 0.1 $TRUST is required to launch and publish this quest.
               </p>
 
               {paymentTxHash ? (
@@ -820,10 +820,10 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                   onClick={async () => {
                     setPaymentLoading(true);
                     try {
-                      const hash = await payStudioHubFee(1, QUEST_FEE_CONTRACT);
+                      const hash = await payStudioHubFee(undefined, QUEST_FEE_CONTRACT);
                       setPaymentTxHash(hash);
                       await apiRequest({ method: "PATCH", endpoint: `/hub/save-payment-hash`, data: { txHash: hash } });
-                      toast({ title: "Payment successful", description: "1 $TRUST sent. You can now publish your quest." });
+                      toast({ title: "Payment successful", description: "0.1 $TRUST sent. You can now publish your quest." });
                     } catch (err: any) {
                       toast({ title: "Payment failed", description: err.message ?? "Transaction was rejected.", variant: "destructive" });
                     } finally {
