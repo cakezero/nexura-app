@@ -290,7 +290,6 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
       handleOrUrl: "",
       description: "",
       validation: "Manual Validation",
-      verificationMode: "",
       roleId: "",
       channelId: "",
     });
@@ -434,7 +433,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
               type="button"
               onClick={() => {
                 setEditingIndex(null);
-                setNewTask({ _id: undefined, type: "", platform: "", handleOrUrl: "", description: "", validation: "Manual Validation", verificationMode: "", roleId: "", channelId: "" });
+                setNewTask({ _id: undefined, type: "", platform: "", handleOrUrl: "", description: "", validation: "Manual Validation", roleId: "", channelId: "" });
                 setShowModal(true);
               }}
               className="absolute -top-10 right-0 px-3 py-1 bg-[#8B3EFE] text-white hover:bg-[#7b35e6] rounded-lg text-sm font-semibold flex items-center gap-2"
@@ -685,13 +684,15 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                       onChange={(e) => {
                         const type = e.target.value;
                         const isTwitter = type === "Comment on X" || type === "Follow on X" || type === "Create a Post";
-                        const isAuto = type === "Own a TNS" || type === "Portal Claims";
+                        const validationLabel =
+                          type === "Own a TNS" ? "Verified by TNS" :
+                          type === "Portal Claims" ? "Verified by Intuition Portal" :
+                          "Manual Validation";
                         setNewTask({
                           ...newTask,
                           type,
                           platform: isTwitter ? "Twitter" : "Other",
-                          validation: isAuto ? "Auto Verified" : "Manual Validation",
-                          verificationMode: isAuto ? "auto" : "",
+                          validation: validationLabel,
                         });
                       }}
                     >
@@ -709,18 +710,22 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                   </div>
                 </div>
 
-                {/* Platform */}
+                {/* Platform & Validation */}
                 <div className="w-[311px] space-y-[14px]">
-                  <label className="text-[15px] font-bold text-white/70 uppercase font-['Geist',sans-serif] leading-[18.2px]">PLATFORM</label>
-                  <div className="flex">
-                    <button
-                      type="button"
-                      className="h-[40px] w-[146px] rounded-[8px] flex items-center justify-center gap-[5px] transition border border-[#8b3efe] bg-[#8b3efe]/17 text-white"
-                      onClick={() => setNewTask({...newTask, platform: newTask.platform === "Twitter" ? "Other" : "Twitter"})}
-                    >
-                      <img src="https://www.figma.com/api/mcp/asset/7c040d25-e34c-42b8-8ee9-10bddba75bba" alt="" className="w-[14px] h-[14px]" />
-                      <span className="text-[12px] font-bold font-['Geist',sans-serif] leading-[20px]">{newTask.platform || "Other"}</span>
-                    </button>
+                  <div className="flex gap-[43px]">
+                    <div className="flex-1 space-y-[10px]">
+                      <label className="text-[15px] font-bold text-white/70 uppercase font-['Geist',sans-serif] leading-[18.2px]">PLATFORM</label>
+                      <div className="h-[40px] rounded-[8px] flex items-center px-[15px] gap-[5px] bg-[#1d0d3d] border border-white/5 text-white/60 text-[12px] font-medium font-['Geist',sans-serif]">
+                        <img src="https://www.figma.com/api/mcp/asset/7c040d25-e34c-42b8-8ee9-10bddba75bba" alt="" className="w-[14px] h-[14px]" />
+                        <span>{newTask.platform || "—"}</span>
+                      </div>
+                    </div>
+                    <div className="flex-1 space-y-[10px]">
+                      <label className="text-[15px] font-bold text-white/70 uppercase font-['Geist',sans-serif] leading-[18.2px]">VALIDATION</label>
+                      <div className="h-[40px] rounded-[8px] flex items-center px-[15px] bg-[#1d0d3d] border border-white/5 text-white/60 text-[12px] font-medium font-['Geist',sans-serif]">
+                        {newTask.validation || "—"}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
