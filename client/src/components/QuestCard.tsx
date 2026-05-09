@@ -7,7 +7,8 @@ interface QuestCardProps {
   projectLogo: string;
   heroImage: string;
   rewards?: string;
-  duration?: string;
+  starts_at?: string;
+  ends_at?: string;
   questId?: string;
   isLocked?: boolean;
   lockLevel?: number;
@@ -21,32 +22,37 @@ export default function QuestCard({
   projectLogo,
   heroImage,
   rewards,
-  duration,
+  starts_at,
+  ends_at,
   questId,
   isLocked = false,
   lockLevel,
   onView,
-  status,
-  statusColor,
-  showClose,
-  showDelete,
-  showWithdraw,
-  isClosing,
-  isDeleting,
-  isWithdrawing,
-  participants,
-  onClose,
-  onDelete,
-  onWithdraw,
 }: QuestCardProps) {
   const [, setLocation] = useLocation();
 
   const handleClick = () => {
     if (!questId || isLocked) return;
-
     if (onView) onView(questId);
     else setLocation(`/quest/${questId}`);
   };
+
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return "";
+    const date = new Date(dateStr);
+
+    return date.toLocaleDateString("en-US", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+  };
+
+  const hasValidDates = starts_at && ends_at;
+
+  const duration = hasValidDates
+    ? `${formatDate(starts_at)} - ${formatDate(ends_at)}`
+    : null;
 
   return (
     <div
@@ -57,17 +63,11 @@ export default function QuestCard({
       <div className="relative h-[120px] w-full overflow-hidden shrink-0">
         <img
           src={heroImage}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          className="w-full h-full object-cover transition-transform duration-500"
         />
 
         {/* ACTIVE BADGE */}
-        <div
-          className="absolute top-3 right-3 px-2 py-1 rounded-full text-[10px] font-semibold"
-          style={{
-            color: "#00E1A2",
-            background: "#00E1A24D",
-          }}
-        >
+        <div className="absolute top-3 right-3 px-2 py-1 rounded-full text-[10px] font-semibold text-[#00E1A2] bg-[#00E1A24D]">
           ACTIVE
         </div>
 
@@ -77,7 +77,6 @@ export default function QuestCard({
           </div>
         )}
 
-        {/* LOGO */}
         <div className="absolute bottom-[-18px] left-3">
           <img
             src={projectLogo}
@@ -101,25 +100,22 @@ export default function QuestCard({
           )}
         </div>
 
-        {/* DURATION (only show if exists — no "Ongoing") */}
+        {/* DURATION (STRICT - NO FALLBACK TEXT) */}
         {duration && (
           <div className="text-[10px] text-[#8A97B0] mt-1">
             {duration}
           </div>
         )}
 
-        {/* DESCRIPTION */}
         <p className="text-xs text-white/60 line-clamp-2 mt-2">
           {description}
         </p>
 
-        {/* PROJECT ROW */}
         <div className="flex justify-between items-center text-[10px] text-white/60 mt-3">
           <span>PROJECT</span>
           <span className="text-white">{projectName}</span>
         </div>
 
-        {/* CTA */}
         <button className="mt-auto flex items-center justify-center gap-2 bg-[#8B3EFE] text-white text-xs py-2 rounded-xl hover:opacity-90 transition">
           Start Quest
           <img src="/arrow-right.png" className="w-3.5 h-3.5" />
