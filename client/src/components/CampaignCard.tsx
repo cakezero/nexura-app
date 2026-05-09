@@ -47,15 +47,14 @@ export default function CampaignCard({
     return count.toString();
   };
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    });
-  };
+const formatDate = (dateStr: string) => {
+  const date = new Date(dateStr);
+  return date.toLocaleDateString("en-US", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+};
 
   const handleClick = () => {
     if (_id && isLive) {
@@ -128,7 +127,7 @@ export default function CampaignCard({
 </div>
 
         {/* Duration */}
-        <div className="flex items-center gap-2 text-[10px] text-[#8A97B0] bg-[#111827] px-2 py-1 rounded-md w-fit">
+        <div className="flex items-center gap-2 text-[10px] text-[#8A97B0] bg-[#8B3EFE33] px-2 py-1 rounded-md w-fit">
           <img src="/calendar.png" className="w-3 h-3" />
           {formatDate(starts_at)} - {formatDate(ends_at)}
         </div>

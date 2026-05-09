@@ -3764,3 +3764,14 @@ body {
   overflow: hidden;
   width: 100%;
 }
+
+.ticker-2 {
+  display: flex;
+  width: max-content;
+  animation: ticker 80s linear infinite;
+}
+
+.ticker-container-2 {
+  overflow: hidden;
+  width: 100%;
+}
