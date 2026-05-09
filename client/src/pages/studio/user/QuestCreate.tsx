@@ -264,7 +264,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
     }
 
     // Validate URL for Twitter/X tasks
-    if (newTask.type === "Comment on X" || newTask.type === "Follow on X") {
+    if (newTask.type === "Comment on X" || newTask.type === "Follow on X" || newTask.type === "Create a Post") {
       if (!newTask.handleOrUrl) {
         setUrlError("URL is required for this task type.");
         return;
@@ -272,7 +272,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
       if (newTask.handleOrUrl) {
         const twitterRegex = /^(https?:\/\/)?(www\.)?(x\.com|twitter\.com)\/.+/i;
         if (!twitterRegex.test(newTask.handleOrUrl)) {
-          setUrlError("Only x.com or twitter.com URLs are allowed.");
+          setUrlError("Only x.com URLs are allowed.");
           return;
         }
       }
@@ -720,10 +720,10 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                     <button
                       type="button"
                       className="h-[40px] w-[146px] rounded-[8px] flex items-center justify-center gap-[5px] transition border border-[#8b3efe] bg-[#8b3efe]/17 text-white"
-                      onClick={() => setNewTask({...newTask, platform: "Twitter"})}
+                      onClick={() => setNewTask({...newTask, platform: newTask.platform === "Twitter" ? "" : "Twitter"})}
                     >
                       <img src="https://www.figma.com/api/mcp/asset/7c040d25-e34c-42b8-8ee9-10bddba75bba" alt="" className="w-[14px] h-[14px]" />
-                      <span className="text-[12px] font-bold font-['Geist',sans-serif] leading-[20px]">Custom/External</span>
+                      <span className="text-[12px] font-bold font-['Geist',sans-serif] leading-[20px]">{newTask.platform || "Select Platform"}</span>
                     </button>
                   </div>
                 </div>
