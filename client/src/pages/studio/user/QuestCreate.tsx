@@ -23,7 +23,7 @@ type Task = {
   handleOrUrl: string;
   description: string;
   validation: string;
-  verificationMode: string;
+  verificationMode?: string;
   roleId: string;
   channelId: string;
 };
@@ -734,7 +734,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
               <div className="space-y-[16px]">
                 <label className="text-[15px] font-bold text-white/70 uppercase font-['Geist',sans-serif] leading-[18.2px]">TASK DETAILS</label>
                 <div className="bg-[#060210] border border-[#833afd] rounded-[16px] h-[180px] p-5 flex flex-col justify-center gap-[6px]">
-                  <div className="space-y-2">
+                  <div className="space-y-2 relative">
                     <label className="text-[14px] font-medium text-white/80 font-['Geist',sans-serif] leading-[18.2px]">Task Description</label>
                     <input
                       type="text"
@@ -744,7 +744,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                       onChange={(e) => setNewTask({...newTask, description: e.target.value})}
                     />
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-2 relative">
                     <label className="text-[14px] font-medium text-white/80 font-['Geist',sans-serif] leading-[18.2px]">Task URL</label>
                     <input
                       type="text"
