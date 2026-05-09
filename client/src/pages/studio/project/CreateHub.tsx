@@ -64,7 +64,7 @@ const handleSubmit = async () => {
 
   setCreating(true);
   try {
-    await apiRequestV2("POST", `/hub-auth/validate-email?email=${encodeURIComponent(email)}&page=project`);
+    await apiRequestV2("POST", `/api/hub-auth/validate-email?email=${encodeURIComponent(email)}&page=project`);
 
     sessionStorage.setItem("nexura:pending-signup", JSON.stringify({
       email,

@@ -39,7 +39,7 @@ export default function OtpVerify() {
     setLoading(true);
     setError("");
     try {
-      await apiRequestV2("POST", `/hub-auth/validate-email?email=${encodeURIComponent(email)}&page=${page}`);
+      await apiRequestV2("POST", `/api/hub-auth/validate-email?email=${encodeURIComponent(email)}&page=${page}`);
       setResentMessage("OTP resent to your email");
       setCanResend(false);
       setResendTimer(60);
@@ -142,7 +142,7 @@ export default function OtpVerify() {
     setLoading(true);
     setError("");
 
-    apiRequestV2("POST", "/auth/confirm-hub-email-validation", { code: otp.join(""), email })
+    apiRequestV2("POST", "/api/auth/confirm-hub-email-validation", { code: otp.join(""), email })
       .then(() => completeSignup())
       .catch((err: any) => {
         setError(err?.error || err?.message || "Invalid or expired OTP");

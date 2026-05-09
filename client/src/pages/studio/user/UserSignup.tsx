@@ -89,7 +89,7 @@ export default function UserSignup() {
 
     setCreating(true);
     try {
-      await apiRequestV2("POST", `/hub-auth/validate-email?email=${encodeURIComponent(email)}&page=user`);
+      await apiRequestV2("POST", `/api/hub-auth/validate-email?email=${encodeURIComponent(email)}&page=user`);
 
       sessionStorage.setItem("nexura:pending-signup", JSON.stringify({
         email,
