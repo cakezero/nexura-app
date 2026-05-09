@@ -3757,7 +3757,7 @@ body {
 .ticker-1 {
   display: flex;
   width: max-content;
-  animation: ticker 150s linear infinite;
+  animation: ticker 200s linear infinite;
 }
 
 .ticker-container-1 {
