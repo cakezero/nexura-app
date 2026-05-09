@@ -3,13 +3,13 @@ import { useState } from "react";
 import { apiRequest } from "../lib/config";
 
 export function useAnalytics() {
-  const [activeRange, setActiveRange] = useState<Range>("Last 24 Hrs");
+  const [activeRange, setActiveRange] = useState("Last 24 Hrs");
 
   const { data } = useQuery({
     queryKey: ["/api/get-analytics"],
     queryFn: async () => {
-      const res = await apiRequest("GET", "/api/get-analytics");
-      return res.json();
+      const res = await apiRequest({ method: "GET", endpoint: "/api/get-analytics" });
+      return res;
     },
   });
 
@@ -48,13 +48,13 @@ export function useAnalytics() {
     },
     {
       title: "Active Users",
-      value: formatNumber(activeUsersForRange[activeRange]),
+      value: formatNumber(activeUsersForRange[activeRange as keyof typeof activeUsersForRange]),
       icon: "approved.png",
       fullNumber: false,
     },
     {
       title: "New Users",
-      value: formatNumber(totalUsersForRange[activeRange]),
+      value: formatNumber(totalUsersForRange[activeRange as keyof typeof totalUsersForRange]),
       icon: "new-users.png",
       fullNumber: false,
     },
