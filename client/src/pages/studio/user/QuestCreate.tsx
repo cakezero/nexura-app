@@ -21,9 +21,7 @@ type Task = {
   type: string;
   platform: string;
   handleOrUrl: string;
-  title: string;
   description: string;
-  evidence: string;
   validation: string;
   verificationMode: string;
   roleId: string;
@@ -55,9 +53,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
     type: "",
     platform: "",
     handleOrUrl: "",
-    title: "",
     description: "",
-    evidence: "",
     validation: "Manual Validation",
     verificationMode: "",
     roleId: "",
@@ -188,7 +184,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
 
     const miniQuests = tasks.map(t => ({
       _id: t._id,
-      quest: t.title + (t.description ? "\n" + t.description : ""),
+      quest: t.description,
       link: t.handleOrUrl || "#",
       tag: typeToTag(t.type),
       category: t.platform.toLowerCase(),
@@ -262,8 +258,8 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
   };
 
   const handleSaveTask = () => {
-    if (!newTask.type || !newTask.title || !newTask.description) {
-      toast({ title: "Incomplete", description: "Task type, title, and description are required.", variant: "destructive" });
+    if (!newTask.type || !newTask.description) {
+      toast({ title: "Incomplete", description: "Task type and description are required.", variant: "destructive" });
       return;
     }
 
@@ -297,9 +293,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
       type: "",
       platform: "",
       handleOrUrl: "",
-      title: "",
       description: "",
-      evidence: "",
       validation: "Manual Validation",
       verificationMode: "",
       roleId: "",
@@ -445,7 +439,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
               type="button"
               onClick={() => {
                 setEditingIndex(null);
-                setNewTask({ _id: undefined, type: "", platform: "", handleOrUrl: "", title: "", description: "", evidence: "", validation: "Manual Validation", verificationMode: "", roleId: "", channelId: "" });
+                setNewTask({ _id: undefined, type: "", platform: "", handleOrUrl: "", description: "", validation: "Manual Validation", verificationMode: "", roleId: "", channelId: "" });
                 setShowModal(true);
               }}
               className="absolute -top-10 right-0 px-3 py-1 bg-[#8B3EFE] text-white hover:bg-[#7b35e6] rounded-lg text-sm font-semibold flex items-center gap-2"
@@ -465,7 +459,6 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                   <div key={index} className="flex items-center justify-between gap-4 rounded-lg border-2 border-purple-500 px-4 py-3 bg-white/5">
                     <div className="flex items-center justify-center w-8 h-8 bg-gray-600 rounded-full font-semibold">{index + 1}</div>
                     <div className="flex-1">
-                      <p className="font-semibold text-purple-400">{task.title}</p>
                       <p className="text-sm text-white/70">{task.description}</p>
                     </div>
                     <div className="flex gap-2">
@@ -583,7 +576,6 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <p className="text-white font-semibold">{task.title}</p>
                       <p className="text-white/60 text-sm">{task.description || task.type}</p>
                       {task.verificationMode && (
                         <p className="text-xs text-white/50 truncate">
@@ -697,19 +689,17 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                       value={newTask.type}
                       onChange={(e) => {
                         const type = e.target.value;
-                        const isTwitter = type === "Comment on X" || type === "Follow on X";
-                        const isCreatePost = type === "Create a Post";
-                        const isTns = type === "Own a TNS";
+                        const isTwitter = type === "Comment on X" || type === "Follow on X" || type === "Create a Post";
+                        const isAuto = type === "Own a TNS" || type === "Portal Claims";
                         setNewTask({
                           ...newTask,
                           type,
-                          platform: isTwitter || isCreatePost ? "Twitter" : (isTns ? "" : newTask.platform),
-                          validation: isTns ? "Auto Verified" : "Manual Validation",
-                          verificationMode: isCreatePost ? "submit_link" : (isTwitter ? "submit_link" : newTask.verificationMode),
+                          platform: isTwitter ? "Twitter" : "",
+                          validation: isAuto ? "Auto Verified" : "Manual Validation",
+                          verificationMode: isAuto ? "auto" : "",
                         });
                       }}
                     >
-                      <option value="">Others</option>
                       <option value="Comment on X">Comment on X</option>
                       <option value="Follow on X">Follow on X</option>
                       <option value="Create a Post">Create a Post</option>
@@ -742,17 +732,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
               {/* TASK DETAILS SECTION */}
               <div className="space-y-[16px]">
                 <label className="text-[15px] font-bold text-white/70 uppercase font-['Geist',sans-serif] leading-[18.2px]">TASK DETAILS</label>
-                <div className="bg-[#060210] border border-[#833afd] rounded-[16px] h-[248px] p-5 flex flex-col justify-center gap-[6px]">
-                  <div className="space-y-2">
-                    <label className="text-[14px] font-medium text-white/80 font-['Geist',sans-serif] leading-[18.2px]">Task Title</label>
-                    <input
-                      type="text"
-                      placeholder="e.g...Visit this website "
-                      className="w-full h-[37px] px-[15px] rounded-[8px] bg-[#1d0d3d] text-[12px] text-white/80 placeholder:text-white/50 border-none focus:ring-1 focus:ring-[#8b3efe] outline-none font-['Geist',sans-serif]"
-                      value={newTask.title}
-                      onChange={(e) => setNewTask({...newTask, title: e.target.value})}
-                    />
-                  </div>
+                <div className="bg-[#060210] border border-[#833afd] rounded-[16px] h-[180px] p-5 flex flex-col justify-center gap-[6px]">
                   <div className="space-y-2">
                     <label className="text-[14px] font-medium text-white/80 font-['Geist',sans-serif] leading-[18.2px]">Task Description</label>
                     <input
@@ -780,39 +760,6 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                 </div>
               </div>
 
-              {/* FOOTER SECTION: EVIDENCE & VALIDATION */}
-              <div className="flex gap-[43px] pb-10">
-                {/* Evidence Upload */}
-                <div className="w-[421px] space-y-[10px]">
-                  <label className="text-[15px] font-bold text-white/70 uppercase font-['Geist',sans-serif] leading-[18.2px]">EVIDENCE UPLOAD MANAGEMENT</label>
-                  <div className="relative">
-                    <select
-                      className="w-full h-[33px] px-5 rounded-[16px] bg-[#060210] text-[14px] text-white/60 border border-[#833afd] focus:outline-none appearance-none font-medium font-['Geist',sans-serif]"
-                      value={newTask.verificationMode}
-                      onChange={(e) => setNewTask({...newTask, verificationMode: e.target.value})}
-                    >
-                      <option value="">No evidence required</option>
-                      <option value="image_upload">Submit screenshot</option>
-                      <option value="submit_link">Submit link</option>
-                      <option value="auto">Auto verify</option>
-                    </select>
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none rotate-90">
-                      <img src="https://www.figma.com/api/mcp/asset/13e665cc-77c8-45d0-8f14-25dd7fa6f060" alt="" className="w-[9px] h-[9px]" />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Validation Type */}
-                <div className="w-[242px] space-y-[10px]">
-                  <label className="text-[15px] font-bold text-white/70 uppercase font-['Geist',sans-serif] leading-[18.2px]">VALIDATION TYPE</label>
-                  <div className="relative flex items-center h-[33px] px-5 rounded-[16px] bg-[#060210] border border-[#833afd]">
-                    <span className="text-[14px] font-medium text-white/60 font-['Geist',sans-serif] leading-[18.2px]">Manual Validation</span>
-                    <div className="ml-auto w-[18px] h-[18px]">
-                      <img src="https://www.figma.com/api/mcp/asset/83d9f6c8-52e3-4dab-8f17-4e93db83c5c7" alt="Check" className="w-full h-full" />
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
 
             {/* Bottom Bar */}
