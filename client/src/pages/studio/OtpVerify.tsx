@@ -106,7 +106,7 @@ export default function OtpVerify() {
         setLocation("/connect-discord");
       }
     } else {
-      const usernameToUse = pending.mainAppUsername || pending.walletAddress || pending.name;
+      const usernameToUse = pending.mainAppUsername || pending.walletAddress || pending.name || pending.email.split("@")[0];
       const res = await userApiRequest<{
         accessToken?: string;
         admin?: { _id: string; name: string; email: string; role: string; hub: string };
