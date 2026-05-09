@@ -8,14 +8,8 @@ import AnimatedBackground from "../components/AnimatedBackground";
 import { apiRequestV2 } from "../lib/queryClient";
 import CampaignCard from "../components/CampaignCard";
 import LessonCard from "../components/LessonCard";
-import AnalyticsCard from "../components/AnalyticsCard";
-
-// Images
-import intuitionPortal from "@assets/intuitionPortal.jpg";
-// import intuitionBets from "@assets/intuitionBets.jpg";
-import Sofia from "/ecosystem/Sofia.jpg"
-import intuRank from "@assets/intuRank.jpg";
-import tnsLogo from "@assets/tnsLogo.jpg";
+import QuestCard from "../components/QuestCard";
+import EcosystemCard from "../components/EcosystemCard";
 
 export default function Discover() {
   const [activeFilter, setActiveFilter] = useState("all");
@@ -111,56 +105,35 @@ export default function Discover() {
     .filter((c: any) => isActiveCampaign(c))
     .slice(0, 3);
 
-  // Unified cards
-  const discoverCards = [
-    {
-      id: 1,
-      title: "Intuition Portal",
-      description:
-        "Explore the Intuition ecosystem through the main portal and discover builders across the network.",
-      category: "Portal",
-      image: intuitionPortal,
-      route: "/ecosystem-dapps",
-    },
+  const { data: dappsData } = useQuery({
+  queryKey: ["/api/ecosystem-dapps"],
+  queryFn: async () => {
+    const res = await apiRequest("GET", "/api/ecosystem-dapps");
+    return res.json();
+  },
+});
 
-    {
-      id: 2,
-      title: "Trust Name Service",
-      description:
-        "Create human-readable identities and simplify interaction across the ecosystem.",
-      category: "Domain Name",
-      image: tnsLogo,
-      route: "/ecosystem-dapps",
-    },
+const [dapps, setDapps] = useState<any[]>([]);
 
-    {
-      id: 3,
-      title: "IntuRank",
-      description:
-        "Track rankings, influence, and ecosystem reputation inside the Intuition network.",
-      category: "Reputation",
-      image: intuRank,
-      route: "/ecosystem-dapps",
-    },
+useEffect(() => {
+  (async () => {
+    try {
+      const { ecosystemQuests } = await apiRequestV2(
+        "GET",
+        "/api/ecosystem-quests"
+      );
 
-        {
-      id: 4,
-      title: "Sofia",
-      description:
-        "Participate in prediction systems powered by social knowledge and onchain intelligence.",
-      category: "Reputation",
-      image: Sofia,
-      route: "/ecosystem-dapps",
-    },
-  ];
+      setDapps(ecosystemQuests || []);
+    } catch (err) {
+      console.error("Failed to fetch ecosystem dapps", err);
+    }
+  })();
+}, []);
 
-  const filteredCards =
-    activeFilter === "all"
-      ? discoverCards
-      : discoverCards.filter(
-          (card) =>
-            card.category.toLowerCase() === activeFilter
-        );
+  const filteredDapps =
+  activeFilter === "all" || activeFilter === "dapps"
+    ? dapps
+    : [];
 
         //// fetch lessons
         const { data: lessonsData } = useQuery({
@@ -175,72 +148,51 @@ export default function Discover() {
 const lessons = Array.isArray(lessonsData?.lessons)
   ? lessonsData.lessons.filter((l: any) => l.status === "published")
   : [];
-
-  const ranges = ["Last 24 Hrs", "Last 7 days", "Last 30 days", "All Time"] as const;
-  type Range = (typeof ranges)[number];
-
-  const formatNumber = (num: number) => {
-  if (num >= 1000000)
-    return `${(num / 1000000).toFixed(num % 1000000 === 0 ? 0 : 1)}M`;
-
-  if (num >= 1000)
-    return `${(num / 1000).toFixed(num % 1000 === 0 ? 0 : 1)}k`;
-
-  return num.toString();
-};
+  
 
   const { data } = useQuery({
-  queryKey: ["/api/analytics"],
+  queryKey: ["/api/get-analytics"],
   queryFn: async () => {
-    const res = await apiRequest("GET", "/api/analytics");
-    return res.json();
+    const res = await apiRequest("GET", "/api/get-analytics");
+    const json = await res.json();
+    return json.analytics ?? json; 
   },
 });
 
-// Derive range-specific values from API data
-  const totalUsersForRange: Record<Range, number> = {
-    "Last 24 Hrs": data?.user.users24h ?? 0,
-    "Last 7 days": data?.user.users7d ?? 0,
-    "Last 30 days": data?.user.users30d ?? 0,
-    "All Time": data?.user.totalUsers ?? 0,
-  };
+const analyticsCards = data
+  ? [
+      {
+        title: "Total Users",
+        value: data.user.totalUsers,
+      },
+      {
+        title: "Active Users",
+        value: data.user.activeUsersWeekly,
+      },
+      {
+        title: "New Users",
+        value: data.user.users24h,
+      },
+      {
+        title: "Quests Created",
+        value: data.totalQuests,
+      },
+      {
+        title: "Campaigns Created",
+        value: data.totalCampaigns,
+      },
+    ]
+  : [];
 
-  const activeUsersForRange: Record<Range, number> = {
-    "Last 24 Hrs": data?.user.users24h ?? 0,
-    "Last 7 days": data?.user.activeUsersWeekly ?? 0,
-    "Last 30 days": data?.user.activeUsersMonthly ?? 0,
-    "All Time": data?.user.totalUsers ?? 0,
-  };
+const { data: questsData, isLoading, error } = useQuery({
+  queryKey: ["quests"],
+  queryFn: async () => {
+    const res = await apiRequestV2("GET", "/api/quests");
+    return res;
+  },
+});
 
-  const [activeRange, setActiveRange] = useState<Range>("Last 24 Hrs");
-
-  const analyticsCards = [
-  {
-    title: "Total Users",
-    value: data?.user?.totalUsers ?? 0,
-    icon: "referrals.png",
-  },
-  {
-    title: "Active Users",
-    value: formatNumber(activeUsersForRange[activeRange] ?? 0),
-    icon: "approved.png",
-  },
-  {
-    title: "New Users",
-    value: formatNumber(totalUsersForRange[activeRange] ?? 0),
-    icon: "new-users.png",
-  },
-  {
-    title: "Quests Created",
-    value: data?.totalQuests ?? 0,
-    icon: "quest-iconx.png",
-  },
-  {
-    title: "Campaigns Created",
-    value: data?.totalCampaigns ?? 0,
-    icon: "campaign_icon.png",
-  },
-];
+const quests = questsData?.quests ?? [];
 
   const DiscoverCard = ({ card }: any) => {
   return (
@@ -292,20 +244,37 @@ const lessons = Array.isArray(lessonsData?.lessons)
 
           {/* Top Label */}
           <div className="mb-4 flex items-center gap-2">
-            <div className="h-1.5 w-1.5 rounded-full bg-purple-400 animate-pulse" />
+  <div
+    className="h-1.5 w-1.5 rounded-full animate-pulse"
+    style={{
+      background: "#FF8CD9",
+      boxShadow: "0 0 10px #FF8CD9, 0 0 20px #B184C4",
+    }}
+  />
 
-            <span className="text-xs font-semibold uppercase tracking-widest text-purple-400">
-              Explore
-            </span>
-          </div>
+  <span
+    className="text-sm font-semibold uppercase tracking-widest bg-clip-text text-transparent"
+    style={{
+      backgroundImage: "linear-gradient(to right, #B184C4, #FF8CD9)",
+      textShadow: "0 0 18px rgba(255, 140, 217, 0.35)",
+    }}
+  >
+    Explore
+  </span>
+</div>
 
-          {/* Filters */}
+         {/* Filters */}
 <div className="mb-5 flex flex-wrap items-center gap-2">
   {[
     {
       key: "all",
       label: "All",
       icon: null,
+    },
+    {
+      key: "dapps",
+      label: "dApps",
+      icon: "/ecosystem-dapps.png",
     },
     {
       key: "campaigns",
@@ -326,12 +295,19 @@ const lessons = Array.isArray(lessonsData?.lessons)
     <button
       key={filter.key}
       onClick={() => setActiveFilter(filter.key)}
-      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 border
+      className={`
+        flex items-center gap-1.5
+        px-3 py-1.5
+        rounded-full
+        text-xs font-medium
+        transition-all duration-200
+        border
         ${
           activeFilter === filter.key
-            ? "bg-purple-500 border-purple-500 text-white"
-            : "bg-white/5 border-white/10 text-white/60 hover:text-white hover:border-white/20"
-        }`}
+            ? "border-[#B65FC8] text-white"
+            : "border-[#00E1A233] text-white/60 hover:text-white hover:border-[#00E1A266]"
+        }
+      `}
     >
       {filter.icon && (
         <img
@@ -346,38 +322,69 @@ const lessons = Array.isArray(lessonsData?.lessons)
   ))}
 </div>
 
-          {/* Apps & Projects */}
-          <section className="mb-8">
-  <div className="flex items-start justify-between mb-3 gap-2">
-    <div>
-      <h2 className="text-base md:text-lg font-semibold">
-        Apps and Projects
-      </h2>
+{/* Apps & Projects */}
+{(activeFilter === "all" || activeFilter === "dapps") && (
+  <section className="mb-8">
+    <div className="flex items-start justify-between mb-3 gap-2">
+      <div>
+        <h2 className="text-base md:text-lg font-semibold">
+          Apps and Projects
+        </h2>
 
-      <p className="text-[11px] md:text-xs text-white/60 mt-1 max-w-xl">
-        Discover projects building on the Intuition knowledge network.
-      </p>
+        <p className="text-[11px] md:text-xs text-white/60 mt-1 max-w-xl">
+          Discover projects building on the Intuition knowledge network.
+        </p>
+      </div>
+
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => setLocation("/ecosystem-dapps")}
+        className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] text-white/80 hover:text-white hover:bg-[#00E1A24D] transition"
+      >
+        <span>View all protocols</span>
+
+        <img
+          src="/arrow-right.png"
+          alt="arrow right"
+          className="w-3.5 h-3.5 opacity-80 transition"
+        />
+      </Button>
     </div>
 
-    <Button
-      variant="ghost"
-      size="sm"
-      className="text-xs h-7 px-2"
-      onClick={() => setLocation("/ecosystem-dapps")}
-    >
-      Show all
-    </Button>
-  </div>
+    <div className="ticker-container">
+      <div className="ticker gap-3">
 
-  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-    {filteredCards.map((card) => (
-      <DiscoverCard
-        key={card.id}
-        card={card}
-      />
-    ))}
-  </div>
-</section>
+        {/* First set */}
+        {filteredDapps.map((dapp: any, index: number) => (
+          <div
+            key={dapp._id}
+            className="w-[260px] shrink-0"
+          >
+            <EcosystemCard
+              dapp={dapp}
+              index={index}
+            />
+          </div>
+        ))}
+
+        {/* Duplicate set */}
+        {filteredDapps.map((dapp: any, index: number) => (
+          <div
+            key={`${dapp._id}-dup`}
+            className="w-[260px] shrink-0"
+          >
+            <EcosystemCard
+              dapp={dapp}
+              index={index}
+            />
+          </div>
+        ))}
+
+      </div>
+    </div>
+  </section>
+)}
 
 {/* Campaigns */}
 {(activeFilter === "all" ||
@@ -386,43 +393,97 @@ const lessons = Array.isArray(lessonsData?.lessons)
     <div className="flex items-start justify-between mb-3 gap-2">
       <div>
         <h2 className="text-base md:text-lg font-semibold">
-          Trending Campaigns
+          Active Campaigns
         </h2>
 
         <p className="text-[11px] md:text-xs text-white/60 mt-1 max-w-xl">
-          Complete campaigns, earn rewards, and participate in the growing Intuition ecosystem.
+          Explore and participate in active campaigns
         </p>
       </div>
 
       <Button
         variant="ghost"
         size="sm"
-        className="text-xs h-7 px-2"
         onClick={() => setLocation("/campaigns")}
+       className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] text-white/80 hover:text-white hover:bg-[#00E1A24D] transition"
       >
-        Show all
+        <span>View all campaigns</span>
+
+        <img
+          src="/arrow-right.png"
+          alt="arrow right"
+          className="w-3.5 h-3.5 opacity-80 group-hover:opacity-100 transition"
+        />
       </Button>
     </div>
 
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-      {trendingCampaigns.map(
-        (campaign: any, index: number) => (
-          <div
-            key={campaign._id ?? index}
-            className={`animate-slide-up delay-${
-              (index + 1) * 100
-            }`}
-          >
-            <div className="rounded-2xl border border-white/10 overflow-hidden">
-              <CampaignCard
-                {...campaign}
-                from="explore"
-              />
-            </div>
+    {trendingCampaigns.length > 0 ? (
+      trendingCampaigns.length > 3 ? (
+        <div className="ticker-container">
+          <div className="ticker gap-3">
+
+            {/* First set */}
+            {trendingCampaigns.map(
+              (campaign: any, index: number) => (
+                <div
+                  key={campaign._id ?? index}
+                  className="w-[260px] shrink-0"
+                >
+                  <div className="rounded-2xl border border-white/10 overflow-hidden">
+                    <CampaignCard
+                      {...campaign}
+                      from="explore"
+                    />
+                  </div>
+                </div>
+              )
+            )}
+
+            {/* Duplicate set */}
+            {trendingCampaigns.map(
+              (campaign: any, index: number) => (
+                <div
+                  key={`${campaign._id}-dup`}
+                  className="w-[260px] shrink-0"
+                >
+                  <div className="rounded-2xl border border-white/10 overflow-hidden">
+                    <CampaignCard
+                      {...campaign}
+                      from="explore"
+                    />
+                  </div>
+                </div>
+              )
+            )}
+
           </div>
-        )
-      )}
-    </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-3 gap-2">
+          {trendingCampaigns.map(
+            (campaign: any, index: number) => (
+              <div
+                key={campaign._id ?? index}
+                className={`animate-slide-up delay-${
+                  (index + 1) * 100
+                }`}
+              >
+                <div className="rounded-2xl border border-white/10 overflow-hidden">
+                  <CampaignCard
+                    {...campaign}
+                    from="explore"
+                  />
+                </div>
+              </div>
+            )
+          )}
+        </div>
+      )
+    ) : (
+      <div className="col-span-2 md:col-span-4 rounded-2xl border border-white/10 bg-[#0B0B0B] p-6 text-center text-white/60 text-sm">
+        No active campaigns at the moment.
+      </div>
+    )}
   </section>
 )}
 
@@ -432,78 +493,227 @@ const lessons = Array.isArray(lessonsData?.lessons)
     <div className="flex items-start justify-between mb-4 gap-4">
       <div>
         <h2 className="text-base md:text-lg font-semibold">
-          Learning
+          Active Lessons
         </h2>
 
         <p className="text-[11px] md:text-xs text-white/60 mt-1 max-w-xl">
-          Learn how Intuition works through guides, tutorials, and ecosystem walkthroughs.
+        Explore and participate in active lessons 
+        </p>
+      </div>
+
+      <Button
+  variant="ghost"
+  size="sm"
+  onClick={() => setLocation("/learn")}
+className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] text-white/80 hover:text-white hover:bg-[#00E1A24D] transition"
+>
+  <span>View all lessons</span>
+
+  <img
+    src="/arrow-right.png"
+    alt="arrow right"
+    className="w-3.5 h-3.5 opacity-80 group-hover:opacity-100 transition"
+  />
+</Button>
+    </div>
+
+    {lessons?.length > 0 ? (
+  lessons.length <= 3 ? (
+    /* GRID MODE */
+    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+      {lessons.map((lesson: any) => (
+        <LessonCard key={lesson._id} lesson={lesson} />
+      ))}
+    </div>
+  ) : (
+    /* TICKER MODE */
+    <div className="ticker-container overflow-hidden">
+      <div className="ticker flex gap-2 w-max">
+
+        {/* first set */}
+        {lessons.map((lesson: any) => (
+          <div key={lesson._id} className="w-[260px] shrink-0">
+            <LessonCard lesson={lesson} />
+          </div>
+        ))}
+
+        {/* duplicate set */}
+        {lessons.map((lesson: any) => (
+          <div key={`${lesson._id}-dup`} className="w-[260px] shrink-0">
+            <LessonCard lesson={lesson} />
+          </div>
+        ))}
+
+      </div>
+    </div>
+  )
+) : (
+  <div className="rounded-2xl border border-white/10 bg-[#0B0B0B] p-6 text-center">
+    <h3 className="text-sm font-semibold text-white mb-1">
+      Learning Hub
+    </h3>
+
+    <p className="text-[11px] text-white/60 max-w-md mx-auto">
+      Educational content, onboarding guides, tutorials, and walkthroughs will appear here soon.
+    </p>
+  </div>
+)}
+  </section>
+)}
+
+{activeFilter === "all" && (
+  <div
+    className="
+      w-full
+      flex
+      rounded-3xl
+      border border-white/10
+      bg-[#170F1F]
+      overflow-hidden
+    "
+    style={{
+      backdropFilter: "blur(8px)",
+      WebkitBackdropFilter: "blur(8px)",
+      boxShadow: "inset 0 0 22px rgba(131, 58, 253, 0.12)",
+    }}
+  >
+    {analyticsCards.map((card, idx) => (
+      <div
+        key={idx}
+        className="
+          flex-1
+          flex flex-col items-center justify-center
+          py-4 px-3
+          text-center
+          relative
+        "
+      >
+        {/* VALUE */}
+        <div className="text-lg sm:text-xl font-semibold text-white leading-none">
+          {typeof card.value === "number"
+            ? card.value.toLocaleString()
+            : card.value}
+        </div>
+
+        {/* LABEL */}
+        <div className="text-[10px] tracking-widest uppercase text-white/50 mt-1">
+          {card.title}
+        </div>
+
+        {/* DIVIDER */}
+        {idx !== analyticsCards.length - 1 && (
+          <div className="absolute right-0 top-0 h-full w-px bg-white/10" />
+        )}
+      </div>
+    ))}
+  </div>
+)}
+
+{activeFilter === "all" && (
+  <div className="mt-2 text-xs text-white/50">
+    Track deeper engagement insights.{" "}
+    <span
+      onClick={() => setLocation("/analytics")}
+      className="inline-flex items-center gap-1 text-[#00E1A2] cursor-pointer hover:opacity-80 transition"
+    >
+      View detailed analytics
+      <img
+        src="/color-arrow-right.png"
+        alt="arrow"
+        className="w-3.5 h-3.5"
+      />
+    </span>
+  </div>
+)}
+
+{/* QUESTS */}
+{(activeFilter === "all" || activeFilter === "quests") && (
+  <section className="mb-8">
+    <div className="flex items-start justify-between mb-3 mt-8 gap-2">
+      <div>
+        <h2 className="text-base md:text-lg font-semibold">
+          Active Quests
+        </h2>
+
+        <p className="text-xs text-white/60 mt-1 max-w-xl">
+          Explore and participate in active quests
         </p>
       </div>
 
       <Button
         variant="ghost"
         size="sm"
-        className="text-xs h-7 px-2"
+        onClick={() => setLocation("/quests")}
+        className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] text-white/80 hover:text-white hover:bg-[#00E1A24D] transition"
       >
-        Coming soon
+        <span>View all quests</span>
+        <img src="/arrow-right.png" className="w-3.5 h-3.5" />
       </Button>
     </div>
 
-    {/* GRID */}
-    {lessons?.length > 0 ? (
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-        {lessons.map((lesson: any) => (
-          <LessonCard key={lesson._id} lesson={lesson} />
+    {/* EMPTY STATE */}
+    {quests?.length === 0 ? (
+      <div className="rounded-2xl border border-white/10 bg-[#170F1F] p-6 text-center text-white/60 text-sm">
+        Quests coming soon...
+      </div>
+    ) : quests.length <= 3 ? (
+      /* GRID MODE */
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+        {quests.map((quest: any) => (
+          <div key={quest._id} className="w-full">
+            <QuestCard
+              questId={quest._id}
+              title={quest.title}
+              description={quest.description}
+              projectName={quest.projectName || quest.project_name}
+              projectLogo={quest.project_image || "/quest-1.png"}
+              heroImage={quest.project_image || "/quest-1.png"}
+              rewards={`${quest.reward || quest.rewards || 0} XP`}
+              duration={quest.duration || "Ongoing"}
+            />
+          </div>
         ))}
       </div>
     ) : (
-      <div className="rounded-2xl border border-white/10 bg-[#0B0B0B] p-6 text-center">
-        <h3 className="text-sm font-semibold text-white mb-1">
-          Learning Hub
-        </h3>
+      /* TICKER MODE (FIXED - MATCH LESSONS STYLE) */
+      <div className="ticker-container overflow-hidden">
+        <div className="ticker flex gap-2 w-max">
 
-        <p className="text-[11px] text-white/60 max-w-md mx-auto">
-          Educational content, onboarding guides, tutorials, and walkthroughs will appear here soon.
-        </p>
+          {quests.map((quest: any) => (
+            <div key={quest._id} className="w-[260px] shrink-0">
+              <QuestCard
+                questId={quest._id}
+                title={quest.title}
+                description={quest.description}
+                projectName={quest.projectName || quest.project_name}
+                projectLogo={quest.project_image || "/quest-1.png"}
+                heroImage={quest.project_image || "/quest-1.png"}
+                rewards={`${quest.reward || quest.rewards || 0} XP`}
+                duration={quest.duration || "Ongoing"}
+              />
+            </div>
+          ))}
+
+          {quests.map((quest: any) => (
+            <div key={`${quest._id}-dup`} className="w-[260px] shrink-0">
+              <QuestCard
+                questId={quest._id}
+                title={quest.title}
+                description={quest.description}
+                projectName={quest.projectName || quest.project_name}
+                projectLogo={quest.project_image || "/quest-1.png"}
+                heroImage={quest.project_image || "/quest-1.png"}
+                rewards={`${quest.reward || quest.rewards || 0} XP`}
+                duration={quest.duration || "Ongoing"}
+              />
+            </div>
+          ))}
+
+        </div>
       </div>
     )}
   </section>
 )}
-
-{/* Analytics */}
-<section className="mb-8">
-  <div className="flex items-start justify-between mb-3 gap-2">
-    <div>
-      <h2 className="text-base md:text-lg font-semibold">
-        Analytics
-      </h2>
-
-      <p className="text-[11px] md:text-xs text-white/60 mt-1 max-w-xl">
-        Live ecosystem metrics across users, quests, and campaigns.
-      </p>
-    </div>
-  </div>
-
-  <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-    {analyticsCards.map((card, index) => (
-      <div
-        key={index}
-        className="rounded-2xl border border-white/10 bg-[#080808] p-3 flex flex-col gap-2"
-      >
-        <div className="flex items-center gap-2 text-[11px] text-white/60">
-          <img src={`/${card.icon}`} className="w-4 h-4" />
-          <span>{card.title}</span>
-        </div>
-
-        <div className="text-lg font-bold text-white">
-          {card.value}
-        </div>
-      </div>
-    ))}
-  </div>
-</section>
-
-          
         </div>
       </div>
     </div>

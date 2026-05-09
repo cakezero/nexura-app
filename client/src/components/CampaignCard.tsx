@@ -97,8 +97,8 @@ export default function CampaignCard({
         />
 
         {/* Active Badge */}
-        <div className="absolute top-3 right-3 px-2 py-1 rounded-full text-[10px] font-semibold text-[#00E1A2] bg-[#00E1A24D]">
-          {isLive ? "Active" : "Ended"}
+        <div className="absolute top-3 right-3 px-2 py-1 rounded-2xl text-[10px] font-semibold text-[#00E1A2] bg-[#00E1A24D]">
+          {isLive ? "ACTIVE" : "ENDED"}
         </div>
 
         {/* Participants */}
@@ -115,11 +115,17 @@ export default function CampaignCard({
         </h3>
 
         {/* Description */}
-        {description && (
-          <p className="text-xs text-white/60 line-clamp-2">
-            {description}
-          </p>
-        )}
+<div className="min-h-[32px]">
+  {description ? (
+    <p className="text-xs text-white/60 line-clamp-2">
+      {description}
+    </p>
+  ) : (
+    <p className="text-xs opacity-0">
+      placeholder text
+    </p>
+  )}
+</div>
 
         {/* Duration */}
         <div className="flex items-center gap-2 text-[10px] text-[#8A97B0] bg-[#111827] px-2 py-1 rounded-md w-fit">
@@ -148,7 +154,7 @@ export default function CampaignCard({
           {/* Start Button */}
           <button className="flex items-center gap-1 bg-[#8B3EFE] text-white text-[11px] px-3 py-1.5 rounded-full hover:opacity-90 transition">
             START
-            <img src="/next-arrow.png" className="w-2 h-3" />
+            <img src="/arrow-right.png" className="w-3 h-4" />
           </button>
         </div>
       </div>

@@ -1,5 +1,4 @@
 import { useLocation } from "wouter";
-import { Trash2, Calendar, XCircle, ArrowDownToLine, Loader2 } from "lucide-react";
 
 interface QuestCardProps {
   title: string;
@@ -7,26 +6,11 @@ interface QuestCardProps {
   projectName: string;
   projectLogo: string;
   heroImage: string;
-  participants?: number;
   rewards?: string;
-  tags?: string[];
+  duration?: string;
+  questId?: string;
   isLocked?: boolean;
   lockLevel?: number;
-  questId?: string;
-  from?: string;
-  duration?: string;
-  onDelete?: (id: string) => void;
-  onClose?: (id: string) => void;
-  onWithdraw?: (id: string) => void;
-  showDelete?: boolean;
-  showClose?: boolean;
-  showWithdraw?: boolean;
-  isDeleting?: boolean;
-  isClosing?: boolean;
-  isWithdrawing?: boolean;
-  status?: string;
-  statusColor?: string;
-  rewardPoolLabel?: string;
 }
 
 export default function QuestCard({
@@ -35,174 +19,79 @@ export default function QuestCard({
   projectName,
   projectLogo,
   heroImage,
-  participants,
   rewards,
-  tags = [],
+  duration,
+  questId,
   isLocked = false,
   lockLevel,
-  questId,
-  from,
-  duration = "Mar 1 - Mar 30",
-  onDelete,
-  onClose,
-  onWithdraw,
-  showDelete = false,
-  showClose = false,
-  showWithdraw = false,
-  isDeleting = false,
-  isClosing = false,
-  isWithdrawing = false,
-  status,
-  statusColor,
-  rewardPoolLabel = "REWARD POOL:"
 }: QuestCardProps) {
   const [, setLocation] = useLocation();
 
   const handleClick = () => {
-    if (questId && !isLocked) {
-      const url = from ? `/quest/${questId}?from=${from}` : `/quest/${questId}`;
-      setLocation(url);
-    }
+    if (!questId || isLocked) return;
+    setLocation(`/quest/${questId}`);
   };
 
   return (
-    <div 
-      className="bg-white/8 border border-white/50 rounded-[10px] overflow-hidden relative w-full h-[320px] transition-all duration-300 hover:-translate-y-1 group"
-      data-node-id="3276:2980"
+    <div
+      onClick={handleClick}
+      className="w-[260px] h-[320px] shrink-0 cursor-pointer rounded-2xl overflow-hidden border border-white/10 bg-[#080808] hover:bg-[#0F0F0F] transition-all duration-300 flex flex-col"
     >
-      {/* Header / Hero Image Section */}
-      <div className="relative h-[109px] w-full overflow-hidden" data-node-id="3276:2981">
-        <div className="absolute inset-0 opacity-50 pointer-events-none">
-          <img 
-            src={heroImage} 
-            alt="" 
-            className="w-full h-full object-cover" 
+      {/* IMAGE */}
+      <div className="relative h-[120px] w-full overflow-hidden shrink-0">
+        <img
+          src={heroImage}
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+        />
+
+        {/* LOCK */}
+        {isLocked && (
+          <div className="absolute inset-0 bg-black/70 flex items-center justify-center text-white text-xs">
+            Locked - Level {lockLevel}
+          </div>
+        )}
+
+        {/* LOGO */}
+        <div className="absolute bottom-[-18px] left-3">
+          <img
+            src={projectLogo}
+            className="w-9 h-9 rounded-xl border border-white/10"
           />
         </div>
-        
-        {/* Project Logo Overlay */}
-        <div className="absolute bottom-[0px] left-[14px] translate-y-1/2 z-10" data-node-id="3583:2079">
-          <div className="w-[51px] h-[49px] rounded-[16px] bg-white p-[1px]">
-            <img 
-              src={projectLogo} 
-              alt={projectName} 
-              className="w-full h-full object-cover rounded-[16px]" 
-            />
-          </div>
-        </div>
-
-        {/* Lock Overlay */}
-        {isLocked && (
-          <div className="absolute inset-0 bg-black/70 flex items-center justify-center z-20">
-            <div className="text-center text-white">
-              <div className="text-xl mb-1">🔒</div>
-              <div className="text-[10px] font-medium uppercase tracking-wider">Level {lockLevel}</div>
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* Content Section */}
-      <div className="px-[11px] pt-[30px] space-y-[6px]">
-        {/* Title */}
-        <div data-node-id="3276:2982">
-          <h3 className="text-[16px] font-bold text-white font-['Geist',sans-serif] truncate leading-[17px]">
-            {title}
-          </h3>
-        </div>
+      {/* CONTENT */}
+      <div className="p-3 pt-7 flex flex-col flex-1 bg-[#170F1F]">
+        <h3 className="text-sm font-semibold text-white truncate">
+          {title}
+        </h3>
 
-        {/* Campaign Label / Description */}
-        <div data-node-id="3276:2983">
-          <p className="text-[12px] font-bold text-white/72 font-['Geist',sans-serif] truncate leading-[17px]">
-            {description || "Onboarding Campaign"}
-          </p>
-        </div>
+        <p className="text-xs text-white/60 line-clamp-2 mt-1 flex-1">
+          {description}
+        </p>
 
-        {/* Stats Grid */}
-        <div className="pt-[10px] space-y-[7px]" data-node-id="3583:2078">
-          {/* Duration */}
-          <div className="flex items-center justify-between" data-node-id="3583:2063">
-            <span className="text-[10px] font-medium text-white/70 uppercase leading-[17px]">DURATION:</span>
-            <div className="flex items-center gap-[8px]">
-              <Calendar className="w-[14px] h-[14px] text-white" />
-              <span className="text-[10px] font-semibold text-white leading-[18.2px]">{duration}</span>
-            </div>
+        {/* META */}
+        <div className="text-[10px] text-white/60 space-y-1 mt-2">
+          <div className="flex justify-between">
+            <span>PROJECT</span>
+            <span className="text-white">{projectName}</span>
           </div>
 
-          {/* Reward Pool */}
-          <div className="flex items-center justify-between" data-node-id="3583:2064">
-            <span className="text-[10px] font-medium text-white/70 uppercase leading-[17px]">{rewardPoolLabel}</span>
-            <span className="text-[10px] font-semibold text-white leading-[18.2px] truncate max-w-[150px]">{rewards || "500 XP"}</span>
+          <div className="flex justify-between">
+            <span>DURATION</span>
+            <span className="text-white">{duration}</span>
           </div>
 
-          {/* Project / Participants */}
-          <div className="flex items-center justify-between" data-node-id="3583:2074">
-            <span className="text-[10px] font-medium text-white/70 uppercase leading-[17px]">
-              {participants !== undefined ? "PARTICIPANTS:" : "PROJECT:"}
-            </span>
-            <span className="text-[10px] font-semibold text-white leading-[18.2px] truncate max-w-[150px]">
-              {participants !== undefined ? participants.toLocaleString() : projectName}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Action Footer */}
-      <div className="absolute bottom-[15px] left-[11px] right-[11px] flex flex-col gap-2">
-        <div className="flex items-center gap-[6px]">
-          {/* View Details Button */}
-          <button
-            onClick={handleClick}
-            disabled={isLocked}
-            className={`flex-1 h-[35px] rounded-[12px] bg-gradient-to-r from-[#8a3ffc] to-[#522696] flex items-center justify-center transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed`}
-            data-node-id="3276:2992"
-          >
-            <span className="text-[12px] font-semibold text-white font-['Geist',sans-serif] leading-[18.2px]">
-              {status === "Draft" ? "Edit" : "View Details"}
-            </span>
-          </button>
-
-          <div className="flex gap-1.5">
-            {showClose && (
-              <button
-                onClick={(e) => { e.stopPropagation(); if (questId && onClose) onClose(questId); }}
-                disabled={isClosing || isDeleting}
-                className="w-[35px] h-[35px] bg-yellow-600/20 rounded-[10px] flex items-center justify-center transition-colors hover:bg-yellow-600/40 text-yellow-400"
-              >
-                {isClosing ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
-              </button>
-            )}
-
-            {showWithdraw && (
-              <button
-                onClick={(e) => { e.stopPropagation(); if (questId && onWithdraw) onWithdraw(questId); }}
-                disabled={isWithdrawing || isDeleting || isClosing}
-                className="w-[35px] h-[35px] bg-emerald-600/20 rounded-[10px] flex items-center justify-center transition-colors hover:bg-emerald-600/40 text-emerald-300"
-              >
-                {isWithdrawing ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowDownToLine className="w-4 h-4" />}
-              </button>
-            )}
-
-            {showDelete && (
-              <button
-                onClick={(e) => { e.stopPropagation(); if (questId && onDelete) onDelete(questId); }}
-                disabled={isDeleting || isClosing}
-                className="w-[35px] h-[35px] bg-[#e84a4a]/20 rounded-[10px] flex items-center justify-center transition-colors hover:bg-[#e84a4a]/40"
-              >
-                {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-[20px] h-[20px] text-[#e84a4a]" />}
-              </button>
-            )}
+          <div className="flex justify-between">
+            <span>REWARD</span>
+            <span className="text-white">{rewards}</span>
           </div>
         </div>
 
-        {/* Status indicator (if needed) */}
-        {status && !isLocked && (
-          <div className="flex items-center gap-1">
-             <span className={`px-2 py-0.5 text-[8px] rounded uppercase font-bold tracking-wider ${statusColor || "bg-purple-500"}`}>
-               {status}
-             </span>
-          </div>
-        )}
+        {/* CTA */}
+        <button className="mt-3 w-full bg-[#8B3EFE] text-white text-xs py-2 rounded-xl hover:opacity-90 transition">
+          View Quest
+        </button>
       </div>
     </div>
   );

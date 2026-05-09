@@ -29,8 +29,10 @@ import {
   getStudioLessons,
   searchUserXpHistory,
   publishAdminQuest,
+  deleteQuestAdmin,
+  deleteLessonAdmin,
 } from "@/controllers/admin.controller";
-import { saveQuest } from "@/controllers/quest.controller";
+import { deleteQuest, saveQuest } from "@/controllers/quest.controller";
 import { fetchChannels, fetchRoles, fetchServers } from "@/controllers/hub.auth.controller";
 import { disconnectHubDiscord, getCampaign, getHub, saveCampaign, saveCampaignWithQuests, updateHub } from "@/controllers/hub.controller";
 import {
@@ -89,7 +91,9 @@ router
   .patch("/publish-quest", requireAdminSuperadmin, attachAdminCampaignHub, noPaymentRequired, publishAdminQuest)
   .patch("/save-quest", requireAdminSuperadmin, attachAdminCampaignHub, upload.single("coverImage"), saveQuest)
   .delete("/delete-campaign", requireAdminSuperadmin, attachAdminCampaignHub, deleteCampaign)
-  .delete("/delete-quest", requireAdminSuperadmin, attachAdminCampaignHub, deleteCampaign)
+  .delete("/delete-quest", requireAdminSuperadmin, attachAdminCampaignHub, deleteQuest)
+  .delete("/delete-fraud-quest", requireAdminSuperadmin, deleteQuestAdmin)
+  .delete("/delete-fraud-lesson", requireAdminSuperadmin, deleteLessonAdmin)
   .patch("/close-campaign", requireAdminSuperadmin, attachAdminCampaignHub, closeCampaign)
   .patch("/reopen-campaign", requireAdminSuperadmin, attachAdminCampaignHub, reopenCampaign)
   .patch("/record-campaign-rewards-withdrawal", requireAdminSuperadmin, attachAdminCampaignHub, recordCampaignRewardsWithdrawal)

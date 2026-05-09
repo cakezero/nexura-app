@@ -821,8 +821,8 @@ export const createQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 
     const hubUserId = req.admin.hub;
 
-  const { error } = validateQuestData(req.body);
-if (error) {
+    const { error } = validateQuestData(req.body);
+    if (error) {
       const emptyFields = getMissingFields(error);
       res.status(BAD_REQUEST).json({ error: `Missing required fields: ${emptyFields}` });
       return;
@@ -890,7 +890,7 @@ if (error) {
     newQuest.creator = createdHub._id;
     newQuest.hub = createdHub._id;
   
-    newQuest.creatorModel = page === "user" ? "user" : page !== "project" ? "admin" : "project";
+    newQuest.creatorModel = page === "user" ? "user" : "admin";
 
     newQuest.status = req.body.status || "Active";
 
@@ -916,11 +916,17 @@ if (error) {
 			await miniQuest.insertMany(manyData);
 		}
 
-		newQuest.noOfQuests = miniQuestsFromBody.length;
+    newQuest.noOfQuests = miniQuestsFromBody.length;
 
-		await newQuest.save();
-		await createdHub.save();
-  
+    await Promise.all([
+  		newQuest.save(),
+  		createdHub.save(),
+    ]);
+
+    if (page === "user") {
+      await user.updateOne({ username: createdHub.name }, { $inc: { xp: 10000 } });
+    }
+
 		res.status(CREATED).json({ message: "quest created!", questId: newQuest._id });
   } catch(error) {
     logger.error(error);
@@ -1280,8 +1286,12 @@ export const deleteQuest = async (req: GlobalRequest, res: GlobalResponse) => {
       return;
     }
 
-    await quest.findByIdAndDelete(id);
-    await miniQuest.deleteMany({ quest: id });
+    await Promise.all([
+      quest.findByIdAndDelete(id),
+      miniQuest.deleteMany({ quest: id }),
+      miniQuestCompleted.deleteMany({ quest: id }),
+      questCompleted.deleteMany({ quest: id }),
+    ]);
 
     res.status(OK).json({ message: "quest deleted successfully" });
   } catch (error) {
