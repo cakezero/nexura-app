@@ -684,12 +684,12 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                     setNewTask({
                       ...newTask,
                       type,
-                      platform: isTwitter ? "Twitter" : "Other",
+                      platform: isTwitter ? "Twitter" : "",
                       validation: validationLabel,
                     });
                   }}
                 >
-                  <option value="" disabled>Select Task Type</option>
+                  <option value="">Select task</option>
                   <option value="Comment on X">Comment on X</option>
                   <option value="Follow on X">Follow on X</option>
                   <option value="Create a Post">Create a Post</option>
@@ -698,12 +698,14 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                   <option value="Give Feedback">Give Feedback</option>
                 </select>
               </div>
+              {newTask.type !== "Portal Claims" && newTask.type !== "Own a TNS" && newTask.type !== "Give Feedback" && (
               <div>
                 <label className="text-sm text-white/70 mb-2 block">Platform</label>
                 <div className="flex items-center w-full p-2 rounded-lg bg-white/5 border border-white/10 text-white/70 text-sm">
                   <span>{newTask.platform || "—"}</span>
                 </div>
               </div>
+              )}
             </div>
 
             {/* Task Details */}
@@ -736,10 +738,10 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
 
             {/* Validation */}
             {newTask.validation && (
-              <div className="mb-6 flex items-center gap-3 rounded-lg bg-purple-900/50 border border-purple-500/50 px-4 py-3">
-                <svg className="w-5 h-5 text-purple-400 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              <div className={`mb-6 flex items-center gap-3 rounded-lg px-4 py-3 border ${newTask.validation === "Manual Validation" ? "bg-amber-900/30 border-amber-500/40" : "bg-purple-900/50 border-purple-500/50"}`}>
+                <svg className={`w-5 h-5 flex-shrink-0 ${newTask.validation === "Manual Validation" ? "text-amber-400" : "text-purple-400"}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                 <div>
-                  <p className="text-sm text-purple-300 font-medium">{newTask.validation}</p>
+                  <p className={`text-sm font-medium ${newTask.validation === "Manual Validation" ? "text-amber-300" : "text-purple-300"}`}>{newTask.validation}</p>
                   <p className="text-xs text-white/50 mt-0.5">{newTask.validation === "Manual Validation" ? "Task completion will be reviewed manually." : "Verification is automatic."}</p>
                 </div>
               </div>
