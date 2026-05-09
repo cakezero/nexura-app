@@ -196,36 +196,55 @@ const { data: questsData, isLoading, error } = useQuery({
 
 const quests = questsData?.quests ?? [];
 
-  const DiscoverCard = ({ card }: any) => {
+const DiscoverCard = ({ card }: any) => {
   return (
     <div
       onClick={() => setLocation(card.route)}
-      className="group cursor-pointer overflow-hidden rounded-2xl border border-white/10 bg-[#080808] transition-all duration-300 hover:border-white/20 hover:bg-[#0d0d0d]"
+      className="
+        group cursor-pointer overflow-hidden
+        rounded-xl sm:rounded-2xl
+        border border-white/10
+        bg-[#080808]
+        transition-all duration-300
+        hover:border-white/20 hover:bg-[#0d0d0d]
+      "
     >
       {/* Image */}
-      <div className="relative h-[110px] md:h-[120px] overflow-hidden">
+      <div className="relative h-[90px] sm:h-[110px] md:h-[120px] overflow-hidden">
         <img
           src={card.image}
           alt={card.title}
-          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+          className="
+            h-full w-full object-cover
+            transition-transform duration-500
+            group-hover:scale-105
+          "
         />
       </div>
 
       {/* Content */}
-      <div className="flex flex-col justify-between p-3">
+      <div className="flex flex-col justify-between p-2.5 sm:p-3">
         <div>
-          <h3 className="text-sm md:text-base font-semibold text-white line-clamp-1">
+          <h3 className="text-xs sm:text-sm md:text-base font-semibold text-white line-clamp-1">
             {card.title}
           </h3>
 
-          <p className="mt-1 text-[11px] md:text-xs leading-relaxed text-white/60 line-clamp-2">
+          <p className="mt-1 text-[10px] sm:text-[11px] md:text-xs leading-relaxed text-white/60 line-clamp-2">
             {card.description}
           </p>
         </div>
 
         {/* Category */}
-        <div className="mt-3">
-          <span className="inline-flex items-center rounded-full border border-purple-500/20 bg-purple-500/10 px-2 py-[4px] text-[10px] font-medium text-purple-300 uppercase">
+        <div className="mt-2 sm:mt-3">
+          <span className="
+            inline-flex items-center
+            rounded-full
+            border border-purple-500/20
+            bg-purple-500/10
+            px-2 py-[3px] sm:py-[4px]
+            text-[9px] sm:text-[10px]
+            font-medium text-purple-300 uppercase
+          ">
             {card.category}
           </span>
         </div>
@@ -235,95 +254,100 @@ const quests = questsData?.quests ?? [];
 };
 
   return (
-    <div
-      className="min-h-screen bg-black text-white relative"
-      data-testid="discover-page"
-    >
-      {/* <AnalyticsBackground /> */}
-      <ReusableBackground />
-
-      <div className="relative z-10 space-y-10 px-3 sm:px-4 md:px-6 py-8">
-        <div className="mx-auto w-full max-w-[1100px]">
-
-          {/* Top Label */}
-          <div className="mb-4 flex items-center gap-2">
   <div
-    className="h-1.5 w-1.5 rounded-full animate-pulse"
-    style={{
-      background: "#FF8CD9",
-      boxShadow: "0 0 10px #FF8CD9, 0 0 20px #B184C4",
-    }}
-  />
+  className="min-h-screen bg-black text-white relative"
+  data-testid="discover-page"
+>
+  <ReusableBackground />
 
-  <span
-    className="text-sm font-semibold uppercase tracking-widest bg-clip-text text-transparent"
-    style={{
-      backgroundImage: "linear-gradient(to right, #B184C4, #FF8CD9)",
-      textShadow: "0 0 18px rgba(255, 140, 217, 0.35)",
-    }}
-  >
-    Explore
-  </span>
-</div>
+  <div className="relative z-10 space-y-10 px-3 sm:px-4 md:px-6 py-6 sm:py-8">
+    <div className="mx-auto w-full max-w-[1100px]">
 
-         {/* Filters */}
-<div className="mb-5 flex flex-wrap items-center gap-2">
-  {[
-    {
-      key: "all",
-      label: "All",
-      icon: null,
-    },
-    {
-      key: "dapps",
-      label: "dApps",
-      icon: "/ecosystem-dapps.png",
-    },
-    {
-      key: "campaigns",
-      label: "Campaigns",
-      icon: "/campaign-icon.png",
-    },
-    {
-      key: "learning",
-      label: "Learning",
-      icon: "/learn-iconn.png",
-    },
-    {
-      key: "quests",
-      label: "Quests",
-      icon: "/quest-iconx.png",
-    },
-  ].map((filter) => (
-    <button
-      key={filter.key}
-      onClick={() => setActiveFilter(filter.key)}
-      className={`
-        flex items-center gap-1.5
-        px-3 py-1.5
-        rounded-full
-        text-xs font-medium
-        transition-all duration-200
-        border
-        ${
-          activeFilter === filter.key
-            ? "border-[#B65FC8] text-white"
-            : "border-[#00E1A233] text-white/60 hover:text-white hover:border-[#00E1A266]"
-        }
-      `}
-    >
-      {filter.icon && (
-        <img
-          src={filter.icon}
-          alt={filter.label}
-          className="w-3.5 h-3.5 object-contain"
+      {/* Top Label */}
+      <div className="mb-4 flex items-center gap-2">
+        <div
+          className="h-1.5 w-1.5 rounded-full animate-pulse"
+          style={{
+            background: "#FF8CD9",
+            boxShadow: "0 0 10px #FF8CD9, 0 0 20px #B184C4",
+          }}
         />
-      )}
 
-      <span>{filter.label}</span>
-    </button>
-  ))}
-</div>
+        <span
+          className="
+            text-xs sm:text-sm
+            font-semibold uppercase tracking-widest
+            bg-clip-text text-transparent
+          "
+          style={{
+            backgroundImage: "linear-gradient(to right, #B184C4, #FF8CD9)",
+            textShadow: "0 0 18px rgba(255, 140, 217, 0.35)",
+          }}
+        >
+          Explore
+        </span>
+      </div>
+
+      {/* Filters */}
+      <div className="mb-5 flex flex-wrap items-center gap-2 sm:gap-2.5">
+        {[
+          {
+            key: "all",
+            label: "All",
+            icon: null,
+          },
+          {
+            key: "dapps",
+            label: "dApps",
+            icon: "/ecosystem-dapps.png",
+          },
+          {
+            key: "campaigns",
+            label: "Campaigns",
+            icon: "/campaign-icon.png",
+          },
+          {
+            key: "learning",
+            label: "Learning",
+            icon: "/learn-iconn.png",
+          },
+          {
+            key: "quests",
+            label: "Quests",
+            icon: "/quest-iconx.png",
+          },
+        ].map((filter) => (
+          <button
+            key={filter.key}
+            onClick={() => setActiveFilter(filter.key)}
+            className={`
+              flex items-center gap-1.5
+              px-2.5 sm:px-3
+              py-1 sm:py-1.5
+              rounded-full
+              text-[11px] sm:text-xs font-medium
+              transition-all duration-200
+              border
+              whitespace-nowrap
+              ${
+                activeFilter === filter.key
+                  ? "border-[#B65FC8] text-white"
+                  : "border-[#00E1A233] text-white/60 hover:text-white hover:border-[#00E1A266]"
+              }
+            `}
+          >
+            {filter.icon && (
+              <img
+                src={filter.icon}
+                alt={filter.label}
+                className="w-3 h-3 sm:w-3.5 sm:h-3.5 object-contain"
+              />
+            )}
+
+            <span>{filter.label}</span>
+          </button>
+        ))}
+      </div>
 
 {/* Apps & Projects */}
 {(activeFilter === "all" || activeFilter === "dapps") && (
@@ -355,14 +379,14 @@ const quests = questsData?.quests ?? [];
       </Button>
     </div>
 
-    <div className="ticker-container">
-      <div className="ticker gap-3">
+    <div className="ticker-container overflow-hidden">
+      <div className="ticker flex gap-3 w-max">
 
         {/* First set */}
         {filteredDapps.map((dapp: any, index: number) => (
           <div
             key={dapp._id}
-            className="w-[260px] shrink-0"
+            className="w-[220px] sm:w-[240px] md:w-[260px] shrink-0"
           >
             <EcosystemCard
               dapp={dapp}
@@ -375,7 +399,7 @@ const quests = questsData?.quests ?? [];
         {filteredDapps.map((dapp: any, index: number) => (
           <div
             key={`${dapp._id}-dup`}
-            className="w-[260px] shrink-0"
+            className="w-[220px] sm:w-[240px] md:w-[260px] shrink-0"
           >
             <EcosystemCard
               dapp={dapp}
@@ -422,15 +446,15 @@ const quests = questsData?.quests ?? [];
 
     {trendingCampaigns.length > 0 ? (
       trendingCampaigns.length > 3 ? (
-        <div className="ticker-container">
-          <div className="ticker gap-3">
+        <div className="ticker-container overflow-hidden">
+          <div className="ticker flex gap-3 w-max">
 
             {/* First set */}
             {trendingCampaigns.map(
               (campaign: any, index: number) => (
                 <div
                   key={campaign._id ?? index}
-                  className="w-[260px] shrink-0"
+                  className="w-[220px] sm:w-[240px] md:w-[260px] shrink-0"
                 >
                   <div className="rounded-2xl border border-white/10 overflow-hidden">
                     <CampaignCard
@@ -447,7 +471,7 @@ const quests = questsData?.quests ?? [];
               (campaign: any, index: number) => (
                 <div
                   key={`${campaign._id}-dup`}
-                  className="w-[260px] shrink-0"
+                  className="w-[220px] sm:w-[240px] md:w-[260px] shrink-0"
                 >
                   <div className="rounded-2xl border border-white/10 overflow-hidden">
                     <CampaignCard
@@ -462,7 +486,7 @@ const quests = questsData?.quests ?? [];
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
           {trendingCampaigns.map(
             (campaign: any, index: number) => (
               <div
@@ -483,7 +507,7 @@ const quests = questsData?.quests ?? [];
         </div>
       )
     ) : (
-      <div className="col-span-2 md:col-span-4 rounded-2xl border border-white/10 bg-[#0B0B0B] p-6 text-center text-white/60 text-sm">
+      <div className="rounded-2xl border border-white/10 bg-[#0B0B0B] p-6 text-center text-white/60 text-sm">
         No active campaigns at the moment.
       </div>
     )}
@@ -500,67 +524,75 @@ const quests = questsData?.quests ?? [];
         </h2>
 
         <p className="text-[11px] md:text-xs text-white/60 mt-1 max-w-xl">
-        Explore and participate in active lessons 
+          Explore and participate in active lessons 
         </p>
       </div>
 
       <Button
-  variant="ghost"
-  size="sm"
-  onClick={() => setLocation("/learn")}
-className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] text-white/80 hover:text-white hover:bg-[#00E1A24D] transition"
->
-  <span>View all lessons</span>
+        variant="ghost"
+        size="sm"
+        onClick={() => setLocation("/learn")}
+        className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] text-white/80 hover:text-white hover:bg-[#00E1A24D] transition"
+      >
+        <span>View all lessons</span>
 
-  <img
-    src="/arrow-right.png"
-    alt="arrow right"
-    className="w-3.5 h-3.5 opacity-80 group-hover:opacity-100 transition"
-  />
-</Button>
+        <img
+          src="/arrow-right.png"
+          alt="arrow right"
+          className="w-3.5 h-3.5 opacity-80 group-hover:opacity-100 transition"
+        />
+      </Button>
     </div>
 
     {lessons?.length > 0 ? (
-  lessons.length <= 3 ? (
-    /* GRID MODE */
-    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-      {lessons.map((lesson: any) => (
-        <LessonCard key={lesson._id} lesson={lesson} />
-      ))}
-    </div>
-  ) : (
-    /* TICKER MODE */
-    <div className="ticker-container overflow-hidden">
-      <div className="ticker flex gap-2 w-max">
+      
+      lessons.length <= 3 ? (
+        /* GRID MODE — MOBILE FIX */
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+          {lessons.map((lesson: any) => (
+            <LessonCard key={lesson._id} lesson={lesson} />
+          ))}
+        </div>
+      ) : (
+        /* TICKER MODE — FIXED RESPONSIVENESS */
+        <div className="ticker-container overflow-hidden">
+          <div className="ticker flex gap-2 w-max">
 
-           {/* first set */}
-    {lessons.map((lesson: any) => (
-      <div key={lesson._id} className="w-[33.333%] max-w-[260px] shrink-0">
-        <LessonCard lesson={lesson} />
+            {/* first set */}
+            {lessons.map((lesson: any) => (
+              <div
+                key={lesson._id}
+                className="w-[220px] sm:w-[240px] md:w-[260px] shrink-0"
+              >
+                <LessonCard lesson={lesson} />
+              </div>
+            ))}
+
+            {/* duplicate set */}
+            {lessons.map((lesson: any) => (
+              <div
+                key={`${lesson._id}-dup`}
+                className="w-[220px] sm:w-[240px] md:w-[260px] shrink-0"
+              >
+                <LessonCard lesson={lesson} />
+              </div>
+            ))}
+
+          </div>
+        </div>
+      )
+
+    ) : (
+      <div className="rounded-2xl border border-white/10 bg-[#0B0B0B] p-6 text-center">
+        <h3 className="text-sm font-semibold text-white mb-1">
+          Learning Hub
+        </h3>
+
+        <p className="text-[11px] text-white/60 max-w-md mx-auto">
+          Educational content, onboarding guides, tutorials, and walkthroughs will appear here soon.
+        </p>
       </div>
-    ))}
-
-    {/* duplicate set */}
-    {lessons.map((lesson: any) => (
-      <div key={`${lesson._id}-dup`} className="w-[33.333%] max-w-[260px] shrink-0">
-        <LessonCard lesson={lesson} />
-      </div>
-    ))}
-
-      </div>
-    </div>
-  )
-) : (
-  <div className="rounded-2xl border border-white/10 bg-[#0B0B0B] p-6 text-center">
-    <h3 className="text-sm font-semibold text-white mb-1">
-      Learning Hub
-    </h3>
-
-    <p className="text-[11px] text-white/60 max-w-md mx-auto">
-      Educational content, onboarding guides, tutorials, and walkthroughs will appear here soon.
-    </p>
-  </div>
-)}
+    )}
   </section>
 )}
 
@@ -568,58 +600,59 @@ className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] te
   <div
     className="
       w-full
-      flex
       rounded-3xl
       overflow-hidden
-      gap-[1px]
       bg-[rgba(131,58,253,0.18)]
     "
   >
-    {analyticsCards.map((card, idx) => (
-      <div
-        key={idx}
-        className="
-          relative
-          overflow-hidden
-          flex-1
-          flex flex-col items-center justify-center
-          py-4 px-3
-          text-center
-        "
-        style={{
-          background: "#170F1F",
-          border: "1px solid rgba(131, 58, 253, 0.18)",
+    <div className="ticker gap-[1px]">
 
-          backdropFilter: "blur(8px)",
-          WebkitBackdropFilter: "blur(8px)",
-
-          boxShadow: "inset 0 0 22px rgba(131, 58, 253, 0.12)",
-        }}
-      >
+      {analyticsCards.map((card, idx) => (
         <div
-          className="absolute w-56 h-56 rounded-full"
+          key={idx}
+          className="
+            relative
+            overflow-hidden
+            flex-shrink-0
+            w-[160px] sm:w-[200px] md:w-auto md:flex-1
+            flex flex-col items-center justify-center
+            py-4 px-3
+            text-center
+          "
           style={{
-            background: "#833AFD",
-            top: "-80px",
-            right: "-80px",
-            filter: "blur(65px)",
-            opacity: 0.5,
+            background: "#170F1F",
+            border: "1px solid rgba(131, 58, 253, 0.18)",
+            backdropFilter: "blur(8px)",
+            WebkitBackdropFilter: "blur(8px)",
+            boxShadow: "inset 0 0 22px rgba(131, 58, 253, 0.12)",
           }}
-        />
+        >
+          <div
+            className="absolute w-56 h-56 rounded-full"
+            style={{
+              background: "#833AFD",
+              top: "-80px",
+              right: "-80px",
+              filter: "blur(65px)",
+              opacity: 0.5,
+            }}
+          />
 
-        {/* VALUE */}
-        <div className="relative z-10 text-lg sm:text-xl font-semibold text-white leading-none">
-          {typeof card.value === "number"
-            ? card.value.toLocaleString()
-            : card.value}
-        </div>
+          {/* VALUE */}
+          <div className="relative z-10 text-lg sm:text-xl font-semibold text-white leading-none">
+            {typeof card.value === "number"
+              ? card.value.toLocaleString()
+              : card.value}
+          </div>
 
-        {/* LABEL */}
-        <div className="relative z-10 text-[10px] tracking-widest uppercase text-white/50 mt-1">
-          {card.title}
+          {/* LABEL */}
+          <div className="relative z-10 text-[10px] tracking-widest uppercase text-white/50 mt-1">
+            {card.title}
+          </div>
         </div>
-      </div>
-    ))}
+      ))}
+
+    </div>
   </div>
 )}
 
@@ -639,7 +672,6 @@ className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] te
     </span>
   </div>
 )}
-
 {/* QUESTS */}
 {(activeFilter === "all" || activeFilter === "quests") && (
   <section className="mb-8">
@@ -689,39 +721,45 @@ className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] te
         ))}
       </div>
     ) : (
-      /* TICKER MODE (FIXED - MATCH LESSONS STYLE) */
+      /* TICKER MODE */
       <div className="ticker-container-1 overflow-hidden">
-        <div className="ticker-1 flex gap-2 w-max">
+        <div className="ticker-1 flex gap-2 w-max px-1 sm:px-0">
 
-    {quests.map((quest: any) => (
-      <div key={quest._id} className="w-[260px] shrink-0">
-        <QuestCard
-          questId={quest._id}
-          title={quest.title}
-          description={quest.description}
-          projectName={quest.projectName || quest.project_name}
-          projectLogo={quest.project_image || "/quest-1.png"}
-          heroImage={quest.project_image || "/quest-1.png"}
-          rewards={`${quest.reward || quest.rewards || 0} XP`}
-          duration={quest.duration || "Ongoing"}
-        />
-      </div>
-    ))}
+          {quests.map((quest: any) => (
+            <div
+              key={quest._id}
+              className="w-[220px] sm:w-[260px] shrink-0"
+            >
+              <QuestCard
+                questId={quest._id}
+                title={quest.title}
+                description={quest.description}
+                projectName={quest.projectName || quest.project_name}
+                projectLogo={quest.project_image || "/quest-1.png"}
+                heroImage={quest.project_image || "/quest-1.png"}
+                rewards={`${quest.reward || quest.rewards || 0} XP`}
+                duration={quest.duration || "Ongoing"}
+              />
+            </div>
+          ))}
 
-        {quests.map((quest: any) => (
-      <div key={`${quest._id}-dup`} className="w-[260px] shrink-0">
-        <QuestCard
-          questId={quest._id}
-          title={quest.title}
-          description={quest.description}
-          projectName={quest.projectName || quest.project_name}
-          projectLogo={quest.project_image || "/quest-1.png"}
-          heroImage={quest.project_image || "/quest-1.png"}
-          rewards={`${quest.reward || quest.rewards || 0} XP`}
-          duration={quest.duration || "Ongoing"}
-        />
-      </div>
-    ))}
+          {quests.map((quest: any) => (
+            <div
+              key={`${quest._id}-dup`}
+              className="w-[220px] sm:w-[260px] shrink-0"
+            >
+              <QuestCard
+                questId={quest._id}
+                title={quest.title}
+                description={quest.description}
+                projectName={quest.projectName || quest.project_name}
+                projectLogo={quest.project_image || "/quest-1.png"}
+                heroImage={quest.project_image || "/quest-1.png"}
+                rewards={`${quest.reward || quest.rewards || 0} XP`}
+                duration={quest.duration || "Ongoing"}
+              />
+            </div>
+          ))}
 
         </div>
       </div>
