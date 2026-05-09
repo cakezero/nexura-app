@@ -48,6 +48,17 @@ export default function QuestCard({
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
         />
 
+        {/* ACTIVE BADGE */}
+        <div
+          className="absolute top-3 right-3 px-2 py-1 rounded-full text-[10px] font-semibold"
+          style={{
+            color: "#00E1A2",
+            background: "#00E1A24D",
+          }}
+        >
+          ACTIVE
+        </div>
+
         {isLocked && (
           <div className="absolute inset-0 bg-black/70 flex items-center justify-center text-white text-xs">
             Locked - Level {lockLevel}
@@ -78,10 +89,12 @@ export default function QuestCard({
           )}
         </div>
 
-        {/* DURATION (date style under title) */}
-        <div className="text-[10px] text-[#8A97B0] mt-1">
-          {duration}
-        </div>
+        {/* DURATION (only show if exists — no "Ongoing") */}
+        {duration && (
+          <div className="text-[10px] text-[#8A97B0] mt-1">
+            {duration}
+          </div>
+        )}
 
         {/* DESCRIPTION */}
         <p className="text-xs text-white/60 line-clamp-2 mt-2">
