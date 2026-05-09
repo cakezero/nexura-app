@@ -694,7 +694,7 @@ className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] te
         <div className="ticker flex gap-2 w-max">
 
     {quests.map((quest: any) => (
-      <div key={quest._id} className="w-[33.333%] max-w-[260px] shrink-0">
+      <div key={quest._id} className="w-[260px] shrink-0">
         <QuestCard
           questId={quest._id}
           title={quest.title}
@@ -709,7 +709,7 @@ className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] te
     ))}
 
         {quests.map((quest: any) => (
-      <div key={`${quest._id}-dup`} className="w-[33.333%] max-w-[260px] shrink-0">
+      <div key={`${quest._id}-dup`} className="w-[260px] shrink-0">
         <QuestCard
           questId={quest._id}
           title={quest.title}
