@@ -3,16 +3,16 @@ import bcrypt from "bcrypt";
 import mongoose from "mongoose";
 import logger from "@/config/logger";
 import { quest, miniQuest } from "@/models/quests.model";
-import { lesson } from "@/models/lesson.model";
+import { lesson, lessonCompleted, miniLesson, question, questionCompleted, videoLesson } from "@/models/lesson.model";
 import { admin } from "@/models/admin.model";
 import { BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND, NO_CONTENT, OK, UNAUTHORIZED, FORBIDDEN } from "@/utils/status.utils";
 import { campaign as campaignModel, campaignCompleted } from "@/models/campaign.model";
 import { generateOTP, getRefreshToken, hashPassword, JWT, validateQuestData } from "@/utils/utils";
 import { sendAdminResetEmail, sendEmailToAdmin } from "@/utils/sendMail";
-import { campaignQuestCompleted, miniQuestCompleted } from "@/models/questsCompleted.models";
+import { campaignQuestCompleted, miniQuestCompleted, questCompleted } from "@/models/questsCompleted.models";
 import { submission } from "@/models/submission.model";
 import { user } from "@/models/user.model";
-import { hub } from "@/models/hub.model";
+import { hub, userHub, userHubAdmin } from "@/models/hub.model";
 import { bannedUser } from "@/models/bannedUser.model";
 import { REDIS } from "@/utils/redis.utils";
 import { xpLog } from "@/models/xpLog.model";
@@ -86,6 +86,83 @@ const buildAdminAuthPayload = (record: {
     refreshToken,
     admin: formatAdminRecord(record),
   };
+};
+
+export const deleteQuestAdmin = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const { id } = req.query as { id: string };
+    
+    const exists = await quest.exists({ _id: id }).select("_id creator creatorModel").lean();
+    if (!exists) {
+      res.status(NOT_FOUND).json({ error: "quest not found" });
+      return;
+    }
+
+    if (exists.creatorModel === "user") {
+      const userHubFound = await userHub.findById(exists.creator).select("name").lean();
+
+      if (!userHubFound) {
+        res.status(NOT_FOUND).json({ error: "hub id attached to quest does not exist" });
+        return;
+      }
+
+      await user.updateOne({ username: userHubFound.name }, { $inc: { xp: -10000 } });
+    }
+
+    await Promise.all([
+      quest.findByIdAndDelete(id),
+      miniQuest.deleteMany({ quest: id }),
+      miniQuestCompleted.deleteMany({ quest: id }),
+      questCompleted.deleteMany({ quest: id }),
+    ]);
+
+    res.status(OK).json({ message: "quest deleted successfully" });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error deleting quest" });
+  }
+}
+
+export const deleteLessonAdmin = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const { id: lessonId } = req.query as { id: string };
+
+    if (!lessonId) {
+      res.status(BAD_REQUEST).json({ error: "lesson id is required" });
+      return;
+    }
+
+    const lessonCreator = await lesson.findById(lessonId).select("creator creatorModel").lean();
+    if (!lessonCreator) {
+      res.status(NOT_FOUND).json({ error: "lesson to be deleted does not exists" });
+      return;
+    }
+
+    if (lessonCreator.creatorModel === "user") {
+      const userHubFound = await userHub.findById(lessonCreator.creator);
+
+      if (!userHubFound) {
+        res.status(NOT_FOUND).json({ error: "hub id attached to lesson does not exist" });
+        return;
+      }
+
+      await user.updateOne({ username: userHubFound.name }, { $inc: { xp: -3500 } });
+    }
+
+    await Promise.all([
+      lesson.deleteOne({ _id: lessonId }),
+      miniLesson.deleteMany({ lesson: lessonId }),
+      question.deleteMany({ lesson: lessonId }),
+      videoLesson.deleteMany({ lesson: lessonId }),
+      lessonCompleted.deleteMany({ lesson: lessonId }),
+      questionCompleted.deleteMany({ lesson: lessonId }),
+    ]);
+
+    res.status(OK).json({ message: "lesson deleted" });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error deleting lesson" });
+  }
 };
 
 export const createQuest = async (req: GlobalRequest, res: GlobalResponse) => {

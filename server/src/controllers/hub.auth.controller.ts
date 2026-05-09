@@ -538,13 +538,12 @@ export const userHubAdminSignUp = async (req: GlobalRequest, res: GlobalResponse
 
     const hashedPassword = await hashPassword(password);
 
-	  await userHubAdmin.create({
+	  const superAdmin = await userHubAdmin.create({
       name: name.trim(),
       email: strippedEmail,
       password: hashedPassword,
     });
 
-<<<<<<< Updated upstream
     // Fetch main app profile picture for hub logo
     let logoUrl = "";
     try {
@@ -581,21 +580,13 @@ export const userHubAdminSignUp = async (req: GlobalRequest, res: GlobalResponse
     // Link the hub to the admin
     await userHubAdmin.findByIdAndUpdate(superAdmin._id, { hub: createdHub._id });
 
-		const accessToken = JWT.sign(superAdmin._id.toString());
-		const refreshToken = getRefreshToken(superAdmin._id.toString());
-=======
 		const code = generateOTP();
->>>>>>> Stashed changes
 
     await OTP.create({ code, email: strippedEmail, role: "superadmin" });
 
-<<<<<<< Updated upstream
-		res.status(CREATED).json({ message: "user hub admin created", accessToken, admin: { _id: superAdmin._id.toString(), name: superAdmin.name, email: superAdmin.email, role: "superadmin", hub: createdHub._id.toString() }, hub: { logo: createdHub.logo || "" } });
-=======
     await sendOTPConfirmEmail({ email: strippedEmail, code });
 
 		res.status(CREATED).json({ message: "user hub admin created" });
->>>>>>> Stashed changes
 	} catch (error: any) {
 		logger.error(error);
 		const isDuplicate = error?.code === 11000;

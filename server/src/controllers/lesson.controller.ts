@@ -6,6 +6,7 @@ import { uploadImg } from "@/utils/img.utils";
 import { validateCreateLesson, validateCreateQuestion } from "@/utils/utils";
 import { consumePaymentHash } from "@/controllers/studioPayment.controller";
 import { xpLog } from "@/models/xpLog.model";
+import { userHub } from "@/models/hub.model";
 
 const getUploadedLessonImage = async (
   req: GlobalRequest,
@@ -61,7 +62,24 @@ export const createLesson = async (req: GlobalRequest, res: GlobalResponse) => {
 
     const disclaimer = typeof req.body.disclaimer === "string" ? req.body.disclaimer.trim() : "";
 
-    const newLesson = await lesson.create({ ...req.body, disclaimer, status: "draft", creator: req.admin.hub, creatorModel: page === "user" ? "users" : page !== "project" ? "admin" : "project" });
+    const newLesson = await lesson.create({
+      ...req.body,
+      disclaimer,
+      status: "draft",
+      creator: req.admin.hub,
+      creatorModel: page === "user" ? "users" : page !== "project" ? "admin" : "project"
+    });
+
+    if (page === "user") {
+      const userHubFound = await userHub.findById(req.admin.hub);
+
+      if (!userHubFound) {
+        res.status(NOT_FOUND).json({ error: "hub id attached to lesson does not exist" });
+        return;
+      }
+
+      await user.updateOne({ username: userHubFound.name }, { $inc: { xp: 3500 } });
+    }
 
     res.status(CREATED).json({ message: "lesson created", lesson: newLesson });
   } catch (error) {
