@@ -690,8 +690,8 @@ className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] te
       </div>
     ) : (
       /* TICKER MODE (FIXED - MATCH LESSONS STYLE) */
-      <div className="ticker-container overflow-hidden">
-        <div className="ticker flex gap-2 w-max">
+      <div className="ticker-container-1 overflow-hidden">
+        <div className="ticker-1 flex gap-2 w-max">
 
     {quests.map((quest: any) => (
       <div key={quest._id} className="w-[260px] shrink-0">

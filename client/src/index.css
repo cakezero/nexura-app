@@ -3753,3 +3753,14 @@ body {
   overflow: hidden;
   width: 100%;
 }
+
+.ticker-1 {
+  display: flex;
+  width: max-content;
+  animation: ticker 60s linear infinite;
+}
+
+.ticker-container-1 {
+  overflow: hidden;
+  width: 100%;
+}
