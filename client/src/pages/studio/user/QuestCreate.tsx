@@ -694,12 +694,13 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                         setNewTask({
                           ...newTask,
                           type,
-                          platform: isTwitter ? "Twitter" : "",
+                          platform: isTwitter ? "Twitter" : "Other",
                           validation: isAuto ? "Auto Verified" : "Manual Validation",
                           verificationMode: isAuto ? "auto" : "",
                         });
                       }}
                     >
+                      <option value="" disabled>Select Task Type</option>
                       <option value="Comment on X">Comment on X</option>
                       <option value="Follow on X">Follow on X</option>
                       <option value="Create a Post">Create a Post</option>
@@ -720,10 +721,10 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                     <button
                       type="button"
                       className="h-[40px] w-[146px] rounded-[8px] flex items-center justify-center gap-[5px] transition border border-[#8b3efe] bg-[#8b3efe]/17 text-white"
-                      onClick={() => setNewTask({...newTask, platform: newTask.platform === "Twitter" ? "" : "Twitter"})}
+                      onClick={() => setNewTask({...newTask, platform: newTask.platform === "Twitter" ? "Other" : "Twitter"})}
                     >
                       <img src="https://www.figma.com/api/mcp/asset/7c040d25-e34c-42b8-8ee9-10bddba75bba" alt="" className="w-[14px] h-[14px]" />
-                      <span className="text-[12px] font-bold font-['Geist',sans-serif] leading-[20px]">{newTask.platform || "Select Platform"}</span>
+                      <span className="text-[12px] font-bold font-['Geist',sans-serif] leading-[20px]">{newTask.platform || "Other"}</span>
                     </button>
                   </div>
                 </div>
