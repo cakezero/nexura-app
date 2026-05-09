@@ -11,7 +11,7 @@ import { projectApiRequest } from "../../../lib/projectApi";
 import { apiRequestV2 } from "../../../lib/queryClient";
 import { useLocation } from "wouter";
 
-import { BACKEND_URL } from "../../../lib/constants";
+import { BACKEND_URL, LESSON_FEE_CONTRACT_PROJECT } from "../../../lib/constants";
 import { getStoredAccessToken } from "../../../lib/queryClient";
 import { payStudioHubFee } from "../../../lib/performOnchainAction";
 
@@ -2257,7 +2257,7 @@ export default function CreateLesson({
                   onClick={async () => {
                     setPaymentLoading(true);
                     try {
-                      const hash = await payStudioHubFee(1);
+                      const hash = await payStudioHubFee(1, LESSON_FEE_CONTRACT_PROJECT);
                       setPaymentTxHash(hash);
                       await projectApiRequest({
                         method: "PATCH",

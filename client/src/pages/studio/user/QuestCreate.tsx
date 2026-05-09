@@ -9,6 +9,7 @@ import { Button } from "../../../components/ui/button";
 import { projectApiRequest } from "../../../lib/projectApi";
 import { userApiRequest } from "../../../lib/userApi";
 import { payStudioHubFee } from "../../../lib/performOnchainAction";
+import { QUEST_FEE_CONTRACT } from "../../../lib/constants";
 import { useToast } from "../../../hooks/use-toast";
 import { getStoredUserSession } from "../../../lib/userSession";
 import {
@@ -839,7 +840,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                   onClick={async () => {
                     setPaymentLoading(true);
                     try {
-                      const hash = await payStudioHubFee(1);
+                      const hash = await payStudioHubFee(1, QUEST_FEE_CONTRACT);
                       setPaymentTxHash(hash);
                       await apiRequest({ method: "PATCH", endpoint: `/hub/save-payment-hash`, data: { txHash: hash } });
                       toast({ title: "Payment successful", description: "1 $TRUST sent. You can now publish your quest." });
