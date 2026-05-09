@@ -1,5 +1,6 @@
 import { userHubLogout } from "@/controllers/hub.auth.controller";
 import { createUserHub, updateUserHub, deleteUserHub, getCampaignSubmissions, validateCampaignSubmissions, getUserHub } from "@/controllers/hub.controller";
+import { savePaymentHash } from "@/controllers/studioPayment.controller";
 import {
   createLesson,
   publishLesson,
@@ -62,6 +63,7 @@ router
   .post("/create-quest", upload.single("coverImage"), createQuest)
   .delete("/delete-mini-quest", deleteMiniQuest)
   .post("/save-quest", upload.single("coverImage"), saveQuest)
+  .post("/save-payment-hash", savePaymentHash)
   .post("/save-mini-quest", upload.single("coverImage"), saveQuestWithMiniQuests)
   .post("/logout", userHubLogout)
   .delete("/delete-quest", deleteQuest);

@@ -1,5 +1,5 @@
 import logger from "@/config/logger";
-import { hub } from "@/models/hub.model";
+import { hub, userHub } from "@/models/hub.model";
 import { hubAdmin } from "@/models/hub.model";
 import { BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_FOUND, OK } from "@/utils/status.utils";
 
@@ -53,11 +53,18 @@ export const requireStudioPayment = async (req: GlobalRequest, res: GlobalRespon
 export const savePaymentHash = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
     const { txHash } = req.body;
-    if (req.admin.hub) {
+    const hubId = req.admin.hub;
+    if (hubId) {
       if (txHash) {
-        await hub.findByIdAndUpdate(req.admin.hub, { pendingTxHash: txHash, $inc: { noOfPayments: 1 } });
+        await Promise.all([
+          hub.findByIdAndUpdate(hubId, { pendingTxHash: txHash, $inc: { noOfPayments: 1 } }),
+          userHub.findByIdAndUpdate(hubId, { pendingTxHash: txHash, $inc: { noOfPayments: 1 } }),
+        ]);
       } else {
-        await hub.findByIdAndUpdate(req.admin.hub, { pendingTxHash: null });
+        await Promise.all([
+          hub.findByIdAndUpdate(hubId, { pendingTxHash: null }),
+          userHub.findByIdAndUpdate(hubId, { pendingTxHash: null }),
+        ]);
       }
     } else {
       await hubAdmin.findByIdAndUpdate(req.id, { pendingTxHash: txHash ?? null });
@@ -71,5 +78,8 @@ export const savePaymentHash = async (req: GlobalRequest, res: GlobalResponse) =
 
 /** Clears the hub's pending payment hash after publish (called internally) */
 export const consumePaymentHash = async (hubId: string) => {
-  await hub.findByIdAndUpdate(hubId, { pendingTxHash: null });
+  await Promise.all([
+    hub.findByIdAndUpdate(hubId, { pendingTxHash: null }),
+    userHub.findByIdAndUpdate(hubId, { pendingTxHash: null }),
+  ]);
 };
