@@ -130,7 +130,8 @@ export default function Campaigns() {
   const isEndedCampaign = (campaign: Campaign) =>
     campaign.status === "Ended" || (!!campaign.ends_at && new Date(campaign.ends_at).getTime() <= now);
   const isScheduledCampaign = (campaign: Campaign) => !isEndedCampaign(campaign) && !!campaign.starts_at && new Date(campaign.starts_at).getTime() > now;
-  const isActiveCampaign = (campaign: Campaign) => !isScheduledCampaign(campaign) && !isEndedCampaign(campaign);
+  const isDraftCampaign = (campaign: Campaign) => campaign.status === "Save";
+  const isActiveCampaign = (campaign: Campaign) => !isDraftCampaign(campaign) && !isScheduledCampaign(campaign) && !isEndedCampaign(campaign);
 
   // Fetch server time offset once
   useEffect(() => {

@@ -117,7 +117,7 @@ export default function UserLayout({
           </header>
 
           {/* CONTENT AREA — padded for mobile top bar + bottom nav */}
-          <main className="flex-1 overflow-y-auto pt-14 pb-20 px-4 md:pt-8 md:pb-8 md:px-8 relative bg-black/20">
+          <main className="flex-1 overflow-y-auto pt-14 pb-20 px-4 md:pt-8 md:pb-8 md:px-8 relative bg-black/20" style={{ transform: "scale(0.85)", transformOrigin: "top left", width: "117.65%" }}>
             <div className="max-w-7xl mx-auto">{children}</div>
           </main>
         </div>
