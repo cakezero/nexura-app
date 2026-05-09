@@ -10,6 +10,7 @@ import CampaignCard from "../components/CampaignCard";
 import LessonCard from "../components/LessonCard";
 import QuestCard from "../components/QuestCard";
 import EcosystemCard from "../components/EcosystemCard";
+import AnalyticsBackground from "../components/AnalyticsBackground";
 
 export default function Discover() {
   const [activeFilter, setActiveFilter] = useState("all");
@@ -237,7 +238,7 @@ const quests = questsData?.quests ?? [];
       className="min-h-screen bg-black text-white relative"
       data-testid="discover-page"
     >
-      <AnimatedBackground />
+      <AnalyticsBackground />
 
       <div className="relative z-10 space-y-10 px-3 sm:px-4 md:px-6 py-8">
         <div className="mx-auto w-full max-w-[1100px]">
