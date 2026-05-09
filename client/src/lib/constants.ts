@@ -4,6 +4,8 @@ export const network: "testnet" | "mainnet" = normalizedNetwork === "mainnet" ? 
 
 const DEFAULT_BACKEND_URL = "https://api-nexura.intuition.box";
 
+export const environment = (import.meta as any).env.VITE_ENVIRONMENT as "development" | "production";
+
 function normalizeBackendUrl(value: string | undefined) {
 	const trimmed = value?.trim();
 	const candidate = trimmed && trimmed.length > 0 ? trimmed : DEFAULT_BACKEND_URL;

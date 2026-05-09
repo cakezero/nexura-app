@@ -19,6 +19,7 @@ import { useAuth } from "../lib/auth";
 import { claimCampaignOnchainReward } from "../lib/performOnchainAction";
 import { createProofOfAction } from "../services/web3";
 import ProofOfActionModal from "../components/ProofOfActionModal";
+import { environment } from "../lib/constants";
 
 type Quest = {
   _id: string;
@@ -251,7 +252,7 @@ export default function CampaignEnvironment() {
     }
 
     try {
-      if (!user?.socialProfiles.x.connected) {
+      if (environment === "production" && !user?.socialProfiles.x.connected) {
         throw new Error("X not connected yet, go to profile to connect.");
       }
 
