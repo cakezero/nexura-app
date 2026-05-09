@@ -12,6 +12,8 @@ import { useWallet } from "../../../hooks/use-wallet";
 import { storeUserSession } from "../../../lib/userSession";
 import { userApiRequest } from "../../../lib/userApi";
 import { BACKEND_URL } from "../../../lib/constants";
+import OtpVerification from "../../../components/studio/OtpVerification";
+import { apiRequestV2 } from "../../../lib/queryClient";
 
 export default function UserSignup() {
   const [email, setEmail] = useState("");
@@ -24,6 +26,7 @@ export default function UserSignup() {
   const [isLongEnough, setIsLongEnough] = useState(false);
 
   const [creating, setCreating] = useState(false);
+  const [step, setStep] = useState<"email" | "otp">("email");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -60,6 +63,34 @@ export default function UserSignup() {
     : "";
 
   const displayUsername = profileLoading ? "Loading..." : mainAppUsername || generatedUsername;
+
+  const handleSendOtp = async () => {
+    if (!email) {
+      toast({
+        title: "Missing email",
+        description: "Please enter your email address.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setCreating(true);
+    try {
+      await apiRequestV2(
+        "POST",
+        `/hub-auth/validate-email?email=${encodeURIComponent(email)}&page=user`
+      );
+      setStep("otp");
+    } catch (err: any) {
+      toast({
+        title: "Failed to send OTP",
+        description: err?.error || err?.message || "Something went wrong.",
+        variant: "destructive",
+      });
+    } finally {
+      setCreating(false);
+    }
+  };
 
   const handleSignUp = async () => {
     if (!email || !password || !confirmPassword) {
@@ -286,7 +317,7 @@ export default function UserSignup() {
               disabled={creating}
               className="w-full rounded-full bg-[#8B3EFE] text-white hover:opacity-90 flex items-center justify-center gap-2 text-sm h-10"
             >
-              {creating ? "Creating Account..." : "Create Account"}
+              {creating ? (step === "email" ? "Sending OTP..." : "Creating Account...") : (step === "email" ? "Create Account" : "Create Account")}
               <ArrowRight className="h-4 w-4" />
             </Button>
           </CardFooter>

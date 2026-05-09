@@ -735,7 +735,8 @@ export const validateHubEmail = async (req: GlobalRequest, res: GlobalResponse) 
 
     const code = generateOTP();
 
-    await OTP.create({ code, email: strippedEmail, role: emailVerified.role });
+    await OTP.deleteMany({ email: strippedEmail });
+    await OTP.create({ code, email: strippedEmail, page: page || "project", role: emailVerified?.role || "admin" });
 
     await sendOTPConfirmEmail({ email: strippedEmail, code });
 
