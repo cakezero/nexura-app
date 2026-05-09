@@ -757,7 +757,7 @@ export const confirmHubEmailValidation = async (req: GlobalRequest, res: GlobalR
 
     const strippedEmail = email.trim().toLowerCase();
 
-    const otpFound = await OTP.exists({ email: strippedEmail, code }).lean();
+    const otpFound = await OTP.findOne({ email: strippedEmail, code }).lean();
     if (!otpFound) {
       res.status(NOT_FOUND).json({ error: "otp does not exist, is invalid or has expired" });
       return;
@@ -770,30 +770,37 @@ export const confirmHubEmailValidation = async (req: GlobalRequest, res: GlobalR
 			return;
 		};
 
+        // Pre-registration flow: no userId, just verify OTP
+    if (!otpFound.userId) {
+      await OTP.deleteOne({ email: strippedEmail, code });
+      res.status(OK).json({ message: "otp verified" });
+      return;
+    }
+
     let accessToken;
 
     if (otpFound.page === "user") {
       await userHubAdmin.updateOne({ email: strippedEmail }, { emailVerified: true });
 
       accessToken = JWT.sign(otpFound.userId);
-  		const refreshToken = getRefreshToken(otpFound.userId);
+      const refreshToken = getRefreshToken(otpFound.userId);
 
-  		res.cookie("userHubRefreshToken", refreshToken, {
-  			httpOnly: true,
-  			secure: true,
-  			maxAge: 30 * 24 * 60 * 60,
-  		});
+      res.cookie("userHubRefreshToken", refreshToken, {
+        httpOnly: true,
+        secure: true,
+        maxAge: 30 * 24 * 60 * 60,
+      });
     } else {
       await hubAdmin.updateOne({ email: strippedEmail }, { emailVerified: true });
       
       accessToken = JWT.sign(otpFound.userId);
-  		const refreshToken = getRefreshToken(otpFound.userId);
+      const refreshToken = getRefreshToken(otpFound.userId);
 
-  		res.cookie("hubRefreshToken", refreshToken, {
-  			httpOnly: true,
-  			secure: true,
-  			maxAge: 30 * 24 * 60 * 60,
-  		});
+      res.cookie("hubRefreshToken", refreshToken, {
+        httpOnly: true,
+        secure: true,
+        maxAge: 30 * 24 * 60 * 60,
+      });
     }
 
     res.status(OK).json({ message: "email confirmed", accessToken })

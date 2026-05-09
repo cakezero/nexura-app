@@ -119,39 +119,6 @@ export default function QuestCard({
           <span className="text-white">{projectName}</span>
         </div>
 
-        {/* Admin actions */}
-        {(showClose || showDelete || showWithdraw) && (
-          <div className="flex gap-2 mt-2">
-            {showClose && (
-              <button
-                onClick={(e) => { e.stopPropagation(); onClose?.(questId || ""); }}
-                disabled={isClosing}
-                className="flex-1 bg-red-900/50 hover:bg-red-800/50 text-red-300 text-[10px] py-1.5 rounded-lg border border-red-500/30 transition"
-              >
-                {isClosing ? "Closing..." : "Close"}
-              </button>
-            )}
-            {showDelete && (
-              <button
-                onClick={(e) => { e.stopPropagation(); onDelete?.(questId || ""); }}
-                disabled={isDeleting}
-                className="flex-1 bg-red-900/50 hover:bg-red-800/50 text-red-300 text-[10px] py-1.5 rounded-lg border border-red-500/30 transition"
-              >
-                {isDeleting ? "Deleting..." : "Delete"}
-              </button>
-            )}
-            {showWithdraw && (
-              <button
-                onClick={(e) => { e.stopPropagation(); onWithdraw?.(); }}
-                disabled={isWithdrawing}
-                className="flex-1 bg-amber-900/50 hover:bg-amber-800/50 text-amber-300 text-[10px] py-1.5 rounded-lg border border-amber-500/30 transition"
-              >
-                {isWithdrawing ? "Withdrawing..." : "Withdraw"}
-              </button>
-            )}
-          </div>
-        )}
-
         {/* CTA */}
         <button className="mt-auto flex items-center justify-center gap-2 bg-[#8B3EFE] text-white text-xs py-2 rounded-xl hover:opacity-90 transition">
           Start Quest
