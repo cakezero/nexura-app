@@ -238,8 +238,8 @@ export default function EcosystemDapps() {
                     <div>
                       <CardTitle className="text-xl mb-2">{dapp.name}</CardTitle>
                       <Badge className={getCategoryColor(dapp.category)} variant="secondary">
-                        {dapp.category}
-                      </Badge>
+  {String(dapp.category).toUpperCase()}
+</Badge>
                     </div>
                   </div>
                   <CardDescription className="mt-2">{dapp.description}</CardDescription>

@@ -74,15 +74,15 @@ export default function EcosystemCard({
         {/* CATEGORY */}
         <div className="mt-3">
           <span
-            className="inline-flex items-center rounded-full px-2 py-[4px] text-[10px] font-medium"
-            style={{
-              color: style.text,
-              background: style.bg,
-              border: `1px solid ${style.border}`,
-            }}
-          >
-            {dapp.category}
-          </span>
+  className="inline-flex items-center rounded-full px-2 py-[4px] text-[10px] font-medium uppercase"
+  style={{
+    color: style.text,
+    background: style.bg,
+    border: `1px solid ${style.border}`,
+  }}
+>
+  {String(dapp.category).toUpperCase()}
+</span>
         </div>
       </div>
     </div>
