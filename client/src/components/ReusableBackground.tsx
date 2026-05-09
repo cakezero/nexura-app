@@ -1,14 +1,10 @@
 const COLORS = {
-  primary: "rgba(131, 58, 253, 0.25)",
-  secondary: "rgba(50, 0, 90, 0.22)",
-  tertiary: "rgba(35, 0, 70, 0.2)",
+  primary: "rgba(131, 58, 253, 0.16)",
+  secondary: "rgba(50, 0, 90, 0.14)",
+  tertiary: "rgba(35, 0, 70, 0.12)",
   base: "#050507",
   baseEnd: "#000000",
 };
-
-interface ReusableBackgroundProps {
-  className?: string;
-}
 
 export default function ReusableBackground({
   className = "",
@@ -18,42 +14,72 @@ export default function ReusableBackground({
       className={`absolute inset-0 overflow-hidden pointer-events-none ${className}`}
       style={{
         background: `
-          radial-gradient(circle at 80% 10%, ${COLORS.primary} 0%, transparent 45%),
-          radial-gradient(circle at 50% 50%, ${COLORS.secondary} 0%, transparent 55%),
-          radial-gradient(circle at 20% 90%, ${COLORS.tertiary} 0%, transparent 60%),
+          radial-gradient(circle at 65% 25%, ${COLORS.primary} 0%, transparent 65%),
+          radial-gradient(circle at 50% 55%, ${COLORS.secondary} 0%, transparent 70%),
+          radial-gradient(circle at 35% 85%, ${COLORS.tertiary} 0%, transparent 75%),
+          radial-gradient(circle at 50% 50%, rgba(131, 58, 253, 0.05) 0%, transparent 80%),
           linear-gradient(135deg, ${COLORS.base} 0%, ${COLORS.baseEnd} 100%)
         `,
         backgroundSize: "cover",
         backgroundRepeat: "no-repeat",
         backgroundPosition: "center",
-        animation: "bg-pan 60s linear infinite",
+        animation: "bg-pan 80s linear infinite",
       }}
     >
-      {/* BG 1 (kept exact size) */}
+      {/* TOP RIGHT GLOW */}
       <div
         className="absolute rounded-full"
         style={{
-          width: "420px",
-          height: "420px",
+          width: "560px",
+          height: "560px",
           background: "#833AFD",
-          top: "-180px",
-          right: "-140px",
-          filter: "blur(120px)",
-          opacity: 0.22,
+          top: "-200px",
+          right: "-180px",
+          filter: "blur(160px)",
+          opacity: 0.12,
         }}
       />
 
-      {/* BG 2 (kept exact size) */}
+      {/* CENTER FOG */}
       <div
         className="absolute rounded-full"
         style={{
-          width: "320px",
-          height: "320px",
+          width: "700px",
+          height: "700px",
+          background: "rgba(131, 58, 253, 0.05)",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          filter: "blur(180px)",
+          opacity: 0.25,
+        }}
+      />
+
+      {/* NEW: BOTTOM LEFT BALANCE GLOW */}
+      <div
+        className="absolute rounded-full"
+        style={{
+          width: "600px",
+          height: "600px",
           background: "#5B21B6",
-          bottom: "-140px",
-          left: "-120px",
-          filter: "blur(110px)",
-          opacity: 0.18,
+          bottom: "-240px",
+          left: "-220px",
+          filter: "blur(170px)",
+          opacity: 0.10,
+        }}
+      />
+
+      {/* existing soft base glow (kept subtle) */}
+      <div
+        className="absolute rounded-full"
+        style={{
+          width: "480px",
+          height: "480px",
+          background: "#4C1D95",
+          bottom: "-180px",
+          left: "10%",
+          filter: "blur(160px)",
+          opacity: 0.08,
         }}
       />
     </div>
