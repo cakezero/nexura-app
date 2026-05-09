@@ -9,10 +9,7 @@ import { ArrowLeft, ArrowRight, Eye, EyeOff, Loader2 } from "lucide-react";
 import { useLocation } from "wouter";
 import { useToast } from "../../../hooks/use-toast";
 import { useWallet } from "../../../hooks/use-wallet";
-import { storeUserSession } from "../../../lib/userSession";
-import { userApiRequest } from "../../../lib/userApi";
 import { BACKEND_URL } from "../../../lib/constants";
-import OtpVerification from "../../../components/studio/OtpVerification";
 import { apiRequestV2 } from "../../../lib/queryClient";
 
 export default function UserSignup() {
@@ -26,7 +23,6 @@ export default function UserSignup() {
   const [isLongEnough, setIsLongEnough] = useState(false);
 
   const [creating, setCreating] = useState(false);
-  const [step, setStep] = useState<"email" | "otp">("email");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -37,7 +33,6 @@ export default function UserSignup() {
   const { toast } = useToast();
   const { address: walletAddress, isConnected } = useWallet();
 
-  // Fetch username from server
   useEffect(() => {
     if (!walletAddress) {
       setProfileLoading(false);
@@ -64,35 +59,7 @@ export default function UserSignup() {
 
   const displayUsername = profileLoading ? "Loading..." : mainAppUsername || generatedUsername;
 
-  const handleSendOtp = async () => {
-    if (!email) {
-      toast({
-        title: "Missing email",
-        description: "Please enter your email address.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setCreating(true);
-    try {
-      await apiRequestV2(
-        "POST",
-        `/hub-auth/validate-email?email=${encodeURIComponent(email)}&page=user`
-      );
-      setStep("otp");
-    } catch (err: any) {
-      toast({
-        title: "Failed to send OTP",
-        description: err?.error || err?.message || "Something went wrong.",
-        variant: "destructive",
-      });
-    } finally {
-      setCreating(false);
-    }
-  };
-
-  const handleSignUp = async () => {
+  const handleSubmit = async () => {
     if (!email || !password || !confirmPassword) {
       toast({
         title: "Missing fields",
@@ -121,51 +88,23 @@ export default function UserSignup() {
     }
 
     setCreating(true);
-
     try {
-      const usernameToUse = mainAppUsername || walletAddress;
-      
-      const res = await userApiRequest<{
-        accessToken?: string;
-        admin?: { _id: string; name: string; email: string; role: string; hub: string };
-        hub?: { logo?: string };
-      }>({
-        method: "POST",
-        endpoint: "/user-hub/sign-up",
-        data: { 
-          name: usernameToUse,
-          email, 
-          password 
-        },
-      });
+      await apiRequestV2("POST", `/hub-auth/validate-email?email=${encodeURIComponent(email)}&page=user`);
 
-      if (res.accessToken) {
-        const userSession = {
-          token: res.accessToken,
-          type: "user",
-          role: res.admin?.role || "user",
-          userId: res.admin?._id,
-          name: res.admin?.name || walletAddress,
-          email: res.admin?.email || email,
-          hub: res.admin?.hub,
-          avatar: res.hub?.logo || "",
-        };
+      sessionStorage.setItem("nexura:pending-signup", JSON.stringify({
+        email,
+        password,
+        name: mainAppUsername || walletAddress,
+        page: "user",
+        walletAddress,
+        mainAppUsername,
+      }));
 
-        storeUserSession(userSession);
-
-        toast({
-          title: "Account created!",
-          description: "Welcome to Nexura Studio.",
-        });
-
-        setLocation("/user-dashboard/quests-tab");
-      } else {
-        throw new Error("Signup failed - no token received");
-      }
+      setLocation(`/studio/verify-otp?email=${encodeURIComponent(email)}&page=user`);
     } catch (err: any) {
       toast({
-        title: "Signup failed",
-        description: err?.message || "Something went wrong.",
+        title: "Failed to send OTP",
+        description: err?.error || err?.message || "Something went wrong.",
         variant: "destructive",
       });
     } finally {
@@ -177,7 +116,6 @@ export default function UserSignup() {
     <div className="min-h-screen bg-black text-white overflow-auto p-4 sm:p-6 relative">
       <AnimatedBackground />
 
-      {/* Back Button */}
       <div className="w-full flex justify-start mb-4">
         <button
           onClick={() => setLocation("/studio/users/create")}
@@ -189,7 +127,6 @@ export default function UserSignup() {
       </div>
 
       <div className="max-w-md mx-auto relative z-10 space-y-6">
-        {/* Header */}
         <div className="text-center py-2 px-2 sm:px-0">
           <h1 className="text-lg sm:text-xl font-bold mb-1">
             User Credentials
@@ -199,12 +136,8 @@ export default function UserSignup() {
           </p>
         </div>
 
-        {/* Card */}
         <Card className="border-2 border-purple-500 rounded-3xl p-5 space-y-4 bg-gray-900">
-
           <div className="space-y-4">
-
-            {/* Username (Auto-filled from server) */}
             <div>
               <CardTitle className="text-white text-base">Username</CardTitle>
               <div className="relative mt-1">
@@ -233,7 +166,6 @@ export default function UserSignup() {
               ) : null}
             </div>
 
-            {/* Disclaimer */}
             <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-3">
               <p className="text-[11px] text-white/70 leading-relaxed">
                 <span className="font-semibold text-purple-400">ℹ Your Nexura profile powers your hub.</span><br />
@@ -241,7 +173,6 @@ export default function UserSignup() {
               </p>
             </div>
 
-            {/* Email */}
             <div>
               <CardTitle className="text-white text-base">Email Address</CardTitle>
               <Input
@@ -253,7 +184,6 @@ export default function UserSignup() {
               />
             </div>
 
-            {/* Password */}
             <div>
               <CardTitle className="text-white text-base">Password</CardTitle>
               <div className="relative mt-1">
@@ -270,7 +200,6 @@ export default function UserSignup() {
                   }}
                   className="w-full rounded-lg bg-gray-800 text-white border-purple-500 pr-10 h-9"
                 />
-
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
@@ -279,7 +208,6 @@ export default function UserSignup() {
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-
               <div className="mt-1.5 space-y-0.5 text-[11px] bg-gray-800/60 p-2 rounded-xl">
                 <p className={isLongEnough ? "text-green-400" : "text-red-400"}>• 8+ characters</p>
                 <p className={hasUppercase ? "text-green-400" : "text-red-400"}>• 1 uppercase</p>
@@ -288,7 +216,6 @@ export default function UserSignup() {
               </div>
             </div>
 
-            {/* Confirm Password */}
             <div>
               <CardTitle className="text-white text-base">Confirm Password</CardTitle>
               <div className="relative mt-1">
@@ -298,7 +225,6 @@ export default function UserSignup() {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   className="w-full rounded-lg bg-gray-800 text-white border-purple-500 pr-10 h-9"
                 />
-
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
@@ -308,20 +234,18 @@ export default function UserSignup() {
                 </button>
               </div>
             </div>
-
           </div>
 
           <CardFooter className="pt-1">
             <Button
-              onClick={handleSignUp}
+              onClick={handleSubmit}
               disabled={creating}
               className="w-full rounded-full bg-[#8B3EFE] text-white hover:opacity-90 flex items-center justify-center gap-2 text-sm h-10"
             >
-              {creating ? (step === "email" ? "Sending OTP..." : "Creating Account...") : (step === "email" ? "Create Account" : "Create Account")}
+              {creating ? "Sending OTP..." : "Create Account"}
               <ArrowRight className="h-4 w-4" />
             </Button>
           </CardFooter>
-
         </Card>
       </div>
     </div>

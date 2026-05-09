@@ -9,9 +9,7 @@ import { ArrowLeft, ArrowRight, Eye, EyeOff } from "lucide-react";
 import { useLocation } from "wouter";
 import { useToast } from "../../../hooks/use-toast";
 import { useWallet } from "../../../hooks/use-wallet";
-import OtpVerification from "../../../components/studio/OtpVerification";
-import { apiRequestV2 as publicApiRequest } from "../../../lib/queryClient";
-import { projectApiRequest, storeProjectSession } from "../../../lib/projectApi";
+import { apiRequestV2 } from "../../../lib/queryClient";
 
 export default function SharedAccessCredentials() {
   const [name, setName] = useState("");
@@ -24,8 +22,7 @@ export default function SharedAccessCredentials() {
   const [hasSpecialChar, setHasSpecialChar] = useState(false);
   const [isLongEnough, setIsLongEnough] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [step, setStep] = useState<"email" | "otp">("email");
-  const [showPassword, setShowPassword] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -46,32 +43,7 @@ export default function SharedAccessCredentials() {
     if (walletAddress) setAddress(walletAddress);
   }, [walletAddress]);
 
-async function handleSendOtp() {
-  if (!email) {
-    toast({
-      title: "Missing email",
-      description: "Please enter your email address.",
-      variant: "destructive",
-    });
-    return;
-  }
-
-  setCreating(true);
-  try {
-    await publicApiRequest("POST", `/hub-auth/validate-email?email=${encodeURIComponent(email)}&page=project`);
-    setStep("otp");
-  } catch (err: any) {
-    toast({
-      title: "Failed to send OTP",
-      description: err?.error || err?.message || "Something went wrong.",
-      variant: "destructive",
-    });
-  } finally {
-    setCreating(false);
-  }
-}
-
-async function handleSignUp() {
+const handleSubmit = async () => {
   if (!name || !email || !password || !confirmPassword) {
     toast({
       title: "Missing fields",
@@ -91,45 +63,27 @@ async function handleSignUp() {
   }
 
   setCreating(true);
-
   try {
-    const res = await projectApiRequest<{
-      accessToken?: string;
-      admin?: { _id: string; name: string; email: string; role: string; hub: string };
-    }>({
-      method: "POST",
-      endpoint: "/hub/sign-up",
-      data: { name, email, password },
-    });
+    await apiRequestV2("POST", `/hub-auth/validate-email?email=${encodeURIComponent(email)}&page=project`);
 
-    if (res.accessToken) {
-      storeProjectSession(res.accessToken, {
-        email: res.admin?.email || email,
-        name: res.admin?.name || name,
-        role: res.admin?.role || "superadmin",
-        adminId: res.admin?._id || "",
-        hub: res.admin?.hub || "",
-      });
+    sessionStorage.setItem("nexura:pending-signup", JSON.stringify({
+      email,
+      password,
+      name,
+      page: "project",
+    }));
 
-      toast({
-        title: "Account created!",
-        description: "Welcome to Nexura Studio.",
-      });
-
-      setLocation("/connect-discord");
-    } else {
-      throw new Error("Signup failed - no token received");
-    }
+    setLocation(`/studio/verify-otp?email=${encodeURIComponent(email)}&page=project`);
   } catch (err: any) {
     toast({
-      title: "Signup failed",
-      description: err?.message || "Something went wrong.",
+      title: "Failed to send OTP",
+      description: err?.error || err?.message || "Something went wrong.",
       variant: "destructive",
     });
   } finally {
     setCreating(false);
   }
-}
+};
 
   return (
     <div className="min-h-screen bg-black text-white overflow-auto p-4 sm:p-6 relative">
@@ -156,7 +110,6 @@ async function handleSignUp() {
           </div>
 
           {/* Credentials Card */}
-          {step === "email" && (
           <Card className="border-2 border-purple-500 rounded-3xl p-6 space-y-6 bg-gray-900">
             <div className="space-y-6">
               {/* name */}
@@ -272,27 +225,14 @@ async function handleSignUp() {
             <CardFooter className="pt-2">
               <Button
                 disabled={creating}
-                onClick={step === "email" ? handleSendOtp : handleSignUp}
+                onClick={handleSubmit}
                 className="w-full rounded-full bg-[#8B3EFE] border-0 text-white hover:bg-[#8B3EFE] hover:shadow-[0_0_28px_rgba(131,58,253,0.7)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2"
               >
-                {creating ? (step === "email" ? "Sending OTP..." : "Creating Super Admin...") : (step === "email" ? "Create Super Admin" : "Create Super Admin")}
+                {creating ? "Sending OTP..." : "Create Super Admin"}
                 <ArrowRight className="h-5 w-5" />
               </Button>
             </CardFooter>
           </Card>
-          )}
-
-                {/* OTP Step */}
-          {step === "otp" && (
-            <Card className="border-2 border-purple-500 rounded-3xl p-6 space-y-6 bg-gray-900">
-              <OtpVerification
-                email={email}
-                page="project"
-                onVerified={handleSignUp}
-                onBack={() => setStep("email")}
-              />
-            </Card>
-          )}
 
       </div>
     </div>
