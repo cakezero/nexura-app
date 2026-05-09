@@ -500,67 +500,67 @@ const quests = questsData?.quests ?? [];
         </h2>
 
         <p className="text-[11px] md:text-xs text-white/60 mt-1 max-w-xl">
-          Explore and participate in active lessons
+        Explore and participate in active lessons 
         </p>
       </div>
 
       <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => setLocation("/learn")}
-        className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] text-white/80 hover:text-white hover:bg-[#00E1A24D] transition"
-      >
-        <span>View all lessons</span>
+  variant="ghost"
+  size="sm"
+  onClick={() => setLocation("/learn")}
+className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] text-white/80 hover:text-white hover:bg-[#00E1A24D] transition"
+>
+  <span>View all lessons</span>
 
-        <img
-          src="/arrow-right.png"
-          alt="arrow right"
-          className="w-3.5 h-3.5 opacity-80 group-hover:opacity-100 transition"
-        />
-      </Button>
+  <img
+    src="/arrow-right.png"
+    alt="arrow right"
+    className="w-3.5 h-3.5 opacity-80 group-hover:opacity-100 transition"
+  />
+</Button>
     </div>
 
     {lessons?.length > 0 ? (
-      lessons.length <= 3 ? (
-        /* GRID MODE (FORCED 3x3 STYLE) */
-        <div className="grid grid-cols-3 gap-2">
-          {lessons.map((lesson: any) => (
-            <LessonCard key={lesson._id} lesson={lesson} />
-          ))}
-        </div>
-      ) : (
-        /* TICKER MODE (EACH PAGE = 3x3 GRID) */
-        <div className="ticker-container overflow-hidden">
-          <div className="ticker flex gap-3 w-max">
+  lessons.length <= 3 ? (
+    /* GRID MODE */
+    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+      {lessons.map((lesson: any) => (
+        <LessonCard key={lesson._id} lesson={lesson} />
+      ))}
+    </div>
+  ) : (
+    /* TICKER MODE */
+    <div className="ticker-container overflow-hidden">
+      <div className="ticker flex gap-2 w-max">
 
-            {/* first set */}
-            <div className="grid grid-cols-3 gap-2 w-[780px] shrink-0">
-              {lessons.map((lesson: any) => (
-                <LessonCard key={lesson._id} lesson={lesson} />
-              ))}
-            </div>
-
-            {/* duplicate set */}
-            <div className="grid grid-cols-3 gap-2 w-[780px] shrink-0">
-              {lessons.map((lesson: any) => (
-                <LessonCard key={`${lesson._id}-dup`} lesson={lesson} />
-              ))}
-            </div>
-
-          </div>
-        </div>
-      )
-    ) : (
-      <div className="rounded-2xl border border-white/10 bg-[#0B0B0B] p-6 text-center">
-        <h3 className="text-sm font-semibold text-white mb-1">
-          Learning Hub
-        </h3>
-
-        <p className="text-[11px] text-white/60 max-w-md mx-auto">
-          Educational content, onboarding guides, tutorials, and walkthroughs will appear here soon.
-        </p>
+           {/* first set */}
+    {lessons.map((lesson: any) => (
+      <div key={lesson._id} className="w-[33.333%] max-w-[260px] shrink-0">
+        <LessonCard lesson={lesson} />
       </div>
-    )}
+    ))}
+
+    {/* duplicate set */}
+    {lessons.map((lesson: any) => (
+      <div key={`${lesson._id}-dup`} className="w-[33.333%] max-w-[260px] shrink-0">
+        <LessonCard lesson={lesson} />
+      </div>
+    ))}
+
+      </div>
+    </div>
+  )
+) : (
+  <div className="rounded-2xl border border-white/10 bg-[#0B0B0B] p-6 text-center">
+    <h3 className="text-sm font-semibold text-white mb-1">
+      Learning Hub
+    </h3>
+
+    <p className="text-[11px] text-white/60 max-w-md mx-auto">
+      Educational content, onboarding guides, tutorials, and walkthroughs will appear here soon.
+    </p>
+  </div>
+)}
   </section>
 )}
 
@@ -671,64 +671,58 @@ const quests = questsData?.quests ?? [];
         Quests coming soon...
       </div>
     ) : quests.length <= 3 ? (
-      /* GRID MODE (FORCED 3x3) */
-      <div className="grid grid-cols-3 gap-2">
+      /* GRID MODE */
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
         {quests.map((quest: any) => (
-          <QuestCard
-            key={quest._id}
-            questId={quest._id}
-            title={quest.title}
-            description={quest.description}
-            projectName={quest.projectName || quest.project_name}
-            projectLogo={quest.project_image || "/quest-1.png"}
-            heroImage={quest.project_image || "/quest-1.png"}
-            rewards={`${quest.reward || quest.rewards || 0} XP`}
-            duration={quest.duration || "Ongoing"}
-          />
+          <div key={quest._id} className="w-full">
+            <QuestCard
+              questId={quest._id}
+              title={quest.title}
+              description={quest.description}
+              projectName={quest.projectName || quest.project_name}
+              projectLogo={quest.project_image || "/quest-1.png"}
+              heroImage={quest.project_image || "/quest-1.png"}
+              rewards={`${quest.reward || quest.rewards || 0} XP`}
+              duration={quest.duration || "Ongoing"}
+            />
+          </div>
         ))}
       </div>
     ) : (
-      /* TICKER MODE (EACH SLIDE = 3x3 GRID, SLOWED DOWN) */
+      /* TICKER MODE (FIXED - MATCH LESSONS STYLE) */
       <div className="ticker-container overflow-hidden">
-        <div
-          className="ticker flex gap-3 w-max"
-          style={{
-            animationDuration: "45s", // slowed down
-          }}
-        >
-          {/* first set */}
-          <div className="grid grid-cols-3 gap-2 w-[780px] shrink-0">
-            {quests.map((quest: any) => (
-              <QuestCard
-                key={quest._id}
-                questId={quest._id}
-                title={quest.title}
-                description={quest.description}
-                projectName={quest.projectName || quest.project_name}
-                projectLogo={quest.project_image || "/quest-1.png"}
-                heroImage={quest.project_image || "/quest-1.png"}
-                rewards={`${quest.reward || quest.rewards || 0} XP`}
-                duration={quest.duration || "Ongoing"}
-              />
-            ))}
-          </div>
+        <div className="ticker flex gap-2 w-max">
 
-          {/* duplicate set */}
-          <div className="grid grid-cols-3 gap-2 w-[780px] shrink-0">
-            {quests.map((quest: any) => (
-              <QuestCard
-                key={`${quest._id}-dup`}
-                questId={quest._id}
-                title={quest.title}
-                description={quest.description}
-                projectName={quest.projectName || quest.project_name}
-                projectLogo={quest.project_image || "/quest-1.png"}
-                heroImage={quest.project_image || "/quest-1.png"}
-                rewards={`${quest.reward || quest.rewards || 0} XP`}
-                duration={quest.duration || "Ongoing"}
-              />
-            ))}
-          </div>
+    {quests.map((quest: any) => (
+      <div key={quest._id} className="w-[33.333%] max-w-[260px] shrink-0">
+        <QuestCard
+          questId={quest._id}
+          title={quest.title}
+          description={quest.description}
+          projectName={quest.projectName || quest.project_name}
+          projectLogo={quest.project_image || "/quest-1.png"}
+          heroImage={quest.project_image || "/quest-1.png"}
+          rewards={`${quest.reward || quest.rewards || 0} XP`}
+          duration={quest.duration || "Ongoing"}
+        />
+      </div>
+    ))}
+
+        {quests.map((quest: any) => (
+      <div key={`${quest._id}-dup`} className="w-[33.333%] max-w-[260px] shrink-0">
+        <QuestCard
+          questId={quest._id}
+          title={quest.title}
+          description={quest.description}
+          projectName={quest.projectName || quest.project_name}
+          projectLogo={quest.project_image || "/quest-1.png"}
+          heroImage={quest.project_image || "/quest-1.png"}
+          rewards={`${quest.reward || quest.rewards || 0} XP`}
+          duration={quest.duration || "Ongoing"}
+        />
+      </div>
+    ))}
+
         </div>
       </div>
     )}
