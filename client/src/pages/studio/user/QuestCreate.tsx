@@ -710,22 +710,12 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                   </div>
                 </div>
 
-                {/* Platform & Validation */}
+                {/* Platform */}
                 <div className="w-[311px] space-y-[14px]">
-                  <div className="flex gap-[43px]">
-                    <div className="flex-1 space-y-[10px]">
-                      <label className="text-[15px] font-bold text-white/70 uppercase font-['Geist',sans-serif] leading-[18.2px]">PLATFORM</label>
-                      <div className="h-[40px] rounded-[8px] flex items-center px-[15px] gap-[5px] bg-[#1d0d3d] border border-white/5 text-white/60 text-[12px] font-medium font-['Geist',sans-serif]">
-                        <img src="https://www.figma.com/api/mcp/asset/7c040d25-e34c-42b8-8ee9-10bddba75bba" alt="" className="w-[14px] h-[14px]" />
-                        <span>{newTask.platform || "—"}</span>
-                      </div>
-                    </div>
-                    <div className="flex-1 space-y-[10px]">
-                      <label className="text-[15px] font-bold text-white/70 uppercase font-['Geist',sans-serif] leading-[18.2px]">VALIDATION</label>
-                      <div className="h-[40px] rounded-[8px] flex items-center px-[15px] bg-[#1d0d3d] border border-white/5 text-white/60 text-[12px] font-medium font-['Geist',sans-serif]">
-                        {newTask.validation || "—"}
-                      </div>
-                    </div>
+                  <label className="text-[15px] font-bold text-white/70 uppercase font-['Geist',sans-serif] leading-[18.2px]">PLATFORM</label>
+                  <div className="h-[40px] rounded-[8px] flex items-center px-[15px] gap-[5px] bg-[#1d0d3d] border border-white/5 text-white/60 text-[12px] font-medium font-['Geist',sans-serif]">
+                    <img src="https://www.figma.com/api/mcp/asset/7c040d25-e34c-42b8-8ee9-10bddba75bba" alt="" className="w-[14px] h-[14px]" />
+                    <span>{newTask.platform || "—"}</span>
                   </div>
                 </div>
               </div>
@@ -760,6 +750,16 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                   </div>
                 </div>
               </div>
+
+              {/* Validation pill */}
+              {newTask.validation && (
+                <div className="flex justify-start mt-[12px]">
+                  <div className="inline-flex items-center gap-[6px] px-[12px] py-[6px] rounded-full bg-[#1d0d3d] border border-[#833afd]/30">
+                    <svg className="w-[14px] h-[14px] text-purple-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    <span className="text-[12px] font-medium text-white/60 font-['Geist',sans-serif]">{newTask.validation}</span>
+                  </div>
+                </div>
+              )}
 
             </div>
 
