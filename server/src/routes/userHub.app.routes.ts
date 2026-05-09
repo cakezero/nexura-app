@@ -39,7 +39,7 @@ router
   .get("/me", getUserHub)
   .get("/quest-submissions", getCampaignSubmissions)
   .post("/validate-quest-submissions", validateCampaignSubmissions)
-  .post("/create-lesson", createLesson)
+  .post("/create-lesson", upload.fields([{ name: "coverImage", maxCount: 1 }, { name: "profileImage", maxCount: 1 }]), createLesson)
   .patch("/update-lesson", updateLesson)
   .delete("/delete-lesson", deleteLesson)
   .post("/create-mini-lesson", createMiniLesson)

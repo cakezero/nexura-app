@@ -43,6 +43,22 @@ const lessonSchema = new mongoose.Schema({
   disclaimer: {
     type: String,
     default: "",
+  },
+  creatorName: {
+    type: String,
+    default: "",
+  },
+  completionTrophy: {
+    type: String,
+    default: "",
+  },
+  completionTitle: {
+    type: String,
+    default: "",
+  },
+  completionMessage: {
+    type: String,
+    default: "",
   }
 }, { timestamps: true });
 

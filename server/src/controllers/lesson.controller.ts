@@ -45,30 +45,38 @@ const getNextLessonContentOrder = async (lessonId: string) => {
 
 export const createLesson = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
-    const coverImage = await getUploadedLessonImage(req, "coverImage", "lesson-covers");
-    const profileImage = await getUploadedLessonImage(req, "profileImage", "lesson-profiles");
+    const { title, description, reward, disclaimer, completionTrophy, completionTitle, completionMessage } = req.body;
 
-    const page = req.body.page;
-
-    if (coverImage) req.body.coverImage = coverImage;
-    if (profileImage) req.body.profileImage = profileImage;
-
-    const { success } = validateCreateLesson(req.body);
-    if (!success) {
-      res.status(BAD_REQUEST).json({ error: "Send the required values. Required values are: title, description and reward" });
+    if (!title?.trim() || !description?.trim() || reward == null) {
+      res.status(BAD_REQUEST).json({ error: "title, description, and reward are required" });
       return;
     }
 
-    const disclaimer = typeof req.body.disclaimer === "string" ? req.body.disclaimer.trim() : "";
+    const coverImage = await getUploadedLessonImage(req, "coverImage", "lesson-covers");
+    const profileImage = await getUploadedLessonImage(req, "profileImage", "lesson-profiles");
 
-    const newLesson = await lesson.create({ ...req.body, disclaimer, status: "draft", creator: req.admin.hub, creatorModel: page === "user" ? "users" : page !== "project" ? "admin" : "project" });
+    const newLesson = await lesson.create({
+      title: String(title).trim(),
+      description: String(description).trim(),
+      reward: Number(reward),
+      disclaimer: typeof disclaimer === "string" ? disclaimer.trim() : "",
+      completionTrophy: completionTrophy || "",
+      completionTitle: completionTitle || "",
+      completionMessage: completionMessage || "",
+      coverImage: coverImage || "",
+      profileImage: profileImage || "",
+      status: "draft",
+      creatorName: req.admin?.name || req.adminName || "User",
+      creator: req.id,
+      creatorModel: "users",
+    });
 
     res.status(CREATED).json({ message: "lesson created", lesson: newLesson });
   } catch (error) {
     logger.error(error);
     res.status(INTERNAL_SERVER_ERROR).json({ error: "error creating lesson" });
   }
-}
+};
 
 export const updateLesson = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
