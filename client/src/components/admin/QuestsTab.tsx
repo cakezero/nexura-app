@@ -202,6 +202,7 @@ const tabs = [
         onClose={(id) => setPendingAction({ type: "close", id, title: quest.description || quest.title })}
         onDelete={(id) => setPendingAction({ type: "delete", id, title: quest.description || quest.title })}
         showDelete={draft || completed}
+        onView={(id) => setLocation(`/user-dashboard/create-new-quest?edit=${id}`)}
       />
     );
   };

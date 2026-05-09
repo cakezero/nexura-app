@@ -11,6 +11,22 @@ interface QuestCardProps {
   questId?: string;
   isLocked?: boolean;
   lockLevel?: number;
+  onView?: (questId: string) => void;
+  status?: string;
+  statusColor?: string;
+  showClose?: boolean;
+  showDelete?: boolean;
+  showWithdraw?: boolean;
+  isClosing?: boolean;
+  isDeleting?: boolean;
+  isWithdrawing?: boolean;
+  participants?: number;
+  tags?: string[];
+  from?: string;
+  onClose?: (id: string) => void;
+  onDelete?: (id: string) => void;
+  onWithdraw?: () => void;
+  rewardPoolLabel?: string;
 }
 
 export default function QuestCard({
@@ -24,12 +40,17 @@ export default function QuestCard({
   questId,
   isLocked = false,
   lockLevel,
+  onView,
 }: QuestCardProps) {
   const [, setLocation] = useLocation();
 
   const handleClick = () => {
     if (!questId || isLocked) return;
-    setLocation(`/quest/${questId}`);
+    if (onView) {
+      onView(questId);
+    } else {
+      setLocation(`/quest/${questId}`);
+    }
   };
 
   return (
