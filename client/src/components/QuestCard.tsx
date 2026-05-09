@@ -11,6 +11,7 @@ interface QuestCardProps {
   questId?: string;
   isLocked?: boolean;
   lockLevel?: number;
+  onView?: (questId: string) => void;
 }
 
 export default function QuestCard({
@@ -24,12 +25,17 @@ export default function QuestCard({
   questId,
   isLocked = false,
   lockLevel,
+  onView,
 }: QuestCardProps) {
   const [, setLocation] = useLocation();
 
   const handleClick = () => {
     if (!questId || isLocked) return;
-    setLocation(`/quest/${questId}`);
+    if (onView) {
+      onView(questId);
+    } else {
+      setLocation(`/quest/${questId}`);
+    }
   };
 
   return (

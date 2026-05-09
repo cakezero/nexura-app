@@ -112,23 +112,18 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
             headers: { Authorization: `Bearer ${session?.token}` },
           });
           const miniData = await miniRes.json();
-          setTasks((miniData.miniQuests || []).map((q: any) => {
-            const fullText = q.text || q.quest || "";
-            const [title, ...descParts] = fullText.split("\n");
-            return {
-              _id: q._id,
-              type: tagToType(q.tag),
-              platform: q.category === "twitter" ? "Twitter" : "",
-              handleOrUrl: q.link ?? "",
-              title: title || tagToType(q.tag),
-              description: descParts.join("\n") || "",
-              evidence: "",
-              validation: "Manual Validation",
-              verificationMode: q.verificationMode ?? "",
-              roleId: q.roleId ?? "",
-              channelId: q.channelId ?? "",
-            };
-          }));
+          setTasks((miniData.miniQuests || []).map((q: any) => ({
+            _id: q._id,
+            type: tagToType(q.tag),
+            platform: q.category === "twitter" ? "Twitter" : (q.category || "Other"),
+            handleOrUrl: q.link ?? "",
+            description: q.quest || q.text || "",
+            evidence: "",
+            validation: "Manual Validation",
+            verificationMode: q.verificationMode ?? "",
+            roleId: q.roleId ?? "",
+            channelId: q.channelId ?? "",
+          })));
       } catch (err) {
         console.error("Failed to load quest", err);
       }
