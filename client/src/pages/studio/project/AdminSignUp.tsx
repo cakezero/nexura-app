@@ -29,13 +29,22 @@ export default function AdminSignUp() {
     upper:   /[A-Z]/.test(password),
   };
   const allPwdValid = Object.values(pwdChecks).every(Boolean);
-  const canSubmit = allPwdValid && !!name && !!email && !loading;
+  const canSubmit = allPwdValid && !!name && !!email && code.length === 6 && !loading;
 
   async function handleSignUp() {
-    if (!name || !email || !password) {
+    if (!name || !email || !password || !code) {
       toast({
         title: "Missing fields",
         description: "Please fill in all fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (code.length !== 6) {
+      toast({
+        title: "Invalid code",
+        description: "The OTP code must be exactly 6 characters.",
         variant: "destructive",
       });
       return;
@@ -51,7 +60,7 @@ export default function AdminSignUp() {
       }>({
         method: "POST",
         endpoint: "/hub/admin/sign-up",
-        data: { name, email, password, code: "000000" }, // Use dummy code as OTP is bypassed on server
+        data: { name, email, password, code },
       });
 
       const token = (res.token ?? res.accessToken) as string | undefined;
@@ -160,8 +169,8 @@ export default function AdminSignUp() {
             )}
           </div>
 
-          {/* OTP - Hidden as it is bypassed */}
-          <div className="hidden">
+          {/* OTP */}
+          <div>
             <label className="block text-xs text-white/50 mb-1 ml-1">Invitation Code (OTP)</label>
             <Input
               value={code}
@@ -199,3 +208,5 @@ export default function AdminSignUp() {
     </div>
   );
 }
+
+

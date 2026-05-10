@@ -30,7 +30,7 @@ export default function Projects() {
         .then((res) => {
           setTitle("");
           setDescription("");
-          alert("Project created â€” server response received.");
+          alert("Project created GÇö server response received.");
           console.log("createProject response:", res);
         })
         .catch((err) => {
@@ -105,3 +105,5 @@ export default function Projects() {
     </div>
   );
 }
+
+

@@ -321,7 +321,6 @@ useEffect(() => {
           if (tag === "send-message-discord" || tag === "message-discord" || tag === "message") return DISCORD_MESSAGE_TASK_TYPE;
           if (tag === "portal") return "Check Out the Portal Claims";
           if (tag === "feedback") return "Give Feedback";
-          if (tag === "create-post") return "Create a Post";
           return "others";
         };
         const catToPlatform = (cat: string) => {
@@ -526,7 +525,6 @@ const typeToTag = (type: string) => {
   if (type === DISCORD_MESSAGE_TASK_TYPE) return "send-message-discord";
   if (type === "Check Out the Portal Claims") return "portal";
   if (type === "Give Feedback") return "feedback";
-  if (type === "Create a Post") return "create-post";
   return "other";
 };
 const platformToCategory = (platform: string) => {
@@ -680,11 +678,10 @@ const buildCampaignFormData = (isDraft: boolean): FormData => {
     tasks.map(t => {
       const taskTag = typeToTag(t.type);
       const taskGuildId = t.guildId || hubGuildId || "";
-      const defaultLink = taskTag === "create-post" ? "https://x.com/compose/post" : "#";
       const payload: Record<string, unknown> = {
         _id: t._id,
         quest: t.description || t.type,
-        link: t.handleOrUrl || defaultLink,
+        link: t.handleOrUrl || "https://nexura.io",
         tag: taskTag,
         category: platformToCategory(t.platform),
         verificationMode: t.verificationMode || "",
@@ -778,13 +775,12 @@ const handleSaveTask = () => {
     showViewOnlyToast();
     return;
   }
-  const requiresPlatform = newTask.type !== "Check Out the Portal Claims" && newTask.type !== "others" && newTask.type !== "Give Feedback" && newTask.type !== "Create a Post";
+  const requiresPlatform = newTask.type !== "Check Out the Portal Claims" && newTask.type !== "others" && newTask.type !== "Give Feedback";
   const requiresDiscordConnection = newTask.platform === "Discord" || isDiscordFixedTaskType(newTask.type);
   const requiresRole = isDiscordRoleTaskType(newTask.type);
   const requiresChannel = isDiscordMessageTaskType(newTask.type);
-  const requiresHandleOrUrl = newTask.type !== "Create a Post";
 
-  if (!newTask.type || (requiresPlatform && !newTask.platform) || (requiresHandleOrUrl && !newTask.handleOrUrl) || !newTask.description) {
+  if (!newTask.type || (requiresPlatform && !newTask.platform) || !newTask.handleOrUrl || !newTask.description) {
     return setError("All fields are required.");
   }
   if (requiresDiscordConnection && !hubDiscordConnected) {
@@ -1944,25 +1940,22 @@ const isActive =
               const isPortal = type === "Check Out the Portal Claims";
               const isOther = type === "others";
               const isFeedback = type === "Give Feedback";
-              const isCreatePost = type === "Create a Post";
               setNewTask({
                 ...newTask,
                 type,
-                platform: isDiscord ? "Discord" : isTwitter ? "Twitter" : isCreatePost ? "Twitter" : (isPortal || isOther || isFeedback) ? "" : newTask.platform,
-                evidence: isDiscord || isPortal ? "" : isTwitter || isCreatePost ? "submit_link" : isFeedback ? "" : newTask.evidence,
-                validation: isDiscord ? "Discord Auth" : isPortal ? "Auto Verified" : isFeedback || isCreatePost ? "Manual Validation" : (newTask.validation === "Discord Auth" || newTask.validation === "Auto Verified" ? "Manual Validation" : newTask.validation),
-                verificationMode: isFeedback ? "feedback" : isCreatePost ? "submit_link" : "",
+                platform: isDiscord ? "Discord" : isTwitter ? "Twitter" : (isPortal || isOther || isFeedback) ? "" : newTask.platform,
+                evidence: isDiscord || isPortal ? "" : isTwitter ? "submit_link" : isFeedback ? "" : newTask.evidence,
+                validation: isDiscord ? "Discord Auth" : isPortal ? "Auto Verified" : isFeedback ? "Manual Validation" : (newTask.validation === "Discord Auth" || newTask.validation === "Auto Verified" ? "Manual Validation" : newTask.validation),
+                verificationMode: isFeedback ? "feedback" : "",
                 roleId: isDiscordRole ? newTask.roleId : "",
                 channelId: isDiscordMessage ? newTask.channelId : "",
                 guildId: isDiscord ? (newTask.guildId || hubGuildId || "") : "",
-                handleOrUrl: isCreatePost ? "" : newTask.handleOrUrl,
               });
             }}
           >
             <option value="">Select task</option>
             <option value="Comment on our X post">Comment on X</option>
             <option value="Follow us on X">Follow on X</option>
-            <option value="Create a Post">Create a Post</option>
             <option value="Join Us On Discord">Join Discord</option>
             <option value={DISCORD_ROLE_TASK_TYPE}>Acquire a Role (Discord)</option>
             <option value={DISCORD_MESSAGE_TASK_TYPE}>Send Message in Channel (Discord)</option>
@@ -2014,7 +2007,6 @@ const isActive =
       <div className="bg-white/5 p-5 rounded-xl mb-6 border border-white/10">
 
         {/* Handle or URL */}
-        {newTask.type !== "Create a Post" && (
         <div className="mb-4">
           <label className="text-sm text-white/70 mb-2 block">
             {newTask.type === "Give Feedback"
@@ -2049,7 +2041,6 @@ const isActive =
             className="w-full p-2 rounded-lg bg-white/5 text-white border border-white/10 focus:outline-none focus:border-purple-500"
           />
         </div>
-        )}
 
         {/* Task Description */}
         <div className="mb-4">
@@ -2515,10 +2506,10 @@ const isActive =
         <div className="bg-white/5 border border-white/10 rounded-xl p-4 mb-4">
           <div className="flex justify-between items-center mb-2">
             <span className="text-white font-semibold text-sm">Campaign Launch Fee</span>
-            <span className="text-purple-400 font-bold text-sm">1 $TRUST</span>
+            <span className="text-purple-400 font-bold text-sm">1000 $TRUST</span>
           </div>
           <p className="text-white/60 text-xs mb-3">
-            A one-time fee of 1 $TRUST is required to launch and publish this campaign.
+            A one-time fee of 1000 $TRUST is required to launch and publish this campaign.
           </p>
 
           {paymentTxHash ? (
@@ -2538,14 +2529,14 @@ const isActive =
               onClick={async () => {
                 setPaymentLoading(true);
                 try {
-                  const hash = await payStudioHubFee(1);
+                  const hash = await payStudioHubFee();
                   await projectApiRequest({
                     method: "PATCH",
                     endpoint: "/hub/save-payment-hash",
                     data: { txHash: hash },
                   });
                   setPaymentTxHash(hash);
-                  toast({ title: "Payment successful", description: "1 $TRUST sent. You can now publish your campaign." });
+                  toast({ title: "Payment successful", description: "1000 $TRUST sent. You can now publish your campaign." });
                 } catch (err: any) {
                   toast({ title: "Payment failed", description: err.message ?? "Transaction was rejected.", variant: "destructive" });
                 } finally {
@@ -2557,7 +2548,7 @@ const isActive =
               {paymentLoading ? (
                 <><span className="inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />Waiting for wallet…</>
               ) : (
-                <>Pay 1 $TRUST</>
+                <>Pay 1000 $TRUST</>
               )}
             </button>
 
@@ -2576,7 +2567,7 @@ const isActive =
       return;
     }
     if (!paymentTxHash.trim()) {
-      toast({ title: "Payment required", description: "Please complete the 1 $TRUST payment before publishing.", variant: "destructive" });
+      toast({ title: "Payment required", description: "Please complete the 1000 $TRUST payment before publishing.", variant: "destructive" });
       return;
     }
     const rewardPoolRequiresContract = Number(rewardPool) > 0;
@@ -2673,7 +2664,7 @@ const isActive =
           <p className="text-white/70 mt-2">
             {isEditMode
               ? "Your campaign changes have been saved and are now live."
-              : "Your 1 $TRUST payment was confirmed and your project is ready to go live."}
+              : "Your 1000 $TRUST payment was confirmed and your project is ready to go live."}
           </p>
         </div>
 

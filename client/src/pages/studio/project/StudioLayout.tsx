@@ -7,7 +7,7 @@ import StudioSidebar from "./StudioSidebar";
 import { isProjectSignedIn, clearProjectSession, projectApiRequest } from "../../../lib/projectApi";
 import { getStoredProjectToken } from "../../../lib/projectApi";
 
-type TabType = "hubProfile" | "campaignSubmissions" | "adminManagement" | "campaignsTab" | "lessonsTab";
+type TabType = "hubProfile" | "campaignSubmissions" | "adminManagement" | "campaignsTab";
 
 interface StudioLayoutProps {
   children: React.ReactNode;
@@ -27,7 +27,6 @@ export default function StudioLayout({ children, title = "Nexura Studio", onLogo
     if (location.includes("hub-profile")) return "hubProfile";
     if (location.includes("admin-management")) return "adminManagement";
     if (location === "/studio-dashboard") return "campaignSubmissions";
-    if (location.includes("create-lesson")) return "lessonsTab";
     if (location.includes("campaigns-tab") || location.includes("create-new-campaign") || location.includes("my-campaign"))
       return "campaignsTab";
     return "campaignSubmissions";
@@ -47,7 +46,12 @@ export default function StudioLayout({ children, title = "Nexura Studio", onLogo
   }, []);
 
   const handleLogout = () => {
+    if (getStoredProjectToken()) {
+      projectApiRequest({ method: "POST", endpoint: "/hub/logout" }).catch(() => {});
+    }
+    clearProjectSession();
     onLogout?.();
+    setLocation("/discover");
   };
 
   return (
@@ -60,7 +64,7 @@ export default function StudioLayout({ children, title = "Nexura Studio", onLogo
       </div>
 
       <div className="relative z-10 flex h-screen flex-col md:flex-row">
-        <StudioSidebar activeTab={activeTab} setActiveTab={setActiveTab} onLogout={onLogout} />
+        <StudioSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
 
         <div className="flex-1 flex flex-col overflow-hidden">
           <AnimatedBackground />
@@ -93,3 +97,5 @@ export default function StudioLayout({ children, title = "Nexura Studio", onLogo
     </div>
   );
 }
+
+

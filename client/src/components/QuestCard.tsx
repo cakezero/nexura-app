@@ -1,4 +1,7 @@
+import { Card } from "./ui/card";
+import { Badge } from "./ui/badge";
 import { useLocation } from "wouter";
+import userAvatar from "../assets/generated_images/User_avatar_Web3_0f8d9459.png";
 
 interface QuestCardProps {
   title: string;
@@ -10,9 +13,10 @@ interface QuestCardProps {
   starts_at?: string;
   ends_at?: string;
   questId?: string;
+  tags?: string[];
   isLocked?: boolean;
   lockLevel?: number;
-  onView?: (questId: string) => void;
+  onView?: (id: string) => void;
   duration?: string;
   status?: string;
   statusColor?: string;
@@ -23,12 +27,11 @@ interface QuestCardProps {
   isDeleting?: boolean;
   isWithdrawing?: boolean;
   participants?: number;
-  onClose?: (questId: string) => void;
-  onDelete?: (questId: string) => void;
-  onWithdraw?: (questId: string) => void;
+  onClose?: (id: string) => void;
+  onDelete?: (id: string) => void;
+  onWithdraw?: (id: string) => void;
   from?: string;
   rewardPoolLabel?: string;
-  tags?: string[];
 }
 
 export default function QuestCard({
@@ -58,44 +61,49 @@ export default function QuestCard({
   onDelete,
   onWithdraw,
   from,
-  rewardPoolLabel = "REWARD POOL:",
+  rewardPoolLabel = "PROJECT:",
 }: QuestCardProps) {
   const [, setLocation] = useLocation();
+
+  const formatParticipants = (count: number) => {
+    if (count >= 1000000) {
+      return `${(count / 1000000).toFixed(1)}M`;
+    } else if (count >= 1000) {
+      return `${(count / 1000).toFixed(1)}K`;
+    }
+    return count.toString();
+  };
 
   const handleClick = () => {
     if (!questId || isLocked) return;
     if (onView) onView(questId);
-    else setLocation(`/quest/${questId}`);
+    else {
+      const url = from ? `/quest/${questId}?from=${from}` : `/quest/${questId}`;
+      setLocation(url);
+    }
   };
 
-  const formatDate = (dateStr?: string) => {
-    if (!dateStr) return "";
-    const date = new Date(dateStr);
-    return date.toLocaleDateString("en-US", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    });
-  };
-
-  const hasValidDates = starts_at && ends_at;
-  const computedDuration = hasValidDates
-    ? `${formatDate(starts_at)} - ${formatDate(ends_at)}`
-    : null;
-
-  const buttonLabel = from ? "View Details" : "Start Quest";
+  const safeParticipants = Number.isFinite(Number(participants))
+  ? Number(participants)
+  : 0;
 
   return (
-    <div
+    <Card
+      className="overflow-hidden glass glass-hover cursor-pointer group relative rounded-3xl hover:-translate-y-1 transition-all duration-300 h-full flex flex-col"
       onClick={handleClick}
-      className="w-full h-[320px] shrink-0 cursor-pointer rounded-2xl overflow-hidden border border-white/10 bg-[#080808] hover:bg-[#0F0F0F] transition-all duration-300 flex flex-col"
     >
-      <div className="relative h-[120px] w-full overflow-hidden shrink-0">
+      <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+      
+      {/* Hero Image */}
+      <div className="relative h-48 overflow-hidden">
         <img
           src={heroImage}
-          className="w-full h-full object-cover transition-transform duration-500"
+          alt={title}
+          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
         />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
 
+        {/* Administration Buttons (Only visible in Studio/Dashboard) */}
         {(showClose || showDelete || showWithdraw) && (
           <div className="absolute top-2 right-2 flex items-center gap-1.5 z-10">
             {showClose && (
@@ -140,57 +148,82 @@ export default function QuestCard({
           </div>
         )}
 
-        <div className={`absolute top-3 right-3 px-2 py-1 rounded-full text-[10px] font-semibold ${statusColor || "text-[#00E1A2] bg-[#00E1A24D]"}`}>
-          {status || "ACTIVE"}
-        </div>
-
-        {isLocked && (
-          <div className="absolute inset-0 bg-black/70 flex items-center justify-center text-white text-xs">
-            Locked - Level {lockLevel}
+        {/* Status Badge */}
+        {status && (
+          <div className={`absolute top-4 right-4 px-2 py-0.5 rounded text-[10px] font-bold uppercase ${statusColor || "bg-green-500 text-white"}`}>
+            {status}
           </div>
         )}
 
-        <div className="absolute bottom-[-18px] left-3">
+        {/* Project Logo */}
+        <div className="absolute top-4 left-4 animate-float">
           <img
             src={projectLogo}
-            className="w-9 h-9 rounded-xl border border-white/10 bg-black"
+            alt={projectName}
+            className="w-12 h-12 rounded-full border-2 border-white/30 shadow-xl bg-black"
           />
         </div>
+
+        {/* Lock Overlay */}
+        {isLocked && (
+          <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
+            <div className="text-center text-white">
+              <div className="text-2xl mb-2">🔒</div>
+              <div className="text-sm font-medium">Level {lockLevel}</div>
+              <div className="text-xs opacity-75">Level Locked</div>
+            </div>
+          </div>
+        )}
       </div>
 
-      <div className="p-3 pt-7 flex flex-col flex-1 bg-[#170F1F]">
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="text-sm font-semibold text-white truncate">
-            {title}
-          </h3>
-          {rewards && (
-            <span className="text-[10px] font-semibold text-[#D4BBFF] whitespace-nowrap">
-              {rewards}
-            </span>
-          )}
+      {/* Content */}
+      <div className="p-6 flex flex-col flex-1">
+        <div className="flex items-center space-x-2 mb-2">
+          <span className="text-sm text-muted-foreground">{rewardPoolLabel} {projectName}</span>
         </div>
 
-        <p className="text-xs text-white/60 line-clamp-2 mt-1">
-          {description}
-        </p>
+        <h3 className="text-lg font-bold text-card-foreground mb-2 line-clamp-2">{title}</h3>
 
-        {(duration || computedDuration) && (
-          <div className="flex items-center gap-2 text-[10px] text-[#8A97B0] bg-[#8B3EFE33] px-2 py-1 rounded-md w-fit mt-2">
-            <img src="/calendar.png" className="w-3 h-3" />
-            {duration || computedDuration}
+        {description && (
+          <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{description}</p>
+        )}
+
+        {duration && (
+          <div className="text-xs text-white/40 mb-4 font-mono">
+            {duration}
           </div>
         )}
 
-        <div className="flex justify-between items-center text-[10px] text-white/60 mt-3">
-          <span>{rewardPoolLabel}</span>
-          <span className="text-white">{projectName}</span>
-        </div>
+        {/* Participants and Rewards */}
+        <div className="flex items-center justify-between mt-auto">
+          <div className="flex items-center space-x-3">
+            <div className="flex -space-x-2">
+              {[...Array(Math.min(3, Math.ceil(safeParticipants / 1000) || 1))].map((_, i) => (
+                <img
+                  key={i}
+                  src={userAvatar}
+                  alt="Participant"
+                  className="w-6 h-6 rounded-full border-2 border-card"
+                />
+              ))}
+            </div>
+            <div className="text-sm">
+              <span className="font-medium text-card-foreground">{formatParticipants(safeParticipants)}</span>
+              <span className="text-muted-foreground ml-1">Participants</span>
+            </div>
+          </div>
 
-        <button className="mt-auto flex items-center justify-center gap-2 bg-[#8B3EFE] text-white text-xs py-2 rounded-xl hover:opacity-90 transition font-medium">
-          {buttonLabel}
-          <img src="/arrow-right.png" className="w-3.5 h-3.5" />
-        </button>
+          {rewards && (
+            <div className="text-right">
+              <div className="text-sm font-medium text-card-foreground">
+                <span className="text-[#8B3EFE] font-bold">5XP</span>
+                <span className="text-muted-foreground mx-1">+</span>
+                <span>{rewards}</span>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </Card>
   );
 }

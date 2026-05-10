@@ -1,79 +1,33 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardTitle, CardDescription } from "../../../components/ui/card";
 import { Button } from "../../../components/ui/button";
-import { ArrowRight, Hash, Volume2, Check, Loader2 } from "lucide-react";
-import { useLocation } from "wouter";
+import { ArrowRight, Hash, Volume2, Check } from "lucide-react";
+import { Link } from "wouter";
 import AnimatedBackground from "../../../components/AnimatedBackground";
-import { projectApiRequest } from "../../../lib/projectApi";
-import { useToast } from "../../../hooks/use-toast";
 
-interface DiscordServer {
-  id: string;
-  name: string;
-  icon: string;
-  memberCount?: number;
-}
+const MOCK_SERVER = {
+  name: "Nexura Official",
+  icon: "/discord-logo.png",
+  memberCount: 12480,
+};
 
-interface DiscordChannel {
-  id: string;
-  name: string;
-  type: number;
-}
+const MOCK_CHANNELS = [
+  { id: "1", name: "general", type: "text", category: "GENERAL" },
+  { id: "2", name: "announcements", type: "text", category: "GENERAL" },
+  { id: "3", name: "introductions", type: "text", category: "GENERAL" },
+  { id: "4", name: "campaigns", type: "text", category: "NEXURA" },
+  { id: "5", name: "quest-updates", type: "text", category: "NEXURA" },
+  { id: "6", name: "rewards-drops", type: "text", category: "NEXURA" },
+  { id: "7", name: "support", type: "text", category: "SUPPORT" },
+  { id: "8", name: "bot-commands", type: "text", category: "SUPPORT" },
+  { id: "9", name: "lounge", type: "voice", category: "VOICE" },
+  { id: "10", name: "stage-events", type: "voice", category: "VOICE" },
+];
+
+const CATEGORIES = ["GENERAL", "NEXURA", "SUPPORT", "VOICE"];
 
 export default function DiscordChannels() {
-  const [selected, setSelected] = useState<string[]>([]);
-  const [server, setServer] = useState<DiscordServer | null>(null);
-  const [channels, setChannels] = useState<DiscordChannel[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [, setLocation] = useLocation();
-  const { toast } = useToast();
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const discordSessionId = params.get("id");
-
-    if (!discordSessionId) {
-      toast({ title: "Error", description: "Discord session not found.", variant: "destructive" });
-      setLocation("/studio-dashboard/connect-discord");
-      return;
-    }
-
-    (async () => {
-      try {
-        setLoading(true);
-        // Fetch servers (usually just one after OAuth)
-        const serversRes = await projectApiRequest<{ servers: any[] }>({
-          method: "GET",
-          endpoint: "/hub/get-servers",
-          params: { id: discordSessionId },
-        });
-
-        const connectedServer = serversRes.servers?.[0];
-        if (!connectedServer) {
-          throw new Error("No Discord server found.");
-        }
-
-        setServer({
-          id: connectedServer.id,
-          name: connectedServer.name,
-          icon: connectedServer.icon ? `https://cdn.discordapp.com/icons/${connectedServer.id}/${connectedServer.icon}.png` : "/discord-logo.png",
-        });
-
-        // Fetch channels for this server
-        const channelsRes = await projectApiRequest<{ channels: any[] }>({
-          method: "GET",
-          endpoint: "/hub/get-channels",
-          params: { id: discordSessionId, serverId: connectedServer.id },
-        });
-
-        setChannels(channelsRes.channels ?? []);
-      } catch (err: any) {
-        toast({ title: "Fetch failed", description: err.message, variant: "destructive" });
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
+  const [selected, setSelected] = useState<string[]>(["4", "5"]);
 
   const toggle = (id: string) => {
     setSelected((prev) =>
@@ -81,32 +35,10 @@ export default function DiscordChannels() {
     );
   };
 
-  const handleContinue = async () => {
-    if (!server) return;
-    try {
-      setLoading(true);
-      await projectApiRequest({
-        method: "PATCH",
-        endpoint: "/hub/update-hub-ids",
-        data: { guildId: server.id },
-      });
-      
-      localStorage.setItem("discordChannels", JSON.stringify(selected));
-      window.location.href = "/studio-dashboard";
-    } catch (err: any) {
-      toast({ title: "Update failed", description: err.message, variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
+  const handleContinue = () => {
+    localStorage.setItem("discordChannels", JSON.stringify(selected));
+    window.location.href = "/studio-dashboard";
   };
-
-  if (loading && !server) {
-    return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-black text-white overflow-auto relative">
@@ -127,20 +59,18 @@ export default function DiscordChannels() {
           </div>
 
           {/* Server info */}
-          {server && (
-            <Card className="bg-gray-900 border border-purple-500 rounded-2xl p-4 flex items-center gap-4">
-              <div className="border-2 border-purple-500 rounded-xl p-1.5">
-                <img src={server.icon} alt="Server" className="w-10 h-10 rounded-lg" />
-              </div>
-              <div>
-                <p className="text-white font-semibold">{server.name}</p>
-                <p className="text-white/50 text-xs">Connected</p>
-              </div>
-              <span className="ml-auto text-xs text-purple-400 bg-purple-500/10 border border-purple-500/30 rounded-full px-3 py-1">
-                Connected
-              </span>
-            </Card>
-          )}
+          <Card className="bg-gray-900 border border-purple-500 rounded-2xl p-4 flex items-center gap-4">
+            <div className="border-2 border-purple-500 rounded-xl p-1.5">
+              <img src={MOCK_SERVER.icon} alt="Server" className="w-10 h-10 rounded-lg" />
+            </div>
+            <div>
+              <p className="text-white font-semibold">{MOCK_SERVER.name}</p>
+              <p className="text-white/50 text-xs">{MOCK_SERVER.memberCount.toLocaleString()} members</p>
+            </div>
+            <span className="ml-auto text-xs text-purple-400 bg-purple-500/10 border border-purple-500/30 rounded-full px-3 py-1">
+              Connected
+            </span>
+          </Card>
 
           {/* Channel list */}
           <Card className="bg-gray-900 border border-purple-500 rounded-2xl p-4 space-y-4">
@@ -152,32 +82,44 @@ export default function DiscordChannels() {
             </div>
 
             <div className="space-y-4 max-h-72 overflow-y-auto pr-1 custom-scrollbar">
-              <div className="space-y-1">
-                {channels.filter(c => c.type === 0).map((ch) => {
-                  const isSelected = selected.includes(ch.id);
-                  return (
-                    <button
-                      key={ch.id}
-                      onClick={() => toggle(ch.id)}
-                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-150 ${
-                        isSelected
-                          ? "bg-purple-500/20 border border-purple-500/50"
-                          : "bg-white/5 border border-transparent hover:bg-white/10"
-                      }`}
-                    >
-                      <Hash className="w-4 h-4 text-white/40 flex-shrink-0" />
-                      <span className={`text-sm flex-1 text-left ${isSelected ? "text-white" : "text-white/70"}`}>
-                        {ch.name}
-                      </span>
-                      {isSelected && (
-                        <span className="w-5 h-5 rounded-full bg-[#8B3EFE] flex items-center justify-center flex-shrink-0">
-                          <Check className="w-3 h-3 text-white" />
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
+              {CATEGORIES.map((cat) => {
+                const channels = MOCK_CHANNELS.filter((c) => c.category === cat);
+                return (
+                  <div key={cat}>
+                    <p className="text-white/30 text-xs font-bold tracking-widest mb-1 px-1">{cat}</p>
+                    <div className="space-y-1">
+                      {channels.map((ch) => {
+                        const isSelected = selected.includes(ch.id);
+                        return (
+                          <button
+                            key={ch.id}
+                            onClick={() => toggle(ch.id)}
+                            className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-150 ${
+                              isSelected
+                                ? "bg-purple-500/20 border border-purple-500/50"
+                                : "bg-white/5 border border-transparent hover:bg-white/10"
+                            }`}
+                          >
+                            {ch.type === "text" ? (
+                              <Hash className="w-4 h-4 text-white/40 flex-shrink-0" />
+                            ) : (
+                              <Volume2 className="w-4 h-4 text-white/40 flex-shrink-0" />
+                            )}
+                            <span className={`text-sm flex-1 text-left ${isSelected ? "text-white" : "text-white/70"}`}>
+                              {ch.name}
+                            </span>
+                            {isSelected && (
+                              <span className="w-5 h-5 rounded-full bg-[#8B3EFE] flex items-center justify-center flex-shrink-0">
+                                <Check className="w-3 h-3 text-white" />
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </Card>
 
@@ -189,10 +131,10 @@ export default function DiscordChannels() {
           {/* CTA */}
           <Button
             onClick={handleContinue}
-            disabled={selected.length === 0 || loading}
+            disabled={selected.length === 0}
             className="w-full bg-[#8B3EFE] hover:bg-[#8B3EFE] hover:shadow-[0_0_28px_rgba(131,58,253,0.7)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none"
           >
-            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Install Bot & Continue"}
+            Install Bot & Continue
             <ArrowRight className="h-5 w-5" />
           </Button>
 
@@ -201,3 +143,5 @@ export default function DiscordChannels() {
     </div>
   );
 }
+
+

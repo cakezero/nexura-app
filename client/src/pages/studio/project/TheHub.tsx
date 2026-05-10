@@ -184,13 +184,13 @@ export default function TheHub() {
             <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Describe your project or community (150â€“300 characters)"
+              placeholder="Describe your project or community (150GÇô300 characters)"
               maxLength={300}
               className="bg-gray-800 border-purple-500 text-white resize-none h-32"
             />
             {description.length > 0 && description.length < 150 && (
               <p className="text-xs text-red-400">
-                Minimum 150 characters â€” {150 - description.length} more needed
+                Minimum 150 characters GÇö {150 - description.length} more needed
               </p>
             )}
           </div>
@@ -275,3 +275,5 @@ export default function TheHub() {
     </div>
   );
 }
+
+

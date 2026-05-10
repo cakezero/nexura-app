@@ -42,7 +42,7 @@ export default function ConnectDiscord() {
               Studio Verification
             </div>
             <p className="mt-1 max-w-xs text-xs leading-5 text-emerald-100/75">
-              Weâ€™ll bring you back here to finish the server and verification-role selection.
+              WeGÇÖll bring you back here to finish the server and verification-role selection.
             </p>
           </div>
         </div>
@@ -50,7 +50,7 @@ export default function ConnectDiscord() {
         <div className="grid gap-4 rounded-2xl border border-white/10 bg-black/25 p-5 text-sm text-white/70">
           <p>Discord will ask you to approve access to the servers you manage.</p>
           <p>You can skip this for now and reconnect later when you want to build Discord-related tasks.</p>
-          <p>After approval, youâ€™ll come right back to the studio to choose the server and verification role.</p>
+          <p>After approval, youGÇÖll come right back to the studio to choose the server and verification role.</p>
         </div>
 
         <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-end">
@@ -86,3 +86,5 @@ export default function ConnectDiscord() {
     </div>
   );
 }
+
+

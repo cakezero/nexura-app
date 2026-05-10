@@ -5,12 +5,12 @@ import AnimatedBackground from "../../../components/AnimatedBackground";
 import { Card, CardTitle, CardDescription, CardFooter } from "../../../components/ui/card";
 import { Input } from "../../../components/ui/input";
 import { Button } from "../../../components/ui/button";
-import { ArrowLeft, ArrowRight, Eye, EyeOff } from "lucide-react";
+import { ArrowRight } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { useLocation } from "wouter";
 import { useToast } from "../../../hooks/use-toast";
 import { useWallet } from "../../../hooks/use-wallet";
 import { apiRequestV2 } from "../../../lib/queryClient";
-import { projectApiRequest, storeProjectSession } from "../../../lib/projectApi";
 
 export default function SharedAccessCredentials() {
   const [name, setName] = useState("");
@@ -23,13 +23,13 @@ export default function SharedAccessCredentials() {
   const [hasSpecialChar, setHasSpecialChar] = useState(false);
   const [isLongEnough, setIsLongEnough] = useState(false);
   const [creating, setCreating] = useState(false);
-    const [showPassword, setShowPassword] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { address: walletAddress, isConnected } = useWallet();
 
-  // Track step â€” only during creation flow (not if already signed in)
+  // Track step GÇö only during creation flow (not if already signed in)
   useEffect(() => {
     const hasFullSession =
       !!localStorage.getItem("nexura-project:token") ||
@@ -44,78 +44,60 @@ export default function SharedAccessCredentials() {
     if (walletAddress) setAddress(walletAddress);
   }, [walletAddress]);
 
-const handleSubmit = async () => {
-  if (!name || !email || !password || !confirmPassword) {
-    toast({
-      title: "Missing fields",
-      description: "Please fill in all fields.",
-      variant: "destructive",
-    });
-    return;
-  }
+  async function handleSignUp() {
+    try {
+      if (!isLongEnough || !hasUppercase || !hasNumber || !hasSpecialChar) {
+        toast({ title: "Weak password", description: "Password does not meet all requirements.", variant: "destructive" });
+        return;
+      }
 
-  if (password !== confirmPassword) {
-    toast({
-      title: "Passwords mismatch",
-      description: "Password and confirm password must match.",
-      variant: "destructive",
-    });
-    return;
-  }
+      if (password !== confirmPassword) {
+        toast({ title: "Password mismatch", description: "Passwords do not match.", variant: "destructive" });
+        return;
+      }
+      if (!email) {
+        toast({ title: "Missing email", description: "Please enter an email address.", variant: "destructive" });
+        return;
+      }
+      if (!address) {
+        toast({ title: "Missing address", description: "Please enter your project wallet address.", variant: "destructive" });
+        return;
+      }
+      if (!name) {
+        toast({ title: "Missing name", description: "Please enter a name.", variant: "destructive" });
+        return;
+      }
 
-  setCreating(true);
-  try {
-    // Validate email & username (OTP logic is now bypassed on server)
-    await apiRequestV2("POST", `/api/hub-auth/validate-email?email=${encodeURIComponent(email)}&name=${encodeURIComponent(name)}&page=project`);
+      setCreating(true);
 
-    // Directly complete signup bypassing OTP verification
-    const res = await projectApiRequest<{
-      accessToken?: string;
-      admin?: { _id: string; name: string; email: string; role: string; hub: string };
-    }>({
-      method: "POST",
-      endpoint: "/hub/sign-up",
-      data: { name, email, password },
-    });
+      // Save credentials GÇö API call happens on TheHub after hub details are filled in
+      const { accessToken } = await apiRequestV2("POST", "/api/hub/sign-up", { email, address, name, password });
 
-    if (res.accessToken) {
-      storeProjectSession(res.accessToken, {
-        email: res.admin?.email || email,
-        name: res.admin?.name || name,
-        role: res.admin?.role || "superadmin",
-        adminId: res.admin?._id || "",
-        hub: res.admin?.hub || "",
-      });
-      toast({ title: "Account created!", description: "Welcome to Nexura Studio. Please set up your project hub profile." });
-      setLocation("/studio/projects-hub");
+      localStorage.setItem("nexura-project:token", accessToken);
+
+      setCreating(false);
+
+      setLocation("/projects/create/the-hub");
+    } catch (error: any) {
+      console.error(error);
+      setCreating(false);
+      const msg: string = error?.message || "Failed to sign up.";
+      if (msg.toLowerCase().includes("already exists")) {
+        toast({ title: "Account already exists", description: "Redirecting you to sign inGÇª", variant: "destructive" });
+        setTimeout(() => setLocation("/projects/create/signin-to-hub"), 1500);
+      } else {
+        toast({ title: "Error", description: msg, variant: "destructive" });
+      }
     }
-  } catch (err: any) {
-    toast({
-      title: "Signup failed",
-      description: err?.error || err?.message || "Something went wrong.",
-      variant: "destructive",
-    });
-  } finally {
-    setCreating(false);
   }
-};
 
   return (
     <div className="min-h-screen bg-black text-white overflow-auto p-4 sm:p-6 relative">
       <AnimatedBackground />
 
       <div className="max-w-md mx-auto relative z-10 space-y-6">
-        {/* Back Button */}
-        <button
-          onClick={() => setLocation("/studio/projects/create")}
-          className="absolute top-4 left-4 inline-flex items-center gap-2 px-3 py-2 rounded-full border border-white/30 bg-black/30 hover:bg-black/50 text-white text-xs sm:text-sm"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back
-        </button>
-
           {/* Header */}
-          <div className="text-center py-4 sm:py-6 px-2 sm:px-0 pt-12">
+          <div className="text-center py-4 sm:py-6 px-2 sm:px-0">
             <h1 className="text-xl sm:text-2xl font-bold text-white mb-2">
               Shared Access Credentials
             </h1>
@@ -240,16 +222,17 @@ const handleSubmit = async () => {
             <CardFooter className="pt-2">
               <Button
                 disabled={creating}
-                onClick={handleSubmit}
+                onClick={handleSignUp}
                 className="w-full rounded-full bg-[#8B3EFE] border-0 text-white hover:bg-[#8B3EFE] hover:shadow-[0_0_28px_rgba(131,58,253,0.7)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2"
               >
-                {creating ? "Creating Account..." : "Create Super Admin"}
+                {creating ? "Creating Super Admin..." : "Create Super Admin"}
                 <ArrowRight className="h-5 w-5" />
               </Button>
             </CardFooter>
           </Card>
-
       </div>
     </div>
   );
 }
+
+

@@ -3,8 +3,7 @@ import AnimatedBackground from "../../../components/AnimatedBackground";
 import { Card, CardTitle, CardFooter } from "../../../components/ui/card";
 import { Input } from "../../../components/ui/input";
 import { Button } from "../../../components/ui/button";
-import { ArrowRight, Eye, EyeOff, CheckCircle2, ArrowLeft } from "lucide-react";
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "../../../components/ui/input-otp";
+import { ArrowRight, Eye, EyeOff } from "lucide-react";
 import { useLocation } from "wouter";
 import { projectApiRequest, storeProjectSession } from "../../../lib/projectApi";
 import { useToast } from "../../../hooks/use-toast";
@@ -18,68 +17,51 @@ export default function SignInToHub() {
   const { toast } = useToast();
 
   const [showResetModal, setShowResetModal] = useState(false);
-  const [resetStep, setResetStep] = useState<"email" | "otp" | "success">("email");
   const [resetEmail, setResetEmail] = useState("");
-  const [resetOTP, setResetOTP] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [resetLoading, setResetLoading] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   async function handleSignIn() {
     if (!email || !password) {
-      toast({
-        title: "Missing credentials",
-        description: "Please enter both email and password.",
-        variant: "destructive",
-      });
+      toast({ title: "Missing fields", description: "Please fill in all fields.", variant: "destructive" });
       return;
     }
 
     setLoading(true);
-
     try {
-      const response = await projectApiRequest<{ 
-        accessToken?: string; 
-        admin?: { _id: string; name: string; email: string; role: string; hub: string };
-        message?: string;
-      }>({
+      const res = await projectApiRequest<{ message?: string; accessToken?: string; token?: string; project?: Record<string, unknown>; admin?: { _id: string; name: string; email: string; role: string; hub?: string } }>({
         method: "POST",
         endpoint: "/hub/sign-in",
-        data: { email, password },
+        data: { email, password, role: "project" },
       });
 
-      if (response.accessToken) {
-        storeProjectSession(response.accessToken, {
-          email: response.admin?.email || email,
-          role: response.admin?.role || "admin",
-          adminId: response.admin?._id || "",
-          name: response.admin?.name || "Project",
-          hub: response.admin?.hub || "",
-        });
+      const token = (res.token ?? res.accessToken) as string | undefined;
+      if (!token) throw new Error("No access token received");
 
-        toast({
-          title: "Signed in!",
-          description: "Welcome back to Nexura Studio.",
-        });
+      // Store token first so subsequent authenticated requests work
+      storeProjectSession(token, { email, role: res.admin?.role ?? "admin", adminId: res.admin?._id ?? "" });
 
-        setLocation("/studio-dashboard");
-      } else {
-        throw new Error("Authentication failed - no token received");
+      // Fetch project profile to get name and logo
+      try {
+        const { hub } = await projectApiRequest<{ hub: Record<string, any> }>({
+          method: "GET",
+          endpoint: "/hub/me",
+        });
+        storeProjectSession(token, { email, name: hub.name ?? email, logo: hub.logo ?? "", role: res.admin?.role ?? "admin", adminId: res.admin?._id ?? "" });
+      } catch {
+        // profile fetch failed GÇö keep email as name
       }
-    } catch (err: any) {
-      toast({
-        title: "Sign in failed",
-        description: err?.message || "Invalid email or password.",
-        variant: "destructive",
-      });
+
+      toast({ title: "Signed in!", description: "Welcome back to Nexura Studio." });
+      setLocation("/studio-dashboard");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Invalid credentials.";
+      toast({ title: "Sign in failed", description: msg, variant: "destructive" });
     } finally {
       setLoading(false);
     }
   }
 
-  async function handleSendOTP() {
+  async function handleResetPassword() {
     if (!resetEmail) {
       toast({ title: "Missing email", description: "Please enter your email.", variant: "destructive" });
       return;
@@ -90,58 +72,17 @@ export default function SignInToHub() {
       await projectApiRequest({
         method: "POST",
         endpoint: "/hub/forgot-password",
-        data: { email: resetEmail },
+        data: { email: resetEmail, role: "project" },
       });
-      toast({ title: "Code sent!", description: `Verification code sent to ${resetEmail}.` });
-      setResetStep("otp");
+      toast({ title: "Email sent!", description: `Password reset instructions sent to ${resetEmail}.` });
+      setShowResetModal(false);
+      setResetEmail("");
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to send verification code.";
+      const msg = err instanceof Error ? err.message : "Failed to send reset email.";
       toast({ title: "Error", description: msg, variant: "destructive" });
     } finally {
       setResetLoading(false);
     }
-  }
-
-  async function handleResetPassword() {
-    if (!resetOTP || !newPassword || !confirmPassword) {
-      toast({ title: "Missing fields", description: "Please fill in all fields.", variant: "destructive" });
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      toast({ title: "Passwords match", description: "New password and confirm password must match.", variant: "destructive" });
-      return;
-    }
-
-    if (newPassword.length < 8) {
-      toast({ title: "Password too short", description: "Password must be at least 8 characters.", variant: "destructive" });
-      return;
-    }
-
-    setResetLoading(true);
-    try {
-      await projectApiRequest({
-        method: "POST",
-        endpoint: "/hub/reset-password",
-        data: { email: resetEmail, code: resetOTP, password: newPassword },
-      });
-      toast({ title: "Success!", description: "Your password has been reset successfully." });
-      setResetStep("success");
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to reset password.";
-      toast({ title: "Error", description: msg, variant: "destructive" });
-    } finally {
-      setResetLoading(false);
-    }
-  }
-
-  function closeResetModal() {
-    setShowResetModal(false);
-    setResetStep("email");
-    setResetEmail("");
-    setResetOTP("");
-    setNewPassword("");
-    setConfirmPassword("");
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -153,17 +94,8 @@ export default function SignInToHub() {
       <AnimatedBackground />
 
       <div className="max-w-md mx-auto relative z-10 space-y-6">
-        {/* Back Button */}
-        <button
-          onClick={() => setLocation("/studio/projects/create")}
-          className="absolute top-4 left-4 inline-flex items-center gap-2 px-3 py-2 rounded-full border border-white/30 bg-black/30 hover:bg-black/50 text-white text-xs sm:text-sm"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back
-        </button>
-
         {/* Header */}
-        <div className="text-center py-4 sm:py-6 px-2 sm:px-0 pt-12">
+        <div className="text-center py-4 sm:py-6 px-2 sm:px-0">
           <h1 className="text-xl sm:text-2xl font-bold text-white mb-2">
             Sign in to Your Project
           </h1>
@@ -243,159 +175,46 @@ export default function SignInToHub() {
       {showResetModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-[#0d0d14] border border-purple-500/20 rounded-2xl p-7 w-full max-w-md space-y-6 animate-modal-pop shadow-[0_0_60px_rgba(131,58,253,0.2)]">
-            {resetStep === "email" && (
-              <>
-                <div className="space-y-2 text-center">
-                  <h2 className="text-xl font-bold text-white">Reset Password</h2>
-                  <p className="text-white/50 text-sm">
-                    Enter your email address and we'll send you a verification code to reset your password.
-                  </p>
-                </div>
+            <div className="space-y-2 text-center">
+              <h2 className="text-xl font-bold text-white">Reset Password</h2>
+              <p className="text-white/50 text-sm">
+                Enter your email address and weGÇÖll send you an email with instructions to reset your password.
+              </p>
+            </div>
 
-                <div>
-                  <label className="text-white/60 text-sm block mb-2">Email Address</label>
-                  <Input
-                    type="email"
-                    placeholder="Enter your email address"
-                    value={resetEmail}
-                    onChange={(e) => setResetEmail(e.target.value)}
-                    className="w-full bg-white/5 text-white border-white/10 focus:border-purple-500 placeholder:text-white/30 mt-0"
-                  />
-                </div>
+            <div>
+              <label className="text-white/60 text-sm block mb-2">Email Address</label>
+              <Input
+                type="email"
+                placeholder="Enter your email address"
+                value={resetEmail}
+                onChange={(e) => setResetEmail(e.target.value)}
+                className="w-full bg-white/5 text-white border-white/10 focus:border-purple-500 placeholder:text-white/30 mt-0"
+              />
+            </div>
 
-                <div className="flex justify-end gap-3">
-                  <button
-                    type="button"
-                    className="px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white text-sm font-medium transition-all"
-                    onClick={closeResetModal}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleSendOTP}
-                    disabled={resetLoading}
-                    className="px-5 py-2.5 rounded-xl bg-[#8B3EFE] text-white text-sm font-semibold hover:opacity-90 hover:shadow-[0_0_20px_rgba(131,58,253,0.5)] hover:-translate-y-0.5 active:translate-y-0 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {resetLoading ? "Sending..." : "Send Code"}
-                  </button>
-                </div>
-              </>
-            )}
-
-            {resetStep === "otp" && (
-              <>
-                <div className="space-y-2 text-center">
-                  <h2 className="text-xl font-bold text-white">Verify Code</h2>
-                  <p className="text-white/50 text-sm">
-                    Enter the 6-digit code sent to <b>{resetEmail}</b>.
-                  </p>
-                </div>
-
-                <div className="flex justify-center">
-                  <InputOTP
-                    maxLength={6}
-                    value={resetOTP}
-                    onChange={setResetOTP}
-                  >
-                    <InputOTPGroup className="gap-2">
-                      <InputOTPSlot index={0} />
-                      <InputOTPSlot index={1} />
-                      <InputOTPSlot index={2} />
-                      <InputOTPSlot index={3} />
-                      <InputOTPSlot index={4} />
-                      <InputOTPSlot index={5} />
-                    </InputOTPGroup>
-                  </InputOTP>
-                </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-white/60 text-sm block mb-2">New Password</label>
-                    <div className="relative">
-                      <Input
-                        type={showNewPassword ? "text" : "password"}
-                        placeholder="Enter new password"
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        className="w-full bg-white/5 text-white border-white/10 focus:border-purple-500 pr-10"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowNewPassword(!showNewPassword)}
-                        className="absolute right-2 top-2 text-gray-400 hover:text-white"
-                      >
-                        {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-white/60 text-sm block mb-2">Confirm New Password</label>
-                    <div className="relative">
-                      <Input
-                        type={showConfirmPassword ? "text" : "password"}
-                        placeholder="Confirm new password"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        className="w-full bg-white/5 text-white border-white/10 focus:border-purple-500 pr-10"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        className="absolute right-2 top-2 text-gray-400 hover:text-white"
-                      >
-                        {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex justify-end gap-3 pt-2">
-                  <button
-                    type="button"
-                    className="px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white text-sm font-medium transition-all"
-                    onClick={() => setResetStep("email")}
-                  >
-                    Back
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleResetPassword}
-                    disabled={resetLoading}
-                    className="px-5 py-2.5 rounded-xl bg-[#8B3EFE] text-white text-sm font-semibold hover:opacity-90 hover:shadow-[0_0_20px_rgba(131,58,253,0.5)] hover:-translate-y-0.5 active:translate-y-0 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {resetLoading ? "Resetting..." : "Update Password"}
-                  </button>
-                </div>
-              </>
-            )}
-
-            {resetStep === "success" && (
-              <div className="text-center space-y-6 py-4">
-                <div className="flex justify-center">
-                  <div className="h-16 w-16 bg-green-500/10 rounded-full flex items-center justify-center">
-                    <CheckCircle2 className="h-8 w-8 text-green-500" />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <h2 className="text-xl font-bold text-white">Password Reset Successful!</h2>
-                  <p className="text-white/50 text-sm">
-                    Your password has been successfully updated. You can now sign in with your new credentials.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={closeResetModal}
-                  className="w-full py-3 rounded-xl bg-[#8B3EFE] text-white text-sm font-semibold hover:opacity-90 hover:shadow-[0_0_20px_rgba(131,58,253,0.5)] transition-all"
-                >
-                  Back to Sign In
-                </button>
-              </div>
-            )}
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                className="px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white text-sm font-medium transition-all"
+                onClick={() => setShowResetModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleResetPassword}
+                disabled={resetLoading}
+                className="px-5 py-2.5 rounded-xl bg-[#8B3EFE] text-white text-sm font-semibold hover:opacity-90 hover:shadow-[0_0_20px_rgba(131,58,253,0.5)] hover:-translate-y-0.5 active:translate-y-0 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:translate-y-0 disabled:shadow-none"
+              >
+                {resetLoading ? "Sending..." : "Reset Password"}
+              </button>
+            </div>
           </div>
         </div>
       )}
     </div>
   );
 }
+
+

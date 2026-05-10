@@ -6,12 +6,12 @@ import { Badge } from "../../../components/ui/badge";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import { cn } from "../../../lib/utils";
-import AnimatedBackground from "../../../components/AnimatedBackground.tsx";
+import AnimatedBackground from "../../../components/AnimatedBackground";
 import StudioSidebar from "./StudioSidebar";
-import { apiRequest } from "../../../lib/config.ts";
+import { apiRequest } from "../../../lib/config";
 import { projectApiRequest, isProjectSignedIn } from "../../../lib/projectApi";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../../../components/ui/collapsible";
-import { getStoredAdminInfo } from "../../../lib/config.ts";
+import { getStoredAdminInfo } from "../../../lib/config";
 import {
   Dialog,
   DialogContent,
@@ -24,8 +24,8 @@ import { StatsOverview } from "../../../components/admin/StatsOverview";
 import CampaignSubmissions from "../../../components/admin/CampaignSubmissions";
 import { TASKS } from "../../../types/admin";
 import AdminManagement, { AdminType as Admin } from "../../../components/admin/AdminManagement";
-import CampaignsTab from "../../../components/admin/CampaignsTab.tsx";
-import CreateNewCampaigns from "../../../components/admin/CreateNewCampaign.tsx";
+import CampaignsTab from "../../../components/admin/CampaignsTab";
+import CreateNewCampaigns from "../../../components/admin/CreateNewCampaign";
 interface StudioDashboardProps {
   onLogout: () => void;
 }
@@ -38,7 +38,7 @@ type BannedUser = {
   bannedAt: string;
 }
 
-type TabType = "hubProfile" | "campaignSubmissions" | "adminManagement" | "campaignsTab" | "lessonsTab";
+type TabType = "hubProfile" | "campaignSubmissions" | "adminManagement" | "campaignsTab";
 
 export default function StudioDashboard({ onLogout }: StudioDashboardProps) {
   const [location, setLocation] = useLocation();
@@ -46,11 +46,10 @@ export default function StudioDashboard({ onLogout }: StudioDashboardProps) {
     if (location.includes("/studio-dashboard/dashboard")) return "campaignSubmissions";
     if (location.includes("hub-profile")) return "hubProfile";
     if (location.includes("admin-management")) return "adminManagement";
-    if (location.includes("create-lesson")) return "lessonsTab";
     if (location.includes("campaigns-tab") || location.includes("create-new-campaign") || location.includes("my-campaign")) {
       return "campaignsTab";
     }
-    return "campaignSubmissions";
+    return "campaignsTab";
   };
   const [activeTab, setActiveTab] = useState<TabType>(deriveTab);
 
@@ -58,7 +57,7 @@ export default function StudioDashboard({ onLogout }: StudioDashboardProps) {
     setActiveTab(deriveTab());
   }, [location]);
 
-  // Auth guard — redirect to /studio if no valid session
+  // Auth guard G�� redirect to /studio if no valid session
   useEffect(() => {
     if (!isProjectSignedIn()) {
       setLocation("/studio");
@@ -235,7 +234,10 @@ const fetchBannedUsers = async () => {
     <Button
       variant="ghost"
       size="sm"
-      onClick={onLogout}
+      onClick={() => {
+        onLogout();
+        setLocation("/discover");
+      }}
       className="text-white/70 hover:text-white hover:text-red-400"
     >
       Logout
@@ -393,3 +395,5 @@ const fetchBannedUsers = async () => {
     </div>
   );
 }
+
+
