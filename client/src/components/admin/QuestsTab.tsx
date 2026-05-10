@@ -238,10 +238,10 @@ export default function QuestsTab() {
                 className="flex-1 px-2 py-1.5 text-xs bg-[#8B3EFE] rounded-lg hover:bg-[#7b35e6] transition"
                 onClick={() => setLocation(`${createUrl}?edit=${quest._id}`)}
               >
-                {isSuperAdmin ? "View Details" : "View"}
+                View Details
               </button>
 
-              {isSuperAdmin && !draft && !completed && (
+              {!draft && !completed && (
                 <button
                   title="Close quest"
                   className="px-2 py-1.5 text-xs bg-yellow-600/20 text-yellow-400 rounded-lg hover:bg-yellow-600/30 transition disabled:opacity-50 disabled:cursor-not-allowed"
@@ -252,7 +252,7 @@ export default function QuestsTab() {
                 </button>
               )}
 
-              {isSuperAdmin && (draft || completed) && (
+              {(draft || completed) && (
                 <button
                   title="Delete quest"
                   className="px-2 py-1.5 text-xs bg-red-600/20 text-red-400 rounded-lg hover:bg-red-600/30 transition disabled:opacity-50 disabled:cursor-not-allowed"
@@ -261,8 +261,7 @@ export default function QuestsTab() {
                 >
                   {deletingId === quest._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                 </button>
-              )}
-            </div>
+              )}            </div>
 
             {scheduled ? (
               <div className="flex items-center gap-1 px-2 py-0.5 text-[10px] rounded self-start bg-black/40 border border-purple-500/30">
@@ -374,6 +373,12 @@ export default function QuestsTab() {
               {pendingAction?.type === "delete" ? "Delete" : "Close Quest"}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+      </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
