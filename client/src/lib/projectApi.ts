@@ -14,8 +14,13 @@ export function getStoredProjectToken(): string | null {
     const projToken = localStorage.getItem("nexura-project:token") ?? localStorage.getItem("nexura:proj-token");
     if (projToken) return projToken;
     
-    // Fallback to user hub token
-    return getStoredUserToken();
+    // Only fallback to user token if it's a Hub session
+    const userSession = getStoredUserSession();
+    if (userSession?.token && userSession?.hub) {
+      return userSession.token;
+    }
+
+    return null;
   } catch {
     return null;
   }
@@ -52,12 +57,15 @@ export function clearProjectSession() {
 }
 
 export function isProjectSignedIn(): boolean {
-  // Email/password session
+  // Email/password session or Hub session
   if (getStoredProjectToken()) return true;
+
   // Wallet-based org session (set by use-wallet org-signin path)
   try { if (localStorage.getItem("nexura:proj-token")) return true; } catch { /* ignore */ }
+  
   // Wallet-based studio session started via BuilderPopup (project mode)
   try { if (localStorage.getItem("nexura:studio-wallet")) return true; } catch { /* ignore */ }
+
   return false;
 }
 

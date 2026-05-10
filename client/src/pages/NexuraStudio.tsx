@@ -16,7 +16,6 @@ const FEATURES = [
 
 export default function NexuraStudio() {
   const [, setLocation] = useLocation();
-  const [redirecting] = useState(() => isProjectSignedIn());
   const { isConnected, address, connectWallet } = useWallet();
   const text = "Nexura Studio";
   const [toggle, setToggle] = useState(false);
@@ -25,14 +24,6 @@ export default function NexuraStudio() {
   const interval = setInterval(() => setToggle(prev => !prev), 2500)
   return () => clearInterval(interval);
 }, []);
-
-  useEffect(() => {
-    if (isProjectSignedIn()) {
-      setLocation("/studio-dashboard");
-    }
-  }, []);
-
-  if (redirecting) return null;
 
   return (
     <div className="min-h-screen bg-black text-white overflow-auto relative">
