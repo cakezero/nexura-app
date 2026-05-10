@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { Link, useLocation } from "wouter";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, XCircle, Trash2, Loader2, Clock } from "lucide-react";
+import { Card } from "../ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "../ui/dialog";
 import { projectApiRequest } from "../../lib/projectApi";
 import { userApiRequest } from "../../lib/userApi";
@@ -10,8 +11,6 @@ import { useToast } from "../../hooks/use-toast";
 import { getStoredUserSession } from "../../lib/userSession";
 import { apiRequestV2 } from "../../lib/queryClient";
 import { Button } from "../ui/button";
-
-import QuestCard from "../QuestCard";
 
 interface Quest {
   _id: string;
@@ -22,8 +21,6 @@ interface Quest {
   projectCoverImage?: string;
   reward?: { pool?: number };
   status?: string;
-  project_name?: string;
-  project_image?: string;
 }
 
 type PendingAction = { type: "delete" | "close"; id: string; title: string } | null;
@@ -50,6 +47,7 @@ export default function QuestsTab() {
 
   const session = getStoredUserSession();
   const isUser = session?.type === "user";
+  const isSuperAdmin = session?.role === "superadmin";
 
   const fetchQuests = useCallback(async () => {
     try {
@@ -193,53 +191,90 @@ export default function QuestsTab() {
     const completed = isCompleted(quest);
 
     let status = "Published";
-    let statusColor = "text-[#00E1A2] bg-[#00E1A24D]";
+    let statusColor = "bg-green-500";
 
     if (draft) {
       status = "Draft";
-      statusColor = "text-yellow-400 bg-yellow-400/20";
+      statusColor = "bg-yellow-500";
     } else if (scheduled) {
       status = "Upcoming";
-      statusColor = "text-blue-400 bg-blue-400/20";
+      statusColor = "bg-blue-500";
     } else if (completed) {
-      status = "Completed";
-      statusColor = "text-gray-400 bg-gray-400/20";
+      status = "Closed";
+      statusColor = "bg-gray-500";
     }
 
     const formatDate = (dateStr: string) => {
       const date = new Date(dateStr);
-      return date.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+      return date.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
     };
-
-    const durationText = scheduled && countdowns[quest._id] 
-      ? `Starts in ${countdowns[quest._id]}`
-      : `${formatDate(quest.starts_at)} - ${formatDate(quest.ends_at)}`;
 
     const createUrl = isUser ? "/user-dashboard/create-new-quest" : "/studio-dashboard/create-new-quest";
 
     return (
-      <QuestCard
-        key={quest._id}
-        questId={quest._id}
-        title={quest.title}
-        description={quest.description || "Quest"}
-        projectName={quest.project_name || session?.name || "My Project"}
-        projectLogo={quest.project_image || quest.projectCoverImage || "/quest-1.png"}
-        heroImage={quest.projectCoverImage || "/quest-1.png"}
-        rewards={quest.reward?.pool ? `${quest.reward.pool} TRUST` : "XP Rewards"}
-        duration={durationText}
-        status={status}
-        statusColor={statusColor}
-        showClose={!draft && !completed}
-        showDelete={draft || completed}
-        isClosing={closingId === quest._id}
-        isDeleting={deletingId === quest._id}
-        onClose={(id) => setPendingAction({ type: "close", id, title: quest.description || quest.title })}
-        onDelete={(id) => setPendingAction({ type: "delete", id, title: quest.description || quest.title })}
-        onView={(id) => setLocation(`${createUrl}?edit=${id}`)}
-        rewardPoolLabel="REWARD POOL:"
-        from="studio"
-      />
+      <Card key={quest._id} className="w-full h-full bg-gray-900 text-white rounded-xl overflow-hidden shadow-lg flex flex-col">
+        {quest.projectCoverImage ? (
+          <img src={quest.projectCoverImage} alt={quest.description || quest.title} className="w-full h-28 object-cover" />
+        ) : (
+          <div className="w-full h-28 bg-gray-700 flex items-center justify-center">
+            <span className="text-white/50 text-xs">No Image</span>
+          </div>
+        )}
+
+        <div className="p-3 flex flex-1 flex-col gap-1.5 text-left">
+          <h3 className="font-bold text-sm truncate" title={quest.description || quest.title}>
+            {quest.description || quest.title}
+          </h3>
+          <p className="text-white/70 text-xs">
+            {formatDate(quest.starts_at)} - {formatDate(quest.ends_at)}
+          </p>
+          {Number(quest.reward?.pool ?? 0) > 0 && (
+            <p className="text-purple-400 text-xs font-medium">Reward Pool: {quest.reward?.pool} TRUST</p>
+          )}
+
+          <div className="mt-auto flex flex-col gap-2 pt-3">
+            <div className="flex gap-1.5 flex-wrap">
+              <button
+                className="flex-1 px-2 py-1.5 text-xs bg-[#8B3EFE] rounded-lg hover:bg-[#7b35e6] transition"
+                onClick={() => setLocation(`${createUrl}?edit=${quest._id}`)}
+              >
+                {isSuperAdmin ? "View Details" : "View"}
+              </button>
+
+              {isSuperAdmin && !draft && !completed && (
+                <button
+                  title="Close quest"
+                  className="px-2 py-1.5 text-xs bg-yellow-600/20 text-yellow-400 rounded-lg hover:bg-yellow-600/30 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={() => setPendingAction({ type: "close", id: quest._id, title: quest.description || quest.title })}
+                  disabled={closingId === quest._id || deletingId === quest._id}
+                >
+                  {closingId === quest._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
+                </button>
+              )}
+
+              {isSuperAdmin && (draft || completed) && (
+                <button
+                  title="Delete quest"
+                  className="px-2 py-1.5 text-xs bg-red-600/20 text-red-400 rounded-lg hover:bg-red-600/30 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={() => setPendingAction({ type: "delete", id: quest._id, title: quest.description || quest.title })}
+                  disabled={deletingId === quest._id || closingId === quest._id}
+                >
+                  {deletingId === quest._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                </button>
+              )}
+            </div>
+
+            {scheduled ? (
+              <div className="flex items-center gap-1 px-2 py-0.5 text-[10px] rounded self-start bg-black/40 border border-purple-500/30">
+                <Clock className="w-3 h-3 text-purple-400 animate-pulse" />
+                <span className="text-purple-300 font-mono font-semibold">{countdowns[quest._id] || "Loading..."}</span>
+              </div>
+            ) : (
+              <span className={`px-2 py-0.5 text-[10px] rounded self-start ${statusColor}`}>{status}</span>
+            )}
+          </div>
+        </div>
+      </Card>
     );
   };
 
@@ -250,8 +285,8 @@ export default function QuestsTab() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div className="space-y-1">
-            <h1 className="text-2xl md:text-3xl font-bold text-white">Quests</h1>
-            <p className="text-white/60 text-lg">Manage and track your community quests</p>
+            <h1 className="text-2xl md:text-3xl font-bold text-white text-left">Quests</h1>
+            <p className="text-white/60 text-lg text-left">Manage and track your community quests</p>
           </div>
           <Button
             variant="ghost"
@@ -285,7 +320,7 @@ export default function QuestsTab() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {activeTab === "all" && (
+            {activeTab === "all" && isSuperAdmin && (
               <Link
                 href={createUrl}
                 className="w-full p-6 flex flex-col items-center justify-center gap-3 border-2 border-dashed border-purple-500 rounded-2xl bg-black hover:bg-black/80 hover:border-[#8B3EFE] transition cursor-pointer no-underline"
