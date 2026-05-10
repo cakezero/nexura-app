@@ -91,11 +91,12 @@ export default function UserSignup() {
 
     setCreating(true);
     try {
-      // Validate email (OTP logic is now bypassed on server)
-      await apiRequestV2("POST", `/api/hub-auth/validate-email?email=${encodeURIComponent(email)}&page=user`);
+      const usernameToUse = mainAppUsername || walletAddress || email.split("@")[0];
+
+      // Validate email & username (OTP logic is now bypassed on server)
+      await apiRequestV2("POST", `/api/hub-auth/validate-email?email=${encodeURIComponent(email)}&name=${encodeURIComponent(usernameToUse)}&page=user`);
 
       // Directly complete signup bypassing OTP verification
-      const usernameToUse = mainAppUsername || walletAddress || email.split("@")[0];
       const res = await userApiRequest<{
         accessToken?: string;
         admin?: { _id: string; name: string; email: string; role: string; hub: string };

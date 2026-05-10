@@ -65,8 +65,8 @@ const handleSubmit = async () => {
 
   setCreating(true);
   try {
-    // Validate email (OTP logic is now bypassed on server)
-    await apiRequestV2("POST", `/api/hub-auth/validate-email?email=${encodeURIComponent(email)}&page=project`);
+    // Validate email & username (OTP logic is now bypassed on server)
+    await apiRequestV2("POST", `/api/hub-auth/validate-email?email=${encodeURIComponent(email)}&name=${encodeURIComponent(name)}&page=project`);
 
     // Directly complete signup bypassing OTP verification
     const res = await projectApiRequest<{

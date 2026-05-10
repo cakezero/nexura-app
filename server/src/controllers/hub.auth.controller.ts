@@ -278,14 +278,23 @@ export const hubAdminSignUp = async (req: GlobalRequest, res: GlobalResponse) =>
 		};
     */
 
-		const adminExists = await hubAdmin.findOne({ email }).lean();
+		const strippedEmail = email.trim().toLowerCase();
+		const trimmedName = String(req.body.name ?? "").trim();
+
+		const adminExists = await hubAdmin.findOne({
+			$or: [{ email: strippedEmail }, { name: trimmedName }]
+		}).lean();
+
 		if (adminExists) {
-			res.status(BAD_REQUEST).json({ error: "email is already in use" });
+			const field = adminExists.email === strippedEmail ? "email" : "username";
+			res.status(BAD_REQUEST).json({ error: `${field} is already in use` });
 			return;
 		}
 
 		req.body.hub = ""; // otp.hubId;
 		req.body.role = "superadmin"; // otp.role || "admin";
+		req.body.name = trimmedName;
+		req.body.email = strippedEmail;
 		req.body.password = await hashPassword(req.body.password);
 
 		const admin = await hubAdmin.create(req.body);
@@ -531,17 +540,28 @@ export const userHubAdminSignUp = async (req: GlobalRequest, res: GlobalResponse
     const { name, email, password } = req.body;
 
     const strippedEmail = email.trim().toLowerCase();
+    const trimmedName = name.trim();
 
-    const emailExists = await userHubAdmin.exists({ email: strippedEmail });
-    if (emailExists) {
-      res.status(BAD_REQUEST).json({ error: "An account with this email already exists. Please sign in instead." });
+    const adminExists = await userHubAdmin.findOne({
+      $or: [{ email: strippedEmail }, { name: trimmedName }]
+    }).lean();
+
+    if (adminExists) {
+      const field = adminExists.email === strippedEmail ? "email" : "username";
+      res.status(BAD_REQUEST).json({ error: `${field} is already in use` });
+      return;
+    }
+
+    const hubNameExists = await userHub.exists({ name: trimmedName });
+    if (hubNameExists) {
+      res.status(BAD_REQUEST).json({ error: "username is already in use" });
       return;
     }
 
     const hashedPassword = await hashPassword(password);
 
 	  const superAdmin = await userHubAdmin.create({
-      name: name.trim(),
+      name: trimmedName,
       email: strippedEmail,
       password: hashedPassword,
     });
@@ -549,35 +569,19 @@ export const userHubAdminSignUp = async (req: GlobalRequest, res: GlobalResponse
     // Fetch main app profile picture for hub logo
     let logoUrl = "";
     try {
-      const mainUser = await user.findOne({ username: name.trim() }).lean();
+      const mainUser = await user.findOne({ username: trimmedName }).lean();
       logoUrl = (mainUser as any)?.profilePic || "";
     } catch {}
 
-    // Create a hub for the new admin immediately (handle name conflicts)
-    let createdHub;
-    try {
-      createdHub = await userHub.create({
-        name: name.trim(),
-        description: "",
-        website: "",
-        xAccount: "",
-        logo: logoUrl,
-        superAdmin: superAdmin._id,
-      });
-    } catch (createErr: any) {
-      if (createErr?.code === 11000) {
-        createdHub = await userHub.create({
-          name: `${name.trim()}-${superAdmin._id.toString().slice(-6)}`,
-          description: "",
-          website: "",
-          xAccount: "",
-          logo: "",
-          superAdmin: superAdmin._id,
-        });
-      } else {
-        throw createErr;
-      }
-    }
+    // Create a hub for the new admin immediately
+    const createdHub = await userHub.create({
+      name: trimmedName,
+      description: "",
+      website: "",
+      xAccount: "",
+      logo: logoUrl,
+      superAdmin: superAdmin._id,
+    });
 
     // Link the hub to the admin
     await userHubAdmin.findByIdAndUpdate(superAdmin._id, { hub: createdHub._id });
@@ -587,9 +591,8 @@ export const userHubAdminSignUp = async (req: GlobalRequest, res: GlobalResponse
 		res.status(CREATED).json({ message: "user hub admin created", accessToken, admin: { _id: superAdmin._id.toString(), name: superAdmin.name, email: superAdmin.email, role: "superadmin", hub: createdHub._id.toString() }, hub: { logo: createdHub.logo || "" } });
 	} catch (error: any) {
 		logger.error(error);
-		const isDuplicate = error?.code === 11000;
-		res.status(isDuplicate ? BAD_REQUEST : INTERNAL_SERVER_ERROR).json({
-      error: isDuplicate ? "An account with this email already exists. Please sign in instead." : "Error creating super admin",
+		res.status(INTERNAL_SERVER_ERROR).json({
+      error: "Error creating user hub account",
     });
 	}
 }
@@ -709,7 +712,7 @@ export const userHubResetPassword = async (req: GlobalRequest, res: GlobalRespon
 
 export const validateHubEmail = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
-    const { email, page } = req.query as { page: string, email: string };
+    const { email, name, page } = req.query as { page: string, email: string, name?: string };
 
     if (!email) {
       res.status(BAD_REQUEST).json({ error: "send the email to validate" });
@@ -717,23 +720,34 @@ export const validateHubEmail = async (req: GlobalRequest, res: GlobalResponse) 
     }
 
     const strippedEmail = email.trim().toLowerCase();
+    const trimmedName = name?.trim();
 
-    let emailVerified: any | null = null;
+    let emailExists: any | null = null;
+    let nameExists: any | null = null;
+
     if (page === "user") {
-      emailVerified = await userHubAdmin.exists({ email: strippedEmail, emailVerified: true });
+      emailExists = await userHubAdmin.exists({ email: strippedEmail });
+      if (trimmedName) nameExists = await userHubAdmin.exists({ name: trimmedName });
+      if (!nameExists && trimmedName) nameExists = await userHub.exists({ name: trimmedName });
     } else {
-      emailVerified = await hubAdmin.exists({ email: strippedEmail, emailVerified: true });
+      emailExists = await hubAdmin.exists({ email: strippedEmail });
+      if (trimmedName) nameExists = await hubAdmin.exists({ name: trimmedName });
     }
 
-    if (emailVerified) {
-      res.status(FORBIDDEN).json({ error: "email already verified, kindly log in" });
+    if (emailExists) {
+      res.status(BAD_REQUEST).json({ error: "email is already in use" });
+      return;
+    }
+
+    if (nameExists) {
+      res.status(BAD_REQUEST).json({ error: "username is already in use" });
       return;
     }
 
     // const code = generateOTP();
 
     // await OTP.deleteMany({ email: strippedEmail });
-    // await OTP.create({ code, email: strippedEmail, page: page || "project", role: emailVerified?.role || "admin" });
+    // await OTP.create({ code, email: strippedEmail, page: page || "project", role: "admin" });
 
     // await sendOTPConfirmEmail({ email: strippedEmail, code });
 
