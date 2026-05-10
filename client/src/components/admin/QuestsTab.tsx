@@ -47,7 +47,6 @@ export default function QuestsTab() {
 
   const session = getStoredUserSession();
   const isUser = session?.type === "user";
-  const isSuperAdmin = session?.role === "superadmin";
 
   const fetchQuests = useCallback(async () => {
     try {
@@ -261,7 +260,8 @@ export default function QuestsTab() {
                 >
                   {deletingId === quest._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                 </button>
-              )}            </div>
+              )}
+            </div>
 
             {scheduled ? (
               <div className="flex items-center gap-1 px-2 py-0.5 text-[10px] rounded self-start bg-black/40 border border-purple-500/30">
@@ -319,7 +319,7 @@ export default function QuestsTab() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {activeTab === "all" && isSuperAdmin && (
+            {activeTab === "all" && (
               <Link
                 href={createUrl}
                 className="w-full p-6 flex flex-col items-center justify-center gap-3 border-2 border-dashed border-purple-500 rounded-2xl bg-black hover:bg-black/80 hover:border-[#8B3EFE] transition cursor-pointer no-underline"
@@ -373,12 +373,6 @@ export default function QuestsTab() {
               {pendingAction?.type === "delete" ? "Delete" : "Close Quest"}
             </Button>
           </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
-  );
-}
-      </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
