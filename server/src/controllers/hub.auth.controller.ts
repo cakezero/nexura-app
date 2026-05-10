@@ -287,7 +287,7 @@ export const hubAdminSignUp = async (req: GlobalRequest, res: GlobalResponse) =>
 
 		if (adminExists) {
 			const field = adminExists.email === strippedEmail ? "email" : "username";
-			res.status(BAD_REQUEST).json({ error: `${field} is already in use` });
+			res.status(BAD_REQUEST).json({ error: `This ${field} account already has an existing hub` });
 			return;
 		}
 
@@ -548,13 +548,13 @@ export const userHubAdminSignUp = async (req: GlobalRequest, res: GlobalResponse
 
     if (adminExists) {
       const field = adminExists.email === strippedEmail ? "email" : "username";
-      res.status(BAD_REQUEST).json({ error: `${field} is already in use` });
+      res.status(BAD_REQUEST).json({ error: `This ${field} account already has an existing hub` });
       return;
     }
 
     const hubNameExists = await userHub.exists({ name: trimmedName });
     if (hubNameExists) {
-      res.status(BAD_REQUEST).json({ error: "username is already in use" });
+      res.status(BAD_REQUEST).json({ error: "This username account already has an existing hub" });
       return;
     }
 
@@ -735,12 +735,12 @@ export const validateHubEmail = async (req: GlobalRequest, res: GlobalResponse) 
     }
 
     if (emailExists) {
-      res.status(BAD_REQUEST).json({ error: "email is already in use" });
+      res.status(BAD_REQUEST).json({ error: "This email account already has an existing hub" });
       return;
     }
 
     if (nameExists) {
-      res.status(BAD_REQUEST).json({ error: "username is already in use" });
+      res.status(BAD_REQUEST).json({ error: "This username already has an existing hub" });
       return;
     }
 

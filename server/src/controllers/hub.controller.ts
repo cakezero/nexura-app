@@ -1052,7 +1052,6 @@ export const createUserHub = async (req: GlobalRequest, res: GlobalResponse) => 
         // Already their hub, just update description and return success
         await userHub.findByIdAndUpdate(existingUserHubWithName._id, {
           description: req.body.description ?? existingUserHubWithName.description,
-          website: String(req.body.website ?? existingUserHubWithName.website).trim(),
           xAccount: String(req.body.xAccount ?? existingUserHubWithName.xAccount).trim(),
         });
         res.status(OK).json({ message: "user hub updated!" });
@@ -1062,7 +1061,6 @@ export const createUserHub = async (req: GlobalRequest, res: GlobalResponse) => 
       return;
     }
 
-    const website = String(req.body.website ?? "").trim();
     const xAccount = String(req.body.xAccount ?? "").trim();
 
             const hubAdminDoc = await userHubAdmin.findById(req.id).lean();
@@ -1075,7 +1073,6 @@ export const createUserHub = async (req: GlobalRequest, res: GlobalResponse) => 
 const createdHub = await userHub.create({
       name,
       description: req.body.description ?? "",
-      website,
       xAccount,
       logo: logoUrl,
       superAdmin: req.id,

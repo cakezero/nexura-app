@@ -138,7 +138,7 @@ export const deleteLessonAdmin = async (req: GlobalRequest, res: GlobalResponse)
       return;
     }
 
-    if (lessonCreator.creatorModel === "user") {
+    if (lessonCreator.creatorModel === "user-hubs") {
       const userHubFound = await userHub.findById(lessonCreator.creator);
 
       if (!userHubFound) {
