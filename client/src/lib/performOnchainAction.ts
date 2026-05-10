@@ -103,7 +103,7 @@ export const payStudioHubFee = async (testAmount?: number, contractAddress?: str
     
     if (contractAddress) {
       targetChainId = chainId;
-      amount = "1";
+      amount = "0.1";
     } else {
       const config = await getStudioPaymentConfig();
       contractAddress = requireContractAddress(config.contractAddress, "Studio fee contract", config.network ?? "the server");
