@@ -198,6 +198,11 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
       return null;
     }
 
+    if (thenNavigate === "review" && tasks.length < 3) {
+      toast({ title: "Incomplete", description: "Please add at least 3 tasks before reviewing.", variant: "destructive" });
+      return null;
+    }
+
     setSaveLoading(true);
     try {
       const fd = buildQuestFormData(true);
@@ -221,17 +226,22 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
   };
 
   const handlePublish = async () => {
+    if (!questName || tasks.length < 3) {
+      toast({ title: "Incomplete", description: "Please provide a name and at least 3 tasks.", variant: "destructive" });
+      return;
+    }
+
     setLoading(true);
     try {
       const savedId = questId ?? await handleSaveDraft();
       if (!savedId) return;
 
-      const fd = buildQuestFormData(false);
       const endpoint = `/${apiPrefix}/publish-quest`;
       await apiRequest({
         method: "PATCH",
         endpoint,
-        data: { questId: savedId, txHash: paymentTxHash },
+        params: { id: savedId },
+        data: { txHash: paymentTxHash },
       });
       
       setPublishedQuest({
