@@ -11,8 +11,6 @@ import { useToast } from "../../../hooks/use-toast";
 import { useWallet } from "../../../hooks/use-wallet";
 import { BACKEND_URL } from "../../../lib/constants";
 import { apiRequestV2 } from "../../../lib/queryClient";
-import { userApiRequest } from "../../../lib/userApi";
-import { storeUserSession } from "../../../lib/userSession";
 
 export default function UserSignup() {
   const [email, setEmail] = useState("");
@@ -91,38 +89,21 @@ export default function UserSignup() {
 
     setCreating(true);
     try {
-      // Validate email (OTP logic is now bypassed on server)
       await apiRequestV2("POST", `/api/hub-auth/validate-email?email=${encodeURIComponent(email)}&page=user`);
 
-      // Directly complete signup bypassing OTP verification
-      const usernameToUse = mainAppUsername || walletAddress || email.split("@")[0];
-      const res = await userApiRequest<{
-        accessToken?: string;
-        admin?: { _id: string; name: string; email: string; role: string; hub: string };
-        hub?: { logo?: string };
-      }>({
-        method: "POST",
-        endpoint: "/user-hub/sign-up",
-        data: { name: usernameToUse, email, password },
-      });
+      sessionStorage.setItem("nexura:pending-signup", JSON.stringify({
+        email,
+        password,
+        name: mainAppUsername || walletAddress,
+        page: "user",
+        walletAddress,
+        mainAppUsername,
+      }));
 
-      if (res.accessToken) {
-        storeUserSession({
-          token: res.accessToken,
-          type: "user",
-          role: res.admin?.role || "user",
-          userId: res.admin?._id,
-          name: res.admin?.name || walletAddress,
-          email: res.admin?.email || email,
-          hub: res.admin?.hub,
-          avatar: res.hub?.logo || "",
-        });
-        toast({ title: "Account created!", description: "Welcome to Nexura Studio. Please set up your hub profile." });
-        setLocation("/studio/users-hub");
-      }
+      setLocation(`/studio/verify-otp?email=${encodeURIComponent(email)}&page=user`);
     } catch (err: any) {
       toast({
-        title: "Signup failed",
+        title: "Failed to send OTP",
         description: err?.error || err?.message || "Something went wrong.",
         variant: "destructive",
       });
@@ -261,7 +242,7 @@ export default function UserSignup() {
               disabled={creating}
               className="w-full rounded-full bg-[#8B3EFE] text-white hover:opacity-90 flex items-center justify-center gap-2 text-sm h-10"
             >
-              {creating ? "Creating Account..." : "Create Account"}
+              {creating ? "Sending OTP..." : "Create Account"}
               <ArrowRight className="h-4 w-4" />
             </Button>
           </CardFooter>
