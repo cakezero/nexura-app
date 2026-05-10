@@ -1,15 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Card } from "../ui/card";
-import { Button } from "../ui/button";
-import { useLocation } from "wouter";
-import { RefreshCw, XCircle, Loader2 } from "lucide-react";
+import { useEffect, useState, useCallback } from "react";
+import { Link, useLocation } from "wouter";
+import { RefreshCw } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "../ui/dialog";
 import { projectApiRequest } from "../../lib/projectApi";
 import { userApiRequest } from "../../lib/userApi";
 import { useToast } from "../../hooks/use-toast";
 import { getStoredUserSession } from "../../lib/userSession";
+import { apiRequestV2 } from "../../lib/queryClient";
+import { Button } from "../ui/button";
 
 import QuestCard from "../QuestCard";
 
@@ -40,11 +40,16 @@ export default function QuestsTab() {
   const [countdowns, setCountdowns] = useState<Record<string, string>>({});
   const [quests, setQuests] = useState<Quest[]>([]);
   const [loading, setLoading] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [closingId, setClosingId] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
-  const fetchQuests = async () => {
+  const session = getStoredUserSession();
+  const isUser = session?.type === "user";
+
+  const fetchQuests = useCallback(async () => {
     try {
       setLoading(true);
       const { apiPrefix, apiRequest } = getApiConfig();
@@ -62,38 +67,33 @@ export default function QuestsTab() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
     fetchQuests();
-  }, []);
+  }, [fetchQuests]);
 
-  // Server time sync for accurate Scheduled/Active switching
+  // Server time sync
   useEffect(() => {
-    const getServerTime = async () => {
-      try {
-        const res = await fetch("https://nexura-app.onrender.com/api/server-time");
-        const data = await res.json();
-        setServerOffset(data.serverTime - Date.now());
-      } catch { /* ignore */ }
-    };
-    getServerTime();
+    apiRequestV2("GET", `/api/server-time`)
+      .then((res: any) => setServerOffset(res.serverTime - Date.now()))
+      .catch(() => {});
   }, []);
 
-  const isScheduled = (c: Quest) => {
-    const nowMs = Date.now() + serverOffset;
-    return c.status !== "Ended" && c.status !== "Save" && !!c.starts_at && new Date(c.starts_at).getTime() > nowMs;
-  };
+  const nowMs = Date.now() + serverOffset;
 
   const isDraft = (c: Quest) => c.status === "Save";
+  const isCompleted = (c: Quest) =>
+    c.status === "Ended" || (!!c.ends_at && new Date(c.ends_at).getTime() <= nowMs);
+  const isScheduled = (c: Quest) => {
+    if (c.status === "Scheduled") return true;
+    if (isDraft(c) || isCompleted(c)) return false;
+    return !!c.starts_at && new Date(c.starts_at).getTime() > nowMs;
+  };
+  const isActive = (c: Quest) =>
+    !isDraft(c) && !isCompleted(c) && !isScheduled(c);
 
-const isCompleted = (c: Quest) =>
-  c.status === "Ended" || new Date(c.ends_at).getTime() <= Date.now() + serverOffset;
-
-const isActive = (c: Quest) =>
-  !isDraft(c) && !isCompleted(c) && !isScheduled(c);
-
-  // Countdown timer for scheduled quests — auto-reloads when countdown expires
+  // Countdown timer
   useEffect(() => {
     const scheduled = quests.filter(isScheduled);
     if (scheduled.length === 0) return;
@@ -111,7 +111,7 @@ const isActive = (c: Quest) =>
           const h = Math.floor((diff % 86400000) / 3600000);
           const m = Math.floor((diff % 3600000) / 60000);
           const s = Math.floor((diff % 60000) / 1000);
-          newCountdowns[q._id] = d > 0 ? `${d}d ${h}h ${m}m ${s}s` : `${h}h ${m}m ${s}s`;
+          newCountdowns[q._id] = d > 0 ? `${d}d ${h}h ${m}m ${s}s` : h > 0 ? `${h}h ${m}m ${s}s` : `${m}m ${s}s`;
         }
       }
       setCountdowns(newCountdowns);
@@ -120,40 +120,68 @@ const isActive = (c: Quest) =>
     tick();
     const interval = setInterval(tick, 1000);
     return () => clearInterval(interval);
-  }, [quests.filter(isScheduled).length, serverOffset]);
+  }, [quests, serverOffset, fetchQuests]);
 
-const filteredQuests = quests.filter((c) => {
-  if (activeTab === "all") return true;
-  if (activeTab === "active") return isActive(c);
-  if (activeTab === "scheduled") return isScheduled(c);
-  if (activeTab === "drafts") return isDraft(c);
-  if (activeTab === "completed") return isCompleted(c);
-  return true;
-});
+  const filteredQuests = quests.filter((c) => {
+    if (activeTab === "all") return true;
+    if (activeTab === "active") return isActive(c);
+    if (activeTab === "scheduled") return isScheduled(c);
+    if (activeTab === "drafts") return isDraft(c);
+    if (activeTab === "completed") return isCompleted(c);
+    return true;
+  });
 
-const tabs = [
-  { id: "all", label: "All Quests", count: quests.length },
-  { id: "active", label: "Active", count: quests.filter(isActive).length },
-  { id: "scheduled", label: "Scheduled", count: quests.filter(isScheduled).length },
-  { id: "drafts", label: "Drafts", count: quests.filter(isDraft).length },
-  { id: "completed", label: "Completed", count: quests.filter(isCompleted).length },
-];
+  const tabs = [
+    { id: "all", label: "All Quests", count: quests.length },
+    { id: "active", label: "Active", count: quests.filter(isActive).length },
+    { id: "scheduled", label: "Upcoming", count: quests.filter(isScheduled).length },
+    { id: "drafts", label: "Drafts", count: quests.filter(isDraft).length },
+    { id: "completed", label: "Completed", count: quests.filter(isCompleted).length },
+  ];
 
-  const confirmAction = async () => {
-    if (!pendingAction) return;
+  const handleDelete = async (id: string) => {
+    setDeletingId(id);
+    setPendingAction(null);
     try {
       const { apiPrefix, apiRequest } = getApiConfig();
-      await apiRequest({
-        method: "DELETE",
-        endpoint: `/${apiPrefix}/delete-quest`,
-        params: { id: pendingAction.id },
-      });
-      setQuests((prev) => prev.filter((q) => q._id !== pendingAction.id));
-      toast({ title: "Quest closed", description: `"${pendingAction.title}" has been removed.` });
+      await apiRequest({ method: "DELETE", endpoint: `/${apiPrefix}/delete-quest`, params: { id } });
+      setQuests((prev) => prev.filter((q) => q._id !== id));
+      toast({ title: "Quest deleted", description: "The quest has been removed." });
     } catch (err: any) {
-      toast({ title: "Failed", description: err.message, variant: "destructive" });
+      toast({ title: "Error", description: err.message, variant: "destructive" });
     } finally {
-      setPendingAction(null);
+      setDeletingId(null);
+    }
+  };
+
+  const handleClose = async (id: string) => {
+    setClosingId(id);
+    setPendingAction(null);
+    try {
+      const { apiPrefix, apiRequest } = getApiConfig();
+      await apiRequest({ 
+        method: "PATCH", 
+        endpoint: `/${apiPrefix}/publish-quest`,
+        data: { questId: id, status: "Ended" } 
+      });
+      toast({ title: "Quest closed", description: "The quest has been closed successfully." });
+      fetchQuests();
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setClosingId(null);
+    }
+  };
+
+  const confirmAction = () => {
+    if (!pendingAction) return;
+    if (pendingAction.type === "delete") {
+      handleDelete(pendingAction.id);
+      return;
+    }
+    if (pendingAction.type === "close") {
+      handleClose(pendingAction.id);
+      return;
     }
   };
 
@@ -163,17 +191,17 @@ const tabs = [
     const completed = isCompleted(quest);
 
     let status = "Published";
-    let statusColor = "bg-green-500";
+    let statusColor = "text-[#00E1A2] bg-[#00E1A24D]";
 
     if (draft) {
       status = "Draft";
-      statusColor = "bg-yellow-500";
+      statusColor = "text-yellow-400 bg-yellow-400/20";
     } else if (scheduled) {
       status = "Upcoming";
-      statusColor = "bg-blue-500";
+      statusColor = "text-blue-400 bg-blue-400/20";
     } else if (completed) {
       status = "Completed";
-      statusColor = "bg-gray-500";
+      statusColor = "text-gray-400 bg-gray-400/20";
     }
 
     const formatDate = (dateStr: string) => {
@@ -185,108 +213,128 @@ const tabs = [
       ? `Starts in ${countdowns[quest._id]}`
       : `${formatDate(quest.starts_at)} - ${formatDate(quest.ends_at)}`;
 
+    const createUrl = isUser ? "/user-dashboard/create-new-quest" : "/studio-dashboard/create-new-quest";
+
     return (
       <QuestCard
         key={quest._id}
         questId={quest._id}
         title={quest.title}
         description={quest.description || "Quest"}
-        projectName="My Project"
-        projectLogo={quest.projectCoverImage || "/quest-1.png"}
+        projectName={quest.project_name || session?.name || "My Project"}
+        projectLogo={quest.project_image || quest.projectCoverImage || "/quest-1.png"}
         heroImage={quest.projectCoverImage || "/quest-1.png"}
         rewards={quest.reward?.pool ? `${quest.reward.pool} TRUST` : "XP Rewards"}
         duration={durationText}
         status={status}
         statusColor={statusColor}
         showClose={!draft && !completed}
+        showDelete={draft || completed}
+        isClosing={closingId === quest._id}
+        isDeleting={deletingId === quest._id}
         onClose={(id) => setPendingAction({ type: "close", id, title: quest.description || quest.title })}
         onDelete={(id) => setPendingAction({ type: "delete", id, title: quest.description || quest.title })}
-        showDelete={draft || completed}
-        onView={(id) => setLocation(`/user-dashboard/create-new-quest?edit=${id}`)}
-        from="dashboard"
+        onView={(id) => setLocation(`${createUrl}?edit=${id}`)}
+        rewardPoolLabel="REWARD POOL:"
+        from="studio"
       />
     );
   };
 
+  const createUrl = isUser ? "/user-dashboard/create-new-quest" : "/studio-dashboard/create-new-quest";
+
   return (
     <>
-      <div className="space-y-6 text-white">
-
-        {/* HEADER */}
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold">Quests</h1>
-            <p className="text-white/60">Manage your quests</p>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <h1 className="text-2xl md:text-3xl font-bold text-white">Quests</h1>
+            <p className="text-white/60 text-lg">Manage and track your community quests</p>
           </div>
-
-          <Button variant="ghost" onClick={fetchQuests} disabled={loading}>
-            <RefreshCw className={loading ? "animate-spin w-5 h-5" : "w-5 h-5"} />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-white/60 hover:text-white"
+            onClick={fetchQuests}
+            disabled={loading}
+          >
+            <RefreshCw className={`w-5 h-5 ${loading ? "animate-spin" : ""}`} />
           </Button>
         </div>
 
-{/* TABS */}
-<div className="flex gap-4 border-b border-white/20 pb-2">
-  {tabs.map((tab) => (
-    <button
-      key={tab.id}
-      onClick={() => setActiveTab(tab.id as any)}
-      className={`text-sm pb-2 transition ${
-        activeTab === tab.id
-          ? "text-white border-b-2 border-purple-500"
-          : "text-white/60 hover:text-white"
-      }`}
-    >
-      {tab.label} ({tab.count})
-    </button>
-  ))}
-</div>
-
-
-
-
-<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 auto-rows-fr">
-
-  {/* CREATE CARD (only on ALL tab) */}
-  {activeTab === "all" && (
-    <div onClick={() => setLocation("/user-dashboard/create-new-quest")}>
-      <div className="h-full w-full flex flex-col items-center justify-center border border-dashed border-purple-500 rounded-xl bg-black/20 hover:bg-black/30 transition cursor-pointer p-6 min-h-[200px]">
-        <div className="w-10 h-10 flex items-center justify-center rounded-full bg-purple-500/20 text-purple-400 text-xl font-bold">
-          +
+        <div className="flex border-b border-white/20 gap-4 pb-2 overflow-x-auto">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as typeof activeTab)}
+              className={`font-medium transition-colors whitespace-nowrap ${
+                activeTab === tab.id ? "border-b-2 border-purple-500 text-white" : "text-white/60 hover:text-white"
+              }`}
+            >
+              {tab.label} ({tab.count})
+            </button>
+          ))}
         </div>
 
-        <p className="mt-2 text-sm font-semibold text-white text-center">
-          Create New Quests
-        </p>
+        {loading ? (
+          <div className="flex items-center justify-center py-20 text-white/60">
+            <RefreshCw className="w-6 h-6 animate-spin mr-2" />
+            Loading quests...
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {activeTab === "all" && (
+              <Link
+                href={createUrl}
+                className="w-full p-6 flex flex-col items-center justify-center gap-3 border-2 border-dashed border-purple-500 rounded-2xl bg-black hover:bg-black/80 hover:border-[#8B3EFE] transition cursor-pointer no-underline"
+              >
+                <div className="w-12 h-12 flex items-center justify-center rounded-full bg-purple-500/20 text-purple-400 text-2xl font-bold">+</div>
+                <p className="font-semibold text-white text-center text-lg">Create New Quest</p>
+                <p className="text-white/60 text-center text-sm">Launch a New Quest now</p>
+              </Link>
+            )}
 
-        <p className="text-white/50 text-xs text-center">
-          Launch new quest
-        </p>
+            {filteredQuests.length === 0 ? (
+              <p className="text-white/60 col-span-full">No quests found.</p>
+            ) : (
+              filteredQuests.map((q) => renderQuestCard(q))
+            )}
+          </div>
+        )}
       </div>
-    </div>
-  )}
 
-  {/* QUEST CARDS */}
-  {filteredQuests.map((q) => renderQuestCard(q))}
-
-</div>
-</div>
-
-      {/* CONFIRM MODAL */}
-      <Dialog open={!!pendingAction} onOpenChange={() => setPendingAction(null)}>
-        <DialogContent className="bg-gray-900 text-white">
+      <Dialog open={!!pendingAction} onOpenChange={(open) => { if (!open) setPendingAction(null); }}>
+        <DialogContent className="bg-gray-900 border border-white/10 text-white rounded-2xl max-w-md">
           <DialogHeader>
-            <DialogTitle>{pendingAction?.type === "close" ? "Close Quest" : "Action"}</DialogTitle>
-            <DialogDescription>
-              {pendingAction?.title}
+            <DialogTitle
+              className={
+                pendingAction?.type === "delete"
+                  ? "text-red-400"
+                  : "text-yellow-400"
+              }
+            >
+              {pendingAction?.type === "delete" ? "Delete Quest" : "Close Quest"}
+            </DialogTitle>
+            <DialogDescription className="text-white/60 pt-1">
+              {pendingAction?.type === "delete"
+                ? (<>This will <span className="text-red-400 font-semibold">permanently delete</span> <span className="text-white font-medium">"{pendingAction?.title}"</span>. This action cannot be undone.</>)
+                : (<>This will close <span className="text-white font-medium">\"{pendingAction?.title}\"</span>. It will no longer accept submissions.</>)
+              }
             </DialogDescription>
           </DialogHeader>
-
-          <DialogFooter>
-            <Button onClick={() => setPendingAction(null)} variant="ghost">
+          <DialogFooter className="gap-2 mt-2">
+            <Button variant="ghost" className="text-white/60 hover:text-white" onClick={() => setPendingAction(null)}>
               Cancel
             </Button>
-            <Button onClick={confirmAction} className="bg-yellow-600">
-              Confirm
+            <Button
+              className={
+                pendingAction?.type === "delete"
+                  ? "bg-red-600 hover:bg-red-700 text-white"
+                  : "bg-yellow-600 hover:bg-yellow-700 text-white"
+              }
+              onClick={confirmAction}
+            >
+              {pendingAction?.type === "delete" ? "Delete" : "Close Quest"}
             </Button>
           </DialogFooter>
         </DialogContent>

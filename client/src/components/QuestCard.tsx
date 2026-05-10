@@ -58,6 +58,7 @@ export default function QuestCard({
   onDelete,
   onWithdraw,
   from,
+  rewardPoolLabel = "REWARD POOL:",
 }: QuestCardProps) {
   const [, setLocation] = useLocation();
 
@@ -82,12 +83,12 @@ export default function QuestCard({
     ? `${formatDate(starts_at)} - ${formatDate(ends_at)}`
     : null;
 
-  const buttonLabel = from ? "View Quest" : "Start Quest";
+  const buttonLabel = from ? "View Details" : "Start Quest";
 
   return (
     <div
       onClick={handleClick}
-      className="w-[260px] h-[320px] shrink-0 cursor-pointer rounded-2xl overflow-hidden border border-white/10 bg-[#080808] hover:bg-[#0F0F0F] transition-all duration-300 flex flex-col"
+      className="w-full h-[320px] shrink-0 cursor-pointer rounded-2xl overflow-hidden border border-white/10 bg-[#080808] hover:bg-[#0F0F0F] transition-all duration-300 flex flex-col"
     >
       <div className="relative h-[120px] w-full overflow-hidden shrink-0">
         <img
@@ -139,7 +140,7 @@ export default function QuestCard({
           </div>
         )}
 
-        <div className="absolute top-3 right-3 px-2 py-1 rounded-full text-[10px] font-semibold text-[#00E1A2] bg-[#00E1A24D]">
+        <div className={`absolute top-3 right-3 px-2 py-1 rounded-full text-[10px] font-semibold ${statusColor || "text-[#00E1A2] bg-[#00E1A24D]"}`}>
           {status || "ACTIVE"}
         </div>
 
@@ -152,7 +153,7 @@ export default function QuestCard({
         <div className="absolute bottom-[-18px] left-3">
           <img
             src={projectLogo}
-            className="w-9 h-9 rounded-xl border border-white/10"
+            className="w-9 h-9 rounded-xl border border-white/10 bg-black"
           />
         </div>
       </div>
@@ -181,11 +182,11 @@ export default function QuestCard({
         )}
 
         <div className="flex justify-between items-center text-[10px] text-white/60 mt-3">
-          <span>PROJECT:</span>
+          <span>{rewardPoolLabel}</span>
           <span className="text-white">{projectName}</span>
         </div>
 
-        <button className="mt-auto flex items-center justify-center gap-2 bg-[#8B3EFE] text-white text-xs py-2 rounded-xl hover:opacity-90 transition">
+        <button className="mt-auto flex items-center justify-center gap-2 bg-[#8B3EFE] text-white text-xs py-2 rounded-xl hover:opacity-90 transition font-medium">
           {buttonLabel}
           <img src="/arrow-right.png" className="w-3.5 h-3.5" />
         </button>
