@@ -113,7 +113,7 @@ export default function QuestCard({
 )}
 
         <div className="flex justify-between items-center text-[10px] text-white/60 mt-3">
-          <span>PROJECT</span>
+          <span>PROJECT:</span>
           <span className="text-white">{projectName}</span>
         </div>
 
