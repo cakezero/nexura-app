@@ -98,20 +98,14 @@ export const payStudioHubFee = async (testAmount?: number, contractAddress?: str
   try {
     if (!window.ethereum) throw new Error("No wallet provider available. Connect a wallet with RainbowKit first.");
     
-    let targetChainId: string;
-    let amount: string;
-    
-    if (contractAddress) {
-      targetChainId = chainId;
-      amount = "0.1";
-    } else {
-      const config = await getStudioPaymentConfig();
-      contractAddress = requireContractAddress(config.contractAddress, "Studio fee contract", config.network ?? "the server");
-      targetChainId = config.chainId;
-      amount = config.amount;
-    }
-
-    const studioFeeContract = requireContractAddress(contractAddress, "Studio fee contract");
+    const config = await getStudioPaymentConfig();
+    const finalContractAddress = requireContractAddress(
+      contractAddress || config.contractAddress,
+      "Studio fee contract",
+      config.network ?? "the server"
+    );
+    const targetChainId = config.chainId;
+    const amount = config.amount;
 
     await ensureSwitch(targetChainId);
 
@@ -119,7 +113,7 @@ export const payStudioHubFee = async (testAmount?: number, contractAddress?: str
     const signer = await provider.getSigner();
 
     const contract = new ethers.Contract(
-      studioFeeContract,
+      finalContractAddress,
       STUDIO_FEE_ABI,
       signer
     );
