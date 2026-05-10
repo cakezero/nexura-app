@@ -108,7 +108,13 @@ export default function CreateNewCampaigns() {
   const [loading, setLoading] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
   const [campaignId, setCampaignId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState("details");
+  const [activeTab, setActiveTab] = useState(() => {
+    return localStorage.getItem("campaignBuilderActiveTab") || "details";
+  });
+
+  useEffect(() => {
+    localStorage.setItem("campaignBuilderActiveTab", activeTab);
+  }, [activeTab]);
   const [showTasks, setShowTasks] = useState(false)
   const [showModal, setShowModal] = useState(false);
   const [validationType, setValidationType] = useState("manual");
@@ -1936,26 +1942,28 @@ const isActive =
               const isDiscord = isDiscordFixedTaskType(type);
               const isDiscordRole = isDiscordRoleTaskType(type);
               const isDiscordMessage = isDiscordMessageTaskType(type);
-              const isTwitter = type === "Comment on our X post" || type === "Follow us on X";
+              const isTwitter = type === "Comment on our X post" || type === "Follow us on X" || type === "Create a Post";
               const isPortal = type === "Check Out the Portal Claims";
               const isOther = type === "others";
               const isFeedback = type === "Give Feedback";
               setNewTask({
                 ...newTask,
                 type,
-                platform: isDiscord ? "Discord" : isTwitter ? "Twitter" : (isPortal || isOther || isFeedback) ? "" : newTask.platform,
+                platform: isDiscord ? "Discord" : isTwitter ? "Twitter" : (isPortal || isOther || isFeedback) ? "" : "Other",
                 evidence: isDiscord || isPortal ? "" : isTwitter ? "submit_link" : isFeedback ? "" : newTask.evidence,
                 validation: isDiscord ? "Discord Auth" : isPortal ? "Auto Verified" : isFeedback ? "Manual Validation" : (newTask.validation === "Discord Auth" || newTask.validation === "Auto Verified" ? "Manual Validation" : newTask.validation),
                 verificationMode: isFeedback ? "feedback" : "",
                 roleId: isDiscordRole ? newTask.roleId : "",
                 channelId: isDiscordMessage ? newTask.channelId : "",
                 guildId: isDiscord ? (newTask.guildId || hubGuildId || "") : "",
+                handleOrUrl: type === "Create a Post" ? "https://x.com" : newTask.handleOrUrl,
               });
             }}
           >
             <option value="">Select task</option>
             <option value="Comment on our X post">Comment on X</option>
             <option value="Follow us on X">Follow on X</option>
+            <option value="Create a Post">Create a Post</option>
             <option value="Join Us On Discord">Join Discord</option>
             <option value={DISCORD_ROLE_TASK_TYPE}>Acquire a Role (Discord)</option>
             <option value={DISCORD_MESSAGE_TASK_TYPE}>Send Message in Channel (Discord)</option>
@@ -1970,34 +1978,18 @@ const isActive =
         <div>
           <label className="text-sm text-white/70 mb-2 block">Platform</label>
           <div className="flex gap-3">
-            <button
-              type="button"
-              onClick={() => setNewTask({ ...newTask, platform: "Twitter", evidence: "submit_link", validation: newTask.validation === "Discord Auth" ? "Manual Validation" : newTask.validation, roleId: "", channelId: "", guildId: "" })}
-              className={`flex-1 border py-2 rounded-lg transition ${
-                newTask.platform === "Twitter"
-                  ? "bg-[#8B3EFE] text-white border-purple-500"
-                  : "bg-purple-900 border-purple-800 text-white hover:border-purple-500"
-              }`}
-            >
-              Twitter
-            </button>
-            <button
-              type="button"
-              onClick={() => setNewTask({
-                ...newTask,
-                platform: "Discord",
-                evidence: "",
-                validation: "Discord Auth",
-                guildId: newTask.guildId || hubGuildId || "",
-              })}
-              className={`flex-1 border py-2 rounded-lg transition ${
-                newTask.platform === "Discord"
-                  ? "bg-[#8B3EFE] text-white border-purple-500"
-                  : "bg-purple-900 border-purple-800 text-white hover:border-purple-500"
-              }`}
-            >
-              Discord
-            </button>
+            {["Twitter", "Discord", "Other"].map((p) => (
+              <div
+                key={p}
+                className={`flex-1 border py-2 rounded-lg transition text-xs font-semibold text-center opacity-90 cursor-default ${
+                  newTask.platform === p
+                    ? "bg-[#8B3EFE] text-white border-purple-500"
+                    : "bg-purple-950 border-purple-800 text-white/50 border-purple-500/50"
+                }`}
+              >
+                {p}
+              </div>
+            ))}
           </div>
         </div>
         )}
@@ -2011,34 +2003,39 @@ const isActive =
           <label className="text-sm text-white/70 mb-2 block">
             {newTask.type === "Give Feedback"
               ? "Website URL"
-              : isDiscordMessageTaskType(newTask.type)
-                ? "Discord Channel Link"
-                : newTask.platform === "Discord"
-                  ? "Discord Invite Link"
-                  : newTask.type === "Comment on our X post"
-                    ? "Post URL"
-                    : newTask.type === "Follow us on X" || newTask.platform === "Twitter"
-                      ? "Profile URL"
-                      : "Handle or URL"}
+              : newTask.type === "Create a Post"
+                ? "Task URL"
+                : isDiscordMessageTaskType(newTask.type)
+                  ? "Discord Channel Link"
+                  : newTask.platform === "Discord"
+                    ? "Discord Invite Link"
+                    : newTask.type === "Comment on our X post"
+                      ? "Post URL"
+                      : newTask.type === "Follow us on X" || newTask.platform === "Twitter"
+                        ? "Profile URL"
+                        : "Handle or URL"}
           </label>
           <input
             type="text"
             placeholder={newTask.type === "Give Feedback"
               ? "https://example.com"
-              : isDiscordMessageTaskType(newTask.type)
-                ? "https://discord.com/channels/..."
-                : newTask.platform === "Discord"
-                  ? "https://discord.gg/..."
-                  : newTask.type === "Comment on our X post"
-                    ? "https://x.com/username/status/..."
-                    : newTask.type === "Follow us on X" || newTask.platform === "Twitter"
-                      ? "https://x.com/username"
-                      : "..."}
-            value={newTask.handleOrUrl}
+              : newTask.type === "Create a Post"
+                ? "https://x.com"
+                : isDiscordMessageTaskType(newTask.type)
+                  ? "https://discord.com/channels/..."
+                  : newTask.platform === "Discord"
+                    ? "https://discord.gg/..."
+                    : newTask.type === "Comment on our X post"
+                      ? "https://x.com/username/status/..."
+                      : newTask.type === "Follow us on X" || newTask.platform === "Twitter"
+                        ? "https://x.com/username"
+                        : "..."}
+            value={newTask.type === "Create a Post" ? "https://x.com" : newTask.handleOrUrl}
             onChange={(e) =>
               setNewTask({ ...newTask, handleOrUrl: e.target.value })
             }
-            className="w-full p-2 rounded-lg bg-white/5 text-white border border-white/10 focus:outline-none focus:border-purple-500"
+            disabled={newTask.type === "Create a Post"}
+            className={`w-full p-2 rounded-lg bg-white/5 text-white border border-white/10 focus:outline-none focus:border-purple-500 ${newTask.type === "Create a Post" ? "opacity-50 cursor-not-allowed" : ""}`}
           />
         </div>
 
