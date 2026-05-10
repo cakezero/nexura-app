@@ -9,6 +9,7 @@ import { useToast } from "../hooks/use-toast";
 import { useAuth } from "../lib/auth";
 import { createProofOfAction } from "../services/web3";
 import ProofOfActionModal from "../components/ProofOfActionModal";
+import { environment } from "../lib/constants";
 
 type Quest = {
   text: string;
@@ -160,23 +161,29 @@ export default function QuestEnvironment() {
 
       try {
         if (["join", "join-discord", "message", "message-discord", "send-message-discord"].includes(miniQuest.tag)) {
-          if (!user?.socialProfiles.discord.connected) {
+          if (environment === "production" && !user?.socialProfiles.discord.connected) {
             throw new Error("discord not connected yet, go to profile to connect");
           }
 
-          const { success } = await apiRequestV2("POST", "/api/check-discord", { questId, id: miniQuest._id, channelId: id, tag: miniQuest.tag });
-          if (!success) {
-            throw new Error(`Kindly ${miniQuest.tag} the discord channel`);
+          if (environment === "production") {
+            const { success } = await apiRequestV2("POST", "/api/check-discord", { questId, id: miniQuest._id, channelId: id, tag: miniQuest.tag });
+            if (!success) {
+              throw new Error(`Kindly ${miniQuest.tag} the discord channel`);
+            }
           }
+
         } else if (["acquire-role-discord"].includes(miniQuest.tag)) {
-          if (!user?.socialProfiles.discord.connected) {
+          if (environment === "production" && !user?.socialProfiles.discord.connected) {
             throw new Error("discord not connected yet, go to profile to connect");
           }
 
-          const { success } = await apiRequestV2("POST", "/api/check-discord", { questId, id: miniQuest._id, channelId: id, tag: miniQuest.tag });
-          if (!success) {
-            throw new Error("You must acquire the required role first");
+          if (environment === "production") {
+            const { success } = await apiRequestV2("POST", "/api/check-discord", { questId, id: miniQuest._id, channelId: id, tag: miniQuest.tag });
+            if (!success) {
+              throw new Error("You must acquire the required role first");
+            }
           }
+
         } else if (miniQuest.tag === "portal") {
           await apiRequestV2("POST", "/api/quest/check-portal-task", { termId: id, id: miniQuest._id, questId, page: "quest" });
         } else if (miniQuest.tag === "trust-name") {
@@ -289,7 +296,6 @@ export default function QuestEnvironment() {
       });
     }
   };
-
 
   const renderQuestRow = (quest: Quest, index: number) => {
     const isTns = quest.tag === "trust-name";

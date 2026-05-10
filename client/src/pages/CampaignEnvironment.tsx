@@ -309,7 +309,7 @@ export default function CampaignEnvironment() {
           //   }
           // } else 
           if (["join", "message", "join-discord", "message-discord", "acquire-role-discord", "send-message-discord"].includes(quest.tag)) {
-            if (!user?.socialProfiles.discord.connected) {
+            if (environment === "production" && !user?.socialProfiles.discord.connected) {
               throw new Error("discord not connected yet, go to profile to connect");
             }
 
@@ -317,16 +317,19 @@ export default function CampaignEnvironment() {
             const resolvedGuildId = quest.guildId || quest.metadata?.guildId;
             const resolvedChannelId = quest.channelId || quest.metadata?.channelId || (isLegacyDiscordTag ? id : "");
             const resolvedRoleId = quest.roleId || quest.metadata?.roleId;
-            const { success } = await apiRequestV2("POST", "/api/check-discord", {
-              campaignId,
-              id: quest._id,
-              tag: quest.tag,
-              ...(resolvedGuildId ? { guildId: resolvedGuildId } : {}),
-              ...(resolvedChannelId ? { channelId: resolvedChannelId } : {}),
-              ...(resolvedRoleId ? { roleId: resolvedRoleId } : {}),
-            });
-            if (!success) {
-              throw new Error(`Kindly ${quest.tag} the discord channel`);
+            if (environment === "production") {
+              const { success } = await apiRequestV2("POST", "/api/check-discord", {
+                campaignId,
+                id: quest._id,
+                tag: quest.tag,
+                ...(resolvedGuildId ? { guildId: resolvedGuildId } : {}),
+                ...(resolvedChannelId ? { channelId: resolvedChannelId } : {}),
+                ...(resolvedRoleId ? { roleId: resolvedRoleId } : {}),
+              });
+
+              if (!success) {
+                throw new Error(`Kindly ${quest.tag} the discord channel`);
+              }
             }
           } else if (quest.tag === "portal") {
             await apiRequestV2("POST", "/api/quest/check-portal-task", { termId: id, id: quest._id, questId: campaignId, page: "campaign" });
