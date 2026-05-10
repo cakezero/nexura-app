@@ -33,30 +33,7 @@ type Task = {
   evidence: string;
   validation: string;
   verificationMode: string;
-  roleId: string;
-  channelId: string;
-  guildId: string;
 };
-
-type DiscordRoleOption = {
-  id: string;
-  name: string;
-};
-
-type DiscordChannelOption = {
-  id: string;
-  name: string;
-  type?: number | string;
-};
-
-const DISCORD_JOIN_TASK_TYPE = "Join Us On Discord";
-const DISCORD_ROLE_TASK_TYPE = "Acquire a Role (Discord)";
-const DISCORD_MESSAGE_TASK_TYPE = "Send Message in Channel (Discord)";
-
-const isDiscordRoleTaskType = (type: string) => type === DISCORD_ROLE_TASK_TYPE;
-const isDiscordMessageTaskType = (type: string) => type === DISCORD_MESSAGE_TASK_TYPE;
-const isDiscordFixedTaskType = (type: string) =>
-  type === DISCORD_JOIN_TASK_TYPE || isDiscordRoleTaskType(type) || isDiscordMessageTaskType(type);
 
 interface QuestCreateProps {
   isUserMode?: boolean;
@@ -88,23 +65,10 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
     evidence: "",
     validation: "Manual Validation",
     verificationMode: "",
-    roleId: "",
-    channelId: "",
-    guildId: "",
   });
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [error, setError] = useState("");
   const [urlError, setUrlError] = useState("");
-
-  // Discord states
-  const [hubGuildId, setHubGuildId] = useState("");
-  const [hubDiscordConnected, setHubDiscordConnected] = useState(false);
-  const [discordSessionId, setDiscordSessionId] = useState("");
-  const [discordRoles, setDiscordRoles] = useState<DiscordRoleOption[]>([]);
-  const [discordChannels, setDiscordChannels] = useState<DiscordChannelOption[]>([]);
-  const [discordRolesError, setDiscordRolesError] = useState("");
-  const [discordChannelsError, setDiscordChannelsError] = useState("");
-  const [discordOptionsLoading, setDiscordOptionsLoading] = useState(false);
 
   const [questName, setQuestName] = useState("");
   const [questDescription, setQuestDescription] = useState("");
@@ -160,61 +124,14 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
           platform: q.category === "twitter" ? "Twitter" : (q.category === "discord" ? "Discord" : "Other"),
           handleOrUrl: q.link ?? "",
           description: q.text || q.quest || "",
-          evidence: q.verificationMode === "auto" ? "" : q.verificationMode,
           validation: q.verificationMode === "auto" ? "Auto Verified" : (q.category === "discord" ? "Discord Auth" : "Manual Validation"),
           verificationMode: q.verificationMode ?? "",
-          roleId: q.roleId ?? "",
-          channelId: q.channelId ?? "",
-          guildId: q.guildId ?? "",
         })));
       } catch (err) {
         console.error("Failed to load quest", err);
       }
     })();
   }, [apiPrefix]);
-
-  // Fetch Discord context
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await apiRequest<{ hub?: { guildId?: string; discordConnected?: boolean; discordSessionId?: string } }>({
-          method: "GET",
-          endpoint: `/${apiPrefix}/me`,
-        });
-        setHubGuildId(String(res.hub?.guildId ?? "").trim());
-        setHubDiscordConnected(Boolean(res.hub?.discordConnected));
-        setDiscordSessionId(String(res.hub?.discordSessionId ?? "").trim());
-      } catch {}
-    })();
-  }, [apiPrefix]);
-
-  const fetchDiscordOptions = async (guildId: string) => {
-    if (!guildId || !discordSessionId) return;
-    setDiscordOptionsLoading(true);
-    setDiscordRolesError("");
-    setDiscordChannelsError("");
-
-    const baseParams: Record<string, string> = { serverId: guildId, id: discordSessionId };
-    try {
-      const [rolesRes, channelsRes] = await Promise.all([
-        apiRequest<{ roles?: DiscordRoleOption[] }>({ method: "GET", endpoint: `/${apiPrefix}/get-roles`, params: baseParams }),
-        apiRequest<{ channels?: DiscordChannelOption[]; data?: DiscordChannelOption[] }>({ method: "GET", endpoint: `/${apiPrefix}/get-channels`, params: baseParams }),
-      ]);
-      setDiscordRoles(rolesRes.roles ?? []);
-      setDiscordChannels(channelsRes.channels ?? channelsRes.data ?? []);
-    } catch (err: any) {
-      setDiscordRolesError(err.message);
-      setDiscordChannelsError(err.message);
-    } finally {
-      setDiscordOptionsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (showModal && (isDiscordRoleTaskType(newTask.type) || isDiscordMessageTaskType(newTask.type)) && hubGuildId) {
-      void fetchDiscordOptions(hubGuildId);
-    }
-  }, [showModal, newTask.type, hubGuildId]);
 
   const handleCoverImage = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -231,30 +148,22 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
   };
 
   const tagToType = (tag: string) => {
-    if (tag === "comment-x") return "Comment on our X post";
-    if (tag === "follow-x") return "Follow us on X";
-    if (tag === "join-discord") return "Join Us On Discord";
-    if (tag === "acquire-role-discord") return DISCORD_ROLE_TASK_TYPE;
-    if (tag === "send-message-discord") return DISCORD_MESSAGE_TASK_TYPE;
-    if (tag === "portal") return "Check Out the Portal Claims";
+    if (tag === "comment-x") return "Comment on X";
+    if (tag === "follow-x") return "Follow on X";
+    if (tag === "portal") return "Portal Claims";
     if (tag === "feedback") return "Give Feedback";
-    return "others";
+    if (tag === "trust-name") return "Own a TNS";
+    if (tag === "create-post") return "Create a Post";
+    return "";
   };
 
   const typeToTag = (type: string) => {
-    if (type === "Comment on our X post") return "comment-x";
-    if (type === "Follow us on X") return "follow-x";
-    if (type === "Join Us On Discord") return "join-discord";
-    if (type === DISCORD_ROLE_TASK_TYPE) return "acquire-role-discord";
-    if (type === DISCORD_MESSAGE_TASK_TYPE) return "send-message-discord";
-    if (type === "Check Out the Portal Claims") return "portal";
+    if (type === "Comment on X") return "comment-x";
+    if (type === "Follow on X") return "follow-x";
+    if (type === "Portal Claims") return "portal";
     if (type === "Give Feedback") return "feedback";
-    return "other";
-  };
-
-  const platformToCategory = (platform: string) => {
-    if (platform === "Twitter") return "twitter";
-    if (platform === "Discord") return "discord";
+    if (type === "Create a Post") return "create-post";
+    if (type === "Own a TNS") return "trust-name";
     return "other";
   };
 
@@ -275,11 +184,8 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
       quest: t.description || t.type,
       link: t.handleOrUrl || "https://nexura.io",
       tag: typeToTag(t.type),
-      category: platformToCategory(t.platform),
+      category: t.platform.toLowerCase(),
       verificationMode: t.verificationMode || "",
-      roleId: t.roleId,
-      channelId: t.channelId,
-      guildId: t.guildId || hubGuildId,
     }));
     fd.append("miniQuests", JSON.stringify(miniQuests));
 
@@ -343,19 +249,9 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
   };
 
   const handleSaveTask = () => {
-    const requiresPlatform = newTask.type !== "Check Out the Portal Claims" && newTask.type !== "others" && newTask.type !== "Give Feedback";
-    const requiresDiscordConnection = newTask.platform === "Discord" || isDiscordFixedTaskType(newTask.type);
-    const requiresRole = isDiscordRoleTaskType(newTask.type);
-    const requiresChannel = isDiscordMessageTaskType(newTask.type);
-
-    if (!newTask.type || (requiresPlatform && !newTask.platform) || !newTask.handleOrUrl || !newTask.description) {
+    if (!newTask.type || !newTask.handleOrUrl || !newTask.description) {
       return setError("All fields are required.");
     }
-    if (requiresDiscordConnection && (!hubDiscordConnected || !hubGuildId)) {
-      return setError("Connect Discord first to use Discord-related tasks.");
-    }
-    if (requiresRole && !newTask.roleId) return setError("Select a Discord role.");
-    if (requiresChannel && !newTask.channelId) return setError("Select a Discord channel.");
 
     if (editingIndex !== null) {
       const updated = [...tasks];
@@ -376,9 +272,6 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
       evidence: "",
       validation: "Manual Validation",
       verificationMode: "",
-      roleId: "",
-      channelId: "",
-      guildId: "",
     });
     setError("");
     setUrlError("");
@@ -400,7 +293,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
           </p>
         </div>
 
-        {/* Tabs - Exact match to Campaign Builder */}
+        {/* Tabs - Mirrored from Campaign Builder */}
         <div className="flex gap-8 border-b border-white/10">
           {[
             { id: "details", label: "Details", icon: "/details.png" },
@@ -519,7 +412,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
               type="button"
               onClick={() => {
                 setEditingIndex(null);
-                setNewTask({ _id: undefined, type: "", platform: "", handleOrUrl: "", description: "", evidence: "", validation: "Manual Validation", verificationMode: "", roleId: "", channelId: "", guildId: "" });
+                setNewTask({ _id: undefined, type: "", platform: "", handleOrUrl: "", description: "", evidence: "", validation: "Manual Validation", verificationMode: "" });
                 setShowModal(true);
               }}
               className="absolute -top-10 right-0 px-3 py-1 bg-[#8B3EFE] text-purple-300 hover:bg-[#7b35e6] rounded-lg text-sm font-semibold flex items-center gap-2 transition"
@@ -551,12 +444,12 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                 {tasks.map((task, index) => (
                   <div key={index} className="flex items-center justify-between gap-4 rounded-lg border-2 border-purple-500 px-4 py-3 bg-white/5">
                     <div className="flex items-center justify-center w-8 h-8 bg-gray-600 rounded-full text-white font-semibold">{index + 1}</div>
-                    <p className="flex-1 text-white text-left">{task.description || task.type}</p>
+                    <p className="flex-1 text-white text-left font-medium">{task.description || task.type}</p>
                     <div className="flex items-center gap-2">
                       <button
                         className="px-3 py-1 bg-gray-600 text-white rounded-lg text-sm hover:bg-gray-500 transition"
                         onClick={() => {
-                          setNewTask({ ...task, roleId: task.roleId ?? "", channelId: task.channelId ?? "", guildId: task.guildId || hubGuildId || "" });
+                          setNewTask(task);
                           setEditingIndex(index);
                           setShowModal(true);
                         }}
@@ -650,13 +543,6 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                     <div className="flex items-center justify-center w-8 h-8 bg-gray-600 rounded-full text-white font-semibold">{index + 1}</div>
                     <div className="flex-1 min-w-0">
                       <p className="text-white text-sm font-medium">{task.description || task.type}</p>
-                      {task.verificationMode && (
-                        <p className="text-xs text-white/50 truncate">
-                          {task.verificationMode === "image_upload" ? "📷 Image proof" : 
-                           task.verificationMode === "submit_link" ? "🔗 Link submission" : 
-                           task.verificationMode === "auto" ? "⚡ Auto" : ""}
-                        </p>
-                      )}
                     </div>
                     <div className="flex items-center gap-2">
                       <button type="button" className="px-3 py-1 bg-[#8B3EFE] text-white rounded-lg text-sm hover:bg-[#7b35e6] transition font-medium" onClick={() => window.open(task.handleOrUrl, "_blank")}>View</button>
@@ -686,139 +572,102 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
         )}
       </div>
 
-      {/* Task Modal - Exact match to Campaign Builder */}
+      {/* Task Modal - Cleaned up to original quest types */}
       {showModal && (
         <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/80 backdrop-blur-sm p-4 text-left">
           <div className="bg-[#0d0d14] w-full max-w-xl border border-purple-500/20 p-6 rounded-2xl relative shadow-[0_0_60px_rgba(131,58,253,0.2)] animate-modal-pop">
             <button onClick={() => setShowModal(false)} className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-all text-lg leading-none">&times;</button>
             <h2 className="text-xl font-semibold text-white mb-6">Add New Task</h2>
 
-            <div className="grid grid-cols-2 gap-6 mb-6">
+            <div className="grid grid-cols-1 gap-6 mb-6">
               <div>
-                <label className="text-sm text-white/70 mb-2 block">Task Type</label>
+                <label className="text-sm text-white/70 mb-2 block font-medium">Task Type</label>
                 <select
                   className="w-full p-2 rounded-lg bg-[#0d0d14] text-white border border-white/10 focus:outline-none focus:border-purple-500 [&>option]:bg-[#0d0d14]"
                   value={newTask.type}
                   onChange={(e) => {
                     const type = e.target.value;
-                    const isDiscord = isDiscordFixedTaskType(type);
-                    const isTwitter = type === "Comment on our X post" || type === "Follow us on X";
-                    const isPortal = type === "Check Out the Portal Claims";
-                    const isFeedback = type === "Give Feedback";
+                    const isTwitter = type === "Comment on X" || type === "Follow on X" || type === "Create a Post";
+                    const validationLabel =
+                      type === "Own a TNS" ? "Verified by TNS" :
+                      type === "Portal Claims" ? "Verified by Intuition Portal" :
+                      "Manual Validation";
                     setNewTask({
                       ...newTask,
                       type,
-                      platform: isDiscord ? "Discord" : isTwitter ? "Twitter" : "",
-                      evidence: isTwitter ? "submit_link" : "",
-                      validation: isDiscord ? "Discord Auth" : (isPortal ? "Auto Verified" : "Manual Validation"),
-                      verificationMode: isFeedback ? "feedback" : "",
-                      roleId: isDiscordRoleTaskType(type) ? newTask.roleId : "",
-                      channelId: isDiscordMessageTaskType(type) ? newTask.channelId : "",
-                      guildId: isDiscord ? (newTask.guildId || hubGuildId || "") : "",
+                      platform: isTwitter ? "Twitter" : "Other",
+                      validation: validationLabel,
                     });
                   }}
                 >
                   <option value="">Select task</option>
-                  <option value="Comment on our X post">Comment on X</option>
-                  <option value="Follow us on X">Follow on X</option>
-                  <option value="Join Us On Discord">Join Discord</option>
-                  <option value={DISCORD_ROLE_TASK_TYPE}>Acquire a Role (Discord)</option>
-                  <option value={DISCORD_MESSAGE_TASK_TYPE}>Send Message in Channel (Discord)</option>
-                  <option value="Check Out the Portal Claims">Portal Claims</option>
+                  <option value="Comment on X">Comment on X</option>
+                  <option value="Follow on X">Follow on X</option>
+                  <option value="Create a Post">Create a Post</option>
+                  <option value="Own a TNS">Own a TNS</option>
+                  <option value="Portal Claims">Portal Claims</option>
                   <option value="Give Feedback">Give Feedback</option>
-                  <option value="others">Others</option>
                 </select>
               </div>
-
-              {newTask.type !== "Check Out the Portal Claims" && newTask.type !== "others" && newTask.type !== "Give Feedback" && !isDiscordFixedTaskType(newTask.type) && (
-                <div>
-                  <label className="text-sm text-white/70 mb-2 block font-medium">Platform</label>
-                  <div className="flex gap-3">
-                    {["Twitter", "Discord"].map((p) => (
-                      <button
-                        key={p}
-                        type="button"
-                        onClick={() => setNewTask({ ...newTask, platform: p, evidence: p === "Twitter" ? "submit_link" : "", validation: p === "Discord" ? "Discord Auth" : "Manual Validation" })}
-                        className={`flex-1 border py-2 rounded-lg transition text-xs font-semibold ${newTask.platform === p ? "bg-[#8B3EFE] text-white border-purple-500" : "bg-purple-900 border-purple-800 text-white hover:border-purple-500"}`}
-                      >
-                        {p}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
 
             <div className="bg-white/5 p-5 rounded-xl mb-6 border border-white/10">
               <div className="mb-4">
-                <label className="text-sm text-white/70 mb-2 block font-medium">Handle or URL</label>
-                <input type="text" placeholder="..." value={newTask.handleOrUrl} onChange={(e) => setNewTask({ ...newTask, handleOrUrl: e.target.value })} className="w-full p-2 rounded-lg bg-white/5 text-white border border-white/10 focus:outline-none focus:border-purple-500" />
-              </div>
-              <div className="mb-4">
                 <label className="text-sm text-white/70 mb-2 block font-medium">Task Description</label>
-                <input type="text" placeholder="..." value={newTask.description} onChange={(e) => setNewTask({ ...newTask, description: e.target.value })} className="w-full p-2 rounded-lg bg-white/5 text-white border border-white/10 focus:outline-none focus:border-purple-500" />
+                <input
+                  type="text"
+                  placeholder="Explain what the user needs to do"
+                  value={newTask.description}
+                  onChange={(e) => setNewTask({...newTask, description: e.target.value})}
+                  className="w-full p-2 rounded-lg bg-white/5 text-white border border-white/10 focus:outline-none focus:border-purple-500"
+                />
               </div>
-
-              {(newTask.platform === "Discord" || isDiscordFixedTaskType(newTask.type)) && (!hubDiscordConnected || !hubGuildId) && (
-                <div className="mb-4 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
-                  {!hubDiscordConnected ? "Connect Discord first." : "Select a Discord server first."}
-                </div>
-              )}
-
-              {isDiscordRoleTaskType(newTask.type) && (
-                <div className="mb-4">
-                  <label className="text-sm text-white/70 mb-2 block font-medium">Discord Role</label>
-                  <select value={newTask.roleId} disabled={!hubDiscordConnected || !hubGuildId || discordOptionsLoading} onChange={(e) => setNewTask({ ...newTask, roleId: e.target.value, guildId: hubGuildId })} className="w-full p-2 rounded-lg bg-white/5 text-white border border-white/10 focus:outline-none focus:border-purple-500 [&>option]:bg-[#0d0d14] text-sm">
-                    <option value="">{discordOptionsLoading ? "Loading roles..." : "Select a role"}</option>
-                    {discordRoles.map((role) => <option key={role.id} value={role.id}>{role.name}</option>)}
-                  </select>
-                </div>
-              )}
-
-              {isDiscordMessageTaskType(newTask.type) && (
-                <div className="mb-4">
-                  <label className="text-sm text-white/70 mb-2 block font-medium">Discord Channel</label>
-                  <select value={newTask.channelId} disabled={!hubDiscordConnected || !hubGuildId || discordOptionsLoading} onChange={(e) => setNewTask({ ...newTask, channelId: e.target.value, guildId: hubGuildId })} className="w-full p-2 rounded-lg bg-white/5 text-white border border-white/10 focus:outline-none focus:border-purple-500 [&>option]:bg-[#0d0d14] text-sm">
-                    <option value="">{discordOptionsLoading ? "Loading channels..." : "Select a channel"}</option>
-                    {discordChannels.map((ch) => <option key={ch.id} value={ch.id}>{ch.name}</option>)}
-                  </select>
-                </div>
-              )}
-
-              {newTask.type === "others" ? (
-                <div>
-                  <label className="text-sm text-white/70 mb-2 block font-medium">Verification Mode</label>
-                  <div className="flex gap-3">
-                    {[
-                      { value: "image_upload", label: "📷 Image" },
-                      { value: "submit_link", label: "🔗 Link" },
-                      { value: "auto", label: "⚡ Auto" },
-                    ].map((v) => (
-                      <button key={v.value} type="button" onClick={() => setNewTask({ ...newTask, verificationMode: v.value, evidence: v.value !== "auto" ? v.value : "", validation: v.value === "auto" ? "Auto Verified" : "Manual Validation" })} className={`flex-1 border py-2 rounded-lg text-xs font-semibold transition ${newTask.verificationMode === v.value ? "bg-[#8B3EFE] text-white border-purple-500" : "bg-purple-950 border-purple-800 text-white/70 hover:border-purple-500"}`}>{v.label}</button>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div className={`flex items-center gap-3 rounded-lg px-4 py-3 border ${newTask.validation === "Manual Validation" ? "bg-amber-900/30 border-amber-500/40" : "bg-purple-900/50 border-purple-500/50"}`}>
-                  <svg className={`w-5 h-5 flex-shrink-0 ${newTask.validation === "Manual Validation" ? "text-amber-400" : "text-purple-400"}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                  <div>
-                    <p className={`text-sm font-medium ${newTask.validation === "Manual Validation" ? "text-amber-300" : "text-purple-300"}`}>{newTask.validation}</p>
-                    <p className="text-xs text-white/50 mt-0.5">{newTask.validation === "Manual Validation" ? "Task completion will be reviewed manually." : "Verification is automatic."}</p>
-                  </div>
-                </div>
-              )}
+              <div className="relative">
+                <label className="text-sm text-white/70 mb-2 block font-medium">Task URL</label>
+                <input
+                  type="text"
+                  placeholder="Input URL"
+                  value={newTask.handleOrUrl}
+                  onChange={(e) => {
+                    setUrlError("");
+                    setNewTask({...newTask, handleOrUrl: e.target.value});
+                  }}
+                  className="w-full p-2 rounded-lg bg-white/5 text-white border border-white/10 focus:outline-none focus:border-purple-500"
+                />
+                {urlError && <p className="text-red-400 text-[10px] mt-1">{urlError}</p>}
+              </div>
             </div>
 
-            {error && <p className="text-red-500 text-sm mb-2">{error}</p>}
+            {/* Validation Info Box - Mirrored Design */}
+            {newTask.validation && (
+              <div className={`mb-6 flex items-center gap-3 rounded-lg px-4 py-3 border ${newTask.validation === "Manual Validation" ? "bg-amber-900/30 border-amber-500/40" : "bg-purple-900/50 border-purple-500/50"}`}>
+                <svg className={`w-5 h-5 flex-shrink-0 ${newTask.validation === "Manual Validation" ? "text-amber-400" : "text-purple-400"}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                <div>
+                  <p className={`text-sm font-medium ${newTask.validation === "Manual Validation" ? "text-amber-300" : "text-purple-300"}`}>{newTask.validation}</p>
+                  <p className="text-xs text-white/50 mt-0.5">{newTask.validation === "Manual Validation" ? "Task completion will be reviewed manually." : "Verification is automatic."}</p>
+                </div>
+              </div>
+            )}
+
             <div className="flex justify-end gap-3 mt-2">
-              <button onClick={() => setShowModal(false)} className="px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white text-sm font-medium transition-all">Cancel</button>
-              <button onClick={handleSaveTask} className="px-5 py-2.5 rounded-xl bg-[#8B3EFE] text-white text-sm font-semibold hover:opacity-90 transition-all">Save Task</button>
+              <button
+                onClick={() => setShowModal(false)}
+                className="px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white text-sm font-medium transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveTask}
+                className="px-5 py-2.5 rounded-xl bg-[#8B3EFE] text-white text-sm font-semibold hover:opacity-90 hover:shadow-[0_0_20px_rgba(131,58,253,0.5)] hover:-translate-y-0.5 active:translate-y-0 transition-all"
+              >
+                {editingIndex !== null ? "Update Task" : "Save Task"}
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Publish Modal - Match Campaign Builder */}
+      {/* Publish Modal - Mirrored from Campaign Builder */}
       {showPublishModal && (
         <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/80 backdrop-blur-sm p-4 text-left">
           <div className="bg-[#0d0d14] w-full max-w-md border border-purple-500/20 p-6 rounded-2xl relative shadow-[0_0_60px_rgba(131,58,253,0.2)] animate-modal-pop">
@@ -826,15 +675,14 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
             <div className="flex justify-center mb-4"><img src="/activate-studio.png" alt="" className="w-48 h-40" /></div>
             <div className="text-center mb-6">
               <h2 className="text-xl font-semibold text-white">Quest Launch Fee</h2>
-              <p className="text-white/70 mt-2">Pay the quest launch fee to publish this quest.</p>
+              <p className="text-white/70 mt-2">Pay the quest launch fee to publish this quest and make it live for participants.</p>
             </div>
             <div className="bg-white/5 border border-white/10 rounded-xl p-4 mb-4">
               <div className="flex justify-between items-center mb-2"><span className="text-white font-semibold text-sm">Quest Launch Fee</span><span className="text-purple-400 font-bold text-sm">0.1 $TRUST</span></div>
+              <p className="text-white/60 text-xs mb-3">A one-time fee of 0.1 $TRUST is required to launch and publish this quest.</p>
               {paymentTxHash ? (
                 <div className="flex items-center gap-2 bg-green-900/40 border border-green-600/50 rounded-lg px-3 py-2">
-                  <svg className="w-4 h-4 text-green-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
+                  <svg className="w-4 h-4 text-green-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                   <div className="min-w-0">
                     <p className="text-green-400 text-xs font-semibold">Payment confirmed</p>
                     <p className="text-white/40 text-[10px] truncate">{paymentTxHash}</p>
@@ -851,11 +699,11 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                   } catch (err: any) {
                     toast({ title: "Payment failed", description: err.message, variant: "destructive" });
                   } finally { setPaymentLoading(false); }
-                }} className="w-full bg-[#8B3EFE] text-white py-2 rounded-lg font-semibold flex items-center justify-center gap-2">{paymentLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Pay 0.1 $TRUST"}</button>
+                }} className="w-full bg-[#8B3EFE] hover:bg-[#7b35e6] text-white py-2 rounded-lg font-semibold flex items-center justify-center gap-2">{paymentLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Pay 0.1 $TRUST"}</button>
               )}
             </div>
-            <button className="w-full py-2.5 bg-[#8B3EFE] text-white rounded-xl font-semibold mb-2 disabled:opacity-50 flex items-center justify-center gap-2" onClick={handlePublish} disabled={!paymentTxHash || loading}>{loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Publish"}</button>
-            <button onClick={() => setShowPublishModal(false)} className="w-full py-2.5 bg-white/5 text-white/70 rounded-xl font-medium">Cancel</button>
+            <button className="w-full py-2.5 bg-[#8B3EFE] text-white rounded-xl font-semibold mb-2 disabled:opacity-50 flex items-center justify-center gap-2 hover:opacity-90" onClick={handlePublish} disabled={!paymentTxHash || loading}>{loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Publish"}</button>
+            <button onClick={() => setShowPublishModal(false)} className="w-full py-2.5 bg-white/5 text-white/70 rounded-xl font-medium border border-white/10 hover:bg-white/10 transition-all">Cancel</button>
           </div>
         </div>
       )}
