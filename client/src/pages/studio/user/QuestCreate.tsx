@@ -313,7 +313,13 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
             <button
               key={tab.id}
               type="button"
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => {
+                if (tab.id === "review" && tasks.length < 5) {
+                  toast({ title: "Incomplete", description: "Please add at least 5 tasks before reviewing.", variant: "destructive" });
+                  return;
+                }
+                setActiveTab(tab.id);
+              }}
               className="flex-1 flex flex-col items-start justify-start gap-2 py-5 text-lg font-semibold transition"
             >
               <span
@@ -486,9 +492,15 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
             <div className="flex justify-between items-center mt-6">
               <button className="px-4 py-2 bg-gray-700 text-white rounded-lg text-sm hover:bg-gray-600 transition font-medium" onClick={() => setActiveTab("details")}>← Back</button>
               <button
-                className="px-6 py-2 bg-[#8B3EFE] text-white rounded-lg text-sm font-semibold hover:bg-[#7b35e6] transition flex items-center gap-2 disabled:opacity-60"
-                disabled={saveLoading}
-                onClick={() => handleSaveDraft("review")}
+                className="px-6 py-2 bg-[#8B3EFE] text-white rounded-lg text-sm font-semibold hover:bg-[#7b35e6] transition flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                disabled={saveLoading || tasks.length < 5}
+                onClick={() => {
+                  if (tasks.length < 5) {
+                    toast({ title: "Incomplete", description: "Please add at least 5 tasks before reviewing.", variant: "destructive" });
+                    return;
+                  }
+                  handleSaveDraft("review");
+                }}
               >
                 {saveLoading ? "Saving..." : "Next →"}
                 {!saveLoading && <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>}
