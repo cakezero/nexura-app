@@ -445,7 +445,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                 <div className="flex flex-col items-center justify-center text-center gap-2">
                   <img src="/upload-icon.png" alt="" className="w-16 h-16" />
                   <p className="font-medium text-white">Create a Quest Task</p>
-                  <p className="text-sm text-white/50">Add at least one task to continue.</p>
+                  <p className="text-sm text-white/50">Add at least 5 tasks to continue.</p>
                   <button
                     onClick={() => setShowModal(true)}
                     className="mt-4 flex items-center justify-center gap-2 px-4 py-1 bg-purple-900 text-purple-400 hover:bg-[#7b35e6] font-semibold rounded-lg transition"
@@ -747,7 +747,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                   try {
                     const hash = await payStudioHubFee(undefined, QUEST_FEE_CONTRACT);
                     setPaymentTxHash(hash);
-                    await apiRequest({ method: "POST", endpoint: `/${apiPrefix}/save-payment-hash`, data: { txHash: hash } });
+                    await apiRequest({ method: "PATCH", endpoint: `/${apiPrefix}/save-payment-hash`, data: { txHash: hash } });
                     toast({ title: "Payment successful", description: "0.1 $TRUST sent." });
                   } catch (err: any) {
                     toast({ title: "Payment failed", description: err.message, variant: "destructive" });
