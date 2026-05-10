@@ -1,127 +1,167 @@
 import { useLocation } from "wouter";
+import { Button } from "../components/ui/button";
+import { Badge } from "../components/ui/badge";
+import { Card } from "../components/ui/card";
+import { ExternalLink, Clock } from "lucide-react";
+import { motion } from "framer-motion";
 
 interface QuestCardProps {
-  title: string;
+  questId: string;
+  title?: string;
   description?: string;
-  projectName: string;
-  projectLogo: string;
-  heroImage: string;
+  subTitle?: string;
+  projectName?: string;
+  projectLogo?: string;
+  heroImage?: string;
   rewards?: string;
   starts_at?: string;
   ends_at?: string;
-  questId?: string;
-  isLocked?: boolean;
-  lockLevel?: number;
-  onView?: (questId: string) => void;
+  joined?: boolean;
+  status?: string;
+  isActive?: boolean;
+  index?: number;
+  onClick?: (id: string) => void;
 }
 
 export default function QuestCard({
+  questId,
   title,
   description,
+  subTitle,
   projectName,
   projectLogo,
   heroImage,
   rewards,
   starts_at,
   ends_at,
-  questId,
-  isLocked = false,
-  lockLevel,
-  onView,
+  joined,
+  status,
+  isActive = true,
+  index = 0,
+  onClick,
 }: QuestCardProps) {
   const [, setLocation] = useLocation();
 
-  const handleClick = () => {
-    if (!questId || isLocked) return;
-    if (onView) onView(questId);
-    else setLocation(`/quest/${questId}`);
-  };
-
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return "";
-    const date = new Date(dateStr);
+    const d = new Date(dateStr);
 
-    return date.toLocaleDateString("en-US", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    });
+    const day = d.getDate();
+    const suffix =
+      day % 10 === 1 && day !== 11
+        ? "st"
+        : day % 10 === 2 && day !== 12
+        ? "nd"
+        : day % 10 === 3 && day !== 13
+        ? "rd"
+        : "th";
+
+    const month = d.toLocaleDateString("en-US", { month: "long" });
+    const year = d.getFullYear();
+
+    return `${day}${suffix} ${month} ${year}`;
   };
 
-  const hasValidDates = starts_at && ends_at;
+  const duration =
+    starts_at && ends_at
+      ? `${formatDate(starts_at)} - ${formatDate(ends_at)}`
+      : "Ongoing";
 
-  const duration = hasValidDates
-    ? `${formatDate(starts_at)} - ${formatDate(ends_at)}`
-    : null;
+  const badge =
+    status?.toLowerCase() === "upcoming"
+      ? "SOON"
+      : isActive
+      ? "ACTIVE"
+      : "ACTIVE";
+
+  const handleClick = () => {
+    if (onClick) return onClick(questId);
+    setLocation(`/quest/${questId}`);
+  };
 
   return (
-    <div
-      onClick={handleClick}
-      className="w-[260px] h-[320px] shrink-0 cursor-pointer rounded-2xl overflow-hidden border border-white/10 bg-[#080808] hover:bg-[#0F0F0F] transition-all duration-300 flex flex-col"
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, delay: index * 0.05 }}
     >
-      {/* IMAGE */}
-      <div className="relative h-[120px] w-full overflow-hidden shrink-0">
-        <img
-          src={heroImage}
-          className="w-full h-full object-cover transition-transform duration-500"
-        />
+      <Card className="bg-[#170F1F] border border-white/10 rounded-xl overflow-hidden flex flex-col hover:shadow-md transition">
 
-        {/* ACTIVE BADGE */}
-        <div className="absolute top-3 right-3 px-2 py-1 rounded-full text-[10px] font-semibold text-[#00E1A2] bg-[#00E1A24D]">
-          ACTIVE
-        </div>
-
-        {isLocked && (
-          <div className="absolute inset-0 bg-black/70 flex items-center justify-center text-white text-xs">
-            Locked - Level {lockLevel}
-          </div>
-        )}
-
-        <div className="absolute bottom-[-18px] left-3">
+        {/* IMAGE */}
+        <div className="relative w-full h-36 flex-shrink-0">
           <img
-            src={projectLogo}
-            className="w-9 h-9 rounded-xl border border-white/10"
+            src={heroImage || "/quest-1.png"}
+            className="w-full h-full object-cover"
           />
+
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+
+          <div className="absolute top-2 right-2">
+            <Badge className="text-[10px] bg-[#00E1A24D] text-[#00E1A2]">{badge}</Badge>
+          </div>
+
+
         </div>
-      </div>
 
-      {/* CONTENT */}
-      <div className="p-3 pt-7 flex flex-col flex-1 bg-[#170F1F]">
-        {/* TITLE + REWARD */}
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="text-sm font-semibold text-white truncate">
-            {title}
-          </h3>
+        {/* CONTENT */}
+        <div className="p-3 pt-6 flex flex-col gap-2 flex-1">
 
-          {rewards && (
-            <span className="text-[10px] font-semibold text-[#D4BBFF] whitespace-nowrap">
-              {rewards}
+          <h2 className="text-sm font-semibold text-white line-clamp-1">
+            {title || "Untitled Quest"}
+          </h2>
+
+          <p className="text-xs text-white/70 line-clamp-2">
+            {description || subTitle || "No description available"}
+          </p>
+
+          {/* CREATED BY */}
+          <div className="flex justify-between text-[11px]">
+            <span className="text-white/50">Created by</span>
+            <span className="text-white text-[11px]">
+              {projectName || "Intuition Ecosystem"}
             </span>
+          </div>
+
+          {/* REWARD */}
+          {rewards && (
+            <div className="flex justify-between text-[11px]">
+              <span className="text-white/50">Reward</span>
+              <span className="text-white font-medium">{rewards}</span>
+            </div>
           )}
-        </div>
 
-        <p className="text-xs text-white/60 line-clamp-2 mt-1">
-          {description}
-        </p>
+          {/* DURATION */}
+<div className="flex justify-between text-[11px]">
+  <span className="text-white/50">Duration</span>
 
-        {/* DURATION */}
-{duration && (
-  <div className="flex items-center gap-2 text-[10px] text-[#8A97B0] bg-[#8B3EFE33] px-2 py-1 rounded-md w-fit mt-2">
+  <span className="text-[#8A97B0] bg-[#8B3EFE33] px-2 py-1 rounded-md font-semibold flex items-center gap-2">
     <img src="/calendar.png" className="w-3 h-3" />
-    {duration}
-  </div>
-)}
+    {starts_at && ends_at
+      ? `${formatDate(starts_at)} - ${formatDate(ends_at)}`
+      : "Ongoing"}
+  </span>
+</div>
 
-        <div className="flex justify-between items-center text-[10px] text-white/60 mt-3">
-          <span>PROJECT</span>
-          <span className="text-white">{projectName}</span>
+          {/* BUTTON */}
+          <Button
+            className="mt-2 w-full bg-[#8B3EFE] hover:bg-[#7a2fe0] text-white text-xs py-2 rounded-lg"
+            onClick={handleClick}
+          >
+            {isActive ? (
+              <>
+                <ExternalLink className="w-3.5 h-3.5 mr-2" />
+                {joined ? "Continue" : "Start"}
+              </>
+            ) : (
+              <>
+                <Clock className="w-3.5 h-3.5 mr-2" />
+                Coming Soon
+              </>
+            )}
+          </Button>
+
         </div>
-
-        <button className="mt-auto flex items-center justify-center gap-2 bg-[#8B3EFE] text-white text-xs py-2 rounded-xl hover:opacity-90 transition">
-          Start Quest
-          <img src="/arrow-right.png" className="w-3.5 h-3.5" />
-        </button>
-      </div>
-    </div>
+      </Card>
+    </motion.div>
   );
 }
