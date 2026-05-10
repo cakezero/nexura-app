@@ -444,7 +444,12 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                 {tasks.map((task, index) => (
                   <div key={index} className="flex items-center justify-between gap-4 rounded-lg border-2 border-purple-500 px-4 py-3 bg-white/5">
                     <div className="flex items-center justify-center w-8 h-8 bg-gray-600 rounded-full text-white font-semibold">{index + 1}</div>
-                    <p className="flex-1 text-white text-left font-medium">{task.description || task.type}</p>
+                    <div className="flex-1 min-w-0 text-left">
+                      <p className="text-white text-sm font-medium">{task.description || task.type}</p>
+                      <p className="text-xs text-white/50 truncate">
+                        {task.platform} · {task.validation}
+                      </p>
+                    </div>
                     <div className="flex items-center gap-2">
                       <button
                         className="px-3 py-1 bg-gray-600 text-white rounded-lg text-sm hover:bg-gray-500 transition"
@@ -579,24 +584,27 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
             <button onClick={() => setShowModal(false)} className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-all text-lg leading-none">&times;</button>
             <h2 className="text-xl font-semibold text-white mb-6">Add New Task</h2>
 
-            <div className="grid grid-cols-1 gap-6 mb-6">
+            <div className="grid grid-cols-2 gap-6 mb-6">
               <div>
                 <label className="text-sm text-white/70 mb-2 block font-medium">Task Type</label>
                 <select
-                  className="w-full p-2 rounded-lg bg-[#0d0d14] text-white border border-white/10 focus:outline-none focus:border-purple-500 [&>option]:bg-[#0d0d14]"
+                  className="w-full p-2 rounded-lg bg-[#0d0d14] text-white border border-white/10 focus:outline-none focus:border-purple-500 [&>option]:bg-[#0d0d14] text-sm"
                   value={newTask.type}
                   onChange={(e) => {
                     const type = e.target.value;
                     const isTwitter = type === "Comment on X" || type === "Follow on X" || type === "Create a Post";
+                    const isPortal = type === "Portal Claims";
+                    const isFeedback = type === "Give Feedback";
                     const validationLabel =
                       type === "Own a TNS" ? "Verified by TNS" :
-                      type === "Portal Claims" ? "Verified by Intuition Portal" :
+                      isPortal ? "Auto Verified" :
                       "Manual Validation";
                     setNewTask({
                       ...newTask,
                       type,
-                      platform: isTwitter ? "Twitter" : "Other",
+                      platform: isTwitter ? "Twitter" : (isPortal || isFeedback) ? "" : newTask.platform || "Other",
                       validation: validationLabel,
+                      verificationMode: isPortal ? "auto" : isFeedback ? "feedback" : "",
                     });
                   }}
                 >
@@ -609,24 +617,47 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                   <option value="Give Feedback">Give Feedback</option>
                 </select>
               </div>
+
+              {/* Platform - Matches Campaign UI */}
+              {newTask.type !== "Portal Claims" && newTask.type !== "Give Feedback" && newTask.type !== "Own a TNS" && (
+                <div>
+                  <label className="text-sm text-white/70 mb-2 block font-medium">Platform</label>
+                  <div className="flex gap-3">
+                    {["Twitter", "Other"].map((p) => (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setNewTask({ ...newTask, platform: p, validation: p === "Twitter" ? "Manual Validation" : newTask.validation })}
+                        className={`flex-1 border py-2 rounded-lg transition text-xs font-semibold ${newTask.platform === p ? "bg-[#8B3EFE] text-white border-purple-500" : "bg-purple-950 border-purple-800 text-white/70 hover:border-purple-500"}`}
+                      >
+                        {p}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="bg-white/5 p-5 rounded-xl mb-6 border border-white/10">
               <div className="mb-4">
-                <label className="text-sm text-white/70 mb-2 block font-medium">Task Description</label>
+                <label className="text-sm text-white/70 mb-2 block">
+                  Task Description
+                </label>
                 <input
                   type="text"
-                  placeholder="Explain what the user needs to do"
+                  placeholder="e.g. Follow us on X to stay updated"
                   value={newTask.description}
                   onChange={(e) => setNewTask({...newTask, description: e.target.value})}
                   className="w-full p-2 rounded-lg bg-white/5 text-white border border-white/10 focus:outline-none focus:border-purple-500"
                 />
               </div>
-              <div className="relative">
-                <label className="text-sm text-white/70 mb-2 block font-medium">Task URL</label>
+              <div>
+                <label className="text-sm text-white/70 mb-2 block">
+                  Handle or URL
+                </label>
                 <input
                   type="text"
-                  placeholder="Input URL"
+                  placeholder="e.g. https://x.com/yourlink"
                   value={newTask.handleOrUrl}
                   onChange={(e) => {
                     setUrlError("");
@@ -634,7 +665,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                   }}
                   className="w-full p-2 rounded-lg bg-white/5 text-white border border-white/10 focus:outline-none focus:border-purple-500"
                 />
-                {urlError && <p className="text-red-400 text-[10px] mt-1">{urlError}</p>}
+                {urlError && <p className="text-red-500 text-[10px] mt-1">{urlError}</p>}
               </div>
             </div>
 
