@@ -317,7 +317,7 @@ export default function CreateLesson({
       try {
         const res = await projectApiRequest<{ lessons?: Lesson[] }>({
           method: "GET",
-          endpoint: `${apiBase}/get-lessons",
+          endpoint: `${apiBase}/get-lessons`,
         });
         if (cancelled) return;
         const found = (res.lessons ?? []).find((entry) => entry._id === effectiveEditId);
@@ -405,7 +405,7 @@ export default function CreateLesson({
           try {
           const adminResponse = await projectApiRequest<LessonDetailsResponse>({
           method: "GET",
-          endpoint: `/hub/get-lesson-details?id=${id}`,
+          endpoint: `${apiBase}/get-lesson-details?id=${id}`,
           });
           setMiniLessons(dedupeById(adminResponse.miniLessons));
           setQuestions(dedupeById(adminResponse.questions));
@@ -464,7 +464,7 @@ export default function CreateLesson({
           if (lessonId) {
           await projectApiRequest({
           method: "PATCH",
-          endpoint: `${apiBase}/update-lesson",
+          endpoint: `${apiBase}/update-lesson`,
           formData: buildLessonFormData(lessonForm, lessonId),
           });
           return lessonId;
@@ -472,7 +472,7 @@ export default function CreateLesson({
 
           const res = await projectApiRequest<{ lesson?: { _id: string }; _id?: string }>({
           method: "POST",
-          endpoint: `${apiBase}/create-lesson",
+          endpoint: `${apiBase}/create-lesson`,
           formData: buildLessonFormData(lessonForm),
           });
           const newId = res.lesson?._id ?? res._id ?? null;
@@ -544,7 +544,7 @@ export default function CreateLesson({
           _id?: string;
           }>({
           method: "POST",
-          endpoint: `${apiBase}/create-mini-lesson",
+          endpoint: `${apiBase}/create-mini-lesson`,
           data: {
           text: "",
           lesson: id,
@@ -583,7 +583,7 @@ export default function CreateLesson({
           _id?: string;
           }>({
           method: "POST",
-          endpoint: `${apiBase}/create-question",
+          endpoint: `${apiBase}/create-question`,
           data: {
           question: "",
           options: ["", "", "", ""],
@@ -627,7 +627,7 @@ export default function CreateLesson({
           _id?: string;
           }>({
           method: "POST",
-          endpoint: `${apiBase}/create-video-lesson",
+          endpoint: `${apiBase}/create-video-lesson`,
           data: {
           url: "",
           lesson: id,
@@ -661,7 +661,7 @@ export default function CreateLesson({
           try {
           await projectApiRequest({
           method: "PATCH",
-          endpoint: `${apiBase}/update-mini-lesson",
+          endpoint: `${apiBase}/update-mini-lesson`,
           data: {
           miniLessonId: item._id,
           text: nextText,
@@ -697,7 +697,7 @@ export default function CreateLesson({
           try {
           await projectApiRequest({
           method: "PATCH",
-          endpoint: `${apiBase}/update-question",
+          endpoint: `${apiBase}/update-question`,
           data: {
           questionId: item._id,
           question: next.question,
@@ -747,7 +747,7 @@ export default function CreateLesson({
           try {
           await projectApiRequest({
           method: "PATCH",
-          endpoint: `${apiBase}/update-question",
+          endpoint: `${apiBase}/update-question`,
           data: {
           questionId: quiz._id,
           question: quiz.question ?? "",
@@ -787,7 +787,7 @@ export default function CreateLesson({
           try {
           await projectApiRequest({
           method: "PATCH",
-          endpoint: `${apiBase}/update-video-lesson",
+          endpoint: `${apiBase}/update-video-lesson`,
           data: {
           videoLessonId: item._id,
           url: nextUrl,
@@ -821,10 +821,10 @@ export default function CreateLesson({
           async () => {
           const endpoint =
           kind === "mini"
-            ? `/hub/delete-mini-lesson?id=${id}`
+            ? `${apiBase}/delete-mini-lesson?id=${id}`
             : kind === "video"
-            ? `/hub/delete-video-lesson?id=${id}`
-            : `/hub/delete-question?id=${id}`;
+            ? `${apiBase}/delete-video-lesson?id=${id}`
+            : `${apiBase}/delete-question?id=${id}`;
           try {
           setDeletingContentId(id);
           await projectApiRequest({ method: "DELETE", endpoint });
@@ -892,7 +892,7 @@ export default function CreateLesson({
   //     (i.e. when next item is not a quiz, or there is no next item)
   // The virtual items are non-deletable and edit the parent quiz's
   // introHeader/introBody/introTrophy or outroHeader/outroBody/outroTrophy
-  // fields via /api/hub/update-question.
+  // fields via dynamic apiBase.
   type SidebarEntry =
     | { kind: "content"; item: ContentItem }
     | { kind: "intro" | "outro"; quizId: string };
@@ -1022,14 +1022,14 @@ export default function CreateLesson({
     const id = ensureLessonId();
     if (!id) return;
     const endpoint =
-      target === "published" ? "/hub/publish-lesson" : "/hub/unpublish-lesson";
+      target === "published" ? `${apiBase}/publish-lesson` : `${apiBase}/unpublish-lesson`;
     try {
       setPublishing(true);
       // Persist any in-flight edits to the lesson form before flipping status
       // so users don't lose changes made on the details step.
       await projectApiRequest({
         method: "PATCH",
-        endpoint: `${apiBase}/update-lesson",
+        endpoint: `${apiBase}/update-lesson`,
         formData: buildLessonFormData(lessonForm, id),
       });
       await projectApiRequest({
@@ -1064,7 +1064,7 @@ export default function CreateLesson({
       setSaving(true);
       await projectApiRequest({
         method: "PATCH",
-        endpoint: `${apiBase}/update-lesson",
+        endpoint: `${apiBase}/update-lesson`,
         formData: buildLessonFormData(lessonForm, id),
       });
       toast({
@@ -1466,7 +1466,7 @@ export default function CreateLesson({
           </div>
           <Button
             variant="outline"
-            onClick={() => setLocation(location.pathname.startsWith("/user-dashboard") ? "/user-dashboard/lessons-tab" : "/studio-dashboard/lessons-tab")}
+            onClick={() => setLocation(location.startsWith("/user-dashboard") ? "/user-dashboard/lessons-tab" : "/studio-dashboard/lessons-tab")}
             className="border-white/10 text-white hover:bg-white/5 gap-2"
           >
             <ChevronLeft className="w-4 h-4" />
@@ -2264,7 +2264,7 @@ export default function CreateLesson({
                       setPaymentTxHash(hash);
                       await projectApiRequest({
                         method: "PATCH",
-                        endpoint: `${apiBase}/save-payment-hash",
+                        endpoint: `${apiBase}/save-payment-hash`,
                         data: { txHash: hash },
                       });
                       toast({ title: "Payment successful", description: "1 $TRUST sent. You can now publish your lesson." });

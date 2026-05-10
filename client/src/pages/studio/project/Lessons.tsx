@@ -6,38 +6,28 @@ import { Card } from "../../../components/ui/card";
 import { Button } from "../../../components/ui/button";
 import { useToast } from "../../../hooks/use-toast";
 import { projectApiRequest } from "../../../lib/projectApi";
-import { 
-  BookOpen, 
-  Plus, 
-  Pencil, 
-  Trash2, 
-  Send, 
-  Eye, 
-  Clock,
-  CheckCircle2,
-  AlertCircle
-} from "lucide-react";
-import { format } from "date-fns";
+import { Trash2, Plus, Edit, Send, Loader2, RefreshCw } from "lucide-react";
+import { getStoredUserSession } from "../../../lib/userSession";
 
 interface Lesson {
   _id: string;
   title: string;
   description: string;
   reward: number;
-  status?: "draft" | "published";
+  noOfQuestions: number;
+  status: "draft" | "published";
   coverImage?: string;
-  createdAt: string;
 }
 
 export default function Lessons() {
-  const isUserDashboard = location.pathname.startsWith("/user-dashboard");
+  const [location, setLocation] = useLocation();
+  const isUserDashboard = location.startsWith("/user-dashboard");
   const apiBase = isUserDashboard ? "/user-hub" : "/hub";
   const createLessonUrl = isUserDashboard ? "/user-dashboard/create-lesson" : "/studio-dashboard/create-lesson";
 
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [loading, setLoading] = useState(true);
   const [publishingId, setPublishingId] = useState("");
-  const [, setLocation] = useLocation();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -104,11 +94,10 @@ export default function Lessons() {
         method: "DELETE",
         endpoint: `${apiBase}/delete-lesson?id=${lesson._id}`,
       });
-      
       setLessons(prev => prev.filter(l => l._id !== lesson._id));
       toast({
-        title: "Lesson Deleted",
-        description: "The lesson has been permanently removed.",
+        title: "Lesson deleted",
+        description: "The lesson has been removed successfully.",
       });
     } catch (err) {
       toast({
@@ -120,137 +109,114 @@ export default function Lessons() {
   };
 
   return (
-    <div className="space-y-8 p-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-white">Manage Lessons</h1>
-          <p className="text-white/60 mt-1">Create and manage educational content for your hub.</p>
+          <h1 className="text-2xl font-bold text-white">Lessons</h1>
+          <p className="text-white/60">Create and manage educational content</p>
         </div>
-        <Button 
-          onClick={() => setLocation(createLessonUrl)}
-          className="bg-[#8a3ffc] hover:bg-[#7a2feb] text-white gap-2"
-        >
-          <Plus className="w-4 h-4" />
-          Create New Lesson
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="ghost"
+            onClick={fetchLessons}
+            disabled={loading}
+            className="text-white/60 hover:text-white"
+          >
+            <RefreshCw className={`w-5 h-5 ${loading ? "animate-spin" : ""}`} />
+          </Button>
+          <Button 
+            className="bg-[#8B3EFE] hover:bg-[#7b35e6] gap-2"
+            onClick={() => setLocation(createLessonUrl)}
+          >
+            <Plus className="w-4 h-4" />
+            Create Lesson
+          </Button>
+        </div>
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-64 rounded-2xl bg-white/5 animate-pulse border border-white/10" />
-          ))}
+        <div className="flex justify-center items-center py-20">
+          <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
         </div>
       ) : lessons.length === 0 ? (
-        <Card className="p-12 text-center border-dashed border-white/10 bg-white/[0.02]">
-          <div className="mx-auto w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
-            <BookOpen className="w-8 h-8 text-white/20" />
-          </div>
-          <h3 className="text-xl font-semibold text-white">No lessons found</h3>
-          <p className="text-white/40 mt-2 max-w-md mx-auto">
-            You haven't created any lessons yet. Get started by creating your first educational module.
-          </p>
+        <Card className="p-12 text-center bg-white/5 border-dashed border-white/10">
+          <p className="text-white/40">No lessons created yet.</p>
           <Button 
+            variant="link" 
+            className="text-purple-400 mt-2"
             onClick={() => setLocation(createLessonUrl)}
-            variant="outline" 
-            className="mt-6 border-white/10 text-white hover:bg-white/5"
           >
-            Create Your First Lesson
+            Create your first lesson
           </Button>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {lessons.map((lesson) => (
-            <Card 
-              key={lesson._id}
-              className="overflow-hidden border-white/10 bg-[#0d0d14] flex flex-col group transition-all hover:border-[#8a3ffc]/50"
-            >
-              {/* Thumbnail */}
-              <div className="relative h-40 w-full bg-white/5">
+            <Card key={lesson._id} className="overflow-hidden bg-[#170F1F] border-white/10 flex flex-col">
+              <div className="aspect-video relative overflow-hidden bg-black/40">
                 {lesson.coverImage ? (
-                  <img 
-                    src={lesson.coverImage} 
-                    alt={lesson.title} 
-                    className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                  />
+                  <img src={lesson.coverImage} className="w-full h-full object-cover" />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-white/10 uppercase tracking-widest text-xs">
-                    No Cover Image
+                  <div className="w-full h-full flex items-center justify-center">
+                    <Send className="w-12 h-12 text-white/10" />
                   </div>
                 )}
-                
-                {/* Status Badge */}
-                <div className={`absolute top-3 right-3 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider backdrop-blur-md border ${
-                  lesson.status === "published" 
-                    ? "bg-emerald-500/20 border-emerald-500/30 text-emerald-400" 
-                    : "bg-amber-500/20 border-amber-500/30 text-amber-400"
-                }`}>
-                  {lesson.status || "draft"}
+                <div className="absolute top-2 right-2">
+                  <div className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${
+                    lesson.status === "published" ? "bg-green-500/20 text-green-400" : "bg-yellow-500/20 text-yellow-400"
+                  }`}>
+                    {lesson.status}
+                  </div>
                 </div>
               </div>
-
-              {/* Content */}
-              <div className="p-5 flex-1 flex flex-col">
-                <div className="flex-1">
-                  <h3 className="text-lg font-bold text-white truncate">{lesson.title}</h3>
-                  <p className="text-white/50 text-sm mt-2 line-clamp-2 leading-relaxed">
-                    {lesson.description}
-                  </p>
+              
+              <div className="p-4 space-y-3 flex-1 flex flex-col">
+                <div>
+                  <h3 className="text-lg font-bold text-white line-clamp-1">{lesson.title}</h3>
+                  <p className="text-sm text-white/60 line-clamp-2 mt-1">{lesson.description}</p>
+                </div>
+                
+                <div className="flex items-center justify-between text-xs text-white/40 mt-auto pt-4 border-t border-white/5">
+                  <span>{lesson.noOfQuestions} Questions</span>
+                  <span className="text-purple-400 font-bold">{lesson.reward} XP</span>
                 </div>
 
-                <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 text-xs text-white/40">
-                    <Clock className="w-3 h-3" />
-                    {format(new Date(lesson.createdAt), "MMM d, yyyy")}
-                  </div>
-                  <div className="flex items-center gap-1.5 text-xs text-purple-400 font-semibold bg-purple-400/10 px-2 py-0.5 rounded">
-                    {lesson.reward} XP
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div className="mt-5 grid grid-cols-2 gap-2">
-                  <Button 
-                    onClick={() => setLocation(`${createLessonUrl}?edit=${lesson._id}`)}
+                <div className="grid grid-cols-3 gap-2 pt-2">
+                  <Button
                     variant="outline"
-                    className="border-white/10 text-white hover:bg-white/5 gap-2 text-xs"
+                    size="sm"
+                    className="border-white/10 hover:bg-white/5 text-xs h-8"
+                    onClick={() => setLocation(`${createLessonUrl}?edit=${lesson._id}`)}
                   >
-                    <Pencil className="w-3 h-3" />
+                    <Edit className="w-3 h-3 mr-1" />
                     Edit
                   </Button>
-                  
-                  <Button 
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={`border-white/10 text-xs h-8 ${
+                      lesson.status === "published" ? "text-yellow-400 hover:text-yellow-300" : "text-green-400 hover:text-green-300"
+                    }`}
                     onClick={() => togglePublish(lesson)}
                     disabled={publishingId === lesson._id}
-                    variant="outline"
-                    className={`border-white/10 gap-2 text-xs transition-all ${
-                      lesson.status === "published"
-                        ? "text-amber-400 hover:text-amber-300 hover:bg-amber-400/10"
-                        : "text-emerald-400 hover:text-emerald-300 hover:bg-emerald-400/10"
-                    }`}
                   >
                     {publishingId === lesson._id ? (
-                      "..."
-                    ) : lesson.status === "published" ? (
-                      <>
-                        <AlertCircle className="w-3 h-3" />
-                        Unpublish
-                      </>
+                      <Loader2 className="w-3 h-3 animate-spin" />
                     ) : (
                       <>
-                        <Send className="w-3 h-3" />
-                        Publish
+                        <Send className="w-3 h-3 mr-1" />
+                        {lesson.status === "published" ? "Unpublish" : "Publish"}
                       </>
                     )}
                   </Button>
-
-                  <Button 
-                    onClick={() => deleteLesson(lesson)}
+                  <Button
                     variant="ghost"
-                    className="col-span-2 text-white/30 hover:text-red-400 hover:bg-red-400/10 gap-2 text-xs mt-1"
+                    size="sm"
+                    className="text-red-400 hover:text-red-300 hover:bg-red-400/10 text-xs h-8"
+                    onClick={() => deleteLesson(lesson)}
                   >
-                    <Trash2 className="w-3 h-3" />
-                    Delete Lesson
+                    <Trash2 className="w-3 h-3 mr-1" />
+                    Delete
                   </Button>
                 </div>
               </div>

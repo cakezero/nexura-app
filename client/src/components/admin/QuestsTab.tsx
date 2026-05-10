@@ -22,6 +22,8 @@ interface Quest {
   projectCoverImage?: string;
   reward?: { pool?: number };
   status?: string;
+  project_name?: string;
+  project_image?: string;
 }
 
 type PendingAction = { type: "delete" | "close"; id: string; title: string } | null;
