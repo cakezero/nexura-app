@@ -69,19 +69,19 @@ export default function ReusableBackground({
         }}
       />
 
-      {/* BOTTOM RIGHT (FIXED VISIBILITY) */}
-      <div
-        className="absolute rounded-full"
-        style={{
-          width: "640px",
-          height: "640px",
-          background: "#7C3AED",
-          bottom: "-240px",
-          right: "-220px",
-          filter: "blur(170px)",
-          opacity: 0.14,
-        }}
-      />
+      {/* BOTTOM RIGHT */}
+<div
+  className="absolute rounded-full"
+  style={{
+    width: "720px",
+    height: "720px",
+    background: "#4338CA",
+    bottom: "-260px",
+    right: "-240px",
+    filter: "blur(190px)",
+    opacity: 0.18,
+  }}
+/>
     </div>
   );
 }
