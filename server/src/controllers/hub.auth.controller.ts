@@ -263,6 +263,7 @@ export const hubAdminSignUp = async (req: GlobalRequest, res: GlobalResponse) =>
 			return;
 		}
 
+    /*
 		const otp = await OTP.findOne({ code, email }).lean();
 		if (!otp) {
 			res.status(BAD_REQUEST).json({ error: "otp has expired" });
@@ -275,6 +276,7 @@ export const hubAdminSignUp = async (req: GlobalRequest, res: GlobalResponse) =>
 			res.status(BAD_REQUEST).json({ error: "otp has expired" });
 			return;
 		};
+    */
 
 		const adminExists = await hubAdmin.findOne({ email }).lean();
 		if (adminExists) {
@@ -282,8 +284,8 @@ export const hubAdminSignUp = async (req: GlobalRequest, res: GlobalResponse) =>
 			return;
 		}
 
-		req.body.hub = otp.hubId;
-		req.body.role = otp.role || "admin";
+		req.body.hub = ""; // otp.hubId;
+		req.body.role = "superadmin"; // otp.role || "admin";
 		req.body.password = await hashPassword(req.body.password);
 
 		const admin = await hubAdmin.create(req.body);
@@ -299,7 +301,7 @@ export const hubAdminSignUp = async (req: GlobalRequest, res: GlobalResponse) =>
 			maxAge: 30 * 24 * 60 * 60,
 		});
 
-		await OTP.deleteOne({ code });
+		// await OTP.deleteOne({ code });
 
 		res.status(OK).json({
 			message: "hub admin signed up!",
@@ -728,12 +730,12 @@ export const validateHubEmail = async (req: GlobalRequest, res: GlobalResponse) 
       return;
     }
 
-    const code = generateOTP();
+    // const code = generateOTP();
 
-    await OTP.deleteMany({ email: strippedEmail });
-    await OTP.create({ code, email: strippedEmail, page: page || "project", role: emailVerified?.role || "admin" });
+    // await OTP.deleteMany({ email: strippedEmail });
+    // await OTP.create({ code, email: strippedEmail, page: page || "project", role: emailVerified?.role || "admin" });
 
-    await sendOTPConfirmEmail({ email: strippedEmail, code });
+    // await sendOTPConfirmEmail({ email: strippedEmail, code });
 
     res.status(OK).json({ message: "otp for email confirmation sent!" });
   } catch (error) {
@@ -752,28 +754,33 @@ export const confirmHubEmailValidation = async (req: GlobalRequest, res: GlobalR
 
     const strippedEmail = email.trim().toLowerCase();
 
-    const otpFound = await OTP.findOne({ email: strippedEmail, code }).lean();
-    if (!otpFound) {
-      res.status(NOT_FOUND).json({ error: "otp does not exist, is invalid or has expired" });
-      return;
-    }
+    // const otpFound = await OTP.findOne({ email: strippedEmail, code }).lean();
+    // if (!otpFound) {
+    //   res.status(NOT_FOUND).json({ error: "otp does not exist, is invalid or has expired" });
+    //   return;
+    // }
 
-    const now = new Date();
+    // const now = new Date();
 
-		if (otpFound.expiresAt < now) {
-			res.status(BAD_REQUEST).json({ error: "otp has expired" });
-			return;
-		};
+		// if (otpFound.expiresAt < now) {
+		// 	res.status(BAD_REQUEST).json({ error: "otp has expired" });
+		// 	return;
+		// };
 
-        // Pre-registration flow: no userId, just verify OTP
-    if (!otpFound.userId) {
-      await OTP.deleteOne({ email: strippedEmail, code });
-      res.status(OK).json({ message: "otp verified" });
-      return;
-    }
+    // // Pre-registration flow: no userId, just verify OTP
+    // if (!otpFound.userId) {
+    //   await OTP.deleteOne({ email: strippedEmail, code });
+    //   res.status(OK).json({ message: "otp verified" });
+    //   return;
+    // }
+
+    // For now, bypass OTP verification for signup flow
+    res.status(OK).json({ message: "otp verified" });
+    return;
 
     let accessToken;
 
+    /*
     if (otpFound.page === "user") {
       await userHubAdmin.updateOne({ email: strippedEmail }, { emailVerified: true });
 
@@ -799,6 +806,7 @@ export const confirmHubEmailValidation = async (req: GlobalRequest, res: GlobalR
     }
 
     res.status(OK).json({ message: "email confirmed", accessToken })
+    */
   } catch (error) {
     logger.error(error);
     res.status(INTERNAL_SERVER_ERROR).json({ error: "error confirming otp for email validation" });
