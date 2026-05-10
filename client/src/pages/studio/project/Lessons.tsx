@@ -30,7 +30,10 @@ interface Lesson {
 }
 
 export default function Lessons() {
-  const createLessonUrl = location.pathname.startsWith("/user-dashboard") ? "/user-dashboard/create-lesson" : "/studio-dashboard/create-lesson";
+  const isUserDashboard = location.pathname.startsWith("/user-dashboard");
+  const apiBase = isUserDashboard ? "/user-hub" : "/hub";
+  const createLessonUrl = isUserDashboard ? "/user-dashboard/create-lesson" : "/studio-dashboard/create-lesson";
+
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [loading, setLoading] = useState(true);
   const [publishingId, setPublishingId] = useState("");
@@ -46,7 +49,7 @@ export default function Lessons() {
       setLoading(true);
       const res = await projectApiRequest<{ lessons?: Lesson[] }>({
         method: "GET",
-        endpoint: "/hub/get-lessons",
+        endpoint: `${apiBase}/get-lessons`,
       });
       setLessons(res.lessons ?? []);
     } catch (err) {
@@ -62,7 +65,7 @@ export default function Lessons() {
 
   const togglePublish = async (lesson: Lesson) => {
     const target = lesson.status === "published" ? "draft" : "published";
-    const endpoint = target === "published" ? "/hub/publish-lesson" : "/hub/unpublish-lesson";
+    const endpoint = target === "published" ? `${apiBase}/publish-lesson` : `${apiBase}/unpublish-lesson`;
     
     try {
       setPublishingId(lesson._id);
@@ -99,7 +102,7 @@ export default function Lessons() {
     try {
       await projectApiRequest({
         method: "DELETE",
-        endpoint: `/hub/delete-lesson?id=${lesson._id}`,
+        endpoint: `${apiBase}/delete-lesson?id=${lesson._id}`,
       });
       
       setLessons(prev => prev.filter(l => l._id !== lesson._id));

@@ -63,21 +63,33 @@ export const createLesson = async (req: GlobalRequest, res: GlobalResponse) => {
     const creatorModel = isProjectHub ? "project" : (isUserHub ? "user-hubs" : "users");
     const creatorName = req.admin?.name || req.user?.name || req.adminName || "User";
 
-    const newLesson = await lesson.create({
-      title: String(title).trim(),
-      description: String(description).trim(),
-      reward: Number(reward),
-      disclaimer: typeof disclaimer === "string" ? disclaimer.trim() : "",
-      completionTrophy: completionTrophy || "",
-      completionTitle: completionTitle || "",
-      completionMessage: completionMessage || "",
-      coverImage: coverImage || "",
-      profileImage: profileImage || "",
-      status: "draft",
-      creatorName,
-      creator,
-      creatorModel,
-    });
+    logger.info(`[createLesson] Attempting to create lesson. creator: ${creator}, creatorModel: ${creatorModel}, creatorName: ${creatorName}`);
+    logger.info(`[createLesson] Body: ${JSON.stringify(req.body)}`);
+
+    let newLesson;
+    try {
+      newLesson = await lesson.create({
+        title: String(title).trim(),
+        description: String(description).trim(),
+        reward: Number(reward),
+        disclaimer: typeof disclaimer === "string" ? disclaimer.trim() : "",
+        completionTrophy: completionTrophy || "",
+        completionTitle: completionTitle || "",
+        completionMessage: completionMessage || "",
+        coverImage: coverImage || "",
+        profileImage: profileImage || "",
+        status: "draft",
+        creatorName,
+        creator,
+        creatorModel,
+      });
+    } catch (createErr: any) {
+      logger.error(`[createLesson] Mongoose create failed: ${createErr.message}`);
+      if (createErr.errors) {
+        logger.error(`[createLesson] Validation Errors: ${JSON.stringify(createErr.errors)}`);
+      }
+      throw createErr;
+    }
 
     res.status(CREATED).json({ message: "lesson created", lesson: newLesson });
   } catch (error) {

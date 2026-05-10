@@ -231,7 +231,10 @@ export default function CreateLesson({
   onLessonSaved,
 }: CreateLessonProps) {
   const { toast } = useToast();
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
+
+  const isUserDashboard = location.startsWith("/user-dashboard");
+  const apiBase = isUserDashboard ? "/user-hub" : "/hub";
 
   const effectiveEditId =
     externalEditId ?? new URLSearchParams(window.location.search).get("edit");
@@ -314,7 +317,7 @@ export default function CreateLesson({
       try {
         const res = await projectApiRequest<{ lessons?: Lesson[] }>({
           method: "GET",
-          endpoint: "/hub/get-lessons",
+          endpoint: `${apiBase}/get-lessons",
         });
         if (cancelled) return;
         const found = (res.lessons ?? []).find((entry) => entry._id === effectiveEditId);
@@ -461,7 +464,7 @@ export default function CreateLesson({
           if (lessonId) {
           await projectApiRequest({
           method: "PATCH",
-          endpoint: "/hub/update-lesson",
+          endpoint: `${apiBase}/update-lesson",
           formData: buildLessonFormData(lessonForm, lessonId),
           });
           return lessonId;
@@ -469,7 +472,7 @@ export default function CreateLesson({
 
           const res = await projectApiRequest<{ lesson?: { _id: string }; _id?: string }>({
           method: "POST",
-          endpoint: "/hub/create-lesson",
+          endpoint: `${apiBase}/create-lesson",
           formData: buildLessonFormData(lessonForm),
           });
           const newId = res.lesson?._id ?? res._id ?? null;
@@ -541,7 +544,7 @@ export default function CreateLesson({
           _id?: string;
           }>({
           method: "POST",
-          endpoint: "/hub/create-mini-lesson",
+          endpoint: `${apiBase}/create-mini-lesson",
           data: {
           text: "",
           lesson: id,
@@ -580,7 +583,7 @@ export default function CreateLesson({
           _id?: string;
           }>({
           method: "POST",
-          endpoint: "/hub/create-question",
+          endpoint: `${apiBase}/create-question",
           data: {
           question: "",
           options: ["", "", "", ""],
@@ -624,7 +627,7 @@ export default function CreateLesson({
           _id?: string;
           }>({
           method: "POST",
-          endpoint: "/hub/create-video-lesson",
+          endpoint: `${apiBase}/create-video-lesson",
           data: {
           url: "",
           lesson: id,
@@ -658,7 +661,7 @@ export default function CreateLesson({
           try {
           await projectApiRequest({
           method: "PATCH",
-          endpoint: "/hub/update-mini-lesson",
+          endpoint: `${apiBase}/update-mini-lesson",
           data: {
           miniLessonId: item._id,
           text: nextText,
@@ -694,7 +697,7 @@ export default function CreateLesson({
           try {
           await projectApiRequest({
           method: "PATCH",
-          endpoint: "/hub/update-question",
+          endpoint: `${apiBase}/update-question",
           data: {
           questionId: item._id,
           question: next.question,
@@ -744,7 +747,7 @@ export default function CreateLesson({
           try {
           await projectApiRequest({
           method: "PATCH",
-          endpoint: "/hub/update-question",
+          endpoint: `${apiBase}/update-question",
           data: {
           questionId: quiz._id,
           question: quiz.question ?? "",
@@ -784,7 +787,7 @@ export default function CreateLesson({
           try {
           await projectApiRequest({
           method: "PATCH",
-          endpoint: "/hub/update-video-lesson",
+          endpoint: `${apiBase}/update-video-lesson",
           data: {
           videoLessonId: item._id,
           url: nextUrl,
@@ -1026,7 +1029,7 @@ export default function CreateLesson({
       // so users don't lose changes made on the details step.
       await projectApiRequest({
         method: "PATCH",
-        endpoint: "/hub/update-lesson",
+        endpoint: `${apiBase}/update-lesson",
         formData: buildLessonFormData(lessonForm, id),
       });
       await projectApiRequest({
@@ -1061,7 +1064,7 @@ export default function CreateLesson({
       setSaving(true);
       await projectApiRequest({
         method: "PATCH",
-        endpoint: "/hub/update-lesson",
+        endpoint: `${apiBase}/update-lesson",
         formData: buildLessonFormData(lessonForm, id),
       });
       toast({
@@ -2261,7 +2264,7 @@ export default function CreateLesson({
                       setPaymentTxHash(hash);
                       await projectApiRequest({
                         method: "PATCH",
-                        endpoint: "/hub/save-payment-hash",
+                        endpoint: `${apiBase}/save-payment-hash",
                         data: { txHash: hash },
                       });
                       toast({ title: "Payment successful", description: "1 $TRUST sent. You can now publish your lesson." });
