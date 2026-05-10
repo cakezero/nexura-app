@@ -97,68 +97,78 @@ export default function QuestCard({
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
 
           <div className="absolute top-2 right-2">
-            <Badge className="text-[10px] bg-[#00E1A24D] text-[#00E1A2]">{badge}</Badge>
+            <Badge className="text-[10px] bg-[#00E1A24D] text-[#00E1A2]">
+              {badge}
+            </Badge>
           </div>
 
-
+          {/* PROJECT LOGO */}
+          {projectLogo && (
+            <img
+              src={projectLogo}
+              className="absolute bottom-2 left-2 w-8 h-8 rounded-md border border-white/10 object-cover"
+            />
+          )}
         </div>
 
         {/* CONTENT */}
-        <div className="p-3 pt-6 flex flex-col gap-2 flex-1">
+        <div className="p-3 pt-4 flex flex-col gap-2 flex-1">
 
-          <h2 className="text-sm font-semibold text-white line-clamp-1">
-            {title || "Untitled Quest"}
-          </h2>
+          {/* TITLE + REWARD */}
+          <div className="flex items-start justify-between gap-2">
+            <h2 className="text-sm font-semibold text-white line-clamp-1">
+              {title || "Untitled Quest"}
+            </h2>
 
+            {rewards && (
+              <span
+                className="text-[11px] px-2 py-1 rounded-md border bg-[#D4BBFF1A] border-[#D4BBFF33] text-[#D4BBFF] font-semibold whitespace-nowrap"
+              >
+                +{rewards}
+              </span>
+            )}
+          </div>
+
+          {/* DESCRIPTION */}
           <p className="text-xs text-white/70 line-clamp-2">
             {description || subTitle || "No description available"}
           </p>
 
-          {/* CREATED BY */}
+          {/* DURATION (VALUE ONLY LEFT SIDE STYLE) */}
+          <div className="flex items-center gap-2 text-[11px] text-[#8A97B0] bg-[#8B3EFE33] px-2 py-1 rounded-md w-fit font-semibold">
+            <img src="/calendar.png" className="w-3 h-3" />
+            {duration}
+          </div>
+
+          {/* CREATOR */}
           <div className="flex justify-between text-[11px]">
-            <span className="text-white/50">Created by</span>
+            <span className="text-white text-sm">Creator:</span>
             <span className="text-white text-[11px]">
               {projectName || "Intuition Ecosystem"}
             </span>
           </div>
 
-          {/* REWARD */}
-          {rewards && (
-            <div className="flex justify-between text-[11px]">
-              <span className="text-white/50">Reward</span>
-              <span className="text-white font-medium">{rewards}</span>
-            </div>
-          )}
-
-          {/* DURATION */}
-<div className="flex justify-between text-[11px]">
-  <span className="text-white/50">Duration</span>
-
-  <span className="text-[#8A97B0] bg-[#8B3EFE33] px-2 py-1 rounded-md font-semibold flex items-center gap-2">
-    <img src="/calendar.png" className="w-3 h-3" />
-    {starts_at && ends_at
-      ? `${formatDate(starts_at)} - ${formatDate(ends_at)}`
-      : "Ongoing"}
-  </span>
-</div>
-
           {/* BUTTON */}
-          <Button
-            className="mt-2 w-full bg-[#8B3EFE] hover:bg-[#7a2fe0] text-white text-xs py-2 rounded-lg"
-            onClick={handleClick}
-          >
-            {isActive ? (
-              <>
-                <ExternalLink className="w-3.5 h-3.5 mr-2" />
-                {joined ? "Continue" : "Start"}
-              </>
-            ) : (
-              <>
-                <Clock className="w-3.5 h-3.5 mr-2" />
-                Coming Soon
-              </>
-            )}
-          </Button>
+<Button
+  className="mt-2 w-full bg-[#8B3EFE] hover:bg-[#7a2fe0] text-white text-xs py-1 rounded-2xl uppercase tracking-wider"
+  onClick={handleClick}
+>
+  {isActive ? (
+    <>
+      {joined ? "Continue Quest" : "Start Quest"}
+      <img
+        src="/arrow-right.png"
+        className="w-3.5 h-3.5 ml-2"
+        alt="arrow"
+      />
+    </>
+  ) : (
+    <>
+      <Clock className="w-3.5 h-3.5 mr-2" />
+      Coming Soon
+    </>
+  )}
+</Button>
 
         </div>
       </Card>

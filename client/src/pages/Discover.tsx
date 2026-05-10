@@ -13,6 +13,7 @@ import EcosystemCard from "../components/EcosystemCard";
 // import AnalyticsBackground from "../components/AnalyticsBackground";
 import ReusableBackground from "../components/ReusableBackground";
 
+
 export default function Discover() {
   const [activeFilter, setActiveFilter] = useState("all");
   const [refreshCountdown, setRefreshCountdown] = useState(0);
@@ -635,11 +636,11 @@ className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] te
         />
 
         {/* VALUE */}
-        <div className="relative z-10 text-lg sm:text-xl font-semibold text-white leading-none">
-          {typeof card.value === "number"
-            ? card.value.toLocaleString()
-            : card.value}
-        </div>
+        <div className="relative z-10 text-lg sm:text-xl font-semibold text-white leading-none soft-rise">
+  {typeof card.value === "number"
+    ? card.value.toLocaleString()
+    : card.value}
+</div>
 
         {/* LABEL */}
         <div className="relative z-10 text-[10px] tracking-widest uppercase text-white/50 mt-1">

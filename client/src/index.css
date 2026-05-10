@@ -3775,3 +3775,16 @@ body {
   overflow: hidden;
   width: 100%;
 }
+
+@keyframes soft-rise {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.soft-rise {
+  animation: soft-rise 2.5s ease-in-out infinite;
+}
