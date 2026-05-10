@@ -139,7 +139,7 @@ const questSchema = new Schema({
 	status: {
 		type: String,
 		enum: ["Active", "Scheduled", "Save", "Ended"],
-		default: "Active"
+		default: "Save"
 	},
 	questNumber: {
 		type: Number
