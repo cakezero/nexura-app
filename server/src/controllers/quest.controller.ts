@@ -1199,7 +1199,7 @@ export const saveQuest = async (req: GlobalRequest, res: GlobalResponse) => {
     }
 
     // Recalculate status atomically when dates change on a published campaign
-    if (questFound.status !== "Save" || updateFields.status === undefined) {
+    if (questFound.status !== "Save") {
       const now = new Date();
 
       const newStartsAt = updateFields.starts_at

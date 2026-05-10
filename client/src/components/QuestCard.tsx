@@ -13,6 +13,16 @@ interface QuestCardProps {
   isLocked?: boolean;
   lockLevel?: number;
   onView?: (questId: string) => void;
+  duration?: string;
+  status?: string;
+  statusColor?: string;
+  showClose?: boolean;
+  showDelete?: boolean;
+  isClosing?: boolean;
+  isDeleting?: boolean;
+  onClose?: (questId: string) => void;
+  onDelete?: (questId: string) => void;
+  from?: string;
 }
 
 export default function QuestCard({
@@ -28,6 +38,16 @@ export default function QuestCard({
   isLocked = false,
   lockLevel,
   onView,
+  duration,
+  status,
+  statusColor,
+  showClose,
+  showDelete,
+  isClosing,
+  isDeleting,
+  onClose,
+  onDelete,
+  from,
 }: QuestCardProps) {
   const [, setLocation] = useLocation();
 
@@ -40,7 +60,6 @@ export default function QuestCard({
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return "";
     const date = new Date(dateStr);
-
     return date.toLocaleDateString("en-US", {
       day: "numeric",
       month: "long",
@@ -49,26 +68,56 @@ export default function QuestCard({
   };
 
   const hasValidDates = starts_at && ends_at;
-
-  const duration = hasValidDates
+  const computedDuration = hasValidDates
     ? `${formatDate(starts_at)} - ${formatDate(ends_at)}`
     : null;
+
+  const buttonLabel = from ? "View Quest" : "Start Quest";
 
   return (
     <div
       onClick={handleClick}
       className="w-[260px] h-[320px] shrink-0 cursor-pointer rounded-2xl overflow-hidden border border-white/10 bg-[#080808] hover:bg-[#0F0F0F] transition-all duration-300 flex flex-col"
     >
-      {/* IMAGE */}
       <div className="relative h-[120px] w-full overflow-hidden shrink-0">
         <img
           src={heroImage}
           className="w-full h-full object-cover transition-transform duration-500"
         />
 
-        {/* ACTIVE BADGE */}
+        {(showClose || showDelete) && (
+          <div className="absolute top-2 right-2 flex items-center gap-1.5 z-10">
+            {showClose && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onClose?.(questId!); }}
+                className="w-6 h-6 flex items-center justify-center rounded-full bg-white/10 hover:bg-red-500/80 text-white/70 hover:text-white text-xs transition"
+                disabled={isClosing}
+              >
+                {isClosing ? (
+                  <span className="inline-block w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  "x"
+                )}
+              </button>
+            )}
+            {showDelete && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onDelete?.(questId!); }}
+                className="w-6 h-6 flex items-center justify-center rounded-full bg-white/10 hover:bg-red-600/80 text-white/70 hover:text-white text-xs transition"
+                disabled={isDeleting}
+              >
+                {isDeleting ? (
+                  <span className="inline-block w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                )}
+              </button>
+            )}
+          </div>
+        )}
+
         <div className="absolute top-3 right-3 px-2 py-1 rounded-full text-[10px] font-semibold text-[#00E1A2] bg-[#00E1A24D]">
-          ACTIVE
+          {status || "ACTIVE"}
         </div>
 
         {isLocked && (
@@ -85,14 +134,11 @@ export default function QuestCard({
         </div>
       </div>
 
-      {/* CONTENT */}
       <div className="p-3 pt-7 flex flex-col flex-1 bg-[#170F1F]">
-        {/* TITLE + REWARD */}
         <div className="flex items-start justify-between gap-2">
           <h3 className="text-sm font-semibold text-white truncate">
             {title}
           </h3>
-
           {rewards && (
             <span className="text-[10px] font-semibold text-[#D4BBFF] whitespace-nowrap">
               {rewards}
@@ -104,13 +150,12 @@ export default function QuestCard({
           {description}
         </p>
 
-        {/* DURATION */}
-{duration && (
-  <div className="flex items-center gap-2 text-[10px] text-[#8A97B0] bg-[#8B3EFE33] px-2 py-1 rounded-md w-fit mt-2">
-    <img src="/calendar.png" className="w-3 h-3" />
-    {duration}
-  </div>
-)}
+        {(duration || computedDuration) && (
+          <div className="flex items-center gap-2 text-[10px] text-[#8A97B0] bg-[#8B3EFE33] px-2 py-1 rounded-md w-fit mt-2">
+            <img src="/calendar.png" className="w-3 h-3" />
+            {duration || computedDuration}
+          </div>
+        )}
 
         <div className="flex justify-between items-center text-[10px] text-white/60 mt-3">
           <span>PROJECT:</span>
@@ -118,7 +163,7 @@ export default function QuestCard({
         </div>
 
         <button className="mt-auto flex items-center justify-center gap-2 bg-[#8B3EFE] text-white text-xs py-2 rounded-xl hover:opacity-90 transition">
-          Start Quest
+          {buttonLabel}
           <img src="/arrow-right.png" className="w-3.5 h-3.5" />
         </button>
       </div>
