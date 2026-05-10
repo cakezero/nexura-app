@@ -118,7 +118,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
             type: tagToType(q.tag),
             platform: q.category === "twitter" ? "Twitter" : (q.category || "Other"),
             handleOrUrl: q.link ?? "",
-            description: q.quest || q.text || "",
+            description: q.text || q.quest || "",
             evidence: "",
             validation: "Manual Validation",
             verificationMode: q.verificationMode ?? "",
@@ -177,6 +177,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
     fd.append("page", "user"); // Important for controller logic
     if (coverImage) fd.append("coverImage", coverImage);
     if (isDraft) fd.append("status", "Save");
+    else fd.append("status", "Active");
 
     const miniQuests = tasks.map(t => ({
       _id: t._id,
