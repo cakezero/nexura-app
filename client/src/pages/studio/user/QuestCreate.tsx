@@ -198,8 +198,8 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
       return null;
     }
 
-    if (thenNavigate === "review" && tasks.length < 3) {
-      toast({ title: "Incomplete", description: "Please add at least 3 tasks before reviewing.", variant: "destructive" });
+    if (thenNavigate === "review" && tasks.length < 5) {
+      toast({ title: "Incomplete", description: "Please add at least 5 tasks before reviewing.", variant: "destructive" });
       return null;
     }
 
@@ -226,8 +226,8 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
   };
 
   const handlePublish = async () => {
-    if (!questName || tasks.length < 3) {
-      toast({ title: "Incomplete", description: "Please provide a name and at least 3 tasks.", variant: "destructive" });
+    if (!questName || tasks.length < 5) {
+      toast({ title: "Incomplete", description: "Please provide a name and at least 5 tasks.", variant: "destructive" });
       return;
     }
 
