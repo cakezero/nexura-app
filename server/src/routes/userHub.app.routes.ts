@@ -41,7 +41,7 @@ router
   .get("/quest-submissions", getCampaignSubmissions)
   .post("/validate-quest-submissions", validateCampaignSubmissions)
   .post("/create-lesson", upload.fields([{ name: "coverImage", maxCount: 1 }, { name: "profileImage", maxCount: 1 }]), createLesson)
-  .patch("/update-lesson", updateLesson)
+  .patch("/update-lesson", upload.fields([{ name: "coverImage", maxCount: 1 }, { name: "profileImage", maxCount: 1 }]), updateLesson)
   .delete("/delete-lesson", deleteLesson)
   .post("/create-mini-lesson", createMiniLesson)
   .patch("/update-mini-lesson", updateMiniLesson)

@@ -38,7 +38,7 @@ const lessonSchema = new mongoose.Schema({
   creatorModel: {
     type: String,
     required: true,
-    enum: ["user", "project", "admin"]
+    enum: ["users", "project", "user-hubs", "admin"]
   },
   disclaimer: {
     type: String,

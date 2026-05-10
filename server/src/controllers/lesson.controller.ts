@@ -55,6 +55,14 @@ export const createLesson = async (req: GlobalRequest, res: GlobalResponse) => {
     const coverImage = await getUploadedLessonImage(req, "coverImage", "lesson-covers");
     const profileImage = await getUploadedLessonImage(req, "profileImage", "lesson-profiles");
 
+    const hubId = req.admin?.hub;
+    const isProjectHub = hubId && req.admin?.role; 
+    const isUserHub = hubId && !req.admin?.role; 
+
+    const creator = hubId || req.id;
+    const creatorModel = isProjectHub ? "project" : (isUserHub ? "user-hubs" : "users");
+    const creatorName = req.admin?.name || req.user?.name || req.adminName || "User";
+
     const newLesson = await lesson.create({
       title: String(title).trim(),
       description: String(description).trim(),
@@ -66,9 +74,9 @@ export const createLesson = async (req: GlobalRequest, res: GlobalResponse) => {
       coverImage: coverImage || "",
       profileImage: profileImage || "",
       status: "draft",
-      creatorName: req.admin?.name || req.adminName || "User",
-      creator: req.id,
-      creatorModel: "users",
+      creatorName,
+      creator,
+      creatorModel,
     });
 
     res.status(CREATED).json({ message: "lesson created", lesson: newLesson });
@@ -80,12 +88,15 @@ export const createLesson = async (req: GlobalRequest, res: GlobalResponse) => {
 
 export const updateLesson = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
-    const { lessonId, title, description, reward, disclaimer } = req.body as {
+    const { lessonId, title, description, reward, disclaimer, completionTrophy, completionTitle, completionMessage } = req.body as {
       lessonId?: string;
       title?: string;
       description?: string;
       reward?: number;
       disclaimer?: string;
+      completionTrophy?: string;
+      completionTitle?: string;
+      completionMessage?: string;
     };
 
     if (!lessonId) {
@@ -120,6 +131,10 @@ export const updateLesson = async (req: GlobalRequest, res: GlobalResponse) => {
       lessonExists.disclaimer = disclaimer.trim();
     }
 
+    if (completionTrophy !== undefined) lessonExists.completionTrophy = completionTrophy;
+    if (completionTitle !== undefined) lessonExists.completionTitle = completionTitle;
+    if (completionMessage !== undefined) lessonExists.completionMessage = completionMessage;
+
     const coverImage = await getUploadedLessonImage(req, "coverImage", "lesson-covers");
     const profileImage = await getUploadedLessonImage(req, "profileImage", "lesson-profiles");
 
@@ -142,7 +157,7 @@ export const updateLesson = async (req: GlobalRequest, res: GlobalResponse) => {
 
 export const createQuestion = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
-    const { lesson: lessonId, question: questionText, options, solution } = req.body;
+    const { lesson: lessonId, question: questionText, options, solution, introHeader, introBody, introTrophy, outroHeader, outroBody, outroTrophy } = req.body;
     if (!lessonId || questionText === undefined || !Array.isArray(options) || solution === undefined) {
       res.status(BAD_REQUEST).json({ error: "Send the required values. Required values are: lesson id as 'lesson', question, options as array and solution" });
       return;
@@ -150,7 +165,19 @@ export const createQuestion = async (req: GlobalRequest, res: GlobalResponse) =>
 
     const nextOrder = await getNextLessonContentOrder(lessonId);
 
-    const newQuestion = await question.create({ ...req.body, order: nextOrder });
+    const newQuestion = await question.create({
+      lesson: lessonId,
+      question: questionText,
+      options,
+      solution,
+      introHeader: introHeader || "",
+      introBody: introBody || "",
+      introTrophy: introTrophy || "",
+      outroHeader: outroHeader || "",
+      outroBody: outroBody || "",
+      outroTrophy: outroTrophy || "",
+      order: nextOrder
+    });
 
     await lesson.updateOne({ _id: lessonId }, { $inc: { noOfQuestions: 1 } });
 
@@ -187,28 +214,28 @@ export const updateQuestion = async (req: GlobalRequest, res: GlobalResponse) =>
       return;
     }
 
-    const normalizedOptions = Array.isArray(options)
-      ? options.map((option) => option.trim()).filter(Boolean)
-      : questionExists.options;
+    if (Array.isArray(options)) {
+      const normalizedOptions = options.map((option) => option.trim()).filter(Boolean);
+      if (normalizedOptions.length < 2) {
+        res.status(BAD_REQUEST).json({ error: "at least two options are required" });
+        return;
+      }
+      questionExists.options = normalizedOptions;
 
-    const normalizedSolution = typeof solution === "string" ? solution.trim() : (questionExists.solution as string);
-
-    if (normalizedOptions.length < 2) {
-      res.status(BAD_REQUEST).json({ error: "at least two options are required" });
-      return;
-    }
-
-    if (!normalizedOptions.includes(normalizedSolution)) {
-      res.status(BAD_REQUEST).json({ error: "solution must match one of the options" });
-      return;
+      if (solution !== undefined) {
+        const normalizedSolution = String(solution).trim();
+        if (!normalizedOptions.includes(normalizedSolution)) {
+          res.status(BAD_REQUEST).json({ error: "solution must match one of the options" });
+          return;
+        }
+        questionExists.solution = normalizedSolution;
+      }
     }
 
     if (typeof questionText === "string" && questionText.trim()) {
       questionExists.question = questionText.trim();
     }
 
-    questionExists.options = normalizedOptions;
-    questionExists.solution = normalizedSolution;
     if (typeof introHeader === "string") questionExists.introHeader = introHeader;
     if (typeof introBody === "string") questionExists.introBody = introBody;
     if (typeof introTrophy === "string") questionExists.introTrophy = introTrophy as "" | "bronze" | "silver" | "gold";
@@ -227,7 +254,7 @@ export const updateQuestion = async (req: GlobalRequest, res: GlobalResponse) =>
 
 export const createMiniLesson = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
-    const { text, lesson: lessonId } = req.body;
+    const { text, lesson: lessonId, introHeader, introBody, introTrophy, outroHeader, outroBody, outroTrophy } = req.body;
     if (text === undefined || text === null || !lessonId) {
       res.status(BAD_REQUEST).json({ error: "Send the required values. Required values are: lesson id as 'lesson' and text" });
       return;
@@ -235,7 +262,17 @@ export const createMiniLesson = async (req: GlobalRequest, res: GlobalResponse) 
 
     const nextOrder = await getNextLessonContentOrder(lessonId);
 
-    const newMiniLesson = await miniLesson.create({ ...req.body, order: nextOrder });
+    const newMiniLesson = await miniLesson.create({
+      text,
+      lesson: lessonId,
+      introHeader: introHeader || "",
+      introBody: introBody || "",
+      introTrophy: introTrophy || "",
+      outroHeader: outroHeader || "",
+      outroBody: outroBody || "",
+      outroTrophy: outroTrophy || "",
+      order: nextOrder
+    });
 
     res.status(CREATED).json({ message: "mini lesson created", miniLesson: newMiniLesson });
   } catch (error) {
@@ -256,8 +293,8 @@ export const updateMiniLesson = async (req: GlobalRequest, res: GlobalResponse) 
       outroBody?: string;
       outroTrophy?: string;
     };
-    if (!miniLessonId || !text?.trim()) {
-      res.status(BAD_REQUEST).json({ error: "miniLessonId and text are required" });
+    if (!miniLessonId) {
+      res.status(BAD_REQUEST).json({ error: "miniLessonId is required" });
       return;
     }
 
@@ -267,7 +304,7 @@ export const updateMiniLesson = async (req: GlobalRequest, res: GlobalResponse) 
       return;
     }
 
-    miniLessonExists.text = text.trim();
+    if (text !== undefined) miniLessonExists.text = String(text).trim();
     if (typeof introHeader === "string") miniLessonExists.introHeader = introHeader;
     if (typeof introBody === "string") miniLessonExists.introBody = introBody;
     if (typeof introTrophy === "string") miniLessonExists.introTrophy = introTrophy as "" | "bronze" | "silver" | "gold";
@@ -285,7 +322,7 @@ export const updateMiniLesson = async (req: GlobalRequest, res: GlobalResponse) 
 
 export const createVideoLesson = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
-    const { url, lesson: lessonId } = req.body;
+    const { url, lesson: lessonId, introHeader, introBody, introTrophy, outroHeader, outroBody, outroTrophy } = req.body;
     if (url === undefined || url === null || !lessonId) {
       res.status(BAD_REQUEST).json({ error: "Send the required values. Required values are: lesson id as 'lesson' and url" });
       return;
@@ -293,7 +330,17 @@ export const createVideoLesson = async (req: GlobalRequest, res: GlobalResponse)
 
     const nextOrder = await getNextLessonContentOrder(lessonId);
 
-    const newVideoLesson = await videoLesson.create({ ...req.body, order: nextOrder });
+    const newVideoLesson = await videoLesson.create({
+      url,
+      lesson: lessonId,
+      introHeader: introHeader || "",
+      introBody: introBody || "",
+      introTrophy: introTrophy || "",
+      outroHeader: outroHeader || "",
+      outroBody: outroBody || "",
+      outroTrophy: outroTrophy || "",
+      order: nextOrder
+    });
 
     res.status(CREATED).json({ message: "video lesson created", videoLesson: newVideoLesson });
   } catch (error) {
@@ -314,8 +361,8 @@ export const updateVideoLesson = async (req: GlobalRequest, res: GlobalResponse)
       outroBody?: string;
       outroTrophy?: string;
     };
-    if (!videoLessonId || !url?.trim()) {
-      res.status(BAD_REQUEST).json({ error: "videoLessonId and url are required" });
+    if (!videoLessonId) {
+      res.status(BAD_REQUEST).json({ error: "videoLessonId is required" });
       return;
     }
 
@@ -325,7 +372,7 @@ export const updateVideoLesson = async (req: GlobalRequest, res: GlobalResponse)
       return;
     }
 
-    videoLessonExists.url = url.trim();
+    if (url !== undefined) videoLessonExists.url = String(url).trim();
     if (typeof introHeader === "string") videoLessonExists.introHeader = introHeader;
     if (typeof introBody === "string") videoLessonExists.introBody = introBody;
     if (typeof introTrophy === "string") videoLessonExists.introTrophy = introTrophy as "" | "bronze" | "silver" | "gold";
