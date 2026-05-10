@@ -104,8 +104,20 @@ export const createHub = async (req: GlobalRequest, res: GlobalResponse) => {
 
     const name = String(req.body.name ?? "").trim();
 
-    const nameExists = await hub.exists({ name });
-    if (nameExists) {
+    const existingHubWithName = await hub.findOne({ name });
+    if (existingHubWithName) {
+      // If it's already their hub, we can just update it or proceed
+      if (String(existingHubWithName.superAdmin) === String(req.id)) {
+        // Proceed to update or just return success if already exists
+        await hub.findByIdAndUpdate(existingHubWithName._id, {
+          description: req.body.description ?? existingHubWithName.description,
+          website: String(req.body.website ?? existingHubWithName.website).trim(),
+          xAccount: String(req.body.xAccount ?? existingHubWithName.xAccount).trim(),
+          discordServer: String(req.body.discordServer ?? existingHubWithName.discordServer).trim(),
+        });
+        res.status(OK).json({ message: "hub updated!" });
+        return;
+      }
       res.status(BAD_REQUEST).json({ error: "name is already in use" });
       return;
     }
@@ -1034,8 +1046,18 @@ export const createUserHub = async (req: GlobalRequest, res: GlobalResponse) => 
 
     const name = String(req.body.name ?? "").trim();
 
-    const nameExists = await userHub.exists({ name });
-    if (nameExists) {
+    const existingUserHubWithName = await userHub.findOne({ name });
+    if (existingUserHubWithName) {
+      if (String(existingUserHubWithName.superAdmin) === String(req.id)) {
+        // Already their hub, just update description and return success
+        await userHub.findByIdAndUpdate(existingUserHubWithName._id, {
+          description: req.body.description ?? existingUserHubWithName.description,
+          website: String(req.body.website ?? existingUserHubWithName.website).trim(),
+          xAccount: String(req.body.xAccount ?? existingUserHubWithName.xAccount).trim(),
+        });
+        res.status(OK).json({ message: "user hub updated!" });
+        return;
+      }
       res.status(BAD_REQUEST).json({ error: "name is already in use" });
       return;
     }

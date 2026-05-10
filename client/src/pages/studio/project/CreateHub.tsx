@@ -10,6 +10,7 @@ import { useLocation } from "wouter";
 import { useToast } from "../../../hooks/use-toast";
 import { useWallet } from "../../../hooks/use-wallet";
 import { apiRequestV2 } from "../../../lib/queryClient";
+import { projectApiRequest, storeProjectSession } from "../../../lib/projectApi";
 
 export default function SharedAccessCredentials() {
   const [name, setName] = useState("");
@@ -64,19 +65,33 @@ const handleSubmit = async () => {
 
   setCreating(true);
   try {
+    // Validate email (OTP logic is now bypassed on server)
     await apiRequestV2("POST", `/api/hub-auth/validate-email?email=${encodeURIComponent(email)}&page=project`);
 
-    sessionStorage.setItem("nexura:pending-signup", JSON.stringify({
-      email,
-      password,
-      name,
-      page: "project",
-    }));
+    // Directly complete signup bypassing OTP verification
+    const res = await projectApiRequest<{
+      accessToken?: string;
+      admin?: { _id: string; name: string; email: string; role: string; hub: string };
+    }>({
+      method: "POST",
+      endpoint: "/hub/sign-up",
+      data: { name, email, password },
+    });
 
-    setLocation(`/studio/verify-otp?email=${encodeURIComponent(email)}&page=project`);
+    if (res.accessToken) {
+      storeProjectSession(res.accessToken, {
+        email: res.admin?.email || email,
+        name: res.admin?.name || name,
+        role: res.admin?.role || "superadmin",
+        adminId: res.admin?._id || "",
+        hub: res.admin?.hub || "",
+      });
+      toast({ title: "Account created!", description: "Welcome to Nexura Studio. Please set up your project hub profile." });
+      setLocation("/studio/projects-hub");
+    }
   } catch (err: any) {
     toast({
-      title: "Failed to send OTP",
+      title: "Signup failed",
       description: err?.error || err?.message || "Something went wrong.",
       variant: "destructive",
     });
@@ -228,7 +243,7 @@ const handleSubmit = async () => {
                 onClick={handleSubmit}
                 className="w-full rounded-full bg-[#8B3EFE] border-0 text-white hover:bg-[#8B3EFE] hover:shadow-[0_0_28px_rgba(131,58,253,0.7)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2"
               >
-                {creating ? "Sending OTP..." : "Create Super Admin"}
+                {creating ? "Creating Account..." : "Create Super Admin"}
                 <ArrowRight className="h-5 w-5" />
               </Button>
             </CardFooter>
