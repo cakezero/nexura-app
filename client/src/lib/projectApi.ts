@@ -93,21 +93,13 @@ export const projectApiRequest = async <T = unknown>({
   formData?: FormData;
   params?: Record<string, string>;
 }): Promise<T> => {
-  const userSession = getStoredUserSession();
-  const isUser = userSession?.type === "user";
-
-  const token = isUser ? (getStoredUserToken() ?? getStoredProjectToken()) : getStoredProjectToken();
-
-  let adjustedEndpoint = endpoint;
-  if (isUser && adjustedEndpoint.includes("/hub/")) {
-    adjustedEndpoint = adjustedEndpoint.replace("/hub/", "/user-hub/");
-  }
+  const token = getStoredProjectToken();
 
   const headers: Record<string, string> = {};
   if (token) headers["Authorization"] = `Bearer ${token}`;
   if (!formData) headers["Content-Type"] = "application/json";
 
-  let url = getApiUrl(adjustedEndpoint);
+  let url = getApiUrl(endpoint);
   if (params && Object.keys(params).length > 0) {
     url += `?${new URLSearchParams(params).toString()}`;
   }
