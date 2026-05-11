@@ -518,16 +518,16 @@ const quests =
   </section>
 )}
 
-{/* Learning */}
+{/* LEARNING */}
 {(activeFilter === "all" || activeFilter === "learning") && (
-  <section className="pb-10">
-    <div className="flex items-start justify-between mb-4 gap-4">
+  <section className="mb-8">
+    <div className="flex items-start justify-between mb-3 mt-8 gap-2">
       <div>
         <h2 className="text-base md:text-lg font-semibold">
           Active Lessons
         </h2>
 
-        <p className="text-[11px] md:text-xs text-white/60 mt-1 max-w-xl">
+        <p className="text-xs text-white/60 mt-1 max-w-xl">
           Explore and participate in active lessons
         </p>
       </div>
@@ -539,50 +539,49 @@ const quests =
         className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] text-white/80 hover:text-white hover:bg-[#00E1A24D] transition"
       >
         <span>View all lessons</span>
-
-        <img
-          src="/arrow-right.png"
-          alt="arrow right"
-          className="w-3.5 h-3.5 opacity-80 group-hover:opacity-100 transition"
-        />
+        <img src="/arrow-right.png" className="w-3.5 h-3.5" />
       </Button>
     </div>
 
-    {lessons?.length === 0 ? (
-      <div className="rounded-2xl border border-white/10 bg-[#0B0B0B] p-6 text-center">
-        <h3 className="text-sm font-semibold text-white mb-1">
-          Learning Hub
-        </h3>
-
-        <p className="text-[11px] text-white/60 max-w-md mx-auto">
-          Educational content, onboarding guides, tutorials, and walkthroughs will appear here soon.
-        </p>
-      </div>
-    ) : lessons.length <= 3 ? (
-      /* GRID MODE (same as quests) */
-      <div className="grid grid-cols-3 gap-2">
-        {lessons.map((lesson: any) => (
-          <LessonCard key={lesson._id} lesson={lesson} />
-        ))}
+    {/* EMPTY STATE */}
+    {!lessons || lessons.length === 0 ? (
+      <div className="rounded-2xl border border-white/10 bg-[#170F1F] p-6 text-center text-white/60 text-sm">
+        Lessons coming soon...
       </div>
     ) : (
-      /* TICKER MODE (same structure as quests) */
-      <div className="ticker-container-1 overflow-hidden">
-        <div className="ticker-1 flex gap-2 w-max">
+      /* WIDE TICKER (same pattern as quests) */
+      <div className="overflow-hidden">
+        <div className="flex gap-3 w-max animate-quest-scroll">
 
-          {/* first set */}
-          {lessons.map((lesson: any) => (
-            <div key={lesson._id} className="w-[260px] shrink-0">
-              <LessonCard lesson={lesson} />
-            </div>
-          ))}
+          {[...lessons, ...lessons].map((lesson: any, i: number) => {
+            const title = lesson.title || "Untitled Lesson";
 
-          {/* duplicate set */}
-          {lessons.map((lesson: any) => (
-            <div key={`${lesson._id}-dup`} className="w-[260px] shrink-0">
-              <LessonCard lesson={lesson} />
-            </div>
-          ))}
+            const description =
+              lesson.description ||
+              lesson.sub_title ||
+              "No description available";
+
+            const project =
+              lesson.projectName ||
+              lesson.project_name ||
+              "Unknown";
+
+            return (
+              <div
+                key={`${lesson._id}-${i}`}
+                className="w-[340px] md:w-[360px] shrink-0"
+              >
+                <LessonCard
+                  lesson={lesson}
+                  title={title}
+                  description={description}
+                  projectName={project}
+                  projectLogo={lesson.project_image || "/lesson-1.png"}
+                  heroImage={lesson.project_image || "/lesson-1.png"}
+                />
+              </div>
+            );
+          })}
 
         </div>
       </div>
@@ -665,6 +664,7 @@ const quests =
     </span>
   </div>
 )}
+
 {/* QUESTS */}
 {(activeFilter === "all" || activeFilter === "quests") && (
   <section className="mb-8">
