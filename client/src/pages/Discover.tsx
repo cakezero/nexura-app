@@ -528,67 +528,65 @@ const quests =
         </h2>
 
         <p className="text-[11px] md:text-xs text-white/60 mt-1 max-w-xl">
-        Explore and participate in active lessons 
+          Explore and participate in active lessons
         </p>
       </div>
 
       <Button
-  variant="ghost"
-  size="sm"
-  onClick={() => setLocation("/learn")}
-className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] text-white/80 hover:text-white hover:bg-[#00E1A24D] transition"
->
-  <span>View all lessons</span>
+        variant="ghost"
+        size="sm"
+        onClick={() => setLocation("/learn")}
+        className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] text-white/80 hover:text-white hover:bg-[#00E1A24D] transition"
+      >
+        <span>View all lessons</span>
 
-  <img
-    src="/arrow-right.png"
-    alt="arrow right"
-    className="w-3.5 h-3.5 opacity-80 group-hover:opacity-100 transition"
-  />
-</Button>
+        <img
+          src="/arrow-right.png"
+          alt="arrow right"
+          className="w-3.5 h-3.5 opacity-80 group-hover:opacity-100 transition"
+        />
+      </Button>
     </div>
 
-    {lessons?.length > 0 ? (
-  lessons.length <= 3 ? (
-    /* GRID MODE */
-    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-      {lessons.map((lesson: any) => (
-        <LessonCard key={lesson._id} lesson={lesson} />
-      ))}
-    </div>
-  ) : (
-    /* TICKER MODE */
-    <div className="ticker-container-2 overflow-hidden">
-      <div className="ticker-2 flex gap-2 w-max">
+    {lessons?.length === 0 ? (
+      <div className="rounded-2xl border border-white/10 bg-[#0B0B0B] p-6 text-center">
+        <h3 className="text-sm font-semibold text-white mb-1">
+          Learning Hub
+        </h3>
 
-           {/* first set */}
-    {lessons.map((lesson: any) => (
-      <div key={lesson._id} className="w-[33.333%] max-w-[260px] shrink-0">
-        <LessonCard lesson={lesson} />
+        <p className="text-[11px] text-white/60 max-w-md mx-auto">
+          Educational content, onboarding guides, tutorials, and walkthroughs will appear here soon.
+        </p>
       </div>
-    ))}
-
-    {/* duplicate set */}
-    {lessons.map((lesson: any) => (
-      <div key={`${lesson._id}-dup`} className="w-[33.333%] max-w-[260px] shrink-0">
-        <LessonCard lesson={lesson} />
+    ) : lessons.length <= 3 ? (
+      /* GRID MODE (same as quests) */
+      <div className="grid grid-cols-3 gap-2">
+        {lessons.map((lesson: any) => (
+          <LessonCard key={lesson._id} lesson={lesson} />
+        ))}
       </div>
-    ))}
+    ) : (
+      /* TICKER MODE (same structure as quests) */
+      <div className="ticker-container-1 overflow-hidden">
+        <div className="ticker-1 flex gap-2 w-max">
 
+          {/* first set */}
+          {lessons.map((lesson: any) => (
+            <div key={lesson._id} className="w-[260px] shrink-0">
+              <LessonCard lesson={lesson} />
+            </div>
+          ))}
+
+          {/* duplicate set */}
+          {lessons.map((lesson: any) => (
+            <div key={`${lesson._id}-dup`} className="w-[260px] shrink-0">
+              <LessonCard lesson={lesson} />
+            </div>
+          ))}
+
+        </div>
       </div>
-    </div>
-  )
-) : (
-  <div className="rounded-2xl border border-white/10 bg-[#0B0B0B] p-6 text-center">
-    <h3 className="text-sm font-semibold text-white mb-1">
-      Learning Hub
-    </h3>
-
-    <p className="text-[11px] text-white/60 max-w-md mx-auto">
-      Educational content, onboarding guides, tutorials, and walkthroughs will appear here soon.
-    </p>
-  </div>
-)}
+    )}
   </section>
 )}
 
