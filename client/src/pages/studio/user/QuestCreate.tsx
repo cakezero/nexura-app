@@ -681,7 +681,11 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. Follow us on X to stay updated"
+                  placeholder={
+                    newTask.platform === "Twitter"
+                      ? "e.g. Follow us on X to stay updated"
+                      : "e.g. Complete this task to earn rewards"
+                  }
                   value={newTask.description}
                   onChange={(e) => setNewTask({...newTask, description: e.target.value})}
                   className="w-full p-2 rounded-lg bg-white/5 text-white border border-white/10 focus:outline-none focus:border-purple-500"
@@ -693,7 +697,13 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                 </label>
                 <input
                   type="text"
-                  placeholder={newTask.type === "Create a Post" ? "https://x.com" : "e.g. https://x.com/yourlink"}
+                  placeholder={
+                    newTask.type === "Create a Post"
+                      ? "https://x.com"
+                      : newTask.platform === "Twitter"
+                        ? "e.g. https://x.com/yourlink"
+                        : "e.g. https://example.com/link"
+                  }
                   value={newTask.type === "Create a Post" ? "https://x.com" : newTask.handleOrUrl}
                   readOnly={newTask.type === "Create a Post"}
                   disabled={newTask.type === "Create a Post"}
