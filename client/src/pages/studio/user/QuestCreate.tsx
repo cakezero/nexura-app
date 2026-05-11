@@ -616,29 +616,28 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
           <div className="bg-[#0d0d14] w-full max-w-xl border border-purple-500/20 p-6 rounded-2xl relative shadow-[0_0_60px_rgba(131,58,253,0.2)] animate-modal-pop">
             <button onClick={() => setShowModal(false)} className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-all text-lg leading-none">&times;</button>
             <h2 className="text-xl font-semibold text-white mb-6">
-              {editingIndex !== null ? "Edit Task" : "Add New Task"}
+              Add New Task
             </h2>
 
             <div className="grid grid-cols-2 gap-6 mb-6">
               {/* Platform - Matches Campaign UI but restricted for Quest modal */}
               {newTask.type !== "Portal Claims" && newTask.type !== "Give Feedback" && newTask.type !== "Own a .trust username" && (
                 <div>
-                  <label className="text-sm text-white/70 mb-2 block font-medium">Platform</label>
+                  <label className="text-sm text-white/70 mb-2 block">Platform</label>
                   <div className="flex gap-3">
-                    <button
-                      type="button"
-                      className="flex-1 border py-2 rounded-lg transition text-xs font-semibold text-center bg-[#8B3EFE] text-white border-purple-500 shadow-[0_0_15px_rgba(139,62,254,0.4)] cursor-default"
+                    <div
+                      className="flex-1 border py-2 rounded-lg transition text-xs font-semibold text-center bg-[#8B3EFE] text-white border-purple-500 opacity-90 cursor-default"
                     >
                       Twitter
-                    </button>
+                    </div>
                   </div>
                 </div>
               )}
 
               <div>
-                <label className="text-sm text-white/70 mb-2 block font-medium">Task Type</label>
+                <label className="text-sm text-white/70 mb-2 block">Task Type</label>
                 <select
-                  className="w-full p-2 rounded-lg bg-[#0d0d14] text-white border border-white/10 focus:outline-none focus:border-purple-500 [&>option]:bg-[#0d0d14] text-sm"
+                  className="w-full p-2 rounded-lg bg-[#0d0d14] text-white border border-white/10 focus:outline-none focus:border-purple-500 [&>option]:bg-[#0d0d14]"
                   value={newTask.type}
                   onChange={(e) => {
                     const type = e.target.value;
@@ -713,13 +712,54 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
               </div>
             </div>
 
-            {/* Validation Info Box - Mirrored Design */}
-            {newTask.validation && (
-              <div className={`mb-6 flex items-center gap-3 rounded-lg px-4 py-3 border ${newTask.validation === "Manual Validation" ? "bg-amber-900/30 border-amber-500/40" : "bg-purple-900/50 border-purple-500/50"}`}>
-                <svg className={`w-5 h-5 flex-shrink-0 ${newTask.validation === "Manual Validation" ? "text-amber-400" : "text-purple-400"}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            {/* Validation & Evidence - Matches Campaign UI for standard tasks */}
+            {newTask.validation && (newTask.type === "Portal Claims" || newTask.type === "Give Feedback") ? (
+              <div className={`mb-6 flex items-center gap-3 rounded-lg px-4 py-3 border ${newTask.type === "Give Feedback" ? "bg-emerald-900/50 border-emerald-500/50" : "bg-purple-900/50 border-purple-500/50"}`}>
+                {newTask.type === "Give Feedback" ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-emerald-400 flex-shrink-0">
+                    <path fillRule="evenodd" d="M4.848 2.771A49.144 49.144 0 0 1 12 2.25c2.43 0 4.817.178 7.152.52 1.978.29 3.348 2.024 3.348 3.97v6.02c0 1.946-1.37 3.68-3.348 3.97a48.901 48.901 0 0 1-3.476.383.39.39 0 0 0-.297.17l-2.755 4.133a.75.75 0 0 1-1.248 0l-2.755-4.133a.39.39 0 0 0-.297-.17 48.9 48.9 0 0 1-3.476-.384c-1.978-.29-3.348-2.024-3.348-3.97V6.741c0-1.946 1.37-3.68 3.348-3.97Z" clipRule="evenodd" />
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-purple-400 flex-shrink-0">
+                    <path fillRule="evenodd" d="M8.603 3.799A4.49 4.49 0 0 1 12 2.25c1.357 0 2.573.6 3.397 1.549a4.49 4.49 0 0 1 3.498 1.307 4.491 4.491 0 0 1 1.307 3.497A4.49 4.49 0 0 1 21.75 12a4.49 4.49 0 0 1-1.549 3.397 4.491 4.491 0 0 1-1.307 3.497 4.491 4.491 0 0 1-3.497 1.307A4.49 4.49 0 0 1 12 21.75a4.49 4.49 0 0 1-3.397-1.549 4.49 4.49 0 0 1-3.498-1.306 4.491 4.491 0 0 1-1.307-3.498A4.49 4.49 0 0 1 2.25 12c0-1.357.6-2.573 1.549-3.397a4.49 4.49 0 0 1 1.307-3.497 4.49 4.49 0 0 1 3.497-1.307Zm7.007 6.387a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z" clipRule="evenodd" />
+                  </svg>
+                )}
                 <div>
-                  <p className={`text-sm font-medium ${newTask.validation === "Manual Validation" ? "text-amber-300" : "text-purple-300"}`}>{newTask.validation}</p>
-                  <p className="text-xs text-white/50 mt-0.5">{newTask.validation === "Manual Validation" ? "Task completion will be reviewed manually." : "Verification is automatic."}</p>
+                  <p className={`text-sm font-medium ${newTask.type === "Give Feedback" ? "text-emerald-300" : "text-purple-300"}`}>{newTask.validation}</p>
+                  <p className="text-xs text-white/50 mt-0.5">
+                    {newTask.type === "Give Feedback" 
+                      ? "Users will visit the website and submit written feedback (min. 200 characters). Reviewed manually."
+                      : "Completion is verified automatically after the user completes the task."}
+                  </p>
+                </div>
+              </div>
+            ) : newTask.validation && (
+              <div className="grid grid-cols-2 gap-6 mb-6">
+                {/* Evidence Upload */}
+                <div>
+                  <label className="text-sm text-white/70 mb-2 block">Evidence Upload</label>
+                  <div className="flex items-center gap-2 w-full p-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm">
+                    <span className="text-purple-400">🔗</span>
+                    <span>Submit Link</span>
+                  </div>
+                </div>
+
+                {/* Validation Type */}
+                <div>
+                  <label className="text-sm text-white/70 mb-2 block">Validation Type</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={newTask.validation}
+                      readOnly
+                      className="w-full p-2 rounded-lg bg-white/5 text-white border border-white/10 focus:outline-none focus:border-purple-500 pr-10"
+                    />
+                    <img
+                      src="/purple-check.png"
+                      alt="Verified"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5"
+                    />
+                  </div>
                 </div>
               </div>
             )}
