@@ -795,6 +795,15 @@ const handleSaveTask = () => {
   if (!finalTask.type || (requiresPlatform && !finalTask.platform) || !finalTask.handleOrUrl || !finalTask.description) {
     return setError("All fields are required.");
   }
+
+  // Enforce x.com for Twitter tasks
+  if (finalTask.platform === "Twitter" && finalTask.type !== "Create a Post") {
+    const url = finalTask.handleOrUrl.toLowerCase();
+    if (!url.includes("x.com")) {
+      return setError("Twitter links must use the x.com domain.");
+    }
+  }
+
   if (requiresDiscordConnection && !hubDiscordConnected) {
     return setError("Connect Discord in Studio before creating Discord-related tasks.");
   }
