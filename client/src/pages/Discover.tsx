@@ -667,7 +667,6 @@ className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] te
     </span>
   </div>
 )}
-
 {/* QUESTS */}
 {(activeFilter === "all" || activeFilter === "quests") && (
   <section className="mb-8">
@@ -698,51 +697,12 @@ className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] te
       <div className="rounded-2xl border border-white/10 bg-[#170F1F] p-6 text-center text-white/60 text-sm">
         Quests coming soon...
       </div>
-    ) : quests.length <= 3 ? (
-      /* GRID MODE */
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-        {quests.map((quest: any) => {
-          const title = quest.title || "Untitled Quest";
-
-          const description =
-            quest.description ||
-            quest.sub_title ||
-            "No description available";
-
-          const project =
-            quest.projectName ||
-            quest.project_name ||
-            "Unknown";
-
-          const duration =
-            quest.starts_at && quest.ends_at
-              ? `${new Date(quest.starts_at).toLocaleDateString()} - ${new Date(
-                  quest.ends_at
-                ).toLocaleDateString()}`
-              : "Ongoing";
-
-          return (
-            <div key={quest._id} className="w-full">
-              <QuestCard
-                questId={quest._id}
-                title={title}
-                description={description}
-                projectName={project}
-                projectLogo={quest.project_image || "/quest-1.png"}
-                heroImage={quest.project_image || "/quest-1.png"}
-                rewards={`${quest.reward || quest.rewards || 0} XP`}
-                starts_at={quest.starts_at}
-                ends_at={quest.ends_at}
-              />
-            </div>
-          );
-        })}
-      </div>
     ) : (
-      /* TICKER MODE */
-      <div className="ticker-container-1 overflow-hidden">
-        <div className="ticker-1 flex gap-2 w-max">
-          {quests.concat(quests).map((quest: any, i: number) => {
+      /* WIDE TICKER (3 cards visible) */
+      <div className="overflow-hidden">
+        <div className="flex gap-3 w-max animate-quest-scroll">
+
+          {[...quests, ...quests].map((quest: any, i: number) => {
             const title = quest.title || "Untitled Quest";
 
             const description =
@@ -755,15 +715,11 @@ className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] te
               quest.project_name ||
               "Unknown";
 
-            const duration =
-              quest.starts_at && quest.ends_at
-                ? `${new Date(quest.starts_at).toLocaleDateString()} - ${new Date(
-                    quest.ends_at
-                  ).toLocaleDateString()}`
-                : "Ongoing";
-
             return (
-              <div key={`${quest._id}-${i}`} className="w-[260px] shrink-0">
+              <div
+                key={`${quest._id}-${i}`}
+                className="w-[340px] md:w-[360px] shrink-0"
+              >
                 <QuestCard
                   questId={quest._id}
                   title={title}
@@ -778,6 +734,7 @@ className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] te
               </div>
             );
           })}
+
         </div>
       </div>
     )}
