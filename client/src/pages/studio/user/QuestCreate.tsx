@@ -49,13 +49,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
   const [loading, setLoading] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
   const [questId, setQuestId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState(() => {
-    return localStorage.getItem("questBuilderActiveTab") || "details";
-  });
-
-  useEffect(() => {
-    localStorage.setItem("questBuilderActiveTab", activeTab);
-  }, [activeTab]);
+  const [activeTab, setActiveTab] = useState("details");
   const [showModal, setShowModal] = useState(false);
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -633,7 +627,6 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                       platform: isTwitter ? "Twitter" : (isPortal || isFeedback) ? "" : newTask.platform || "Other",
                       validation: validationLabel,
                       verificationMode: isPortal ? "auto" : isFeedback ? "feedback" : "",
-                      handleOrUrl: type === "Create a Post" ? "https://x.com" : newTask.handleOrUrl,
                     });
                   }}
                 >
@@ -653,16 +646,14 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                   <label className="text-sm text-white/70 mb-2 block font-medium">Platform</label>
                   <div className="flex gap-3">
                     {["Twitter", "Other"].map((p) => (
-                      <div
+                      <button
                         key={p}
-                        className={`flex-1 border py-2 rounded-lg transition text-xs font-semibold text-center opacity-90 cursor-default ${
-                          newTask.platform === p
-                            ? "bg-[#8B3EFE] text-white border-purple-500"
-                            : "bg-purple-950 border-purple-800 text-white/50 border-purple-500/50"
-                        }`}
+                        type="button"
+                        onClick={() => setNewTask({ ...newTask, platform: p, validation: p === "Twitter" ? "Manual Validation" : newTask.validation })}
+                        className={`flex-1 border py-2 rounded-lg transition text-xs font-semibold ${newTask.platform === p ? "bg-[#8B3EFE] text-white border-purple-500" : "bg-purple-950 border-purple-800 text-white/70 hover:border-purple-500"}`}
                       >
                         {p}
-                      </div>
+                      </button>
                     ))}
                   </div>
                 </div>
@@ -672,34 +663,29 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
             <div className="bg-white/5 p-5 rounded-xl mb-6 border border-white/10">
               <div className="mb-4">
                 <label className="text-sm text-white/70 mb-2 block">
-                  {newTask.type === "Give Feedback"
-                    ? "Website URL"
-                    : newTask.type === "Create a Post"
-                      ? "Task URL"
-                      : newTask.type === "Comment on X"
-                        ? "Post URL"
-                        : newTask.type === "Follow on X" || newTask.platform === "Twitter"
-                          ? "Profile URL"
-                          : "Handle or URL"}
+                  Task Description
                 </label>
                 <input
                   type="text"
-                  placeholder={newTask.type === "Give Feedback"
-                    ? "https://example.com"
-                    : newTask.type === "Create a Post"
-                      ? "https://x.com"
-                      : newTask.type === "Comment on X"
-                        ? "https://x.com/username/status/..."
-                        : newTask.type === "Follow on X" || newTask.platform === "Twitter"
-                          ? "https://x.com/username"
-                          : "..."}
-                  value={newTask.type === "Create a Post" ? "https://x.com" : newTask.handleOrUrl}
+                  placeholder="e.g. Follow us on X to stay updated"
+                  value={newTask.description}
+                  onChange={(e) => setNewTask({...newTask, description: e.target.value})}
+                  className="w-full p-2 rounded-lg bg-white/5 text-white border border-white/10 focus:outline-none focus:border-purple-500"
+                />
+              </div>
+              <div>
+                <label className="text-sm text-white/70 mb-2 block">
+                  Handle or URL
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. https://x.com/yourlink"
+                  value={newTask.handleOrUrl}
                   onChange={(e) => {
                     setUrlError("");
                     setNewTask({...newTask, handleOrUrl: e.target.value});
                   }}
-                  disabled={newTask.type === "Create a Post"}
-                  className={`w-full p-2 rounded-lg bg-white/5 text-white border border-white/10 focus:outline-none focus:border-purple-500 ${newTask.type === "Create a Post" ? "opacity-50 cursor-not-allowed" : ""}`}
+                  className="w-full p-2 rounded-lg bg-white/5 text-white border border-white/10 focus:outline-none focus:border-purple-500"
                 />
                 {urlError && <p className="text-red-500 text-[10px] mt-1">{urlError}</p>}
               </div>
