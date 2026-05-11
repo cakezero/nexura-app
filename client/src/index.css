@@ -3802,7 +3802,7 @@ body {
   animation: quest-scroll 14s linear infinite;
 }
 
-@keyframes quest-scroll {
+@keyframes lesson-scroll {
   0% {
     transform: translateX(0);
   }
@@ -3811,6 +3811,6 @@ body {
   }
 }
 
-.animate-quest-scroll {
-  animation: quest-scroll 14s linear infinite;
+.animate-lesson-scroll {
+  animation: quest-scroll 50s linear infinite;
 }
