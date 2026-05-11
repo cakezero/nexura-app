@@ -158,7 +158,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
     if (tag === "follow-x") return "Follow on X";
     if (tag === "portal") return "Portal Claims";
     if (tag === "feedback") return "Give Feedback";
-    if (tag === "trust-name") return "Own a TNS";
+    if (tag === "trust-name") return "Own a .trust username";
     if (tag === "create-post") return "Create a Post";
     return "";
   };
@@ -169,7 +169,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
     if (type === "Portal Claims") return "portal";
     if (type === "Give Feedback") return "feedback";
     if (type === "Create a Post") return "create-post";
-    if (type === "Own a TNS") return "trust-name";
+    if (type === "Own a .trust username") return "trust-name";
     return "other";
   };
 
@@ -629,7 +629,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                     const isPortal = type === "Portal Claims";
                     const isFeedback = type === "Give Feedback";
                     const validationLabel =
-                      type === "Own a TNS" ? "Verified by TNS" :
+                      type === "Own a .trust username" ? "Verified by TNS" :
                       isPortal ? "Auto Verified" :
                       "Manual Validation";
                     setNewTask({
@@ -646,14 +646,14 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                   <option value="Comment on X">Comment on X</option>
                   <option value="Follow on X">Follow on X</option>
                   <option value="Create a Post">Create a Post</option>
-                  <option value="Own a TNS">Own a TNS</option>
+                  <option value="Own a .trust username">Own a .trust username</option>
                   <option value="Portal Claims">Portal Claims</option>
                   <option value="Give Feedback">Give Feedback</option>
                 </select>
               </div>
 
               {/* Platform - Matches Campaign UI */}
-              {newTask.type !== "Portal Claims" && newTask.type !== "Give Feedback" && newTask.type !== "Own a TNS" && (
+              {newTask.type !== "Portal Claims" && newTask.type !== "Give Feedback" && newTask.type !== "Own a .trust username" && (
                 <div>
                   <label className="text-sm text-white/70 mb-2 block font-medium">Platform</label>
                   <div className="flex gap-3">
