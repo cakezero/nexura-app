@@ -34,10 +34,10 @@ export default function UserSidebar({ activeTab, setActiveTab, onLogout }: UserS
     return () => window.removeEventListener("user-session-update", handler);
   }, []);
 
-  const sidebarItems: { title: string; icon: any; id: TabType }[] = [
-    { title: "Quests", icon: Users, id: "questsTab" },
-    { title: "Lessons", icon: BookOpen, id: "lessonsTab" },
-    { title: "Dashboard", icon: Zap, id: "questSubmissions" },
+  const sidebarItems: { title: string; icon: string; id: TabType }[] = [
+    { title: "Quests", icon: "/sidebar-icons/quests.png", id: "questsTab" },
+    { title: "Lessons", icon: "/sidebar-icons/learn.png", id: "lessonsTab" },
+    { title: "Dashboard", icon: "/sidebar-icons/analytics.png", id: "questSubmissions" },
   ];
 
   const routeByTab: Record<TabType, string> = {
@@ -102,10 +102,12 @@ export default function UserSidebar({ activeTab, setActiveTab, onLogout }: UserS
                   : "text-white hover:bg-purple-600/20 hover:text-purple-300"
               )}
             >
-              <item.icon
+              <img
+                src={item.icon}
+                alt={item.title}
                 className={cn(
-                  "w-5 h-5 transition-colors",
-                  activeTab === item.id ? "text-[#8B3EFE]" : "text-white group-hover:text-purple-300"
+                  "w-5 h-5 transition-all",
+                  activeTab === item.id ? "brightness-125 scale-110" : "opacity-70 group-hover:opacity-100"
                 )}
               />
               {item.title}
@@ -164,7 +166,7 @@ export default function UserSidebar({ activeTab, setActiveTab, onLogout }: UserS
               activeTab === item.id ? "text-[#8B3EFE]" : "text-white hover:text-purple-300"
             )}
           >
-            <item.icon className="w-5 h-5" />
+            <img src={item.icon} alt={item.title} className="w-5 h-5" />
             <span>{item.title}</span>
           </button>
         ))}

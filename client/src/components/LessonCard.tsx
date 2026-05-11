@@ -11,14 +11,28 @@ type LessonCardProps = {
     profileImage?: string;
     done?: boolean;
   };
+  title?: string;
+  description?: string;
+  projectName?: string;
+  projectLogo?: string;
+  heroImage?: string;
 };
 
-export default function LessonCard({ lesson }: LessonCardProps) {
+export default function LessonCard({ 
+  lesson,
+  title,
+  description,
+  heroImage
+}: LessonCardProps) {
   const [, setLocation] = useLocation();
 
   const handleClick = () => {
     setLocation(`/learn/${lesson._id}`);
   };
+
+  const displayTitle = title || lesson.title;
+  const displayDescription = description || lesson.description;
+  const displayImage = heroImage || lesson.coverImage || "/learn-image.png";
 
   return (
     <div
@@ -28,8 +42,8 @@ export default function LessonCard({ lesson }: LessonCardProps) {
       {/* IMAGE */}
       <div className="relative h-32 md:h-36 overflow-hidden shrink-0">
         <img
-          src={lesson.coverImage || "/learn-image.png"}
-          alt={lesson.title}
+          src={displayImage}
+          alt={displayTitle}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
         />
 
@@ -43,12 +57,12 @@ export default function LessonCard({ lesson }: LessonCardProps) {
       <div className="p-4 space-y-3 bg-[#170F1F] flex flex-col flex-1">
         {/* TITLE */}
         <h3 className="text-sm md:text-base font-semibold text-white truncate">
-          {lesson.title}
+          {displayTitle}
         </h3>
 
         {/* DESCRIPTION */}
         <p className="text-xs text-white/60 line-clamp-2 flex-1">
-          {lesson.description}
+          {displayDescription}
         </p>
 
         {/* META */}

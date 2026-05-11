@@ -620,20 +620,6 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
             </h2>
 
             <div className="grid grid-cols-2 gap-6 mb-6">
-              {/* Platform - Matches Campaign UI but restricted for Quest modal */}
-              {newTask.type !== "Portal Claims" && newTask.type !== "Give Feedback" && newTask.type !== "Own a .trust username" && (
-                <div>
-                  <label className="text-sm text-white/70 mb-2 block">Platform</label>
-                  <div className="flex gap-3">
-                    <div
-                      className="flex-1 border py-2 rounded-lg transition text-xs font-semibold text-center bg-[#8B3EFE] text-white border-purple-500 opacity-90 cursor-default"
-                    >
-                      Twitter
-                    </div>
-                  </div>
-                </div>
-              )}
-
               <div>
                 <label className="text-sm text-white/70 mb-2 block">Task Type</label>
                 <select
@@ -667,6 +653,20 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                   <option value="Give Feedback">Give Feedback</option>
                 </select>
               </div>
+
+              {/* Platform - Matches Campaign UI but restricted for Quest modal */}
+              {newTask.type !== "Portal Claims" && newTask.type !== "Give Feedback" && newTask.type !== "Own a .trust username" && (
+                <div>
+                  <label className="text-sm text-white/70 mb-2 block">Platform</label>
+                  <div className="flex gap-3">
+                    <div
+                      className="flex-1 border py-2 rounded-lg transition text-xs font-semibold text-center bg-[#8B3EFE] text-white border-purple-500 opacity-90 cursor-default"
+                    >
+                      Twitter
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="bg-white/5 p-5 rounded-xl mb-6 border border-white/10">
@@ -686,30 +686,28 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                   className="w-full p-2 rounded-lg bg-white/5 text-white border border-white/10 focus:outline-none focus:border-purple-500"
                 />
               </div>
-              <div className="mb-4">
-                <label className="text-sm text-white/70 mb-2 block">
-                  {newTask.type === "Create a Post" ? "Task URL" : "Handle or URL"}
-                </label>
-                <input
-                  type="text"
-                  placeholder={
-                    newTask.type === "Create a Post"
-                      ? "https://x.com"
-                      : newTask.platform === "Twitter"
+              {newTask.type !== "Create a Post" && (
+                <div className="mb-4">
+                  <label className="text-sm text-white/70 mb-2 block">
+                    Handle or URL
+                  </label>
+                  <input
+                    type="text"
+                    placeholder={
+                      newTask.platform === "Twitter"
                         ? "e.g. https://x.com/yourlink"
                         : "e.g. https://example.com/link"
-                  }
-                  value={newTask.type === "Create a Post" ? "https://x.com" : newTask.handleOrUrl}
-                  readOnly={newTask.type === "Create a Post"}
-                  disabled={newTask.type === "Create a Post"}
-                  onChange={(e) => {
-                    setUrlError("");
-                    setNewTask({...newTask, handleOrUrl: e.target.value});
-                  }}
-                  className={`w-full p-2 rounded-lg bg-white/5 text-white border border-white/10 focus:outline-none focus:border-purple-500 ${newTask.type === "Create a Post" ? "opacity-50 cursor-not-allowed" : ""}`}
-                />
-                {urlError && <p className="text-red-500 text-[10px] mt-1">{urlError}</p>}
-              </div>
+                    }
+                    value={newTask.handleOrUrl}
+                    onChange={(e) => {
+                      setUrlError("");
+                      setNewTask({...newTask, handleOrUrl: e.target.value});
+                    }}
+                    className="w-full p-2 rounded-lg bg-white/5 text-white border border-white/10 focus:outline-none focus:border-purple-500"
+                  />
+                  {urlError && <p className="text-red-500 text-[10px] mt-1">{urlError}</p>}
+                </div>
+              )}
             </div>
 
             {/* Validation & Evidence - Matches Campaign UI for standard tasks */}

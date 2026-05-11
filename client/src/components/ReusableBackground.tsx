@@ -6,6 +6,10 @@ const COLORS = {
   baseEnd: "#000000",
 };
 
+interface ReusableBackgroundProps {
+  className?: string;
+}
+
 export default function ReusableBackground({
   className = "",
 }: ReusableBackgroundProps) {

@@ -2001,12 +2001,11 @@ const isActive =
       <div className="bg-white/5 p-5 rounded-xl mb-6 border border-white/10">
 
         {/* Handle or URL */}
-        <div className="mb-4">
-          <label className="text-sm text-white/70 mb-2 block">
-            {newTask.type === "Give Feedback"
-              ? "Website URL"
-              : newTask.type === "Create a Post"
-                ? "Task URL"
+        {newTask.type !== "Create a Post" && (
+          <div className="mb-4">
+            <label className="text-sm text-white/70 mb-2 block">
+              {newTask.type === "Give Feedback"
+                ? "Website URL"
                 : isDiscordMessageTaskType(newTask.type)
                   ? "Discord Channel Link"
                   : newTask.platform === "Discord"
@@ -2016,13 +2015,11 @@ const isActive =
                       : newTask.type === "Follow us on X" || newTask.platform === "Twitter"
                         ? "Profile URL"
                         : "Handle or URL"}
-          </label>
-          <input
-            type="text"
-            placeholder={newTask.type === "Give Feedback"
-              ? "https://example.com"
-              : newTask.type === "Create a Post"
-                ? "https://x.com"
+            </label>
+            <input
+              type="text"
+              placeholder={newTask.type === "Give Feedback"
+                ? "https://example.com"
                 : isDiscordMessageTaskType(newTask.type)
                   ? "https://discord.com/channels/..."
                   : newTask.platform === "Discord"
@@ -2032,14 +2029,14 @@ const isActive =
                       : newTask.type === "Follow us on X" || newTask.platform === "Twitter"
                         ? "https://x.com/username"
                         : "..."}
-            value={newTask.type === "Create a Post" ? "https://x.com" : newTask.handleOrUrl}
-            onChange={(e) =>
-              setNewTask({ ...newTask, handleOrUrl: e.target.value })
-            }
-            disabled={newTask.type === "Create a Post"}
-            className={`w-full p-2 rounded-lg bg-white/5 text-white border border-white/10 focus:outline-none focus:border-purple-500 ${newTask.type === "Create a Post" ? "opacity-50 cursor-not-allowed" : ""}`}
-          />
-        </div>
+              value={newTask.handleOrUrl}
+              onChange={(e) =>
+                setNewTask({ ...newTask, handleOrUrl: e.target.value })
+              }
+              className="w-full p-2 rounded-lg bg-white/5 text-white border border-white/10 focus:outline-none focus:border-purple-500"
+            />
+          </div>
+        )}
 
         {/* Task Description */}
         <div className="mb-4">

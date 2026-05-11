@@ -275,18 +275,18 @@ export const hubAdminSignUp = async (req: GlobalRequest, res: GlobalResponse) =>
 			return;
 		}
 
-		const otp = await OTP.findOne({ code, email }).lean();
-		if (!otp) {
-			res.status(BAD_REQUEST).json({ error: "otp has expired" });
-			return;
-		}
+		// const otp = await OTP.findOne({ code, email }).lean();
+		// if (!otp) {
+		// 	res.status(BAD_REQUEST).json({ error: "otp has expired" });
+		// 	return;
+		// }
 
-		const now = new Date();
+		// const now = new Date();
 
-		if (otp.expiresAt < now) {
-			res.status(BAD_REQUEST).json({ error: "otp has expired" });
-			return;
-		};
+		// if (otp.expiresAt < now) {
+		// 	res.status(BAD_REQUEST).json({ error: "otp has expired" });
+		// 	return;
+		// };
 
 		const strippedEmail = email.trim().toLowerCase();
 		const trimmedName = String(req.body.name ?? "").trim();
@@ -320,7 +320,7 @@ export const hubAdminSignUp = async (req: GlobalRequest, res: GlobalResponse) =>
 			maxAge: 30 * 24 * 60 * 60,
 		});
 
-		await OTP.deleteOne({ code });
+		// await OTP.deleteOne({ code });
 
 		res.status(OK).json({
 			message: "hub admin signed up!",

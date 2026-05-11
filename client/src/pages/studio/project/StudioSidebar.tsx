@@ -25,9 +25,9 @@ export default function StudioSidebar({
   const [adminName, setAdminName] = useState<string>("Administrator");
 
   const sidebarItems = [
-    { title: "Profile", icon: User, id: "hubProfile" as TabType },
-    { title: "Campaigns", icon: Users, id: "campaignsTab" as TabType },
-    { title: "Dashboard", icon: Zap, id: "campaignSubmissions" as TabType },
+    { title: "Profile", icon: "/sidebar-icons/nexura-studio.png", id: "hubProfile" as TabType },
+    { title: "Campaigns", icon: "/sidebar-icons/campaigns.png", id: "campaignsTab" as TabType },
+    { title: "Dashboard", icon: "/sidebar-icons/analytics.png", id: "campaignSubmissions" as TabType },
     ...(adminRole === "superadmin" ? [{ title: "Admin Management", icon: Shield, id: "adminManagement" as TabType }] : []),
   ];
 
@@ -63,7 +63,7 @@ export default function StudioSidebar({
             }
           }
         })
-        .catch(() => { /* ignore GÇö offline or no hub yet */ });
+        .catch(() => { /* ignore Gï¿½ï¿½ offline or no hub yet */ });
   }, []);
 
   const routeByTab: Record<TabType, string> = {
@@ -80,7 +80,7 @@ export default function StudioSidebar({
 
   return (
     <>
-      {/* GöÇGöÇ Desktop sidebar GöÇGöÇ */}
+      {/* Gï¿½ï¿½Gï¿½ï¿½ Desktop sidebar Gï¿½ï¿½Gï¿½ï¿½ */}
       <div className="w-[16rem] border-r border-white/10 hidden md:flex flex-col z-20">
         <div className="p-6 border-b border-white/10 relative">
           <AnimatedBackground className="absolute inset-0 z-0" />
@@ -89,7 +89,7 @@ export default function StudioSidebar({
             <img src="/nexura-logo.png" alt="Nexura" className="w-40 h-auto" />
           </div>
 
-          {/* Project pill GÇö clickable, navigates to hub profile */}
+          {/* Project pill Gï¿½ï¿½ clickable, navigates to hub profile */}
           <button
             onClick={() => {
               setActiveTab("hubProfile");
@@ -126,14 +126,25 @@ export default function StudioSidebar({
                   : "text-white hover:bg-purple-600/20 hover:text-purple-300"
               )}
             >
-              <item.icon
-                className={cn(
-                  "w-5 h-5 transition-colors",
-                  activeTab === item.id
-                    ? "text-[#9a58ff]"
-                    : "text-white group-hover:text-purple-300"
-                )}
-              />
+              {typeof item.icon === "string" ? (
+                <img
+                  src={item.icon}
+                  alt={item.title}
+                  className={cn(
+                    "w-5 h-5 transition-all",
+                    activeTab === item.id ? "brightness-125 scale-110" : "opacity-70 group-hover:opacity-100"
+                  )}
+                />
+              ) : (
+                <item.icon
+                  className={cn(
+                    "w-5 h-5 transition-colors",
+                    activeTab === item.id
+                      ? "text-[#9a58ff]"
+                      : "text-white group-hover:text-purple-300"
+                  )}
+                />
+              )}
               {item.title}
             </button>
           ))}
@@ -153,7 +164,7 @@ export default function StudioSidebar({
         </div>
       </div>
 
-      {/* GöÇGöÇ Mobile top bar GöÇGöÇ */}
+      {/* Gï¿½ï¿½Gï¿½ï¿½ Mobile top bar Gï¿½ï¿½Gï¿½ï¿½ */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-30 flex items-center justify-between px-4 py-3 bg-black/80 backdrop-blur-xl border-b border-white/10">
         <img src="/nexura-logo.png" alt="Nexura" className="h-7 w-auto" />
         <button
@@ -170,7 +181,7 @@ export default function StudioSidebar({
         </button>
       </div>
 
-      {/* GöÇGöÇ Mobile bottom nav bar GöÇGöÇ */}
+      {/* GG Mobile bottom nav bar GG */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 flex bg-black/90 backdrop-blur-xl border-t border-white/10 safe-area-inset-bottom">
         {sidebarItems.map((item) => (
           <button
@@ -181,7 +192,11 @@ export default function StudioSidebar({
               activeTab === item.id ? "text-[#9a58ff]" : "text-white hover:text-purple-300"
             )}
           >
-            <item.icon className="w-5 h-5" />
+            {typeof item.icon === "string" ? (
+              <img src={item.icon} alt={item.title} className="w-5 h-5" />
+            ) : (
+              <item.icon className="w-5 h-5" />
+            )}
             <span>{item.title === "Admin Management" ? "Admins" : item.title}</span>
           </button>
         ))}
