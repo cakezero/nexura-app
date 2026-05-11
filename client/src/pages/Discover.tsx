@@ -450,7 +450,11 @@ const quests =
     ) : (
       /* TICKER MODE (same pattern as quests) */
       <div className="overflow-hidden">
-        <div className="flex gap-3 w-max animate-quest-scroll">
+        <div
+          className={`flex gap-3 w-max ${
+            trendingCampaigns.length <= 3 ? "" : "animate-quest-scroll"
+          }`}
+        >
 
           {[...trendingCampaigns, ...trendingCampaigns].map(
             (campaign: any, i: number) => {
@@ -506,37 +510,43 @@ const quests =
     ) : (
       /* WIDE TICKER (same pattern as quests) */
       <div className="overflow-hidden">
-        <div className="flex gap-3 w-max animate-lesson-scroll">
+        <div
+          className={`flex gap-3 w-max ${
+            lessons.length <= 3 ? "" : "animate-lesson-scroll"
+          }`}
+        >
 
-          {[...lessons, ...lessons].map((lesson: any, i: number) => {
-            const title = lesson.title || "Untitled Lesson";
+          {(lessons.length <= 3 ? lessons : [...lessons, ...lessons]).map(
+            (lesson: any, i: number) => {
+              const title = lesson.title || "Untitled Lesson";
 
-            const description =
-              lesson.description ||
-              lesson.sub_title ||
-              "No description available";
+              const description =
+                lesson.description ||
+                lesson.sub_title ||
+                "No description available";
 
-            const project =
-              lesson.projectName ||
-              lesson.project_name ||
-              "Unknown";
+              const project =
+                lesson.projectName ||
+                lesson.project_name ||
+                "Unknown";
 
-            return (
-              <div
-                key={`${lesson._id}-${i}`}
-                className="w-[340px] md:w-[360px] shrink-0"
-              >
-                <LessonCard
-                  lesson={lesson}
-                  title={title}
-                  description={description}
-                  projectName={project}
-                  projectLogo={lesson.project_image || "/lesson-1.png"}
-                  heroImage={lesson.project_image || "/lesson-1.png"}
-                />
-              </div>
-            );
-          })}
+              return (
+                <div
+                  key={`${lesson._id}-${i}`}
+                  className="w-[340px] md:w-[360px] shrink-0"
+                >
+                  <LessonCard
+                    lesson={lesson}
+                    title={title}
+                    description={description}
+                    projectName={project}
+                    projectLogo={lesson.project_image || "/lesson-1.png"}
+                    heroImage={lesson.project_image || "/lesson-1.png"}
+                  />
+                </div>
+              );
+            }
+          )}
 
         </div>
       </div>
@@ -653,40 +663,46 @@ const quests =
     ) : (
       /* WIDE TICKER (3 cards visible) */
       <div className="overflow-hidden">
-        <div className="flex gap-3 w-max animate-quest-scroll">
+        <div
+          className={`flex gap-3 w-max ${
+            quests.length <= 3 ? "" : "animate-quest-scroll"
+          }`}
+        >
 
-          {[...quests, ...quests].map((quest: any, i: number) => {
-            const title = quest.title || "Untitled Quest";
+          {(quests.length <= 3 ? quests : [...quests, ...quests]).map(
+            (quest: any, i: number) => {
+              const title = quest.title || "Untitled Quest";
 
-            const description =
-              quest.description ||
-              quest.sub_title ||
-              "No description available";
+              const description =
+                quest.description ||
+                quest.sub_title ||
+                "No description available";
 
-            const project =
-              quest.projectName ||
-              quest.project_name ||
-              "Unknown";
+              const project =
+                quest.projectName ||
+                quest.project_name ||
+                "Unknown";
 
-            return (
-              <div
-                key={`${quest._id}-${i}`}
-                className="w-[340px] md:w-[360px] shrink-0"
-              >
-                <QuestCard
-                  questId={quest._id}
-                  title={title}
-                  description={description}
-                  projectName={project}
-                  projectLogo={quest.project_image || "/quest-1.png"}
-                  heroImage={quest.project_image || "/quest-1.png"}
-                  rewards={`${quest.reward || quest.rewards || 0} XP`}
-                  starts_at={quest.starts_at}
-                  ends_at={quest.ends_at}
-                />
-              </div>
-            );
-          })}
+              return (
+                <div
+                  key={`${quest._id}-${i}`}
+                  className="w-[340px] md:w-[360px] shrink-0"
+                >
+                  <QuestCard
+                    questId={quest._id}
+                    title={title}
+                    description={description}
+                    projectName={project}
+                    projectLogo={quest.project_image || "/quest-1.png"}
+                    heroImage={quest.project_image || "/quest-1.png"}
+                    rewards={`${quest.reward || quest.rewards || 0} XP`}
+                    starts_at={quest.starts_at}
+                    ends_at={quest.ends_at}
+                  />
+                </div>
+              );
+            }
+          )}
 
         </div>
       </div>

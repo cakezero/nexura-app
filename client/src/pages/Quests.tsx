@@ -1,17 +1,12 @@
-"use client";
-
 import { useEffect, useState } from "react";
-import { Button } from "../components/ui/button";
-import { Badge } from "../components/ui/badge";
-import { Card } from "../components/ui/card";
-import { ExternalLink, Clock } from "lucide-react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import AnimatedBackground from "../components/AnimatedBackground";
-import { apiRequestV2, getStoredAccessToken } from "../lib/queryClient";
+import { apiRequestV2 } from "../lib/queryClient";
 import { useToast } from "../hooks/use-toast";
 import { useAuth } from "../lib/auth";
 import { motion } from "framer-motion";
+import QuestCard from "../components/QuestCard";
 
 interface Quest {
   _id: string;
@@ -33,62 +28,29 @@ interface Quest {
   tag?: string;
 }
 
-export const DUMMY_QUESTS: Quest[] = [
-  {
-    _id: "tasks-card",
-    joined: true,
-    title: "Start Tasks",
-    sub_title: "Complete tasks to earn XP and unlock new features",
-    done: false,
-    description: "Complete unique tasks in the Nexura ecosystem and earn rewards",
-    project_name: "Intuition Ecosystem",
-    reward: "500",
-    project_image: "/quest-1.png",
-    starts_at: new Date().toISOString(),
-    ends_at: new Date(new Date().getTime() + 1000 * 60 * 60 * 24 * 365).toISOString(),
-    category: "Weekly",
-    status: "active"
-  },
-  {
-    _id: "social-card",
-    joined: true,
-    title: "Social Boost",
-    sub_title: "Engage on social platforms to earn rewards",
-    done: false,
-    description: "Like, share, and comment to earn XP",
-    project_name: "Nexura Social",
-    reward: "300",
-    project_image: "/quest-2.png",
-    starts_at: new Date().toISOString(),
-    ends_at: new Date(new Date().getTime() + 1000 * 60 * 60 * 24 * 180).toISOString(),
-    category: "Daily",
-    status: "active"
-  },
-  {
-    _id: "referral-card",
-    joined: true,
-    title: "Referral Sprint",
-    sub_title: "Invite friends and climb the leaderboard",
-    done: false,
-    description: "Earn XP for each successful referral",
-    project_name: "Nexura Referral",
-    reward: "800",
-    project_image: "/quest-3.png",
-    starts_at: new Date().toISOString(),
-    ends_at: new Date(new Date().getTime() + 1000 * 60 * 60 * 24 * 90).toISOString(),
-    category: "Weekly",
-    status: "active"
-  }
-];
-
 export default function Quests() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
+
   const userId = user?._id || "";
 
   const [visitedTasks, setVisitedTasks] = useState<string[]>(() => {
     return JSON.parse(localStorage.getItem('nexura:one-time-quest:visited') || '[]')[userId] || [];
   });
+  const [serverOffset, setServerOffset] = useState(0);
+  const [countdowns, setCountdowns] = useState<Record<string, string>>({});
+
+  // Server time sync
+  useEffect(() => {
+    const getServerTime = async () => {
+      try {
+        const res = await fetch("https://nexura-app.onrender.com/api/server-time");
+        const data = await res.json();
+        setServerOffset(data.serverTime - Date.now());
+      } catch { /* ignore */ }
+    };
+    getServerTime();
+  }, []);
 
   const [claimedTasks, setClaimedTasks] = useState<string[]>(() => {
     return JSON.parse(localStorage.getItem('nexura:one-time-quest:claimed') || '[]')[userId] || [];
@@ -96,7 +58,11 @@ export default function Quests() {
 
   const { toast } = useToast();
 
-  const { data: quests, isLoading } = useQuery({
+  const { data, isLoading } = useQuery<{
+    oneTimeQuests: Quest[];
+    quests: Quest[];
+    featuredQuests: Quest[];
+  }>({
     queryKey: ["/api/quests"],
     queryFn: async () => {
       const res = await apiRequestV2("GET", "/api/quests");
@@ -106,44 +72,64 @@ export default function Quests() {
     refetchIntervalInBackground: true,
   });
 
-  const allQuests: Quest[] = quests?.weeklyQuests ?? DUMMY_QUESTS;
+  useEffect(() => {
+    const value: Record<string, string[]> = {};
+    value[userId] = visitedTasks;
+    localStorage.setItem('nexura:one-time-quest:visited', JSON.stringify(value));
+  }, [visitedTasks]);
 
-  const activeQuests = allQuests.filter((q) => q.status === "active");
-  const upcomingQuests = allQuests.filter((q) => q.status === "upcoming");
+  useEffect(() => {
+    const value: Record<string, string[]> = {};
+    value[userId] = claimedTasks;
+    localStorage.setItem('nexura:one-time-quest:claimed', JSON.stringify(value));
+  }, [claimedTasks]);
 
-  const formatDate = (dateStr?: string) => {
-    if (!dateStr) return "N/A";
-    const d = new Date(dateStr);
+  const allQuests: Quest[] = data?.quests ?? [];
 
-    const day = d.getDate();
-    const suffix =
-      day % 10 === 1 && day !== 11
-        ? "st"
-        : day % 10 === 2 && day !== 12
-        ? "nd"
-        : day % 10 === 3 && day !== 13
-        ? "rd"
-        : "th";
-
-    const month = d.toLocaleDateString("en-US", { month: "long" });
-    const year = d.getFullYear();
-
-    return `${day}${suffix} ${month} ${year}`;
+    const isScheduled = (q: Quest) => {
+    const nowMs = Date.now() + serverOffset;
+    return q.status === "Scheduled" || (!!q.starts_at && new Date(q.starts_at).getTime() > nowMs && q.status !== "Ended" && q.status !== "Save");
   };
+
+  const activeQuests = allQuests.filter((q) => q.status === "Active" || (!isScheduled(q) && q.status !== "Ended" && q.status !== "Save"));
+  const scheduledQuests = allQuests.filter(isScheduled);
+
+  // Countdown timer
+  useEffect(() => {
+    if (scheduledQuests.length === 0) return;
+    const tick = () => {
+      const n = Date.now() + serverOffset;
+      const newCountdowns: Record<string, string> = {};
+      for (const q of scheduledQuests) {
+        const diff = new Date(q.starts_at!).getTime() - n;
+        if (diff <= 0) {
+          newCountdowns[q._id] = "Starting...";
+        } else {
+          const d = Math.floor(diff / 86400000);
+          const h = Math.floor((diff % 86400000) / 3600000);
+          const m = Math.floor((diff % 3600000) / 60000);
+          const s = Math.floor((diff % 60000) / 1000);
+          newCountdowns[q._id] = d > 0 ? `${d}d ${h}h ${m}m ${s}s` : `${h}h ${m}m ${s}s`;
+        }
+      }
+      setCountdowns(newCountdowns);
+    };
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [scheduledQuests.length, serverOffset]);
 
   const startQuest = async (quest: Quest) => {
     if (!quest.joined) {
       try {
         await apiRequestV2("POST", "/api/quest/start-quest", {
           questId: quest._id,
-          category: quest.category.toLowerCase(),
         });
-
         toast({
           title: "Quest Started",
           description: `You have started the quest: ${quest.title}`,
         });
-      } catch {
+      } catch (error) {
         toast({
           title: "Error",
           description: "Failed to start the quest. Please try again.",
@@ -155,13 +141,17 @@ export default function Quests() {
     }
 
     setLocation(`/quest/${quest._id}`);
-  };
+  }
 
-  const renderQuestCard = (quest: Quest, isActive = true, index = 0) => {
-    const duration =
-      quest.starts_at && quest.ends_at
-        ? `${formatDate(quest.starts_at)} - ${formatDate(quest.ends_at)}`
-        : "Ongoing";
+  const renderQuestCard = (quest: Quest, isActive: boolean = true, index: number = 0) => {
+    const formatDate = (dateStr?: string) => {
+      if (!dateStr) return "N/A";
+      return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    };
+
+    const durationText = isActive 
+      ? (quest.starts_at && quest.ends_at ? `${formatDate(quest.starts_at)} - ${formatDate(quest.ends_at)}` : "Ongoing")
+      : (countdowns[quest._id] ? `Starts in ${countdowns[quest._id]}` : "Coming Soon");
 
     return (
       <motion.div
@@ -170,66 +160,18 @@ export default function Quests() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.45, delay: index * 0.08, ease: "easeOut" }}
       >
-        <Card className="bg-[#0d1117] border border-white/5 rounded-xl overflow-hidden transition hover:shadow-lg flex flex-col">
-
-          <div className="relative w-full h-44 sm:h-40 flex-shrink-0">
-            <img
-              src={quest.project_image ?? "/quest-1.png"}
-              alt={quest.title}
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-            <div className="absolute top-2 right-2">
-              <Badge className="text-xs">{isActive ? "Active" : "Soon"}</Badge>
-            </div>
-          </div>
-
-          <div className="p-4 sm:p-5 flex flex-col gap-3 flex-1">
-            <h2 className="text-lg sm:text-xl font-semibold text-white line-clamp-2">
-              {quest.title}
-            </h2>
-
-            <p className="text-xs sm:text-sm text-white/90 line-clamp-2">
-              {quest.sub_title}
-            </p>
-
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-500">Created by</span>
-              <span className="text-white">
-                {quest.project_name ?? "Intuition Ecosystem"}
-              </span>
-            </div>
-
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-500">Reward:</span>
-              <span className="text-white font-semibold">{quest.reward} XP</span>
-            </div>
-
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-500">Duration:</span>
-              <span className="text-white">{duration}</span>
-            </div>
-
-            <Button
-              className="w-full bg-gradient-to-r from-purple-700 via-purple-800 to-indigo-900 
-              hover:from-purple-600 hover:via-purple-700 hover:to-indigo-800
-              text-white font-medium rounded-lg mt-2 py-2 flex items-center justify-center space-x-2"
-              onClick={() => startQuest(quest)}
-            >
-              {isActive ? (
-                <>
-                  <ExternalLink className="w-4 h-4" />
-                  <span>{quest.joined ? "Continue Quest" : "Start Task"}</span>
-                </>
-              ) : (
-                <>
-                  <Clock className="w-4 h-4" />
-                  <span>Coming Soon</span>
-                </>
-              )}
-            </Button>
-          </div>
-        </Card>
+        <QuestCard
+          title={quest.title}
+          description={quest.sub_title}
+          projectName={quest.project_name || "Intuition Ecosystem"}
+          projectLogo={quest.project_image || "/quest-1.png"}
+          heroImage={quest.project_image || "/quest-1.png"}
+          rewards={`${quest.reward} XP`}
+          duration={durationText}
+          questId={quest._id}
+          isLocked={!isActive}
+          lockLevel={1}
+        />
       </motion.div>
     );
   };
@@ -239,37 +181,40 @@ export default function Quests() {
       <AnimatedBackground />
 
       <div className="mx-auto space-y-6 relative z-10 max-w-full sm:max-w-6xl px-1 sm:px-0">
+        {/* Heading */}
+        <div className="space-y-1 mb-6">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
+            <span className="text-purple-400 text-xs font-semibold uppercase tracking-widest">Quests</span>
+          </div>
+          <h1 className="text-3xl sm:text-4xl font-extrabold bg-gradient-to-r from-white via-purple-200 to-purple-400 bg-clip-text text-transparent">Quests</h1>
+          <p className="text-sm text-white/50 mt-1">
+            Complete these quests to earn rewards
+          </p>
+        </div>
 
-        <h1 className="text-3xl sm:text-4xl font-extrabold mb-6">
-          Quests
-        </h1>
-
+        {/* Active Quests */}
         {isLoading ? (
           <div className="text-center py-12 text-white/60">Loading quests...</div>
         ) : activeQuests.length === 0 ? (
-          <Card className="p-8 text-center">
+          <div className="bg-white/5 border border-white/10 rounded-3xl p-8 text-center backdrop-blur-md">
             <p className="text-white/60">No active quests at the moment. Check back soon!</p>
-          </Card>
+          </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-0">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {activeQuests.map((quest, i) => renderQuestCard(quest, true, i))}
           </div>
         )}
 
-        {upcomingQuests.length > 0 && (
-          <div className="mt-10">
-            <h2 className="text-lg sm:text-2xl font-semibold mb-4">
-              Upcoming Quest(s)
-            </h2>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-0">
-              {upcomingQuests.map((quest, i) =>
-                renderQuestCard(quest, false, i)
-              )}
+        {/* Upcoming Quests */}
+        {scheduledQuests.length > 0 && (
+          <div className="space-y-4 sm:space-y-6 mt-8 sm:mt-12">
+            <h2 className="text-lg sm:text-2xl font-semibold text-white">Scheduled Quests</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              {scheduledQuests.map((quest, i) => renderQuestCard(quest, false, i))}
             </div>
           </div>
         )}
-
       </div>
     </div>
   );
