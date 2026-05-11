@@ -108,7 +108,13 @@ export default function CreateNewCampaigns() {
   const [loading, setLoading] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
   const [campaignId, setCampaignId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState("details");
+  const [activeTab, setActiveTab] = useState(() => {
+    return localStorage.getItem("campaignBuilderActiveTab") || "details";
+  });
+
+  useEffect(() => {
+    localStorage.setItem("campaignBuilderActiveTab", activeTab);
+  }, [activeTab]);
   const [showTasks, setShowTasks] = useState(false)
   const [showModal, setShowModal] = useState(false);
   const [validationType, setValidationType] = useState("manual");
@@ -1970,34 +1976,14 @@ const isActive =
         <div>
           <label className="text-sm text-white/70 mb-2 block">Platform</label>
           <div className="flex gap-3">
-            <button
-              type="button"
-              onClick={() => setNewTask({ ...newTask, platform: "Twitter", evidence: "submit_link", validation: newTask.validation === "Discord Auth" ? "Manual Validation" : newTask.validation, roleId: "", channelId: "", guildId: "" })}
-              className={`flex-1 border py-2 rounded-lg transition ${
-                newTask.platform === "Twitter"
-                  ? "bg-[#8B3EFE] text-white border-purple-500"
-                  : "bg-purple-900 border-purple-800 text-white hover:border-purple-500"
-              }`}
-            >
-              Twitter
-            </button>
-            <button
-              type="button"
-              onClick={() => setNewTask({
-                ...newTask,
-                platform: "Discord",
-                evidence: "",
-                validation: "Discord Auth",
-                guildId: newTask.guildId || hubGuildId || "",
-              })}
-              className={`flex-1 border py-2 rounded-lg transition ${
-                newTask.platform === "Discord"
-                  ? "bg-[#8B3EFE] text-white border-purple-500"
-                  : "bg-purple-900 border-purple-800 text-white hover:border-purple-500"
-              }`}
-            >
-              Discord
-            </button>
+            {["Twitter", "Discord", "Other"].filter(p => (newTask.platform === "Twitter" && p === "Twitter") || (newTask.platform === "Discord" && p === "Discord") || (newTask.platform === "Other" && p === "Other")).map((p) => (
+              <div
+                key={p}
+                className="flex-1 border py-2 rounded-lg transition text-xs font-semibold text-center bg-[#8B3EFE] text-white border-purple-500 opacity-90 cursor-default"
+              >
+                {p}
+              </div>
+            ))}
           </div>
         </div>
         )}

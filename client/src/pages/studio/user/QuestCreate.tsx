@@ -49,7 +49,13 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
   const [loading, setLoading] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
   const [questId, setQuestId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState("details");
+  const [activeTab, setActiveTab] = useState(() => {
+    return localStorage.getItem("questBuilderActiveTab") || "details";
+  });
+
+  useEffect(() => {
+    localStorage.setItem("questBuilderActiveTab", activeTab);
+  }, [activeTab]);
   const [showModal, setShowModal] = useState(false);
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -646,14 +652,16 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                   <label className="text-sm text-white/70 mb-2 block font-medium">Platform</label>
                   <div className="flex gap-3">
                     {["Twitter", "Other"].map((p) => (
-                      <button
+                      <div
                         key={p}
-                        type="button"
-                        onClick={() => setNewTask({ ...newTask, platform: p, validation: p === "Twitter" ? "Manual Validation" : newTask.validation })}
-                        className={`flex-1 border py-2 rounded-lg transition text-xs font-semibold ${newTask.platform === p ? "bg-[#8B3EFE] text-white border-purple-500" : "bg-purple-950 border-purple-800 text-white/70 hover:border-purple-500"}`}
+                        className={`flex-1 border py-2 rounded-lg transition text-xs font-semibold text-center opacity-90 cursor-default ${
+                          newTask.platform === p
+                            ? "bg-[#8B3EFE] text-white border-purple-500"
+                            : "bg-purple-950 border-purple-800 text-white/50 border-purple-500/50"
+                        }`}
                       >
                         {p}
-                      </button>
+                      </div>
                     ))}
                   </div>
                 </div>
