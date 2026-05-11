@@ -97,11 +97,11 @@ export const superAdminSignUp = async (req: GlobalRequest, res: GlobalResponse) 
 
     const strippedEmail = email.trim().toLowerCase();
 
-    const verified = await verifiedEmail.exists({ email: strippedEmail }).lean().select("_id");
-    if (!verified) {
-      res.status(UNAUTHORIZED).json({ error: "email address has not been verified" });
-      return;
-    }
+    // const verified = await verifiedEmail.exists({ email: strippedEmail }).lean().select("_id");
+    // if (!verified) {
+    //   res.status(UNAUTHORIZED).json({ error: "email address has not been verified" });
+    //   return;
+    // }
 
     const emailExists = await hubAdmin.exists({ email: strippedEmail });
     if (emailExists) {
@@ -118,7 +118,7 @@ export const superAdminSignUp = async (req: GlobalRequest, res: GlobalResponse) 
       role: "superadmin",
     });
 
-		await verifiedEmail.findByIdAndDelete(verified._id)
+		// await verifiedEmail.findByIdAndDelete(verified._id)
 
     const accessToken = JWT.sign(ha._id);
 		const refreshToken = getRefreshToken(ha._id);
@@ -552,11 +552,11 @@ export const userHubAdminSignUp = async (req: GlobalRequest, res: GlobalResponse
     const strippedEmail = email.trim().toLowerCase();
     const trimmedName = name.trim();
 
-    const verified = await verifiedEmail.exists({ email: strippedEmail }).lean().select("_id");
-    if (!verified) {
-      res.status(UNAUTHORIZED).json({ error: "email address has not been verified" });
-      return;
-    }
+    // const verified = await verifiedEmail.exists({ email: strippedEmail }).lean().select("_id");
+    // if (!verified) {
+    //   res.status(UNAUTHORIZED).json({ error: "email address has not been verified" });
+    //   return;
+    // }
 
     const adminExists = await userHubAdmin.findOne({
       $or: [{ email: strippedEmail }, { name: trimmedName }]
@@ -608,7 +608,7 @@ export const userHubAdminSignUp = async (req: GlobalRequest, res: GlobalResponse
     // Link the hub to the admin and delete verified email
     await Promise.all([
       userHubAdmin.findByIdAndUpdate(superAdmin._id, { hub: createdHub._id }),
-      verifiedEmail.findByIdAndDelete(verified._id)
+      // verifiedEmail.findByIdAndDelete(verified._id)
     ]);
 
 		const accessToken = JWT.sign(superAdmin._id.toString());
@@ -766,14 +766,14 @@ export const validateHubEmail = async (req: GlobalRequest, res: GlobalResponse) 
       return;
     }
 
-    const code = generateOTP();
+    // const code = generateOTP();
 
-    await OTP.deleteMany({ email: strippedEmail }),
+    // await OTP.deleteMany({ email: strippedEmail }),
 
-    await Promise.all([
-      OTP.create({ code, email: strippedEmail, page: page || "project", role: "admin" }),
-      sendOTPConfirmEmail({ email: strippedEmail, code })
-    ]);
+    // await Promise.all([
+    //   OTP.create({ code, email: strippedEmail, page: page || "project", role: "admin" }),
+    //   sendOTPConfirmEmail({ email: strippedEmail, code })
+    // ]);
 
     res.status(OK).json({ message: "otp for email confirmation sent!" });
   } catch (error) {
