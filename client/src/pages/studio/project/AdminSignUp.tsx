@@ -29,10 +29,10 @@ export default function AdminSignUp() {
     upper:   /[A-Z]/.test(password),
   };
   const allPwdValid = Object.values(pwdChecks).every(Boolean);
-  const canSubmit = allPwdValid && !!name && !!email && code.length === 6 && !loading;
+  const canSubmit = allPwdValid && !!name && !!email && !loading; // && code.length === 6
 
   async function handleSignUp() {
-    if (!name || !email || !password || !code) {
+    if (!name || !email || !password) { // || !code
       toast({
         title: "Missing fields",
         description: "Please fill in all fields.",
@@ -41,14 +41,14 @@ export default function AdminSignUp() {
       return;
     }
 
-    if (code.length !== 6) {
-      toast({
-        title: "Invalid code",
-        description: "The OTP code must be exactly 6 characters.",
-        variant: "destructive",
-      });
-      return;
-    }
+    // if (code.length !== 6) {
+    //   toast({
+    //     title: "Invalid code",
+    //     description: "The OTP code must be exactly 6 characters.",
+    //     variant: "destructive",
+    //   });
+    //   return;
+    // }
 
     setLoading(true);
     try {
@@ -60,7 +60,7 @@ export default function AdminSignUp() {
       }>({
         method: "POST",
         endpoint: "/hub/admin/sign-up",
-        data: { name, email, password, code },
+        data: { name, email, password }, // code
       });
 
       const token = (res.token ?? res.accessToken) as string | undefined;
@@ -96,8 +96,8 @@ export default function AdminSignUp() {
           </CardTitle>
           <p className="mt-2 text-sm text-white/50 text-center">
             You've been invited to manage a project on Nexura Studio.
-            <br />
-            Enter the OTP from your invitation email to complete setup.
+            {/* <br />
+            Enter the OTP from your invitation email to complete setup. */}
           </p>
         </div>
 
@@ -170,7 +170,7 @@ export default function AdminSignUp() {
           </div>
 
           {/* OTP */}
-          <div>
+          {/* <div>
             <label className="block text-xs text-white/50 mb-1 ml-1">Invitation Code (OTP)</label>
             <Input
               value={code}
@@ -179,7 +179,7 @@ export default function AdminSignUp() {
               maxLength={6}
               className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-purple-500 tracking-widest text-center text-lg font-mono"
             />
-          </div>
+          </div> */}
         </div>
 
         {/* Submit */}
