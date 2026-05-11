@@ -327,6 +327,7 @@ useEffect(() => {
           if (tag === "send-message-discord" || tag === "message-discord" || tag === "message") return DISCORD_MESSAGE_TASK_TYPE;
           if (tag === "portal") return "Check Out the Portal Claims";
           if (tag === "feedback") return "Give Feedback";
+          if (tag === "create-post") return "Create a Post";
           return "others";
         };
         const catToPlatform = (cat: string) => {
@@ -531,6 +532,7 @@ const typeToTag = (type: string) => {
   if (type === DISCORD_MESSAGE_TASK_TYPE) return "send-message-discord";
   if (type === "Check Out the Portal Claims") return "portal";
   if (type === "Give Feedback") return "feedback";
+  if (type === "Create a Post") return "create-post";
   return "other";
 };
 const platformToCategory = (platform: string) => {
@@ -785,6 +787,7 @@ const handleSaveTask = () => {
   const finalTask = { ...newTask };
   if (finalTask.type === "Create a Post") {
     finalTask.handleOrUrl = "https://x.com";
+    finalTask.platform = "Twitter";
   }
 
   const requiresPlatform = finalTask.type !== "Check Out the Portal Claims" && finalTask.type !== "others" && finalTask.type !== "Give Feedback";

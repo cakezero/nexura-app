@@ -190,7 +190,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
       quest: t.description || t.type,
       link: t.handleOrUrl || "https://nexura.io",
       tag: typeToTag(t.type),
-      category: t.platform.toLowerCase(),
+      category: (t.platform || "Other").toLowerCase(),
       verificationMode: t.verificationMode || "",
     }));
     fd.append("miniQuests", JSON.stringify(miniQuests));
@@ -268,6 +268,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
     const finalTask = { ...newTask };
     if (finalTask.type === "Create a Post") {
       finalTask.handleOrUrl = "https://x.com";
+      finalTask.platform = "Twitter";
     }
 
     if (!finalTask.type || !finalTask.handleOrUrl || !finalTask.description) {
