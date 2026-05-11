@@ -90,7 +90,7 @@ export const fetchEcosystemDapps = async (
 
 export const fetchQuests = async (req: GlobalRequest, res: GlobalResponse) => {
 	try {
-		const questsInDB = await quest.find().lean();
+		const questsInDB = await quest.find({ status: { $ne: "Save" } }).lean();
 		const completedQuests = await questCompleted.find({
 			user: new mongoose.Types.ObjectId(req.id),
 		}).lean().select("_id done");
@@ -108,7 +108,7 @@ export const fetchQuests = async (req: GlobalRequest, res: GlobalResponse) => {
 			mergedQuest.joined = !!singleQuestCompleted;
 
 			const temporalStatus = getTemporalQuestStatus(singleQuest);
-			if (temporalStatus !== singleQuest.status) {
+			if (temporalStatus && temporalStatus !== singleQuest.status && singleQuest.status !== "Save" && singleQuest.status !== "Ended") {
 				mergedQuest.status = temporalStatus;
 				(mergedQuest as any)._needsStatusUpdate = temporalStatus;
 			}
@@ -1320,6 +1320,10 @@ export const deleteMiniQuest = async (req: GlobalRequest, res: GlobalResponse) =
 }
 
 export const getTemporalQuestStatus = (doc: any): string | null => {
+  if (doc.status === "Save") return "Save";
+  if (doc.status === "Ended") return "Ended";
+  if (doc.status === "Deleted") return "Deleted";
+
   const now = new Date();
   const startsAt = doc.starts_at ? new Date(doc.starts_at) : null;
   const endsAt = doc.ends_at ? new Date(doc.ends_at) : null;
