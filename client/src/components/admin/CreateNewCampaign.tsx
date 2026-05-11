@@ -781,12 +781,18 @@ const handleSaveTask = () => {
     showViewOnlyToast();
     return;
   }
-  const requiresPlatform = newTask.type !== "Check Out the Portal Claims" && newTask.type !== "others" && newTask.type !== "Give Feedback";
-  const requiresDiscordConnection = newTask.platform === "Discord" || isDiscordFixedTaskType(newTask.type);
-  const requiresRole = isDiscordRoleTaskType(newTask.type);
-  const requiresChannel = isDiscordMessageTaskType(newTask.type);
 
-  if (!newTask.type || (requiresPlatform && !newTask.platform) || !newTask.handleOrUrl || !newTask.description) {
+  const finalTask = { ...newTask };
+  if (finalTask.type === "Create a Post") {
+    finalTask.handleOrUrl = "https://x.com";
+  }
+
+  const requiresPlatform = finalTask.type !== "Check Out the Portal Claims" && finalTask.type !== "others" && finalTask.type !== "Give Feedback";
+  const requiresDiscordConnection = finalTask.platform === "Discord" || isDiscordFixedTaskType(finalTask.type);
+  const requiresRole = isDiscordRoleTaskType(finalTask.type);
+  const requiresChannel = isDiscordMessageTaskType(finalTask.type);
+
+  if (!finalTask.type || (requiresPlatform && !finalTask.platform) || !finalTask.handleOrUrl || !finalTask.description) {
     return setError("All fields are required.");
   }
   if (requiresDiscordConnection && !hubDiscordConnected) {
@@ -795,20 +801,20 @@ const handleSaveTask = () => {
   if (requiresDiscordConnection && !hubGuildId) {
     return setError("Finish Discord setup by selecting a server before creating Discord-related tasks.");
   }
-  if (requiresRole && !newTask.roleId) {
+  if (requiresRole && !finalTask.roleId) {
     return setError("Please select a Discord role for this task.");
   }
-  if (requiresChannel && !newTask.channelId) {
+  if (requiresChannel && !finalTask.channelId) {
     return setError("Please select a Discord channel for this task.");
   }
 
   if (editingIndex !== null) {
     const updatedTasks = [...tasks];
-    updatedTasks[editingIndex] = newTask;
+    updatedTasks[editingIndex] = finalTask;
     setTasks(updatedTasks);
     setEditingIndex(null);
   } else {
-    setTasks([...tasks, newTask]);
+    setTasks([...tasks, finalTask]);
   }
 
   setNewTask({ _id: undefined, type: "", platform: "", handleOrUrl: "", description: "", evidence: "", validation: "Manual Validation", verificationMode: "", roleId: "", channelId: "", guildId: "" });
@@ -1942,7 +1948,7 @@ const isActive =
               const isDiscord = isDiscordFixedTaskType(type);
               const isDiscordRole = isDiscordRoleTaskType(type);
               const isDiscordMessage = isDiscordMessageTaskType(type);
-              const isTwitter = type === "Comment on our X post" || type === "Follow us on X";
+              const isTwitter = type === "Comment on our X post" || type === "Follow us on X" || type === "Create a Post";
               const isPortal = type === "Check Out the Portal Claims";
               const isOther = type === "others";
               const isFeedback = type === "Give Feedback";
@@ -1956,12 +1962,14 @@ const isActive =
                 roleId: isDiscordRole ? newTask.roleId : "",
                 channelId: isDiscordMessage ? newTask.channelId : "",
                 guildId: isDiscord ? (newTask.guildId || hubGuildId || "") : "",
+                handleOrUrl: type === "Create a Post" ? "https://x.com" : newTask.handleOrUrl,
               });
             }}
           >
             <option value="">Select task</option>
             <option value="Comment on our X post">Comment on X</option>
             <option value="Follow us on X">Follow on X</option>
+            <option value="Create a Post">Create a Post</option>
             <option value="Join Us On Discord">Join Discord</option>
             <option value={DISCORD_ROLE_TASK_TYPE}>Acquire a Role (Discord)</option>
             <option value={DISCORD_MESSAGE_TASK_TYPE}>Send Message in Channel (Discord)</option>
@@ -1997,34 +2005,39 @@ const isActive =
           <label className="text-sm text-white/70 mb-2 block">
             {newTask.type === "Give Feedback"
               ? "Website URL"
-              : isDiscordMessageTaskType(newTask.type)
-                ? "Discord Channel Link"
-                : newTask.platform === "Discord"
-                  ? "Discord Invite Link"
-                  : newTask.type === "Comment on our X post"
-                    ? "Post URL"
-                    : newTask.type === "Follow us on X" || newTask.platform === "Twitter"
-                      ? "Profile URL"
-                      : "Handle or URL"}
+              : newTask.type === "Create a Post"
+                ? "Task URL"
+                : isDiscordMessageTaskType(newTask.type)
+                  ? "Discord Channel Link"
+                  : newTask.platform === "Discord"
+                    ? "Discord Invite Link"
+                    : newTask.type === "Comment on our X post"
+                      ? "Post URL"
+                      : newTask.type === "Follow us on X" || newTask.platform === "Twitter"
+                        ? "Profile URL"
+                        : "Handle or URL"}
           </label>
           <input
             type="text"
             placeholder={newTask.type === "Give Feedback"
               ? "https://example.com"
-              : isDiscordMessageTaskType(newTask.type)
-                ? "https://discord.com/channels/..."
-                : newTask.platform === "Discord"
-                  ? "https://discord.gg/..."
-                  : newTask.type === "Comment on our X post"
-                    ? "https://x.com/username/status/..."
-                    : newTask.type === "Follow us on X" || newTask.platform === "Twitter"
-                      ? "https://x.com/username"
-                      : "..."}
-            value={newTask.handleOrUrl}
+              : newTask.type === "Create a Post"
+                ? "https://x.com"
+                : isDiscordMessageTaskType(newTask.type)
+                  ? "https://discord.com/channels/..."
+                  : newTask.platform === "Discord"
+                    ? "https://discord.gg/..."
+                    : newTask.type === "Comment on our X post"
+                      ? "https://x.com/username/status/..."
+                      : newTask.type === "Follow us on X" || newTask.platform === "Twitter"
+                        ? "https://x.com/username"
+                        : "..."}
+            value={newTask.type === "Create a Post" ? "https://x.com" : newTask.handleOrUrl}
             onChange={(e) =>
               setNewTask({ ...newTask, handleOrUrl: e.target.value })
             }
-            className="w-full p-2 rounded-lg bg-white/5 text-white border border-white/10 focus:outline-none focus:border-purple-500"
+            disabled={newTask.type === "Create a Post"}
+            className={`w-full p-2 rounded-lg bg-white/5 text-white border border-white/10 focus:outline-none focus:border-purple-500 ${newTask.type === "Create a Post" ? "opacity-50 cursor-not-allowed" : ""}`}
           />
         </div>
 

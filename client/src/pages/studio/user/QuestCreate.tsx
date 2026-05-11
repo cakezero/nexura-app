@@ -265,17 +265,22 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
   };
 
   const handleSaveTask = () => {
-    if (!newTask.type || !newTask.handleOrUrl || !newTask.description) {
+    const finalTask = { ...newTask };
+    if (finalTask.type === "Create a Post") {
+      finalTask.handleOrUrl = "https://x.com";
+    }
+
+    if (!finalTask.type || !finalTask.handleOrUrl || !finalTask.description) {
       return setError("All fields are required.");
     }
 
     if (editingIndex !== null) {
       const updated = [...tasks];
-      updated[editingIndex] = newTask;
+      updated[editingIndex] = finalTask;
       setTasks(updated);
       setEditingIndex(null);
     } else {
-      setTasks([...tasks, newTask]);
+      setTasks([...tasks, finalTask]);
     }
 
     setShowModal(false);
@@ -633,6 +638,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                       platform: isTwitter ? "Twitter" : (isPortal || isFeedback) ? "" : newTask.platform || "Other",
                       validation: validationLabel,
                       verificationMode: isPortal ? "auto" : isFeedback ? "feedback" : "",
+                      handleOrUrl: type === "Create a Post" ? "https://x.com" : newTask.handleOrUrl,
                     });
                   }}
                 >
@@ -681,19 +687,21 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                   className="w-full p-2 rounded-lg bg-white/5 text-white border border-white/10 focus:outline-none focus:border-purple-500"
                 />
               </div>
-              <div>
+              <div className="mb-4">
                 <label className="text-sm text-white/70 mb-2 block">
-                  Handle or URL
+                  {newTask.type === "Create a Post" ? "Task URL" : "Handle or URL"}
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. https://x.com/yourlink"
-                  value={newTask.handleOrUrl}
+                  placeholder={newTask.type === "Create a Post" ? "https://x.com" : "e.g. https://x.com/yourlink"}
+                  value={newTask.type === "Create a Post" ? "https://x.com" : newTask.handleOrUrl}
+                  readOnly={newTask.type === "Create a Post"}
+                  disabled={newTask.type === "Create a Post"}
                   onChange={(e) => {
                     setUrlError("");
                     setNewTask({...newTask, handleOrUrl: e.target.value});
                   }}
-                  className="w-full p-2 rounded-lg bg-white/5 text-white border border-white/10 focus:outline-none focus:border-purple-500"
+                  className={`w-full p-2 rounded-lg bg-white/5 text-white border border-white/10 focus:outline-none focus:border-purple-500 ${newTask.type === "Create a Post" ? "opacity-50 cursor-not-allowed" : ""}`}
                 />
                 {urlError && <p className="text-red-500 text-[10px] mt-1">{urlError}</p>}
               </div>
