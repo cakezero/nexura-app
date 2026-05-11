@@ -354,7 +354,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                 <label className="block mb-2 text-sm font-medium text-white">Quest Name</label>
                 <Input
                   placeholder="Enter quest name..."
-                  className="bg-white/5 border-white/10 text-white"
+                  className="bg-white/5 border-white/10 text-white rounded-xl"
                   value={questName}
                   onChange={(e) => setQuestName(e.target.value)}
                 />
@@ -364,7 +364,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                 <label className="block mb-2 text-sm font-medium text-white">Quest Description</label>
                 <textarea
                   placeholder="Explain what learners will get out of this quest..."
-                  className="min-h-[120px] w-full rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="min-h-[80px] w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-purple-500"
                   value={questDescription}
                   onChange={(e) => setQuestDescription(e.target.value)}
                 />
