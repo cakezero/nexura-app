@@ -615,9 +615,26 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
         <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/80 backdrop-blur-sm p-4 text-left">
           <div className="bg-[#0d0d14] w-full max-w-xl border border-purple-500/20 p-6 rounded-2xl relative shadow-[0_0_60px_rgba(131,58,253,0.2)] animate-modal-pop">
             <button onClick={() => setShowModal(false)} className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-all text-lg leading-none">&times;</button>
-            <h2 className="text-xl font-semibold text-white mb-6">Add New Task</h2>
+            <h2 className="text-xl font-semibold text-white mb-6">
+              {editingIndex !== null ? "Edit Task" : "Add New Task"}
+            </h2>
 
             <div className="grid grid-cols-2 gap-6 mb-6">
+              {/* Platform - Matches Campaign UI but restricted for Quest modal */}
+              {newTask.type !== "Portal Claims" && newTask.type !== "Give Feedback" && newTask.type !== "Own a .trust username" && (
+                <div>
+                  <label className="text-sm text-white/70 mb-2 block font-medium">Platform</label>
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      className="flex-1 border py-2 rounded-lg transition text-xs font-semibold text-center bg-[#8B3EFE] text-white border-purple-500 shadow-[0_0_15px_rgba(139,62,254,0.4)] cursor-default"
+                    >
+                      Twitter
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div>
                 <label className="text-sm text-white/70 mb-2 block font-medium">Task Type</label>
                 <select
@@ -651,27 +668,6 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                   <option value="Give Feedback">Give Feedback</option>
                 </select>
               </div>
-
-              {/* Platform - Matches Campaign UI */}
-              {newTask.type !== "Portal Claims" && newTask.type !== "Give Feedback" && newTask.type !== "Own a .trust username" && (
-                <div>
-                  <label className="text-sm text-white/70 mb-2 block font-medium">Platform</label>
-                  <div className="flex gap-3">
-                    {["Twitter", "Other"].map((p) => (
-                      <div
-                        key={p}
-                        className={`flex-1 border py-2 rounded-lg transition text-xs font-semibold text-center opacity-90 cursor-default ${
-                          newTask.platform === p
-                            ? "bg-[#8B3EFE] text-white border-purple-500"
-                            : "bg-purple-950 border-purple-800 text-white/50 border-purple-500/50"
-                        }`}
-                      >
-                        {p}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
 
             <div className="bg-white/5 p-5 rounded-xl mb-6 border border-white/10">
@@ -739,7 +735,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                 onClick={handleSaveTask}
                 className="px-5 py-2.5 rounded-xl bg-[#8B3EFE] text-white text-sm font-semibold hover:opacity-90 hover:shadow-[0_0_20px_rgba(131,58,253,0.5)] hover:-translate-y-0.5 active:translate-y-0 transition-all"
               >
-                {editingIndex !== null ? "Update Task" : "Save Task"}
+                Save Task
               </button>
             </div>
           </div>

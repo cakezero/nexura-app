@@ -20,7 +20,7 @@ interface Quest {
   project_name?: string;
   description?: string;
   done: boolean;
-  project_image?: string;
+  projectCoverImage?: string;
   starts_at?: string;
   ends_at?: string;
   link?: string;
@@ -264,9 +264,9 @@ export default function Quests() {
         <Card className="bg-[#0d1117] h-full border border-white/5 rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition flex flex-col">
           {/* Quest Banner */}
           <div className="relative h-36 bg-black w-full">
-            {quest.project_image && (
+            {quest.projectCoverImage && (
               <img
-                src={quest.project_image}
+                src={quest.projectCoverImage}
                 alt={quest.title}
                 className="w-full h-full object-cover rounded-t-2xl"
               />
