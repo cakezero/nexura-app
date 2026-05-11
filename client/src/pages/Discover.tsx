@@ -417,17 +417,16 @@ const quests =
   </section>
 )}
 
-{/* Campaigns */}
-{(activeFilter === "all" ||
-  activeFilter === "campaigns") && (
+{/* CAMPAIGNS */}
+{(activeFilter === "all" || activeFilter === "campaigns") && (
   <section className="mb-8">
-    <div className="flex items-start justify-between mb-3 gap-2">
+    <div className="flex items-start justify-between mb-3 mt-8 gap-2">
       <div>
         <h2 className="text-base md:text-lg font-semibold">
           Active Campaigns
         </h2>
 
-        <p className="text-[11px] md:text-xs text-white/60 mt-1 max-w-xl">
+        <p className="text-xs text-white/60 mt-1 max-w-xl">
           Explore and participate in active campaigns
         </p>
       </div>
@@ -436,83 +435,39 @@ const quests =
         variant="ghost"
         size="sm"
         onClick={() => setLocation("/campaigns")}
-       className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] text-white/80 hover:text-white hover:bg-[#00E1A24D] transition"
+        className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] text-white/80 hover:text-white hover:bg-[#00E1A24D] transition"
       >
         <span>View all campaigns</span>
-
-        <img
-          src="/arrow-right.png"
-          alt="arrow right"
-          className="w-3.5 h-3.5 opacity-80 group-hover:opacity-100 transition"
-        />
+        <img src="/arrow-right.png" className="w-3.5 h-3.5" />
       </Button>
     </div>
 
-    {trendingCampaigns.length > 0 ? (
-      trendingCampaigns.length > 3 ? (
-        <div className="ticker-container">
-          <div className="ticker gap-3">
-
-            {/* First set */}
-            {trendingCampaigns.map(
-              (campaign: any, index: number) => (
-                <div
-                  key={campaign._id ?? index}
-                  className="w-[260px] shrink-0"
-                >
-                  <div className="rounded-2xl border border-white/10 overflow-hidden">
-                    <CampaignCard
-                      {...campaign}
-                      from="explore"
-                    />
-                  </div>
-                </div>
-              )
-            )}
-
-            {/* Duplicate set */}
-            {trendingCampaigns.map(
-              (campaign: any, index: number) => (
-                <div
-                  key={`${campaign._id}-dup`}
-                  className="w-[260px] shrink-0"
-                >
-                  <div className="rounded-2xl border border-white/10 overflow-hidden">
-                    <CampaignCard
-                      {...campaign}
-                      from="explore"
-                    />
-                  </div>
-                </div>
-              )
-            )}
-
-          </div>
-        </div>
-      ) : (
-        <div className="grid grid-cols-3 gap-2">
-          {trendingCampaigns.map(
-            (campaign: any, index: number) => (
-              <div
-                key={campaign._id ?? index}
-                className={`animate-slide-up delay-${
-                  (index + 1) * 100
-                }`}
-              >
-                <div className="rounded-2xl border border-white/10 overflow-hidden">
-                  <CampaignCard
-                    {...campaign}
-                    from="explore"
-                  />
-                </div>
-              </div>
-            )
-          )}
-        </div>
-      )
-    ) : (
-      <div className="col-span-2 md:col-span-4 rounded-2xl border border-white/10 bg-[#0B0B0B] p-6 text-center text-white/60 text-sm">
+    {/* EMPTY STATE */}
+    {!trendingCampaigns || trendingCampaigns.length === 0 ? (
+      <div className="rounded-2xl border border-white/10 bg-[#170F1F] p-6 text-center text-white/60 text-sm">
         No active campaigns at the moment.
+      </div>
+    ) : (
+      /* TICKER MODE (same pattern as quests) */
+      <div className="overflow-hidden">
+        <div className="flex gap-3 w-max animate-quest-scroll">
+
+          {[...trendingCampaigns, ...trendingCampaigns].map(
+            (campaign: any, i: number) => {
+              return (
+                <div
+                  key={`${campaign._id}-${i}`}
+                  className="w-[340px] md:w-[360px] shrink-0"
+                >
+                  <div className="rounded-2xl border border-white/10 overflow-hidden">
+                    <CampaignCard {...campaign} from="explore" />
+                  </div>
+                </div>
+              );
+            }
+          )}
+
+        </div>
       </div>
     )}
   </section>
@@ -551,7 +506,7 @@ const quests =
     ) : (
       /* WIDE TICKER (same pattern as quests) */
       <div className="overflow-hidden">
-        <div className="flex gap-3 w-max animate-quest-scroll">
+        <div className="flex gap-3 w-max animate-lesson-scroll">
 
           {[...lessons, ...lessons].map((lesson: any, i: number) => {
             const title = lesson.title || "Untitled Lesson";
