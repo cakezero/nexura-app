@@ -452,24 +452,27 @@ const quests =
       <div className="overflow-hidden">
         <div
           className={`flex gap-3 w-max ${
-            trendingCampaigns.length <= 3 ? "" : "animate-quest-scroll"
+            trendingCampaigns.length <= 3
+              ? ""
+              : "animate-quest-scroll"
           }`}
         >
 
-          {[...trendingCampaigns, ...trendingCampaigns].map(
-            (campaign: any, i: number) => {
-              return (
-                <div
-                  key={`${campaign._id}-${i}`}
-                  className="w-[340px] md:w-[360px] shrink-0"
-                >
-                  <div className="rounded-2xl border border-white/10 overflow-hidden">
-                    <CampaignCard {...campaign} from="explore" />
-                  </div>
+          {(trendingCampaigns.length <= 3
+            ? trendingCampaigns
+            : [...trendingCampaigns, ...trendingCampaigns]
+          ).map((campaign: any, i: number) => {
+            return (
+              <div
+                key={`${campaign._id}-${i}`}
+                className="w-[340px] md:w-[360px] shrink-0"
+              >
+                <div className="rounded-2xl border border-white/10 overflow-hidden">
+                  <CampaignCard {...campaign} from="explore" />
                 </div>
-              );
-            }
-          )}
+              </div>
+            );
+          })}
 
         </div>
       </div>
