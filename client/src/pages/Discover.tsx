@@ -209,9 +209,6 @@ const { data: questsData, isLoading, error } = useQuery({
   queryKey: ["quests"],
   queryFn: async () => {
   const res = await apiRequest("GET", "/api/quests");
-  console.log("QUESTS RAW RESPONSE:", questsData);
-console.log("QUESTS ARRAY:", quests);
-console.log("ERROR:", error);
   return res.json();
   
 },
