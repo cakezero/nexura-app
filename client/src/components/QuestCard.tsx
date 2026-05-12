@@ -154,21 +154,22 @@ export default function QuestCard({
 
           {/* BUTTON */}
 <Button
-  className="mt-2 w-full bg-[#8B3EFE] hover:bg-[#7a2fe0] text-white text-xs py-1 rounded-2xl uppercase tracking-wider"
+  className={`mt-2 w-full py-1 text-sm font-medium rounded-xl transition flex items-center justify-center gap-2 ${
+    isActive
+      ? "bg-[#8B3EFE] hover:bg-[#B65FC8] text-white"
+      : "bg-gray-600 cursor-not-allowed text-gray-300"
+  }`}
   onClick={handleClick}
+  disabled={!isActive}
 >
   {isActive ? (
     <>
+      <ExternalLink className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
       {joined ? "Continue Quest" : "Start Quest"}
-      <img
-        src="/arrow-right.png"
-        className="w-3.5 h-3.5 ml-2"
-        alt="arrow"
-      />
     </>
   ) : (
     <>
-      <Clock className="w-3.5 h-3.5 mr-2" />
+      <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
       Coming Soon
     </>
   )}
