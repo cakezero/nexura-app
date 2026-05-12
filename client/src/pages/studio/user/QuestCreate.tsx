@@ -317,6 +317,19 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
       }
     }
 
+    // Enforce Portal prefixes for Portal Claims tasks
+    if (finalTask.type === "Portal Claims") {
+      const url = finalTask.handleOrUrl.toLowerCase();
+      const allowedPrefixes = [
+        "nexura.intuition.box/portal-claims/",
+        "portal.intuition.systems/atoms/triples"
+      ];
+      const isAllowed = allowedPrefixes.some(prefix => url.includes(prefix));
+      if (!isAllowed) {
+        return setError("Portal Claims must be from Nexura Portal or Intuition Portal triples.");
+      }
+    }
+
     if (editingIndex !== null) {
       const updated = [...tasks];
       updated[editingIndex] = finalTask;
@@ -734,11 +747,13 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                 <input
                   type="text"
                   placeholder={
-                    newTask.type === "Create a Post"
-                      ? "e.g. Just joined this amazing quest on Nexura!"
-                      : newTask.platform === "Twitter"
-                        ? "e.g. Follow us on X to stay updated"
-                        : "e.g. Complete this task to earn rewards"
+                    newTask.type === "Create a Post" ? "e.g. Just joined this amazing quest on Nexura!" :
+                    newTask.type === "Comment on X" ? "e.g. Reply to our latest announcement" :
+                    newTask.type === "Follow on X" ? "e.g. Follow @NexuraApp for updates" :
+                    newTask.type === "Own a .trust username" ? "e.g. Acquire your unique identity on TNS" :
+                    newTask.type === "Portal Claims" ? "e.g. Claim your rewards from the portal" :
+                    newTask.type === "Give Feedback" ? "e.g. Tell us about your experience" :
+                    "e.g. Complete this task to earn rewards"
                   }
                   value={newTask.description}
                   onChange={(e) => setNewTask({...newTask, description: e.target.value})}
@@ -752,19 +767,48 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                   </label>
                   <input
                     type="text"
-                    placeholder={
-                      newTask.platform === "Twitter"
-                        ? "e.g. https://x.com/yourlink"
-                        : "e.g. https://example.com/link"
-                    }
+                    placeholder="e.g. https://..."
                     value={newTask.handleOrUrl}
                     onChange={(e) => {
-                      setUrlError("");
-                      setNewTask({...newTask, handleOrUrl: e.target.value});
+                      const val = e.target.value;
+                      setNewTask({...newTask, handleOrUrl: val});
+                      
+                      const valLower = val.toLowerCase().trim();
+                      if (!valLower) {
+                        setUrlError("");
+                        return;
+                      }
+
+                      // Immediate feedback for x.com enforcement
+                      if (newTask.platform === "Twitter" && newTask.type !== "Create a Post") {
+                        if (!valLower.includes("x.com")) {
+                          setUrlError("Twitter links must use the x.com domain.");
+                        } else {
+                          setUrlError("");
+                        }
+                      } 
+                      // Immediate feedback for Portal Claims enforcement
+                      else if (newTask.type === "Portal Claims") {
+                        const allowedPrefixes = [
+                          "nexura.intuition.box/portal-claims/",
+                          "portal.intuition.systems/atoms/triples"
+                        ];
+                        const isAllowed = allowedPrefixes.some(prefix => valLower.includes(prefix));
+                        if (!isAllowed) {
+                          setUrlError("URL must be from Nexura Portal or Intuition Portal triples.");
+                        } else {
+                          setUrlError("");
+                        }
+                      }
+                      else {
+                        setUrlError("");
+                      }
                     }}
-                    className="w-full p-2 rounded-lg bg-white/5 text-white border border-white/10 focus:outline-none focus:border-purple-500"
+                    className={`w-full p-2 rounded-lg bg-white/5 text-white border focus:outline-none focus:border-purple-500 transition-colors ${urlError ? "border-red-500/50" : "border-white/10"}`}
                   />
-                  {urlError && <p className="text-red-500 text-[10px] mt-1">{urlError}</p>}
+                  {urlError && <p className="text-red-500 text-[11px] mt-1.5 flex items-center gap-1">
+                    <XCircle className="w-3.5 h-3.5" /> {urlError}
+                  </p>}
                 </div>
               )}
             </div>
@@ -818,6 +862,13 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                     />
                   </div>
                 </div>
+              </div>
+            )}
+
+            {error && (
+              <div className="mb-6 flex items-center gap-2 text-red-400 bg-red-400/10 border border-red-400/20 p-3 rounded-xl text-xs">
+                <XCircle className="w-4 h-4" />
+                {error}
               </div>
             )}
 
