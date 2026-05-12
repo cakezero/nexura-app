@@ -36,6 +36,7 @@ import { uploadImg } from "@/utils/img.utils";
 import { parseDate, normalizeCampaignDateInput } from "@/utils/dates";
 import { xpLog } from "@/models/xpLog.model";
 import { consumePaymentHash } from "./studioPayment.controller";
+import { environment } from "@/utils/env.utils";
 
 const DISCORD_CAMPAIGN_TAGS = new Set([
 	"join",
@@ -782,13 +783,15 @@ export const submitQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 		if (!userExists) {
 			res.status(NOT_FOUND).json({ error: "id is invalid or does not exists" });
 			return;
-		}
-
-		if (!userExists.socialProfiles?.x?.connected) {
-			res.status(BAD_REQUEST).json({ error: "user x profile not linked" });
-			return;
     }
-		
+
+    if (environment === "production") {
+  		if (!userExists.socialProfiles?.x?.connected) {
+  			res.status(BAD_REQUEST).json({ error: "user x profile not linked" });
+  			return;
+      }
+    }
+
     if (hubId) {
   		const hubExists = (await hub.findById(hubId)) || (await userHub.findById(hubId));
   		if (!hubExists) {
