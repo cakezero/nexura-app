@@ -168,7 +168,7 @@ const toggleUserSelection = (id: string) => {
 const unbanUser = async (id: string) => {
   try {
     setLoading(true);
-    await apiRequest({ method: "POST", endpoint: "/api/admin/unban-user", data: { id } });
+    await apiRequest({ method: "POST", endpoint: "/api/admin/unban-user", data: { userId: id } });
     // Refresh banned users
     fetchBannedUsers();
   } catch (err) {

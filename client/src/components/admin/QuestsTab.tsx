@@ -143,7 +143,12 @@ export default function QuestsTab() {
     setPendingAction(null);
     try {
       const { apiPrefix, apiRequest } = getApiConfig();
-      await apiRequest({ method: "DELETE", endpoint: `/${apiPrefix}/delete-quest`, params: { id } });
+      // Send ID in both query and body for maximum compatibility with backend extraction
+      await apiRequest({ 
+        method: "DELETE", 
+        endpoint: `/${apiPrefix}/delete-quest?id=${id}`, 
+        data: { id, questId: id } 
+      });
       setQuests((prev) => prev.filter((q) => q._id !== id));
       toast({ title: "Quest deleted", description: "The quest has been removed." });
     } catch (err: any) {
@@ -158,10 +163,11 @@ export default function QuestsTab() {
     setPendingAction(null);
     try {
       const { apiPrefix, apiRequest } = getApiConfig();
+      // Send ID in both query and body for maximum compatibility with backend extraction
       await apiRequest({ 
         method: "PATCH", 
-        endpoint: `/${apiPrefix}/publish-quest`,
-        data: { questId: id, status: "Ended" } 
+        endpoint: `/${apiPrefix}/publish-quest?id=${id}`,
+        data: { id, questId: id, status: "Ended" } 
       });
       toast({ title: "Quest closed", description: "The quest has been closed successfully." });
       fetchQuests();
@@ -213,7 +219,7 @@ export default function QuestsTab() {
     return (
       <Card key={quest._id} className="w-full h-full bg-gray-900 text-white rounded-xl overflow-hidden shadow-lg flex flex-col">
         {quest.projectCoverImage ? (
-          <img src={quest.projectCoverImage} alt={quest.description || quest.title} className="w-full h-28 object-cover" />
+          <img src={quest.projectCoverImage} alt={quest.title || quest.description} className="w-full h-28 object-cover" />
         ) : (
           <div className="w-full h-28 bg-gray-700 flex items-center justify-center">
             <span className="text-white/50 text-xs">No Image</span>
@@ -221,8 +227,8 @@ export default function QuestsTab() {
         )}
 
         <div className="p-3 flex flex-1 flex-col gap-1.5 text-left">
-          <h3 className="font-bold text-sm truncate" title={quest.description || quest.title}>
-            {quest.description || quest.title}
+          <h3 className="font-bold text-sm truncate" title={quest.title || quest.description}>
+            {quest.title || quest.description}
           </h3>
           <p className="text-white/70 text-xs">
             {formatDate(quest.starts_at)} - {formatDate(quest.ends_at)}
@@ -244,7 +250,7 @@ export default function QuestsTab() {
                 <button
                   title="Close quest"
                   className="px-2 py-1.5 text-xs bg-yellow-600/20 text-yellow-400 rounded-lg hover:bg-yellow-600/30 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                  onClick={() => setPendingAction({ type: "close", id: quest._id, title: quest.description || quest.title })}
+                  onClick={() => setPendingAction({ type: "close", id: quest._id, title: quest.title || quest.description || "Untitled" })}
                   disabled={closingId === quest._id || deletingId === quest._id}
                 >
                   {closingId === quest._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
@@ -255,7 +261,7 @@ export default function QuestsTab() {
                 <button
                   title="Delete quest"
                   className="px-2 py-1.5 text-xs bg-red-600/20 text-red-400 rounded-lg hover:bg-red-600/30 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                  onClick={() => setPendingAction({ type: "delete", id: quest._id, title: quest.description || quest.title })}
+                  onClick={() => setPendingAction({ type: "delete", id: quest._id, title: quest.title || quest.description || "Untitled" })}
                   disabled={deletingId === quest._id || closingId === quest._id}
                 >
                   {deletingId === quest._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}

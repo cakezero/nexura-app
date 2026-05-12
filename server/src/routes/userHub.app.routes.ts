@@ -1,6 +1,6 @@
 import { userHubLogout } from "@/controllers/hub.auth.controller";
 import { createUserHub, updateUserHub, deleteUserHub, getCampaignSubmissions, validateCampaignSubmissions, getUserHub } from "@/controllers/hub.controller";
-import { savePaymentHash } from "@/controllers/studioPayment.controller";
+import { requireStudioPayment, savePaymentHash } from "@/controllers/studioPayment.controller";
 import {
   createLesson,
   publishLesson,
@@ -48,7 +48,7 @@ router
   .delete("/delete-mini-lesson", deleteMiniLesson)
   .patch("/publish-lesson", publishLesson)
   .patch("/unpublish-lesson", unpublishLesson)
-  .patch("/publish-quest", publishQuest)
+  .patch("/publish-quest", requireStudioPayment, publishQuest)
   .post("/create-question", createQuestion)
   .patch("/update-question", updateQuestion)
   .delete("/delete-question", deleteQuestion)

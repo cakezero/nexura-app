@@ -90,7 +90,11 @@ const buildAdminAuthPayload = (record: {
 
 export const deleteQuestAdmin = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
-    const { id } = req.query as { id: string };
+    const id = (req.query.id as string) || (req.body.id as string) || (req.body.questId as string);
+    if (!id) {
+      res.status(BAD_REQUEST).json({ error: "Quest ID is required" });
+      return;
+    }
     
     const exists = await quest.exists({ _id: id }).select("_id creator creatorModel").lean();
     if (!exists) {
@@ -637,13 +641,13 @@ export const createAdmin = async (req: GlobalRequest, res: GlobalResponse) => {
 
 export const getAdminQuestDetail = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
-    const questId = req.query.id as string;
-    if (!questId) {
-      res.status(BAD_REQUEST).json({ error: "quest id is required" });
+    const id = (req.query.id as string) || (req.body.id as string) || (req.body.questId as string);
+    if (!id) {
+      res.status(BAD_REQUEST).json({ error: "Quest ID is required" });
       return;
     }
 
-    const found = await quest.findById(questId).lean();
+    const found = await quest.findById(id).lean();
     if (!found) {
       res.status(NOT_FOUND).json({ error: "quest not found" });
       return;
@@ -719,6 +723,7 @@ export const getAdminHubQuests = async (req: GlobalRequest, res: GlobalResponse)
     const getStatus = (q: any) => {
       if (q.status === "Save") return "Save";
       if (q.status === "Deleted") return "Deleted";
+      if (q.status === "Ended") return "Ended";
       const s = parseDate(q.starts_at);
       const e = parseDate(q.ends_at);
       if (e && e <= now) return "Ended";
@@ -1311,7 +1316,7 @@ export const getStudioLessons = async (_req: GlobalRequest, res: GlobalResponse)
 
 export const publishAdminQuest = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
-    const { id } = req.query as { id: string };
+    const id = (req.query.id as string) || (req.body.id as string) || (req.body.questId as string);
     if (!id) {
       res.status(BAD_REQUEST).json({ error: "Quest ID is required" });
       return;
@@ -1331,6 +1336,14 @@ export const publishAdminQuest = async (req: GlobalRequest, res: GlobalResponse)
 
     if (String(questDoc.creator) !== adminHub) {
       res.status(FORBIDDEN).json({ error: "You are not allowed to publish this quest" });
+      return;
+    }
+
+    const { status } = req.body;
+    if (status === "Ended") {
+      questDoc.status = "Ended";
+      await questDoc.save();
+      res.status(OK).json({ message: "Quest closed successfully!" });
       return;
     }
 

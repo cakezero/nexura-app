@@ -85,6 +85,8 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
   const [coverImage, setCoverImage] = useState<File | null>(null);
   const [coverImagePreview, setCoverImagePreview] = useState<string | null>(null);
   const [publishedQuest, setPublishedQuest] = useState<any>(null);
+  const [isPublished, setIsPublished] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
 
   const XP_REWARDS = "200";
 
@@ -103,6 +105,8 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
         if (!found) return;
 
         setQuestId(editId);
+        setIsEditMode(true);
+        setIsPublished(found.status !== "Save");
         setQuestName(found.title ?? "");
         setQuestDescription(found.description ?? "");
         
@@ -185,14 +189,18 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
     if (isDraft) fd.append("status", "Save");
     else fd.append("status", "Active");
 
-    const miniQuests = tasks.map(t => ({
-      _id: t._id,
-      quest: t.description || t.type,
-      link: t.handleOrUrl || "https://nexura.io",
-      tag: typeToTag(t.type),
-      category: (t.platform || "Other").toLowerCase(),
-      verificationMode: t.verificationMode || "",
-    }));
+    const miniQuests = tasks.map(t => {
+      const isCreatePost = t.type === "Create a Post";
+      const isTrustName = t.type === "Own a .trust username";
+      return {
+        _id: t._id,
+        quest: t.description || t.type,
+        link: isCreatePost ? "https://x.com" : (isTrustName ? "https://tns.intuition.box" : (t.handleOrUrl || "https://x.com")),
+        tag: typeToTag(t.type),
+        category: isCreatePost ? "twitter" : (t.platform || "Other").toLowerCase(),
+        verificationMode: t.verificationMode || "",
+      };
+    });
     fd.append("miniQuests", JSON.stringify(miniQuests));
 
     return fd;
@@ -264,11 +272,37 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
     }
   };
 
+  const handleUpdateQuest = async () => {
+    if (!questId) return;
+    setLoading(true);
+    try {
+      const fd = buildQuestFormData(false); // status: Active
+      const endpoint = `/${apiPrefix}/save-quest`;
+      await apiRequest({
+        method: "POST",
+        endpoint,
+        formData: fd,
+        params: { id: questId },
+      });
+      toast({ title: "Quest Updated", description: "Your changes have been saved." });
+      setLocation(session?.type === "user" ? "/user-dashboard/quests-tab" : "/studio-dashboard/campaigns-tab");
+    } catch (err: any) {
+      toast({ title: "Update Failed", description: err.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSaveTask = () => {
     const finalTask = { ...newTask };
     if (finalTask.type === "Create a Post") {
       finalTask.handleOrUrl = "https://x.com";
       finalTask.platform = "Twitter";
+    }
+
+    if (finalTask.type === "Own a .trust username") {
+      finalTask.handleOrUrl = "https://tns.intuition.box";
+      finalTask.platform = "";
     }
 
     if (!finalTask.type || !finalTask.handleOrUrl || !finalTask.description) {
@@ -573,7 +607,9 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                     <Clock className="w-4 h-4 text-white/60" />
                     Status
                   </div>
-                  <span className="text-white text-lg font-semibold">Draft</span>
+                  <span className={`text-lg font-semibold ${isPublished ? "text-green-400" : "text-white"}`}>
+                    {isPublished ? "Live" : "Draft"}
+                  </span>
                 </div>
               </div>
             </div>
@@ -606,14 +642,25 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
 
             <div className="flex items-center justify-between mt-8">
               <button type="button" className="px-4 py-2 bg-gray-600 text-white rounded-lg text-sm hover:bg-gray-500 transition font-medium" onClick={() => setActiveTab("tasks")}>Back</button>
-              <button
-                type="button"
-                className="px-6 py-2 bg-[#8B3EFE] text-white rounded-lg text-sm font-semibold hover:bg-[#7b35e6] transition disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={loading}
-                onClick={() => setShowPublishModal(true)}
-              >
-                {loading ? "Publishing..." : "Publish Quest"}
-              </button>
+              {isEditMode && isPublished ? (
+                <button
+                  type="button"
+                  className="px-6 py-2 bg-[#8B3EFE] text-white rounded-lg text-sm font-semibold hover:bg-[#7b35e6] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={loading}
+                  onClick={handleUpdateQuest}
+                >
+                  {loading ? "Updating..." : "Update Quest"}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="px-6 py-2 bg-[#8B3EFE] text-white rounded-lg text-sm font-semibold hover:bg-[#7b35e6] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={loading}
+                  onClick={() => setShowPublishModal(true)}
+                >
+                  {loading ? "Publishing..." : "Publish Quest"}
+                </button>
+              )}
             </div>
           </Card>
         )}
@@ -639,17 +686,18 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                     const isTwitter = type === "Comment on X" || type === "Follow on X" || type === "Create a Post";
                     const isPortal = type === "Portal Claims";
                     const isFeedback = type === "Give Feedback";
+                    const isTrustName = type === "Own a .trust username";
                     const validationLabel =
-                      type === "Own a .trust username" ? "Verified by TNS" :
+                      isTrustName ? "Verified by TNS" :
                       isPortal ? "Auto Verified" :
                       "Manual Validation";
                     setNewTask({
                       ...newTask,
                       type,
-                      platform: isTwitter ? "Twitter" : (isPortal || isFeedback) ? "" : newTask.platform || "Other",
+                      platform: isTwitter ? "Twitter" : (isPortal || isFeedback || isTrustName) ? "" : newTask.platform || "Other",
                       validation: validationLabel,
-                      verificationMode: isPortal ? "auto" : isFeedback ? "feedback" : "",
-                      handleOrUrl: type === "Create a Post" ? "https://x.com" : newTask.handleOrUrl,
+                      verificationMode: isPortal ? "auto" : isFeedback ? "feedback" : isTrustName ? "auto" : "",
+                      handleOrUrl: type === "Create a Post" ? "https://x.com" : (isTrustName ? "https://tns.intuition.box" : (newTask.handleOrUrl === "https://x.com" || newTask.handleOrUrl === "https://tns.intuition.box" ? "" : newTask.handleOrUrl)),
                     });
                   }}
                 >
@@ -681,21 +729,23 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
             <div className="bg-white/5 p-5 rounded-xl mb-6 border border-white/10">
               <div className="mb-4">
                 <label className="text-sm text-white/70 mb-2 block">
-                  Task Description
+                  {newTask.type === "Create a Post" ? "Post Content" : "Task Description"}
                 </label>
                 <input
                   type="text"
                   placeholder={
-                    newTask.platform === "Twitter"
-                      ? "e.g. Follow us on X to stay updated"
-                      : "e.g. Complete this task to earn rewards"
+                    newTask.type === "Create a Post"
+                      ? "e.g. Just joined this amazing quest on Nexura!"
+                      : newTask.platform === "Twitter"
+                        ? "e.g. Follow us on X to stay updated"
+                        : "e.g. Complete this task to earn rewards"
                   }
                   value={newTask.description}
                   onChange={(e) => setNewTask({...newTask, description: e.target.value})}
                   className="w-full p-2 rounded-lg bg-white/5 text-white border border-white/10 focus:outline-none focus:border-purple-500"
                 />
               </div>
-              {newTask.type !== "Create a Post" && (
+              {newTask.type !== "Create a Post" && newTask.type !== "Own a .trust username" && (
                 <div className="mb-4">
                   <label className="text-sm text-white/70 mb-2 block">
                     Handle or URL

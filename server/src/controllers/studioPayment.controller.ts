@@ -21,14 +21,26 @@ export const requireStudioPayment = async (req: GlobalRequest, res: GlobalRespon
       return;
     }
 
-    const hubDoc = await hub.findById(hubId).select("pendingTxHash").lean() as any;
-    if (!hubDoc) {
+    // Check both project hubs and user hubs for a pending payment hash
+    const [hubDoc, userHubDoc] = await Promise.all([
+      hub.findById(hubId).select("pendingTxHash").lean(),
+      userHub.findById(hubId).select("pendingTxHash").lean(),
+    ]);
+
+    const finalDoc = hubDoc || userHubDoc;
+    if (!finalDoc) {
       res.status(NOT_FOUND).json({ error: "hub not found" });
       return;
     }
 
+    // Skip payment validation if closing a quest/campaign
+    if ((req.body as any)?.status === "Ended") {
+      next();
+      return;
+    }
+
     const bodyHash = (req.body as any)?.txHash as string | undefined;
-    const storedHash = hubDoc.pendingTxHash || bodyHash;
+    const storedHash = (finalDoc as any).pendingTxHash || bodyHash;
 
     if (!storedHash) {
       res.status(FORBIDDEN).json({
@@ -37,8 +49,11 @@ export const requireStudioPayment = async (req: GlobalRequest, res: GlobalRespon
       return;
     }
 
-    if (!hubDoc.pendingTxHash && bodyHash) {
-      await hub.findByIdAndUpdate(hubId, { pendingTxHash: bodyHash });
+    if (!(finalDoc as any).pendingTxHash && bodyHash) {
+      await Promise.all([
+        hub.findByIdAndUpdate(hubId, { pendingTxHash: bodyHash }),
+        userHub.findByIdAndUpdate(hubId, { pendingTxHash: bodyHash }),
+      ]);
     }
 
     req.paymentTxHash = storedHash;

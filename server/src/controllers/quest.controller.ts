@@ -35,6 +35,7 @@ import { hub, userHub } from "@/models/hub.model";
 import { uploadImg } from "@/utils/img.utils";
 import { parseDate, normalizeCampaignDateInput } from "@/utils/dates";
 import { xpLog } from "@/models/xpLog.model";
+import { consumePaymentHash } from "./studioPayment.controller";
 
 const DISCORD_CAMPAIGN_TAGS = new Set([
 	"join",
@@ -137,7 +138,11 @@ export const fetchQuests = async (req: GlobalRequest, res: GlobalResponse) => {
 
 export const fetchMiniQuests = async (req: GlobalRequest, res: GlobalResponse) => {
 	try {
-		const id = req.query.id as string;
+		const id = (req.query.id as string) || (req.body.id as string) || (req.body.questId as string);
+		if (!id) {
+			res.status(BAD_REQUEST).json({ error: "Quest ID is required" });
+			return;
+		}
 
 		const mainQuest = await quest.findById(id).lean();
 		if (!mainQuest) {
@@ -171,7 +176,7 @@ export const fetchMiniQuests = async (req: GlobalRequest, res: GlobalResponse) =
 
 		const questNumber = padNumber(mainQuest.questNumber!);
 
-		res.status(OK).json({ message: "mini quests fetched", miniQuests, questCompleted: mainQuestCompleted?.done, totalXp: mainQuest.reward, questNumber, sub_title: mainQuest?.sub_title, title: mainQuest.title });
+		res.status(OK).json({ message: "mini quests fetched", miniQuests, questCompleted: mainQuestCompleted?.done, totalXp: mainQuest.reward, questNumber, sub_title: mainQuest?.sub_title, title: mainQuest.title, description: mainQuest.description });
 	} catch (error) {
 		logger.error(error);
 		res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching mini quests" });
@@ -180,16 +185,19 @@ export const fetchMiniQuests = async (req: GlobalRequest, res: GlobalResponse) =
 
 export const startQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 	try {
-		const id = req.query.id as string;
-		const { questId } = req.body;
+		const id = (req.query.id as string) || (req.body.id as string) || (req.body.questId as string);
+		if (!id) {
+			res.status(BAD_REQUEST).json({ error: "Quest ID is required" });
+			return;
+		}
 
-		const questStarted = await questCompleted.exists({ quest: questId, user: req.id });
+		const questStarted = await questCompleted.exists({ quest: id, user: req.id });
 		if (questStarted) {
 			res.status(BAD_REQUEST).json({ error: "quest already started" });
 			return;
 		}
 
-		await questCompleted.create({ quest: questId, user: req.id, done: false, category: "one-time" });
+		await questCompleted.create({ quest: id, user: req.id, done: false, category: "one-time" });
 
 		res.status(OK).json({ message: "quest started" });
 	} catch (error) {
@@ -203,7 +211,11 @@ export const fetchCampaignQuests = async (
 	res: GlobalResponse
 ) => {
 	try {
-		const id = req.query.id as string;
+		const id = (req.query.id as string) || (req.body.id as string) || (req.body.questId as string);
+		if (!id) {
+			res.status(BAD_REQUEST).json({ error: "Campaign ID is required" });
+			return;
+		}
 		const userId = req.id!;
 
 		const currentCampaign = await campaign.findById(id).lean();
@@ -565,10 +577,9 @@ export const claimMiniQuest = async (req: GlobalRequest, res: GlobalResponse) =>
 
 export const claimQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 	try {
-		const id = req.query.id as string;
-
+		const id = (req.query.id as string) || (req.body.id as string) || (req.body.questId as string);
 		if (!id) {
-			res.status(BAD_REQUEST).json({ error: "send quest id" });
+			res.status(BAD_REQUEST).json({ error: "Quest ID is required" });
 			return;
 		}
 
@@ -639,7 +650,11 @@ export const claimEcosystemQuest = async (
 	res: GlobalResponse
 ) => {
 	try {
-		const id = req.query.id;
+		const id = (req.query.id as string) || (req.body.id as string) || (req.body.questId as string);
+		if (!id) {
+			res.status(BAD_REQUEST).json({ error: "Quest ID is required" });
+			return;
+		}
 
 		const userId = req.id;
 
@@ -709,7 +724,11 @@ export const claimEcosystemQuest = async (
 
 export const setTimer = async (req: GlobalRequest, res: GlobalResponse) => {
 	try {
-		const id = req.query.id;
+		const id = (req.query.id as string) || (req.body.id as string) || (req.body.questId as string);
+		if (!id) {
+			res.status(BAD_REQUEST).json({ error: "Quest ID is required" });
+			return;
+		}
 
 		const questForEcosystem = await ecosystemQuest.findById(id).lean();
 		if (!questForEcosystem) {
@@ -892,7 +911,9 @@ export const createQuest = async (req: GlobalRequest, res: GlobalResponse) => {
   
     newQuest.creatorModel = page === "user" ? "user" : "admin";
 
-    newQuest.status = req.body.status || "Active";
+    // Enforce Save status for all new quests from Studio.
+    // Quests must be explicitly published via /publish-quest which requires payment.
+    newQuest.status = "Save";
 
     createdHub.questsCreated += 1;
 
@@ -979,6 +1000,9 @@ export const saveQuestWithMiniQuests = async (req: GlobalRequest, res: GlobalRes
         maxSize: 2 * 1024 ** 2
       });
 
+      // Enforce Save status for new quests from Studio.
+      req.body.status = "Save";
+
       const savedQuest = await quest.create(req.body);
 
       questId = savedQuest._id.toString();
@@ -989,7 +1013,13 @@ export const saveQuestWithMiniQuests = async (req: GlobalRequest, res: GlobalRes
         return;
       }
 
-      await quest.findByIdAndUpdate(id, req.body.questData, { new: true });
+      // If it's a draft, don't allow status update via this endpoint.
+      if (questFound.status === "Save") {
+        delete req.body.status;
+        if (req.body.questData) delete req.body.questData.status;
+      }
+
+      await quest.findByIdAndUpdate(id, req.body.questData || req.body, { new: true });
     }
 
     const { error: questError } = validateMiniQuestData(req.body.questData);
@@ -1128,6 +1158,7 @@ export const saveQuest = async (req: GlobalRequest, res: GlobalResponse) => {
         projectCoverImage: req.body.coverImage ?? "pending",
         creator: req.admin.hub,
         creatorModel: page === "user" ? "user" : "project",
+        status: "Save", // Enforce Save status for new quests from Studio
       };
 
       const savedQuest = await quest.create(body);
@@ -1161,6 +1192,7 @@ export const saveQuest = async (req: GlobalRequest, res: GlobalResponse) => {
         projectCoverImage: req.body.coverImage ?? "pending",
         creator: req.admin.hub,
         creatorModel: page === "user" ? "user" : "project",
+        status: "Save", // Enforce Save status for new quests from Studio
       };
 
       const newQuest = await quest.create(body);
@@ -1179,6 +1211,11 @@ export const saveQuest = async (req: GlobalRequest, res: GlobalResponse) => {
     }
 
     const { miniQuests: _mq, isDraft: _d, existingCoverImage: _e, hubCoverImage: _h, nameOfProject: _n, ...updateFields } = req.body;
+
+    // If it's a draft, don't allow status update via this endpoint.
+    if (questFound.status === "Save") {
+      delete updateFields.status;
+    }
 
     if (updateFields.description !== undefined) {
       const trimmed = String(updateFields.description ?? "").trim();
@@ -1278,7 +1315,11 @@ export const saveQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 
 export const deleteQuest = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
-    const { id } = req.query as { id: string };
+    const id = (req.query.id as string) || (req.body.id as string) || (req.body.questId as string);
+    if (!id) {
+      res.status(BAD_REQUEST).json({ error: "Quest ID is required" });
+      return;
+    }
     
     const exists = await quest.exists({ _id: id }).select("_id").lean();
     if (!exists) {
@@ -1302,7 +1343,11 @@ export const deleteQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 
 export const deleteMiniQuest = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
-    const { id } = req.query as { id: string };
+    const id = (req.query.id as string) || (req.body.id as string) || (req.body.questId as string);
+    if (!id) {
+      res.status(BAD_REQUEST).json({ error: "Quest ID is required" });
+      return;
+    }
 
     const exists = await miniQuest.exists({ _id: id }).select("_id").lean();
     if (!exists) {
@@ -1333,11 +1378,9 @@ export const getTemporalQuestStatus = (doc: any): string | null => {
   return null;
 };
 
-import { consumePaymentHash } from "@/controllers/studioPayment.controller";
-
 export const publishQuest = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
-    const { id } = req.query as { id: string };
+    const id = (req.query.id as string) || (req.body.id as string) || (req.body.questId as string);
     if (!id) {
       res.status(BAD_REQUEST).json({ error: "Quest ID is required" });
       return;
@@ -1346,6 +1389,14 @@ export const publishQuest = async (req: GlobalRequest, res: GlobalResponse) => {
     const questDoc = await quest.findById(id);
     if (!questDoc) {
       res.status(NOT_FOUND).json({ error: "Quest not found" });
+      return;
+    }
+
+    const { status } = req.body;
+    if (status === "Ended") {
+      questDoc.status = "Ended";
+      await questDoc.save();
+      res.status(OK).json({ message: "quest closed!" });
       return;
     }
 
@@ -1427,7 +1478,7 @@ export const getAdminHubQuests = async (req: GlobalRequest, res: GlobalResponse)
 
 export const getAdminQuestDetail = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
-    const { id } = req.query as { id: string };
+    const id = (req.query.id as string) || (req.body.id as string) || (req.body.questId as string);
     if (!id) {
       res.status(BAD_REQUEST).json({ error: "Quest ID is required" });
       return;

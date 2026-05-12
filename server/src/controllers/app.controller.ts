@@ -65,9 +65,10 @@ const getTrustProvider = () => {
 
 export const validateTrustNameTask = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
-    const { id, campaignId: campaignIdFromBody, questId: questIdFromBody }: { id: string; campaignId?: string; questId?: string } = req.body;
+    const { campaignId: campaignIdFromBody, questId: questIdFromBody }: { campaignId?: string; questId?: string } = req.body;
+    const id = (req.query.id as string) || (req.body.id as string) || (req.body.questId as string);
     if (!id) {
-      res.status(BAD_REQUEST).json({ error: "task id is required" });
+      res.status(BAD_REQUEST).json({ error: "Quest ID is required" });
       return;
     }
 
@@ -2480,10 +2481,10 @@ export const checkDiscordTask = async (req: GlobalRequest, res: GlobalResponse) 
       campaignId: campaignIdFromBody,
       channelId: channelIdFromBody,
       roleId: roleIdFromBody,
-      id,
     } = req.body;
+    const id = (req.query.id as string) || (req.body.id as string) || (req.body.questId as string);
     if (!id) {
-      res.status(BAD_REQUEST).json({ error: "campaign quest id is required" });
+      res.status(BAD_REQUEST).json({ error: "Quest ID is required" });
       return;
     }
 
