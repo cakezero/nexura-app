@@ -261,7 +261,7 @@ export default function Quests() {
           ease: "easeOut",
         }}
       >
-        <Card className="bg-[#0d1117] h-full border border-white/5 rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition flex flex-col">
+        <Card className="bg-[#170f1f] h-full border border-white/5 rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition flex flex-col">
           {/* Quest Banner */}
           <div className="relative h-36 bg-black w-full">
             {quest.projectCoverImage && (
@@ -329,9 +329,9 @@ export default function Quests() {
             </div>
 
             <Button
-              className={`w-full mt-auto pt-2 py-2 text-xs font-medium rounded-xl ${
+              className={`w-full mt-auto pt-2 py-2 text-xs font-medium rounded-2xl ${
                 isActive
-                  ? "bg-[#1f6feb] hover:bg-[#388bfd] text-white"
+                  ? "bg-[#8b3efe] hover:bg-[#B65FC8] text-white"
                   : "bg-gray-600 cursor-not-allowed text-gray-300"
               }`}
               onClick={(e) => {
