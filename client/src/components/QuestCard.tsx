@@ -6,7 +6,7 @@ import { ExternalLink, Clock } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface QuestCardProps {
-  questId: string;
+  questId?: string;
   title?: string;
   description?: string;
   subTitle?: string;
@@ -20,11 +20,15 @@ interface QuestCardProps {
   status?: string;
   isActive?: boolean;
   index?: number;
+  participants?: number;
+  tags?: string[];
+  isLocked?: boolean;
+  lockLevel?: number;
   onClick?: (id: string) => void;
 }
 
 export default function QuestCard({
-  questId,
+  questId = "",
   title,
   description,
   subTitle,

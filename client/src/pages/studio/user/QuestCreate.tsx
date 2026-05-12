@@ -85,6 +85,8 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
   const [coverImage, setCoverImage] = useState<File | null>(null);
   const [coverImagePreview, setCoverImagePreview] = useState<string | null>(null);
   const [publishedQuest, setPublishedQuest] = useState<any>(null);
+  const [isPublished, setIsPublished] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
 
   const XP_REWARDS = "200";
 
@@ -103,6 +105,8 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
         if (!found) return;
 
         setQuestId(editId);
+        setIsEditMode(true);
+        setIsPublished(found.status !== "Save");
         setQuestName(found.title ?? "");
         setQuestDescription(found.description ?? "");
         
@@ -185,14 +189,18 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
     if (isDraft) fd.append("status", "Save");
     else fd.append("status", "Active");
 
-    const miniQuests = tasks.map(t => ({
-      _id: t._id,
-      quest: t.description || t.type,
-      link: t.handleOrUrl || "https://nexura.io",
-      tag: typeToTag(t.type),
-      category: t.platform.toLowerCase(),
-      verificationMode: t.verificationMode || "",
-    }));
+    const miniQuests = tasks.map(t => {
+      const isCreatePost = t.type === "Create a Post";
+      const isTrustName = t.type === "Own a .trust username";
+      return {
+        _id: t._id,
+        quest: t.description || t.type,
+        link: isCreatePost ? "https://x.com" : (isTrustName ? "https://tns.intuition.box" : (t.handleOrUrl || "https://x.com")),
+        tag: typeToTag(t.type),
+        category: isCreatePost ? "twitter" : (t.platform || "Other").toLowerCase(),
+        verificationMode: t.verificationMode || "",
+      };
+    });
     fd.append("miniQuests", JSON.stringify(miniQuests));
 
     return fd;
@@ -264,14 +272,62 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
     }
   };
 
+  const handleUpdateQuest = async () => {
+    if (!questId) return;
+    setLoading(true);
+    try {
+      const fd = buildQuestFormData(false); // status: Active
+      const endpoint = `/${apiPrefix}/save-quest`;
+      await apiRequest({
+        method: "POST",
+        endpoint,
+        formData: fd,
+        params: { id: questId },
+      });
+      toast({ title: "Quest Updated", description: "Your changes have been saved." });
+      setLocation(session?.type === "user" ? "/user-dashboard/quests-tab" : "/studio-dashboard/campaigns-tab");
+    } catch (err: any) {
+      toast({ title: "Update Failed", description: err.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSaveTask = () => {
     const finalTask = { ...newTask };
     if (finalTask.type === "Create a Post") {
       finalTask.handleOrUrl = "https://x.com";
+      finalTask.platform = "Twitter";
+    }
+
+    if (finalTask.type === "Own a .trust username") {
+      finalTask.handleOrUrl = "https://tns.intuition.box";
+      finalTask.platform = "";
     }
 
     if (!finalTask.type || !finalTask.handleOrUrl || !finalTask.description) {
       return setError("All fields are required.");
+    }
+
+    // Enforce x.com for Twitter tasks
+    if (finalTask.platform === "Twitter" && finalTask.type !== "Create a Post") {
+      const url = finalTask.handleOrUrl.toLowerCase();
+      if (!url.includes("x.com")) {
+        return setError("Twitter links must use the x.com domain.");
+      }
+    }
+
+    // Enforce Portal prefixes for Portal Claims tasks
+    if (finalTask.type === "Portal Claims") {
+      const url = finalTask.handleOrUrl.toLowerCase();
+      const allowedPrefixes = [
+        "nexura.intuition.box/portal-claims/",
+        "portal.intuition.systems/atoms/triples"
+      ];
+      const isAllowed = allowedPrefixes.some(prefix => url.includes(prefix));
+      if (!isAllowed) {
+        return setError("Portal Claims must be from Nexura Portal or Intuition Portal triples.");
+      }
     }
 
     if (editingIndex !== null) {
@@ -564,7 +620,9 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                     <Clock className="w-4 h-4 text-white/60" />
                     Status
                   </div>
-                  <span className="text-white text-lg font-semibold">Draft</span>
+                  <span className={`text-lg font-semibold ${isPublished ? "text-green-400" : "text-white"}`}>
+                    {isPublished ? "Live" : "Draft"}
+                  </span>
                 </div>
               </div>
             </div>
@@ -597,14 +655,25 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
 
             <div className="flex items-center justify-between mt-8">
               <button type="button" className="px-4 py-2 bg-gray-600 text-white rounded-lg text-sm hover:bg-gray-500 transition font-medium" onClick={() => setActiveTab("tasks")}>Back</button>
-              <button
-                type="button"
-                className="px-6 py-2 bg-[#8B3EFE] text-white rounded-lg text-sm font-semibold hover:bg-[#7b35e6] transition disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={loading}
-                onClick={() => setShowPublishModal(true)}
-              >
-                {loading ? "Publishing..." : "Publish Quest"}
-              </button>
+              {isEditMode && isPublished ? (
+                <button
+                  type="button"
+                  className="px-6 py-2 bg-[#8B3EFE] text-white rounded-lg text-sm font-semibold hover:bg-[#7b35e6] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={loading}
+                  onClick={handleUpdateQuest}
+                >
+                  {loading ? "Updating..." : "Update Quest"}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="px-6 py-2 bg-[#8B3EFE] text-white rounded-lg text-sm font-semibold hover:bg-[#7b35e6] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={loading}
+                  onClick={() => setShowPublishModal(true)}
+                >
+                  {loading ? "Publishing..." : "Publish Quest"}
+                </button>
+              )}
             </div>
           </Card>
         )}
@@ -615,30 +684,33 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
         <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/80 backdrop-blur-sm p-4 text-left">
           <div className="bg-[#0d0d14] w-full max-w-xl border border-purple-500/20 p-6 rounded-2xl relative shadow-[0_0_60px_rgba(131,58,253,0.2)] animate-modal-pop">
             <button onClick={() => setShowModal(false)} className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-all text-lg leading-none">&times;</button>
-            <h2 className="text-xl font-semibold text-white mb-6">Add New Task</h2>
+            <h2 className="text-xl font-semibold text-white mb-6">
+              Add New Task
+            </h2>
 
             <div className="grid grid-cols-2 gap-6 mb-6">
               <div>
-                <label className="text-sm text-white/70 mb-2 block font-medium">Task Type</label>
+                <label className="text-sm text-white/70 mb-2 block">Task Type</label>
                 <select
-                  className="w-full p-2 rounded-lg bg-[#0d0d14] text-white border border-white/10 focus:outline-none focus:border-purple-500 [&>option]:bg-[#0d0d14] text-sm"
+                  className="w-full p-2 rounded-lg bg-[#0d0d14] text-white border border-white/10 focus:outline-none focus:border-purple-500 [&>option]:bg-[#0d0d14]"
                   value={newTask.type}
                   onChange={(e) => {
                     const type = e.target.value;
                     const isTwitter = type === "Comment on X" || type === "Follow on X" || type === "Create a Post";
                     const isPortal = type === "Portal Claims";
                     const isFeedback = type === "Give Feedback";
+                    const isTrustName = type === "Own a .trust username";
                     const validationLabel =
-                      type === "Own a .trust username" ? "Verified by TNS" :
+                      isTrustName ? "Verified by TNS" :
                       isPortal ? "Auto Verified" :
                       "Manual Validation";
                     setNewTask({
                       ...newTask,
                       type,
-                      platform: isTwitter ? "Twitter" : (isPortal || isFeedback) ? "" : newTask.platform || "Other",
+                      platform: isTwitter ? "Twitter" : (isPortal || isFeedback || isTrustName) ? "" : newTask.platform || "Other",
                       validation: validationLabel,
-                      verificationMode: isPortal ? "auto" : isFeedback ? "feedback" : "",
-                      handleOrUrl: type === "Create a Post" ? "https://x.com" : newTask.handleOrUrl,
+                      verificationMode: isPortal ? "auto" : isFeedback ? "feedback" : isTrustName ? "auto" : "",
+                      handleOrUrl: type === "Create a Post" ? "https://x.com" : (isTrustName ? "https://tns.intuition.box" : (newTask.handleOrUrl === "https://x.com" || newTask.handleOrUrl === "https://tns.intuition.box" ? "" : newTask.handleOrUrl)),
                     });
                   }}
                 >
@@ -652,23 +724,16 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                 </select>
               </div>
 
-              {/* Platform - Matches Campaign UI */}
+              {/* Platform - Matches Campaign UI but restricted for Quest modal */}
               {newTask.type !== "Portal Claims" && newTask.type !== "Give Feedback" && newTask.type !== "Own a .trust username" && (
                 <div>
-                  <label className="text-sm text-white/70 mb-2 block font-medium">Platform</label>
+                  <label className="text-sm text-white/70 mb-2 block">Platform</label>
                   <div className="flex gap-3">
-                    {["Twitter", "Other"].map((p) => (
-                      <div
-                        key={p}
-                        className={`flex-1 border py-2 rounded-lg transition text-xs font-semibold text-center opacity-90 cursor-default ${
-                          newTask.platform === p
-                            ? "bg-[#8B3EFE] text-white border-purple-500"
-                            : "bg-purple-950 border-purple-800 text-white/50 border-purple-500/50"
-                        }`}
-                      >
-                        {p}
-                      </div>
-                    ))}
+                    <div
+                      className="flex-1 border py-2 rounded-lg transition text-xs font-semibold text-center bg-[#8B3EFE] text-white border-purple-500 opacity-90 cursor-default"
+                    >
+                      Twitter
+                    </div>
                   </div>
                 </div>
               )}
@@ -677,54 +742,133 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
             <div className="bg-white/5 p-5 rounded-xl mb-6 border border-white/10">
               <div className="mb-4">
                 <label className="text-sm text-white/70 mb-2 block">
-                  Task Description
+                  {newTask.type === "Create a Post" ? "Post Content" : "Task Description"}
                 </label>
                 <input
                   type="text"
                   placeholder={
-                    newTask.platform === "Twitter"
-                      ? "e.g. Follow us on X to stay updated"
-                      : "e.g. Complete this task to earn rewards"
+                    newTask.type === "Create a Post" ? "e.g. Just joined this amazing quest on Nexura!" :
+                    newTask.type === "Comment on X" ? "e.g. Reply to our latest announcement" :
+                    newTask.type === "Follow on X" ? "e.g. Follow @NexuraApp for updates" :
+                    newTask.type === "Own a .trust username" ? "e.g. Acquire your unique identity on TNS" :
+                    newTask.type === "Portal Claims" ? "e.g. Claim your rewards from the portal" :
+                    newTask.type === "Give Feedback" ? "e.g. Tell us about your experience" :
+                    "e.g. Complete this task to earn rewards"
                   }
                   value={newTask.description}
                   onChange={(e) => setNewTask({...newTask, description: e.target.value})}
                   className="w-full p-2 rounded-lg bg-white/5 text-white border border-white/10 focus:outline-none focus:border-purple-500"
                 />
               </div>
-              <div className="mb-4">
-                <label className="text-sm text-white/70 mb-2 block">
-                  {newTask.type === "Create a Post" ? "Task URL" : "Handle or URL"}
-                </label>
-                <input
-                  type="text"
-                  placeholder={
-                    newTask.type === "Create a Post"
-                      ? "https://x.com"
-                      : newTask.platform === "Twitter"
-                        ? "e.g. https://x.com/yourlink"
-                        : "e.g. https://example.com/link"
-                  }
-                  value={newTask.type === "Create a Post" ? "https://x.com" : newTask.handleOrUrl}
-                  readOnly={newTask.type === "Create a Post"}
-                  disabled={newTask.type === "Create a Post"}
-                  onChange={(e) => {
-                    setUrlError("");
-                    setNewTask({...newTask, handleOrUrl: e.target.value});
-                  }}
-                  className={`w-full p-2 rounded-lg bg-white/5 text-white border border-white/10 focus:outline-none focus:border-purple-500 ${newTask.type === "Create a Post" ? "opacity-50 cursor-not-allowed" : ""}`}
-                />
-                {urlError && <p className="text-red-500 text-[10px] mt-1">{urlError}</p>}
-              </div>
+              {newTask.type !== "Create a Post" && newTask.type !== "Own a .trust username" && (
+                <div className="mb-4">
+                  <label className="text-sm text-white/70 mb-2 block">
+                    Handle or URL
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. https://..."
+                    value={newTask.handleOrUrl}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setNewTask({...newTask, handleOrUrl: val});
+                      
+                      const valLower = val.toLowerCase().trim();
+                      if (!valLower) {
+                        setUrlError("");
+                        return;
+                      }
+
+                      // Immediate feedback for x.com enforcement
+                      if (newTask.platform === "Twitter" && newTask.type !== "Create a Post") {
+                        if (!valLower.includes("x.com")) {
+                          setUrlError("Twitter links must use the x.com domain.");
+                        } else {
+                          setUrlError("");
+                        }
+                      } 
+                      // Immediate feedback for Portal Claims enforcement
+                      else if (newTask.type === "Portal Claims") {
+                        const allowedPrefixes = [
+                          "nexura.intuition.box/portal-claims/",
+                          "portal.intuition.systems/atoms/triples"
+                        ];
+                        const isAllowed = allowedPrefixes.some(prefix => valLower.includes(prefix));
+                        if (!isAllowed) {
+                          setUrlError("URL must be from Nexura Portal or Intuition Portal triples.");
+                        } else {
+                          setUrlError("");
+                        }
+                      }
+                      else {
+                        setUrlError("");
+                      }
+                    }}
+                    className={`w-full p-2 rounded-lg bg-white/5 text-white border focus:outline-none focus:border-purple-500 transition-colors ${urlError ? "border-red-500/50" : "border-white/10"}`}
+                  />
+                  {urlError && <p className="text-red-500 text-[11px] mt-1.5 flex items-center gap-1">
+                    <XCircle className="w-3.5 h-3.5" /> {urlError}
+                  </p>}
+                </div>
+              )}
             </div>
 
-            {/* Validation Info Box - Mirrored Design */}
-            {newTask.validation && (
-              <div className={`mb-6 flex items-center gap-3 rounded-lg px-4 py-3 border ${newTask.validation === "Manual Validation" ? "bg-amber-900/30 border-amber-500/40" : "bg-purple-900/50 border-purple-500/50"}`}>
-                <svg className={`w-5 h-5 flex-shrink-0 ${newTask.validation === "Manual Validation" ? "text-amber-400" : "text-purple-400"}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            {/* Validation & Evidence - Matches Campaign UI for standard tasks */}
+            {newTask.validation && (newTask.type === "Portal Claims" || newTask.type === "Give Feedback") ? (
+              <div className={`mb-6 flex items-center gap-3 rounded-lg px-4 py-3 border ${newTask.type === "Give Feedback" ? "bg-emerald-900/50 border-emerald-500/50" : "bg-purple-900/50 border-purple-500/50"}`}>
+                {newTask.type === "Give Feedback" ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-emerald-400 flex-shrink-0">
+                    <path fillRule="evenodd" d="M4.848 2.771A49.144 49.144 0 0 1 12 2.25c2.43 0 4.817.178 7.152.52 1.978.29 3.348 2.024 3.348 3.97v6.02c0 1.946-1.37 3.68-3.348 3.97a48.901 48.901 0 0 1-3.476.383.39.39 0 0 0-.297.17l-2.755 4.133a.75.75 0 0 1-1.248 0l-2.755-4.133a.39.39 0 0 0-.297-.17 48.9 48.9 0 0 1-3.476-.384c-1.978-.29-3.348-2.024-3.348-3.97V6.741c0-1.946 1.37-3.68 3.348-3.97Z" clipRule="evenodd" />
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-purple-400 flex-shrink-0">
+                    <path fillRule="evenodd" d="M8.603 3.799A4.49 4.49 0 0 1 12 2.25c1.357 0 2.573.6 3.397 1.549a4.49 4.49 0 0 1 3.498 1.307 4.491 4.491 0 0 1 1.307 3.497A4.49 4.49 0 0 1 21.75 12a4.49 4.49 0 0 1-1.549 3.397 4.491 4.491 0 0 1-1.307 3.497 4.491 4.491 0 0 1-3.497 1.307A4.49 4.49 0 0 1 12 21.75a4.49 4.49 0 0 1-3.397-1.549 4.49 4.49 0 0 1-3.498-1.306 4.491 4.491 0 0 1-1.307-3.498A4.49 4.49 0 0 1 2.25 12c0-1.357.6-2.573 1.549-3.397a4.49 4.49 0 0 1 1.307-3.497 4.49 4.49 0 0 1 3.497-1.307Zm7.007 6.387a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z" clipRule="evenodd" />
+                  </svg>
+                )}
                 <div>
-                  <p className={`text-sm font-medium ${newTask.validation === "Manual Validation" ? "text-amber-300" : "text-purple-300"}`}>{newTask.validation}</p>
-                  <p className="text-xs text-white/50 mt-0.5">{newTask.validation === "Manual Validation" ? "Task completion will be reviewed manually." : "Verification is automatic."}</p>
+                  <p className={`text-sm font-medium ${newTask.type === "Give Feedback" ? "text-emerald-300" : "text-purple-300"}`}>{newTask.validation}</p>
+                  <p className="text-xs text-white/50 mt-0.5">
+                    {newTask.type === "Give Feedback" 
+                      ? "Users will visit the website and submit written feedback (min. 200 characters). Reviewed manually."
+                      : "Completion is verified automatically after the user completes the task."}
+                  </p>
                 </div>
+              </div>
+            ) : newTask.validation && (
+              <div className="grid grid-cols-2 gap-6 mb-6">
+                {/* Evidence Upload */}
+                <div>
+                  <label className="text-sm text-white/70 mb-2 block">Evidence Upload</label>
+                  <div className="flex items-center gap-2 w-full p-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm">
+                    <span className="text-purple-400">🔗</span>
+                    <span>Submit Link</span>
+                  </div>
+                </div>
+
+                {/* Validation Type */}
+                <div>
+                  <label className="text-sm text-white/70 mb-2 block">Validation Type</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={newTask.validation}
+                      readOnly
+                      className="w-full p-2 rounded-lg bg-white/5 text-white border border-white/10 focus:outline-none focus:border-purple-500 pr-10"
+                    />
+                    <img
+                      src="/purple-check.png"
+                      alt="Verified"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {error && (
+              <div className="mb-6 flex items-center gap-2 text-red-400 bg-red-400/10 border border-red-400/20 p-3 rounded-xl text-xs">
+                <XCircle className="w-4 h-4" />
+                {error}
               </div>
             )}
 
@@ -739,7 +883,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                 onClick={handleSaveTask}
                 className="px-5 py-2.5 rounded-xl bg-[#8B3EFE] text-white text-sm font-semibold hover:opacity-90 hover:shadow-[0_0_20px_rgba(131,58,253,0.5)] hover:-translate-y-0.5 active:translate-y-0 transition-all"
               >
-                {editingIndex !== null ? "Update Task" : "Save Task"}
+                Save Task
               </button>
             </div>
           </div>

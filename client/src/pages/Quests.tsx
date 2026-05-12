@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import { ExternalLink, Clock, Users } from "lucide-react";
 import AnimatedBackground from "../components/AnimatedBackground";
 import { apiRequestV2 } from "../lib/queryClient";
 import { useToast } from "../hooks/use-toast";
@@ -19,7 +20,7 @@ interface Quest {
   project_name?: string;
   description?: string;
   done: boolean;
-  project_image?: string;
+  projectCoverImage?: string;
   starts_at?: string;
   ends_at?: string;
   link?: string;
@@ -233,19 +234,17 @@ export default function Quests() {
       if (!dateStr) return "N/A";
 
       return new Date(dateStr).toLocaleDateString(
-        "en-US",
+        "en-GB",
         {
-          month: "short",
           day: "numeric",
+          month: "long",
         }
       );
     };
 
     const durationText = isActive
       ? quest.starts_at && quest.ends_at
-        ? `${formatDate(
-            quest.starts_at
-          )} - ${formatDate(quest.ends_at)}`
+        ? `${formatDate(quest.starts_at)} – ${formatDate(quest.ends_at)}`
         : "Ongoing"
       : countdowns[quest._id]
       ? `Starts in ${countdowns[quest._id]}`
@@ -262,118 +261,97 @@ export default function Quests() {
           ease: "easeOut",
         }}
       >
-        <Card className="bg-[#0B0B0F] border border-white/10 rounded-2xl overflow-hidden transition-all duration-300 hover:border-[#8B3EFE66] hover:shadow-[0_0_30px_rgba(139,62,254,0.12)] flex flex-col h-full">
+        <Card className="bg-[#0d1117] h-full border border-white/5 rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition flex flex-col">
+          {/* Quest Banner */}
+          <div className="relative h-36 bg-black w-full">
+            {quest.projectCoverImage && (
+              <img
+                src={quest.projectCoverImage}
+                alt={quest.title}
+                className="w-full h-full object-cover rounded-t-2xl"
+              />
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
 
-          {/* IMAGE */}
-          <div className="relative w-full h-48 overflow-hidden">
-            <img
-              src={
-                quest.project_image || "/quest-1.png"
-              }
-              alt={quest.title}
-              className="w-full h-full object-cover"
-            />
-
-            <div className="absolute inset-0 bg-gradient-to-t from-[#0B0B0F] via-black/20 to-transparent" />
-
-            {/* STATUS */}
-            <div className="absolute top-3 right-3">
-              <Badge
-                className={`border text-[10px] px-2 py-1 rounded-full backdrop-blur-md ${
-                  isActive
-                    ? "bg-[#00E1A21A] text-[#00E1A2] border-[#00E1A233]"
-                    : "bg-[#8B3EFE1A] text-[#B388FF] border-[#8B3EFE33]"
-                }`}
-              >
-                {isActive
-                  ? "Active"
-                  : "Scheduled"}
-              </Badge>
+            {/* Status Badge / Countdown */}
+            <div className="absolute top-2 right-2">
+              {isActive ? (
+                <Badge className="bg-green-500/20 text-green-400 border border-green-500/30 text-[0.65rem] sm:text-xs">
+                  Active
+                </Badge>
+              ) : (
+                <div className="bg-black/60 backdrop-blur-sm border border-purple-500/30 rounded-lg px-2 py-1 flex items-center gap-1.5">
+                  <Clock className="w-3 h-3 text-purple-400 animate-pulse" />
+                  <span className="text-purple-300 text-[0.6rem] sm:text-xs font-mono font-semibold">
+                    {countdowns[quest._id] || "Coming Soon"}
+                  </span>
+                </div>
+              )}
             </div>
 
-            {/* CATEGORY */}
+            {/* Category */}
             {quest.category && (
-              <div className="absolute top-3 left-3">
-                <div className="bg-black/40 backdrop-blur-md border border-white/10 text-white/80 text-[10px] px-2 py-1 rounded-full">
-                  {quest.category}
-                </div>
+              <div className="absolute top-2 left-2 text-[0.65rem] sm:text-xs text-white/80 font-medium">
+                {quest.category}
               </div>
             )}
           </div>
 
-          {/* CONTENT */}
-          <div className="p-4 flex flex-col flex-1">
-
-            {/* PROJECT */}
-            <div className="flex items-center gap-2 mb-3">
-              <img
-                src={
-                  quest.project_image ||
-                  "/quest-1.png"
-                }
-                alt={quest.project_name}
-                className="w-5 h-5 rounded-full object-cover"
-              />
-
-              <span className="text-xs text-white/60 truncate">
-                {quest.project_name ||
-                  "Intuition Ecosystem"}
-              </span>
-            </div>
-
-            {/* TITLE */}
-            <h2 className="text-lg font-semibold text-white leading-tight line-clamp-2">
+          {/* Quest Details */}
+          <div className="p-3 sm:p-4 flex flex-1 flex-col space-y-1.5">
+            <h2
+              className="text-sm font-semibold text-white leading-snug line-clamp-2 min-h-[2.25rem] break-words"
+              title={quest.title}
+            >
               {quest.title}
             </h2>
 
-            {/* DESCRIPTION */}
-            <p className="text-sm text-white/55 mt-2 line-clamp-2">
-              {quest.sub_title ||
-                "No description available"}
-            </p>
-
-            {/* META */}
-            <div className="mt-4 space-y-2">
-
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-white/40">
-                  Reward
-                </span>
-
-                <span className="font-semibold text-[#00E1A2]">
-                  {quest.reward} XP
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-white/40">
-                  Duration
-                </span>
-
-                <span className="text-white/75 text-xs">
-                  {durationText}
-                </span>
-              </div>
-
+            <div className="flex flex-row justify-between text-xs gap-1 items-center">
+              <span className="text-gray-500">Creator:</span>
+              <span className="text-white line-clamp-1 break-all max-w-[65%] text-right">
+                {quest.project_name || "Nexura Ecosystem"}
+              </span>
             </div>
 
-            {/* CTA */}
-            <Button
-              onClick={() => startQuest(quest)}
-              disabled={!isActive}
-              className={`mt-5 h-11 rounded-xl font-medium transition-all ${
-                isActive
-                  ? "bg-[#8B3EFE] hover:bg-[#7A32E0] text-white"
-                  : "bg-white/5 text-white/40 cursor-not-allowed"
-              }`}
-            >
-              {isActive
-                ? quest.joined
-                  ? "Continue Quest"
-                  : "Start Quest"
-                : "Coming Soon"}
-            </Button>
+            <div className="flex flex-row justify-between text-xs items-center">
+              <span className="text-gray-500">Reward:</span>
+              <span className="text-white flex items-center gap-1 text-right">
+                {quest.reward} XP
+              </span>
+            </div>
 
+            <div className="flex flex-row justify-between text-xs items-center">
+              <span className="text-gray-500">Duration:</span>
+              <span className="text-white flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                {durationText}
+              </span>
+            </div>
+
+            <Button
+              className={`w-full mt-auto pt-2 py-2 text-xs font-medium rounded-xl ${
+                isActive
+                  ? "bg-[#1f6feb] hover:bg-[#388bfd] text-white"
+                  : "bg-gray-600 cursor-not-allowed text-gray-300"
+              }`}
+              onClick={(e) => {
+                e.stopPropagation();
+                startQuest(quest);
+              }}
+              disabled={!isActive}
+            >
+              {isActive ? (
+                <>
+                  <ExternalLink className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                  {quest.joined ? "Continue Quest" : "Start Quest"}
+                </>
+              ) : (
+                <>
+                  <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                  Coming Soon
+                </>
+              )}
+            </Button>
           </div>
         </Card>
       </motion.div>
@@ -381,65 +359,59 @@ export default function Quests() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#050507] via-[#08060D] to-black text-white relative overflow-hidden">
+    <div className="min-h-screen bg-black text-white overflow-auto p-6 relative">
       <AnimatedBackground />
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
+      <div className="max-w-4xl sm:max-w-6xl mx-auto space-y-6 sm:space-y-8 relative z-10">
 
         {/* HEADER */}
-        <div className="mb-10">
+        <div className="space-y-1">
           <div className="flex items-center gap-2 mb-3">
             <div className="w-1.5 h-1.5 rounded-full bg-[#8B3EFE] animate-pulse" />
 
-            <span className="text-[#8B3EFE] text-[11px] font-semibold uppercase tracking-[0.2em]">
+            <span className="text-[#8B3EFE] text-[11px] font-semibold uppercase tracking-widest">
               Quests
             </span>
           </div>
 
-          <h2 className="text-3xl sm:text-3xl font-bold tracking-tight">
+          <h1 className="text-3xl sm:text-4xl font-extrabold bg-gradient-to-r from-white via-purple-200 to-purple-400 bg-clip-text text-transparent mb-2">
             Quests
-          </h2>
+          </h1>
 
-          <p className="text-sm sm:text-base text-white/50 mt-3 max-w-2xl">
+          <p className="text-xs sm:text-sm text-muted-foreground">
             Complete these quests to earn rewards
           </p>
         </div>
 
         {/* ACTIVE QUESTS */}
-        {isLoading ? (
-          <div className="text-center py-16 text-white/50">
-            Loading quests...
-          </div>
-        ) : activeQuests.length === 0 ? (
-          <div className="rounded-3xl border border-white/10 bg-[#111114] p-10 text-center">
-            <p className="text-white/60">
-              No active quests at the moment.
-              Check back soon.
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
-            {activeQuests.map((quest, i) =>
-              renderQuestCard(quest, true, i)
-            )}
-          </div>
-        )}
+        <div className="space-y-4 sm:space-y-6">
+          <h2 className="text-lg sm:text-2xl font-semibold text-white">Active Quests</h2>
+          {isLoading ? (
+            <div className="text-center py-6 sm:py-12 text-muted-foreground">
+              Loading quests...
+            </div>
+          ) : activeQuests.length === 0 ? (
+            <Card className="glass glass-hover rounded-3xl p-6 sm:p-8 text-center">
+              <p className="text-white/60">
+                No active quests at the moment. Check back soon.
+              </p>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+              {activeQuests.map((quest, i) =>
+                renderQuestCard(quest, true, i)
+              )}
+            </div>
+          )}
+        </div>
 
         {/* SCHEDULED QUESTS */}
         {scheduledQuests.length > 0 && (
-          <div className="mt-14">
-
-            <div className="mb-6">
-              <h2 className="text-2xl font-semibold">
-                Scheduled Quests
-              </h2>
-
-              <p className="text-sm text-white/45 mt-1">
-                Upcoming quests launching soon.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+          <div className="space-y-4 sm:space-y-6 mt-8 sm:mt-12">
+            <h2 className="text-lg sm:text-2xl font-semibold text-white">
+              Scheduled Quests
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
               {scheduledQuests.map((quest, i) =>
                 renderQuestCard(
                   quest,
@@ -448,7 +420,6 @@ export default function Quests() {
                 )
               )}
             </div>
-
           </div>
         )}
 

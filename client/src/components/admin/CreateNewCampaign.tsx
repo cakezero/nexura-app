@@ -327,6 +327,7 @@ useEffect(() => {
           if (tag === "send-message-discord" || tag === "message-discord" || tag === "message") return DISCORD_MESSAGE_TASK_TYPE;
           if (tag === "portal") return "Check Out the Portal Claims";
           if (tag === "feedback") return "Give Feedback";
+          if (tag === "create-post") return "Create a Post";
           return "others";
         };
         const catToPlatform = (cat: string) => {
@@ -531,6 +532,7 @@ const typeToTag = (type: string) => {
   if (type === DISCORD_MESSAGE_TASK_TYPE) return "send-message-discord";
   if (type === "Check Out the Portal Claims") return "portal";
   if (type === "Give Feedback") return "feedback";
+  if (type === "Create a Post") return "create-post";
   return "other";
 };
 const platformToCategory = (platform: string) => {
@@ -785,6 +787,7 @@ const handleSaveTask = () => {
   const finalTask = { ...newTask };
   if (finalTask.type === "Create a Post") {
     finalTask.handleOrUrl = "https://x.com";
+    finalTask.platform = "Twitter";
   }
 
   const requiresPlatform = finalTask.type !== "Check Out the Portal Claims" && finalTask.type !== "others" && finalTask.type !== "Give Feedback";
@@ -795,6 +798,15 @@ const handleSaveTask = () => {
   if (!finalTask.type || (requiresPlatform && !finalTask.platform) || !finalTask.handleOrUrl || !finalTask.description) {
     return setError("All fields are required.");
   }
+
+  // Enforce x.com for Twitter tasks
+  if (finalTask.platform === "Twitter" && finalTask.type !== "Create a Post") {
+    const url = finalTask.handleOrUrl.toLowerCase();
+    if (!url.includes("x.com")) {
+      return setError("Twitter links must use the x.com domain.");
+    }
+  }
+
   if (requiresDiscordConnection && !hubDiscordConnected) {
     return setError("Connect Discord in Studio before creating Discord-related tasks.");
   }
@@ -2001,12 +2013,11 @@ const isActive =
       <div className="bg-white/5 p-5 rounded-xl mb-6 border border-white/10">
 
         {/* Handle or URL */}
-        <div className="mb-4">
-          <label className="text-sm text-white/70 mb-2 block">
-            {newTask.type === "Give Feedback"
-              ? "Website URL"
-              : newTask.type === "Create a Post"
-                ? "Task URL"
+        {newTask.type !== "Create a Post" && (
+          <div className="mb-4">
+            <label className="text-sm text-white/70 mb-2 block">
+              {newTask.type === "Give Feedback"
+                ? "Website URL"
                 : isDiscordMessageTaskType(newTask.type)
                   ? "Discord Channel Link"
                   : newTask.platform === "Discord"
@@ -2016,13 +2027,11 @@ const isActive =
                       : newTask.type === "Follow us on X" || newTask.platform === "Twitter"
                         ? "Profile URL"
                         : "Handle or URL"}
-          </label>
-          <input
-            type="text"
-            placeholder={newTask.type === "Give Feedback"
-              ? "https://example.com"
-              : newTask.type === "Create a Post"
-                ? "https://x.com"
+            </label>
+            <input
+              type="text"
+              placeholder={newTask.type === "Give Feedback"
+                ? "https://example.com"
                 : isDiscordMessageTaskType(newTask.type)
                   ? "https://discord.com/channels/..."
                   : newTask.platform === "Discord"
@@ -2032,14 +2041,14 @@ const isActive =
                       : newTask.type === "Follow us on X" || newTask.platform === "Twitter"
                         ? "https://x.com/username"
                         : "..."}
-            value={newTask.type === "Create a Post" ? "https://x.com" : newTask.handleOrUrl}
-            onChange={(e) =>
-              setNewTask({ ...newTask, handleOrUrl: e.target.value })
-            }
-            disabled={newTask.type === "Create a Post"}
-            className={`w-full p-2 rounded-lg bg-white/5 text-white border border-white/10 focus:outline-none focus:border-purple-500 ${newTask.type === "Create a Post" ? "opacity-50 cursor-not-allowed" : ""}`}
-          />
-        </div>
+              value={newTask.handleOrUrl}
+              onChange={(e) =>
+                setNewTask({ ...newTask, handleOrUrl: e.target.value })
+              }
+              className="w-full p-2 rounded-lg bg-white/5 text-white border border-white/10 focus:outline-none focus:border-purple-500"
+            />
+          </div>
+        )}
 
         {/* Task Description */}
         <div className="mb-4">
