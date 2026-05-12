@@ -3799,7 +3799,7 @@ body {
 }
 
 .animate-quest-scroll {
-  animation: quest-scroll 10s linear infinite;
+  animation: quest-scroll 30s linear infinite;
 }
 
 @keyframes lesson-scroll {
@@ -3812,5 +3812,5 @@ body {
 }
 
 .animate-lesson-scroll {
-  animation: quest-scroll 30s linear infinite;
+  animation: quest-scroll 40s linear infinite;
 }
