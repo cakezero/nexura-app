@@ -2,15 +2,17 @@ import { useLocation } from "wouter";
 
 type LessonCardProps = {
   lesson: {
-    _id: string;
-    title: string;
-    description: string;
-    reward: number;
-    noOfQuestions: number;
-    coverImage?: string;
-    profileImage?: string;
-    done?: boolean;
-  };
+  _id: string;
+  title: string;
+  description: string;
+  reward: number;
+  noOfQuestions: number;
+  coverImage?: string;
+  profileImage?: string;
+  done?: boolean;
+  creatorName?: string;
+  creatorLogo?: string;
+};
   title?: string;
   description?: string;
   projectName?: string;
@@ -33,6 +35,8 @@ export default function LessonCard({
   const displayTitle = title || lesson.title;
   const displayDescription = description || lesson.description;
   const displayImage = heroImage || lesson.coverImage || "/learn-image.png";
+  const creatorName = lesson.creatorName || "Jeremiah";
+  const creatorLogo = lesson.creatorLogo || "/quest-1.png";
 
   return (
     <div
@@ -65,12 +69,18 @@ export default function LessonCard({
           {displayDescription}
         </p>
 
+        {/* CREATOR */}
+<div className="flex items-center justify-between text-sm text-white">
+  <span>Creator:</span>
+    <span className="text-white/80">{creatorName}</span>
+</div>
+
         {/* META */}
         <div className="flex items-center justify-between pt-2 mt-auto">
-          <span className="flex items-center gap-1 text-[10px] text-[#8A97B0] bg-[#111827] px-2 py-1 rounded-md">
-            <img src="/xp-iconn.png" className="w-4 h-4" />
-            {lesson.reward} XP
-          </span>
+          <span className="flex items-center gap-1 text-[10px] text-[#D4BBFF] bg-[#D4BBFF1A] border border-[#D4BBFF33] px-2 py-1 rounded-md">
+  <img src="/xp-iconn.png" className="w-4 h-4" />
+  {lesson.reward} XP
+</span>
 
           <button
   className="group relative flex items-center gap-2 px-4 py-2 rounded-full 

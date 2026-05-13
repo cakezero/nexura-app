@@ -405,7 +405,7 @@ export default function Quests() {
           )}
         </div>
 
-        {/* SCHEDULED QUESTS */}
+        {/* UPCOMING QUESTS */}
         {scheduledQuests.length > 0 && (
           <div className="space-y-4 sm:space-y-6 mt-8 sm:mt-12">
             <h2 className="text-lg sm:text-2xl font-semibold text-white">
