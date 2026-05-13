@@ -224,12 +224,28 @@ const { data: questsData, isLoading, error } = useQuery({
 },
 });
 
-// const quests = questsData?.quests ?? [];
-const quests =
+const questsRaw =
   questsData?.quests ||
   questsData?.weeklyQuests ||
   questsData?.data ||
   [];
+
+const isActiveQuest = (quest: any) => {
+  const start = quest.starts_at ? new Date(quest.starts_at).getTime() : null;
+  const end = quest.ends_at ? new Date(quest.ends_at).getTime() : null;
+  const status = String(quest.status ?? "").toLowerCase();
+
+  // Exclude if explicitly ended or saved (draft)
+  if (status === "ended" || status === "save") return false;
+  // Exclude if already past the end time
+  if (end && end <= currentTime) return false;
+  // Exclude if it hasn't started yet
+  if (start && start > currentTime) return false;
+
+  return true;
+};
+
+const quests = questsRaw.filter(isActiveQuest);
 
   const DiscoverCard = ({ card }: any) => {
   return (
