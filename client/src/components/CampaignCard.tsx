@@ -53,14 +53,41 @@ export default function CampaignCard({
     }
   };
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
+const formatDuration = (
+  startDate: string,
+  endDate: string
+) => {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
 
-    return date.toLocaleDateString("en-GB", {
+  const sameYear =
+    start.getFullYear() === end.getFullYear();
+
+  const startFormatted = start.toLocaleDateString(
+    "en-GB",
+    sameYear
+      ? {
+          day: "numeric",
+          month: "long",
+        }
+      : {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        }
+  );
+
+  const endFormatted = end.toLocaleDateString(
+    "en-GB",
+    {
       day: "numeric",
       month: "long",
-    });
-  };
+      year: "numeric",
+    }
+  );
+
+  return `${startFormatted} – ${endFormatted}`;
+};
 
   const allowedParticipants =
     maxParticipants && maxParticipants > 0
@@ -227,8 +254,7 @@ export default function CampaignCard({
 
           <span className="text-white flex items-center gap-1 text-right">
             <Clock className="w-3 h-3" />
-            {formatDate(starts_at)} –{" "}
-            {formatDate(ends_at)}
+            {formatDuration(starts_at, ends_at)}
           </span>
         </div>
 

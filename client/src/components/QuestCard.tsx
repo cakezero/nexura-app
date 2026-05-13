@@ -47,19 +47,46 @@ export default function QuestCard({
 }: QuestCardProps) {
   const [, setLocation] = useLocation();
 
-  const formatDate = (dateStr?: string) => {
-    if (!dateStr) return "";
+const formatDuration = (
+  startDate: string,
+  endDate: string
+) => {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
 
-    return new Date(dateStr).toLocaleDateString("en-GB", {
+  const sameYear =
+    start.getFullYear() === end.getFullYear();
+
+  const startFormatted = start.toLocaleDateString(
+    "en-GB",
+    sameYear
+      ? {
+          day: "numeric",
+          month: "long",
+        }
+      : {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        }
+  );
+
+  const endFormatted = end.toLocaleDateString(
+    "en-GB",
+    {
       day: "numeric",
       month: "long",
-    });
-  };
+      year: "numeric",
+    }
+  );
 
-  const duration =
-    starts_at && ends_at
-      ? `${formatDate(starts_at)} – ${formatDate(ends_at)}`
-      : "Ongoing";
+  return `${startFormatted} – ${endFormatted}`;
+};
+
+const duration =
+  starts_at && ends_at
+    ? formatDuration(starts_at, ends_at)
+    : "Ongoing";
 
   const badge =
     status?.toLowerCase() === "upcoming"
