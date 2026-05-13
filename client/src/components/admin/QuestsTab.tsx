@@ -11,6 +11,7 @@ import { useToast } from "../../hooks/use-toast";
 import { getStoredUserSession } from "../../lib/userSession";
 import { apiRequestV2 } from "../../lib/queryClient";
 import { Button } from "../ui/button";
+import CreatorRewardsBanner from "../CreatorRewardsBanner";
 
 interface Quest {
   _id: string;
@@ -317,6 +318,8 @@ export default function QuestsTab() {
             </button>
           ))}
         </div>
+
+        {isUser && <CreatorRewardsBanner />}
 
         {loading ? (
           <div className="flex items-center justify-center py-20 text-white/60">

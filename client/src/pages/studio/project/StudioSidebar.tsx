@@ -1,7 +1,7 @@
 import { cn } from "../../../lib/utils";
 import { Zap, Shield, Users, LogOut, User } from "lucide-react";
 import { useLocation } from "wouter";
-import AnimatedBackground from "../../../components/AnimatedBackground";
+import StudioBackground from "../../../components/StudioBackground";
 import { useEffect, useState } from "react";
 import { getStoredProjectInfo, clearProjectSession, projectApiRequest, getStoredProjectToken, storeProjectSession } from "../../../lib/projectApi";
 
@@ -83,7 +83,7 @@ export default function StudioSidebar({
       {/* G��G�� Desktop sidebar G��G�� */}
       <div className="w-[16rem] border-r border-white/10 hidden md:flex flex-col z-20">
         <div className="p-6 border-b border-white/10 relative">
-          <AnimatedBackground className="absolute inset-0 z-0" />
+          <StudioBackground className="absolute inset-0 z-0" />
 
           <div className="flex items-center mb-4 relative z-10">
             <img src="/nexura-logo.png" alt="Nexura" className="w-40 h-auto" />

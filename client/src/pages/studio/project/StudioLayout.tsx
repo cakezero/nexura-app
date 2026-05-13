@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { Bell } from "lucide-react";
 import { Button } from "../../../components/ui/button";
-import AnimatedBackground from "../../../components/AnimatedBackground";
+import StudioBackground from "../../../components/StudioBackground";
 import StudioSidebar from "./StudioSidebar";
 import { isProjectSignedIn, clearProjectSession, projectApiRequest } from "../../../lib/projectApi";
 import { getStoredProjectToken } from "../../../lib/projectApi";
@@ -55,20 +55,13 @@ export default function StudioLayout({ children, title = "Nexura Studio", onLogo
   };
 
   return (
-    <div className="relative min-h-screen bg-black overflow-hidden">
-      {/* Ambient glow */}
-      <div className="pointer-events-none fixed inset-0 z-0">
-        <div className="absolute top-1/4 left-1/4 h-96 w-96 rounded-full bg-[#9a58ff]/20 blur-[120px] animate-pulse-glow" />
-        <div className="absolute bottom-1/4 right-1/4 h-80 w-80 rounded-full bg-[#6366f1]/15 blur-[100px] animate-pulse-glow" style={{ animationDelay: "2s" }} />
-        <div className="absolute top-1/2 right-1/3 h-64 w-64 rounded-full bg-[#b76bff]/10 blur-[80px] animate-pulse-glow" style={{ animationDelay: "4s" }} />
-      </div>
+    <div className="relative min-h-screen overflow-hidden">
+      <StudioBackground />
 
       <div className="relative z-10 flex h-screen flex-col md:flex-row">
         <StudioSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
 
         <div className="flex-1 flex flex-col overflow-hidden">
-          <AnimatedBackground />
-
           <header className="hidden md:flex h-16 border-b border-white/10 items-center justify-between px-6 backdrop-blur-sm bg-black/30">
             <div className="flex items-center gap-4 flex-1">
               <h2 className="text-lg font-semibold text-white whitespace-nowrap min-w-[200px]">{title}</h2>
