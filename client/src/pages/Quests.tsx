@@ -122,10 +122,14 @@ export default function Quests() {
     return () => clearInterval(interval);
   }, [upcomingQuests, serverOffset, refetch]);
 
+  const [isStartingQuest, setIsStartingQuest] = useState<string | null>(null);
+
   const startQuest = async (quest: Quest) => {
     if (isEndedQuest(quest)) return;
+    if (isStartingQuest === quest._id) return;
 
     if (!quest.joined) {
+      setIsStartingQuest(quest._id);
       try {
         await apiRequestV2("POST", "/api/quest/start-quest", {
           questId: quest._id,
@@ -135,13 +139,23 @@ export default function Quests() {
           title: "Quest Started",
           description: `You have started the quest: ${quest.title}`,
         });
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: "Failed to start the quest. Please try again.",
-          variant: "destructive",
-        });
-        return;
+        
+        // Refetch to update joined status
+        await refetch();
+      } catch (error: any) {
+        // If the error is "quest already started", we can ignore it and just proceed
+        const errorData = error.info || {};
+        if (errorData.error !== "quest already started") {
+          toast({
+            title: "Error",
+            description: errorData.error || "Failed to start the quest. Please try again.",
+            variant: "destructive",
+          });
+          setIsStartingQuest(null);
+          return;
+        }
+      } finally {
+        setIsStartingQuest(null);
       }
     }
 
@@ -273,12 +287,16 @@ export default function Quests() {
                 e.stopPropagation();
                 if (isActive) startQuest(quest);
               }}
-              disabled={!isActive}
+              disabled={!isActive || isStartingQuest === quest._id}
             >
               {isActive ? (
                 <>
-                  <ExternalLink className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                  {quest.joined ? "Continue Quest" : "Start Quest"}
+                  {isStartingQuest === quest._id ? (
+                    <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 animate-spin" />
+                  ) : (
+                    <ExternalLink className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                  )}
+                  {isStartingQuest === quest._id ? "Joining..." : (quest.joined ? "Continue Quest" : "Start Quest")}
                 </>
               ) : isUpcoming ? (
                 <>

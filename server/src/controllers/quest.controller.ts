@@ -194,7 +194,7 @@ export const startQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 
 		const questStarted = await questCompleted.exists({ quest: id, user: req.id });
 		if (questStarted) {
-			res.status(BAD_REQUEST).json({ error: "quest already started" });
+			res.status(OK).json({ message: "quest already started" });
 			return;
 		}
 
