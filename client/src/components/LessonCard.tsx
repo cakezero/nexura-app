@@ -2,21 +2,19 @@ import { useLocation } from "wouter";
 
 type LessonCardProps = {
   lesson: {
-  _id: string;
-  title: string;
-  description: string;
-  reward: number;
-  noOfQuestions: number;
-  coverImage?: string;
-  profileImage?: string;
-  done?: boolean;
-  creatorName?: string;
-  creatorLogo?: string;
-};
+    _id: string;
+    title: string;
+    description: string;
+    reward: number;
+    noOfQuestions: number;
+    coverImage?: string;
+    profileImage?: string;
+    done?: boolean;
+    creatorName?: string;
+    creatorLogo?: string;
+  };
   title?: string;
   description?: string;
-  projectName?: string;
-  projectLogo?: string;
   heroImage?: string;
 };
 

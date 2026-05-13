@@ -541,8 +541,6 @@ const quests =
                     lesson={lesson}
                     title={title}
                     description={description}
-                    projectName={project}
-                    projectLogo={lesson.project_image || "/lesson-1.png"}
                     heroImage={lesson.project_image || "/lesson-1.png"}
                   />
                 </div>
@@ -694,8 +692,8 @@ const quests =
                     questId={quest._id}
                     title={title}
                     description={description}
-                    projectName={project}
-                    projectLogo={quest.project_image || "/quest-1.png"}
+                    creatorName={project}
+                    creatorLogo={quest.project_image || "/quest-1.png"}
                     heroImage={quest.project_image || "/quest-1.png"}
                     rewards={`${quest.reward || quest.rewards || 0} XP`}
                     starts_at={quest.starts_at}
