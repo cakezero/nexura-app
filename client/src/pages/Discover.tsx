@@ -119,10 +119,12 @@ export default function Discover() {
   },
 });
 
-const campaignsToRender =
-  trendingCampaigns && trendingCampaigns.length > 0
-    ? trendingCampaigns
-    : dummyCampaigns;
+// const campaignsToRender =
+//   trendingCampaigns && trendingCampaigns.length > 0
+//     ? trendingCampaigns
+//     : dummyCampaigns;
+
+const campaignsToRender = dummyCampaigns;
 
 const [dapps, setDapps] = useState<any[]>([]);
 
