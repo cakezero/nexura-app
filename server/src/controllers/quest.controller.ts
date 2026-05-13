@@ -190,15 +190,26 @@ export const startQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 		if (!id) {
 			res.status(BAD_REQUEST).json({ error: "Quest ID is required" });
 			return;
-		}
+    }
+
+    const questExists = await quest.findById(id);
+    if (!questExists) {
+      res.status(NOT_FOUND).json({ error: "quest does not exist or id is invalid" });
+      return;
+    }
 
 		const questStarted = await questCompleted.exists({ quest: id, user: req.id });
 		if (questStarted) {
 			res.status(OK).json({ message: "quest already started" });
 			return;
-		}
+    }
 
-		await questCompleted.create({ quest: id, user: req.id, done: false, category: "one-time" });
+    questExists.participants += 1;
+
+    await Promise.all([
+      questCompleted.create({ quest: id, user: req.id, done: false }),
+      questExists.save()
+    ]);
 
 		res.status(OK).json({ message: "quest started" });
 	} catch (error) {
