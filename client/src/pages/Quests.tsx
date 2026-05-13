@@ -139,23 +139,16 @@ export default function Quests() {
     );
   };
 
+const nowMs = Date.now() + serverOffset;
+
 const activeQuests = allQuests.filter((q) => {
-  const nowMs = Date.now() + serverOffset;
+  const start = q.starts_at ? new Date(q.starts_at).getTime() : null;
+  const end = q.ends_at ? new Date(q.ends_at).getTime() : null;
 
-  const hasStarted = q.starts_at
-    ? new Date(q.starts_at).getTime() <= nowMs
-    : true;
+  const hasStarted = !start || nowMs >= start;
+  const notEnded = !end || nowMs <= end;
 
-  const notEnded =
-    q.ends_at
-      ? new Date(q.ends_at).getTime() > nowMs
-      : true;
-
-  return (
-    q.status === "Active" &&
-    hasStarted &&
-    notEnded
-  );
+  return hasStarted && notEnded;
 });
 
   const scheduledQuests = allQuests.filter(isScheduled);
