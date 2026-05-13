@@ -107,7 +107,7 @@ export default function SignInToHub() {
           Enter your credentials to access your project hub
         </p>
 
-        <div className="w-full max-w-[740px] space-y-6">
+        <form onSubmit={(e) => { e.preventDefault(); handleSignIn(); }} className="w-full max-w-[740px] space-y-6">
           {/* Email Address */}
           <div className="space-y-2">
             <label className="block text-[18px] sm:text-[20px] font-bold text-white">Email Address</label>
@@ -116,7 +116,6 @@ export default function SignInToHub() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                onKeyDown={handleKeyDown}
                 placeholder="Enter email address..."
                 className="w-full bg-transparent border-none outline-none text-[16px] text-white placeholder-[rgba(255,255,255,0.4)]"
               />
@@ -140,7 +139,6 @@ export default function SignInToHub() {
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                onKeyDown={handleKeyDown}
                 placeholder="••••••••••••"
                 className="w-full bg-transparent border-none outline-none text-[16px] text-white placeholder-[rgba(255,255,255,0.4)] tracking-widest font-mono"
               />
@@ -157,7 +155,7 @@ export default function SignInToHub() {
           {/* Buttons */}
           <div className="pt-8">
             <button
-              onClick={handleSignIn}
+              type="submit"
               disabled={loading}
               className="w-full h-[60px] rounded-full bg-[#8b3efe] shadow-[0px_2px_6px_2px_#843afd,0px_1px_2px_0px_#843afd] flex items-center justify-center gap-2 text-[20px] font-bold text-white hover:bg-[#9b51ff] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -168,7 +166,7 @@ export default function SignInToHub() {
               )}
             </button>
           </div>
-        </div>
+        </form>
       </div>
 
       {/* Reset Password Modal */}

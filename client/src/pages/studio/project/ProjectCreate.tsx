@@ -82,7 +82,7 @@ export default function ProjectCreate() {
           Anyone with these credentials can access and control your hub.
         </p>
 
-        <div className="w-full max-w-[740px] space-y-6">
+        <form onSubmit={(e) => { e.preventDefault(); handleSignUp(); }} className="w-full max-w-[740px] space-y-6">
           {/* Full Name */}
           <div className="space-y-2">
             <label className="block text-[18px] font-bold text-white">Full Name</label>
@@ -156,7 +156,7 @@ export default function ProjectCreate() {
           {/* Buttons */}
           <div className="flex flex-col gap-4 pt-4">
             <button
-              onClick={handleSignUp}
+              type="submit"
               disabled={!canSubmit}
               className="w-full h-[50px] rounded-full bg-[#8b3efe] shadow-[0px_2px_3px_#843afd,0px_1px_1px_#843afd] flex items-center justify-center gap-2 text-[18px] font-bold text-white hover:bg-[#9b51ff] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -168,13 +168,14 @@ export default function ProjectCreate() {
             </button>
 
             <button
+              type="button"
               onClick={() => setLocation("/projects/create/signin-to-hub")}
               className="w-full h-[60px] rounded-full border border-[#833bfb] shadow-[0px_1px_1px_#843afd] flex items-center justify-center gap-2 text-[20px] font-bold text-white hover:bg-[rgba(131,59,251,0.1)] transition-all"
             >
               Sign In <ArrowRight className="w-5 h-5" />
             </button>
           </div>
-        </div>
+        </form>
       </div>
     </div>
   );
