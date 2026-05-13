@@ -31,6 +31,8 @@ interface Quest {
   actionLabel?: string;
   status: string;
   tag?: string;
+  participants?: number;
+  maxParticipants?: number;
 }
 
 export default function Quests() {
@@ -165,6 +167,10 @@ export default function Quests() {
     const starts_atFormatted = quest.starts_at ? formatDate(quest.starts_at) : "";
     const ends_atFormatted = quest.ends_at ? formatDate(quest.ends_at) : "TBA";
 
+    const allowedParticipants = quest.maxParticipants && quest.maxParticipants > 0
+      ? quest.maxParticipants
+      : (quest.participants || 0);
+
     return (
       <motion.div
         key={quest._id}
@@ -229,6 +235,14 @@ export default function Quests() {
               <span className="text-gray-500">Creator:</span>
               <span className="text-white line-clamp-1 break-all max-w-[65%] text-right">
                 {quest.project_name || "Nexura Ecosystem"}
+              </span>
+            </div>
+
+            <div className="flex flex-row justify-between text-xs gap-1 items-center">
+              <span className="text-gray-500">Participants:</span>
+              <span className="text-white flex items-center gap-1">
+                <Users className="w-3 h-3" />
+                {allowedParticipants.toLocaleString()}
               </span>
             </div>
 
