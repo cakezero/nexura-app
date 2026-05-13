@@ -12,7 +12,7 @@ const ecosystemQuestSchema = new Schema({
 	logo: {
 		type: String,
 		required: true,
-	},
+  },
 	reward: {
 		type: Number,
 		required: true
@@ -106,6 +106,10 @@ const questSchema = new Schema({
     type: String,
     default: ""
   },
+  participants: {
+    type: Number,
+    default: 0
+  },
   project_name: {
     type: String,
     default: ""
@@ -159,7 +163,7 @@ const questSchema = new Schema({
   creatorModel: {
     type: String,
     required: true,
-    enum: ['user', 'project', 'admin'],
+    enum: ['user', 'admin'],
   },
   hub: {
     type: Schema.Types.ObjectId,

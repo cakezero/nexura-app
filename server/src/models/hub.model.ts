@@ -160,6 +160,11 @@ const userHubSchema = new Schema({
     type: Number,
     default: 0
   },
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "users",
+    required: true
+  },
   superAdmin: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "user-hub-admins",

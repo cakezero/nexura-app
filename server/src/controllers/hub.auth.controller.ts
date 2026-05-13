@@ -600,6 +600,7 @@ export const userHubAdminSignUp = async (req: GlobalRequest, res: GlobalResponse
       name: trimmedName,
       description: "",
       website: "",
+      userId: req.id,
       xAccount: "",
       logo: logoUrl,
       superAdmin: superAdmin._id,
