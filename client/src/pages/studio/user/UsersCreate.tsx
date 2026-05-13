@@ -167,7 +167,7 @@ export default function UsersCreate() {
               )}
             </div>
             {mainAppUsername ? (
-              <p className="text-[11px] text-emerald-400 mt-1">✓ Loaded from your main app profile</p>
+              <p className="text-[11px] text-emerald-400 mt-1">✓ Synced from your Nexura profile</p>
             ) : walletAddress && !profileLoading ? (
               <p className="text-[11px] text-white/50 mt-1">Using wallet-derived username — set a username on the main app for your profile name</p>
             ) : !walletAddress ? (
