@@ -19,7 +19,7 @@ export const StatOverview = ({ tasks }: { tasks: TASKSS[] }) => {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
         <Card className="bg-white/5 border-white/10 backdrop-blur-md p-6 relative overflow-hidden group hover:bg-white/10 transition-colors">
           <div className="flex flex-col relative z-10 pr-20">
-            <span className="text-white/80 text-sm font-medium">Total Pending Today</span>
+            <span className="text-white/80 text-sm font-medium">Total Pending</span>
             <div className="flex items-baseline gap-2 mt-2">
               <span className="text-3xl font-bold text-white">{totalPending}</span>
               <span className="text-white/70 text-xs font-medium">{pendingChange} pending</span>
@@ -30,7 +30,7 @@ export const StatOverview = ({ tasks }: { tasks: TASKSS[] }) => {
 
         <Card className="bg-white/5 border-white/10 backdrop-blur-md p-6 relative overflow-hidden group hover:bg-white/10 transition-colors">
           <div className="flex flex-col relative z-10 pr-20">
-            <span className="text-white/80 text-sm font-medium">Total Approved Today</span>
+            <span className="text-white/80 text-sm font-medium">Total Approved</span>
             <div className="flex items-baseline gap-2 mt-2">
               <span className="text-3xl font-bold text-white">{approvedToday}</span>
               <span className="text-white/70 text-xs font-medium">{approvedChange} approval rate</span>
@@ -41,7 +41,7 @@ export const StatOverview = ({ tasks }: { tasks: TASKSS[] }) => {
 
         <Card className="bg-white/5 border-white/10 backdrop-blur-md p-6 relative overflow-hidden group hover:bg-white/10 transition-colors">
           <div className="flex flex-col relative z-10 pr-20">
-            <span className="text-white/80 text-sm font-medium">Total Rejected Today</span>
+            <span className="text-white/80 text-sm font-medium">Total Rejected</span>
             <div className="flex items-baseline gap-2 mt-2">
               <span className="text-3xl font-bold text-white">{rejectedToday}</span>
               <span className="text-white/70 text-xs font-medium">{rejectedChange} rejection rate</span>
