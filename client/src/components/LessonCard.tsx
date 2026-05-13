@@ -58,7 +58,30 @@ export default function LessonCard({
       </div>
 
       {/* CONTENT */}
-      <div className="p-4 space-y-3 bg-[#170F1F] flex flex-col flex-1">
+      <div
+  className="relative overflow-hidden p-4 space-y-1 flex flex-col flex-1 rounded-b-2xl"
+  style={{
+    background: "#170F1F",
+    borderTop: "1px solid rgba(131, 58, 253, 0.12)",
+    backdropFilter: "blur(8px)",
+    WebkitBackdropFilter: "blur(8px)",
+    boxShadow: "inset 0 0 22px rgba(131, 58, 253, 0.10)",
+  }}
+>
+  {/* BACKGROUND GLOW */}
+  <div
+    className="absolute w-56 h-56 rounded-full pointer-events-none"
+    style={{
+      background: "#833AFD",
+      top: "-90px",
+      right: "-90px",
+      filter: "blur(70px)",
+      opacity: 0.35,
+    }}
+  />
+
+  {/* CONTENT */}
+  <div className="relative z-10 flex flex-col flex-1 space-y-1.5">
         {/* TITLE */}
         <h3 className="text-sm md:text-base font-semibold text-white truncate">
           {displayTitle}
@@ -101,6 +124,7 @@ export default function LessonCard({
   <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition bg-gradient-to-r from-white/10 via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] duration-700" />
 </button>
         </div>
+      </div>
       </div>
     </div>
   );
