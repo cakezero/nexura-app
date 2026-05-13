@@ -12,6 +12,7 @@ import QuestCard from "../components/QuestCard";
 import EcosystemCard from "../components/EcosystemCard";
 // import AnalyticsBackground from "../components/AnalyticsBackground";
 import ReusableBackground from "../components/ReusableBackground";
+import { dummyCampaigns } from "../types/dummyCampaign";
 
 
 export default function Discover() {
@@ -104,6 +105,8 @@ export default function Discover() {
     );
   };
 
+  
+
   const trendingCampaigns = campaigns
     .filter((c: any) => isActiveCampaign(c))
     .slice(0, 3);
@@ -115,6 +118,11 @@ export default function Discover() {
     return res.json();
   },
 });
+
+const campaignsToRender =
+  trendingCampaigns && trendingCampaigns.length > 0
+    ? trendingCampaigns
+    : dummyCampaigns;
 
 const [dapps, setDapps] = useState<any[]>([]);
 
@@ -439,41 +447,33 @@ const quests =
       </Button>
     </div>
 
-    {/* EMPTY STATE */}
-    {!trendingCampaigns || trendingCampaigns.length === 0 ? (
-      <div className="rounded-2xl border border-white/10 bg-[#170F1F] p-6 text-center text-white/60 text-sm">
-        No active campaigns at the moment.
-      </div>
-    ) : (
-      /* TICKER MODE (same pattern as quests) */
-      <div className="overflow-hidden">
+    {campaignsToRender.length === 0 ? (
+  <div className="rounded-2xl border border-white/10 bg-[#170F1F] p-6 text-center text-white/60 text-sm">
+    No active campaigns at the moment.
+  </div>
+) : (
+  <div className="overflow-hidden">
+    <div
+      className={`flex gap-3 w-max ${
+        campaignsToRender.length <= 3 ? "" : "animate-quest-scroll"
+      }`}
+    >
+      {(campaignsToRender.length <= 3
+        ? campaignsToRender
+        : [...campaignsToRender, ...campaignsToRender]
+      ).map((campaign: any, i: number) => (
         <div
-          className={`flex gap-3 w-max ${
-            trendingCampaigns.length <= 3
-              ? ""
-              : "animate-quest-scroll"
-          }`}
+          key={`${campaign._id}-${i}`}
+          className="w-[340px] md:w-[360px] shrink-0"
         >
-
-          {(trendingCampaigns.length <= 3
-            ? trendingCampaigns
-            : [...trendingCampaigns, ...trendingCampaigns]
-          ).map((campaign: any, i: number) => {
-            return (
-              <div
-                key={`${campaign._id}-${i}`}
-                className="w-[340px] md:w-[360px] shrink-0"
-              >
-                <div className="rounded-2xl border border-white/10 overflow-hidden">
-                  <CampaignCard {...campaign} from="explore" />
-                </div>
-              </div>
-            );
-          })}
-
+          <div className="rounded-2xl border border-white/10 overflow-hidden">
+            <CampaignCard {...campaign} from="explore" />
+          </div>
         </div>
-      </div>
-    )}
+      ))}
+    </div>
+  </div>
+)}
   </section>
 )}
 

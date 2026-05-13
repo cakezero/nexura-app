@@ -2,6 +2,7 @@ import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Clock, ExternalLink, Users } from "lucide-react";
 import { useLocation } from "wouter";
+import { dummyCampaigns } from "../types/dummyCampaign";
 
 interface CampaignCardProps {
   title: string;
@@ -114,6 +115,18 @@ export default function CampaignCard({
             </Badge>
           )}
         </div>
+
+        {/* PROJECT LOGO */}
+<div className="absolute bottom-3 left-3">
+  <div className="w-14 h-14 rounded-2xl overflow-hidden border border-white/10 bg-[#1D1526] backdrop-blur-md shadow-lg">
+    <img
+      src={projectCoverImage || "/quest-1.png"}
+      alt={project_name || "Project"}
+      className="w-full h-full object-cover"
+    />
+  </div>
+</div>
+
       </div>
 
       {/* Content */}
