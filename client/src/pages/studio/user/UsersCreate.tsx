@@ -86,7 +86,7 @@ export default function UsersCreate() {
       return;
     }
 
-    const isWallet = /^(0x[a-fA-F0-9]{40}|0x[a-fA-F0-9]{4}\.\.\.[a-fA-F0-9]{4})$/.test(displayUsername);
+    const isWallet = /^(0x[a-fA-F0-9]{40}|0x[a-fA-F0-9]+\.\.\.[a-fA-F0-9]+)$/.test(displayUsername);
     if (isWallet) {
       toast({
         title: "Username required",
@@ -176,7 +176,7 @@ export default function UsersCreate() {
                 <Loader2 className="absolute right-4 w-4 h-4 text-[#8a3efe] animate-spin" />
               )}
             </div>
-            {mainAppUsername && !/^(0x[a-fA-F0-9]{40}|0x[a-fA-F0-9]{4}\.\.\.[a-fA-F0-9]{4})$/.test(mainAppUsername) ? (
+            {mainAppUsername && !/^(0x[a-fA-F0-9]{40}|0x[a-fA-F0-9]+\.\.\.[a-fA-F0-9]+)$/.test(mainAppUsername) ? (
               <p className="text-[11px] text-emerald-400 mt-1">✓ Synced from your Nexura profile</p>
             ) : (walletAddress || mainAppUsername) && !profileLoading ? (
               <p className="text-[11px] text-red-400 mt-1">⚠ Please set a username in your main profile</p>

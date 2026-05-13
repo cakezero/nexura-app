@@ -211,9 +211,6 @@ export const startQuest = async (req: GlobalRequest, res: GlobalResponse) => {
       questExists.save()
     ]);
 
-		// Increment participants count
-		await quest.findByIdAndUpdate(id, { $inc: { participants: 1 } });
-
 		res.status(OK).json({ message: "quest started" });
 	} catch (error) {
 		logger.error(error);

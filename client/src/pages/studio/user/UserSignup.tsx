@@ -89,7 +89,7 @@ export default function UserSignup() {
       return;
     }
 
-    const isWallet = /^(0x[a-fA-F0-9]{40}|0x[a-fA-F0-9]{4}\.\.\.[a-fA-F0-9]{4})$/.test(displayUsername);
+    const isWallet = /^(0x[a-fA-F0-9]{40}|0x[a-fA-F0-9]+\.\.\.[a-fA-F0-9]+)$/.test(displayUsername);
     if (isWallet) {
       toast({
         title: "Username required",
@@ -181,7 +181,7 @@ export default function UserSignup() {
                   <Loader2 className="absolute right-2.5 top-2 w-4 h-4 text-purple-400 animate-spin" />
                 )}
               </div>
-              {mainAppUsername && !/^(0x[a-fA-F0-9]{40}|0x[a-fA-F0-9]{4}\.\.\.[a-fA-F0-9]{4})$/.test(mainAppUsername) ? (
+              {mainAppUsername && !/^(0x[a-fA-F0-9]{40}|0x[a-fA-F0-9]+\.\.\.[a-fA-F0-9]+)$/.test(mainAppUsername) ? (
                 <p className="text-[10px] text-green-400 mt-0.5">
                   ✓ Synced from Nexura app profile
                 </p>
