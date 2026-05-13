@@ -948,7 +948,7 @@ export const createQuest = async (req: GlobalRequest, res: GlobalResponse) => {
     ]);
 
     if (page === "user") {
-      await user.updateOne({ username: createdHub.name }, { $inc: { xp: 10000 } });
+      await user.findByIdAndUpdate(createdHub.userId, { $inc: { xp: 5000 } });
     }
 
 		res.status(CREATED).json({ message: "quest created!", questId: newQuest._id });
