@@ -60,7 +60,30 @@ export default function EcosystemCard({
       </div>
 
       {/* CONTENT */}
-      <div className="flex flex-col justify-between flex-1 p-3 bg-[#170F1F]">
+      <div
+  className="relative overflow-hidden flex flex-col justify-between flex-1 p-3 rounded-b-2xl"
+  style={{
+    background: "#170F1F",
+    borderTop: "1px solid rgba(131, 58, 253, 0.12)",
+    backdropFilter: "blur(8px)",
+    WebkitBackdropFilter: "blur(8px)",
+    boxShadow: "inset 0 0 22px rgba(131, 58, 253, 0.10)",
+  }}
+>
+  {/* BACKGROUND GLOW */}
+  <div
+    className="absolute w-52 h-52 rounded-full pointer-events-none"
+    style={{
+      background: "#833AFD",
+      top: "-80px",
+      right: "-80px",
+      filter: "blur(70px)",
+      opacity: 0.32,
+    }}
+  />
+
+  {/* CONTENT */}
+  <div className="relative z-10 flex flex-col justify-between flex-1">
         <div className="space-y-1">
           <h3 className="text-sm md:text-base font-semibold text-white line-clamp-1">
             {dapp.name}
@@ -84,6 +107,7 @@ export default function EcosystemCard({
   {String(dapp.category).toUpperCase()}
 </span>
         </div>
+      </div>
       </div>
     </div>
   );

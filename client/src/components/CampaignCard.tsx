@@ -129,8 +129,31 @@ export default function CampaignCard({
 
       </div>
 
-      {/* Content */}
-      <div className="p-3 sm:p-4 flex flex-1 flex-col space-y-2">
+      {/* CONTENT */}
+        <div
+  className="relative overflow-hidden p-1 flex flex-col flex-1 rounded-b-2xl"
+  style={{
+    background: "#170F1F",
+    borderTop: "1px solid rgba(131, 58, 253, 0.12)",
+    backdropFilter: "blur(8px)",
+    WebkitBackdropFilter: "blur(8px)",
+    boxShadow: "inset 0 0 22px rgba(131, 58, 253, 0.10)",
+  }}
+>
+  {/* BACKGROUND GLOW */}
+  <div
+    className="absolute w-56 h-56 rounded-full pointer-events-none"
+    style={{
+      background: "#833AFD",
+      top: "-90px",
+      right: "-90px",
+      filter: "blur(70px)",
+      opacity: 0.35,
+    }}
+  />
+
+  {/* CONTENT */}
+        <div className="relative p-2 sm:p-2 flex flex-1 flex-col space-y-1">
         {/* Title */}
         <h2
           className="text-sm font-semibold text-white leading-snug line-clamp-2 min-h-[2.25rem] break-words"
@@ -230,6 +253,7 @@ export default function CampaignCard({
             </span>
           )}
         </button>
+      </div>
       </div>
     </Card>
   );

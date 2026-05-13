@@ -118,7 +118,30 @@ export default function QuestCard({
         </div>
 
         {/* CONTENT */}
-        <div className="p-3 sm:p-4 flex flex-1 flex-col space-y-1.5">
+        <div
+  className="relative overflow-hidden p-1 flex flex-col flex-1 rounded-b-2xl"
+  style={{
+    background: "#170F1F",
+    borderTop: "1px solid rgba(131, 58, 253, 0.12)",
+    backdropFilter: "blur(8px)",
+    WebkitBackdropFilter: "blur(8px)",
+    boxShadow: "inset 0 0 22px rgba(131, 58, 253, 0.10)",
+  }}
+>
+  {/* BACKGROUND GLOW */}
+  <div
+    className="absolute w-56 h-56 rounded-full pointer-events-none"
+    style={{
+      background: "#833AFD",
+      top: "-90px",
+      right: "-90px",
+      filter: "blur(70px)",
+      opacity: 0.35,
+    }}
+  />
+
+  {/* CONTENT */}
+        <div className="relative p-3 sm:p-4 flex flex-1 flex-col space-y-1">
 
           {/* TITLE */}
           <h2
@@ -208,6 +231,7 @@ export default function QuestCard({
               </span>
             )}
           </Button>
+        </div>
         </div>
       </Card>
     </motion.div>

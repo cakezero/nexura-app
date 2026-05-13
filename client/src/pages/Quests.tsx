@@ -139,13 +139,24 @@ export default function Quests() {
     );
   };
 
-  const activeQuests = allQuests.filter(
-    (q) =>
-      q.status === "Active" ||
-      (!isScheduled(q) &&
-        q.status !== "Ended" &&
-        q.status !== "Save")
+const activeQuests = allQuests.filter((q) => {
+  const nowMs = Date.now() + serverOffset;
+
+  const hasStarted = q.starts_at
+    ? new Date(q.starts_at).getTime() <= nowMs
+    : true;
+
+  const notEnded =
+    q.ends_at
+      ? new Date(q.ends_at).getTime() > nowMs
+      : true;
+
+  return (
+    q.status === "Active" &&
+    hasStarted &&
+    notEnded
   );
+});
 
   const scheduledQuests = allQuests.filter(isScheduled);
 
@@ -409,7 +420,7 @@ export default function Quests() {
         {scheduledQuests.length > 0 && (
           <div className="space-y-4 sm:space-y-6 mt-8 sm:mt-12">
             <h2 className="text-lg sm:text-2xl font-semibold text-white">
-              Scheduled Quests
+              Upcoming Quests
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
               {scheduledQuests.map((quest, i) =>
