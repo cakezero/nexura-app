@@ -175,6 +175,17 @@ export default function UsersCreate() {
             ) : null}
           </div>
 
+          {/* Disclaimer */}
+          <div className="flex justify-center pt-2 pb-2">
+            <div className="bg-[rgba(201,170,255,0.2)] max-w-[740px] w-full py-3 px-4 sm:px-6 rounded-2xl flex items-start gap-3">
+              <Info className="w-[15px] h-[15px] text-[#8b3efe] shrink-0 mt-1" />
+              <p className="text-[14px] font-semibold leading-[23px]">
+                <span className="text-white">Disclaimer:</span>
+                <span className="text-[#a3adc2]"> Your username and profile picture are pulled from your main Nexura profile. To update them, edit your profile in the main app settings.</span>
+              </p>
+            </div>
+          </div>
+
           {/* Email Address */}
           <div className="space-y-2">
             <label className="block text-[18px] font-bold text-white">Email Address</label>
@@ -215,14 +226,25 @@ export default function UsersCreate() {
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
-            {password.length > 0 && (
-              <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-[11px]">
-                <span className={isLongEnough ? "text-emerald-400" : "text-white/40"}>• 8+ chars</span>
-                <span className={hasUppercase ? "text-emerald-400" : "text-white/40"}>• 1 uppercase</span>
-                <span className={hasNumber ? "text-emerald-400" : "text-white/40"}>• 1 number</span>
-                <span className={hasSpecialChar ? "text-emerald-400" : "text-white/40"}>• 1 special</span>
+            {/* Password checklist - Vertical and Always Visible */}
+            <div className="flex flex-col gap-1 mt-2 text-[11px] ml-1">
+              <div className={`flex items-center gap-2 ${isLongEnough ? "text-emerald-400" : "text-white/40"}`}>
+                <div className={`w-1 h-1 rounded-full ${isLongEnough ? "bg-emerald-400" : "bg-white/40"}`} />
+                <span>At least 8 characters</span>
               </div>
-            )}
+              <div className={`flex items-center gap-2 ${hasUppercase ? "text-emerald-400" : "text-white/40"}`}>
+                <div className={`w-1 h-1 rounded-full ${hasUppercase ? "bg-emerald-400" : "bg-white/40"}`} />
+                <span>At least 1 uppercase letter</span>
+              </div>
+              <div className={`flex items-center gap-2 ${hasNumber ? "text-emerald-400" : "text-white/40"}`}>
+                <div className={`w-1 h-1 rounded-full ${hasNumber ? "bg-emerald-400" : "bg-white/40"}`} />
+                <span>At least 1 number</span>
+              </div>
+              <div className={`flex items-center gap-2 ${hasSpecialChar ? "text-emerald-400" : "text-white/40"}`}>
+                <div className={`w-1 h-1 rounded-full ${hasSpecialChar ? "bg-emerald-400" : "bg-white/40"}`} />
+                <span>At least 1 special character</span>
+              </div>
+            </div>
           </div>
 
           {/* Confirm Password */}
@@ -243,17 +265,6 @@ export default function UsersCreate() {
               >
                 {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
-            </div>
-          </div>
-
-          {/* Disclaimer */}
-          <div className="flex justify-center pt-4 pb-2">
-            <div className="bg-[rgba(201,170,255,0.2)] max-w-[637px] w-full py-3 px-4 sm:px-6 rounded-full flex items-center justify-center sm:justify-start gap-2">
-              <Info className="w-[15px] h-[15px] text-white shrink-0" />
-              <div className="flex flex-col sm:flex-row sm:items-center gap-1 text-[13px] sm:text-[14px]">
-                <span className="font-semibold text-white">Disclaimer:</span>
-                <span className="font-semibold text-[#a3adc2]">Anyone with these credentials can access your account settings</span>
-              </div>
             </div>
           </div>
 
