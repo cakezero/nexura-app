@@ -813,7 +813,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                       else if (newTask.type === "Portal Claims") {
                         const allowedPrefixes = [
                           "nexura.intuition.box/portal-claims/",
-                          "portal.intuition.systems/atoms/triples"
+                          "portal.intuition.systems/explore/triples"
                         ];
                         const isAllowed = allowedPrefixes.some(prefix => valLower.includes(prefix));
                         if (!isAllowed) {

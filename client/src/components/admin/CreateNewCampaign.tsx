@@ -820,7 +820,7 @@ const handleSaveTask = () => {
     const url = finalTask.handleOrUrl.toLowerCase();
     const allowedPrefixes = [
       "nexura.intuition.box/portal-claims/",
-      "portal.intuition.systems/atoms/triples"
+      "portal.intuition.systems/explore/triples"
     ];
     const isAllowed = allowedPrefixes.some(prefix => url.includes(prefix));
     if (!isAllowed) {
