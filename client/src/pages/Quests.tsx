@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { ExternalLink, Clock, Users } from "lucide-react";
@@ -39,176 +39,95 @@ export default function Quests() {
 
   const userId = user?._id || "";
 
-  const [visitedTasks, setVisitedTasks] = useState<string[]>(() => {
-    return (
-      JSON.parse(
-        localStorage.getItem(
-          "nexura:one-time-quest:visited"
-        ) || "{}"
-      )[userId] || []
-    );
-  });
-
-  const [claimedTasks, setClaimedTasks] = useState<string[]>(() => {
-    return (
-      JSON.parse(
-        localStorage.getItem(
-          "nexura:one-time-quest:claimed"
-        ) || "{}"
-      )[userId] || []
-    );
-  });
-
   const [serverOffset, setServerOffset] = useState(0);
-  const [countdowns, setCountdowns] = useState<
-    Record<string, string>
-  >({});
+  const [countdowns, setCountdowns] = useState<Record<string, string>>({});
 
   const { toast } = useToast();
+
+  const now = Date.now() + serverOffset;
+
+  const isEndedQuest = (quest: Quest) =>
+    quest.status === "Ended" || (!!quest.ends_at && new Date(quest.ends_at).getTime() <= now);
+  const isScheduledQuest = (quest: Quest) =>
+    !isEndedQuest(quest) && !!quest.starts_at && new Date(quest.starts_at).getTime() > now;
+  const isActiveQuest = (quest: Quest) =>
+    !isScheduledQuest(quest) && !isEndedQuest(quest) && quest.status !== "Save";
 
   // SERVER TIME SYNC
   useEffect(() => {
     const getServerTime = async () => {
       try {
-        const res = await fetch(
-          "https://nexura-app.onrender.com/api/server-time"
-        );
-
-        const data = await res.json();
-
-        setServerOffset(data.serverTime - Date.now());
+        const res = await apiRequestV2("GET", "/api/server-time");
+        setServerOffset(res.serverTime - Date.now());
       } catch {
-        //
+        // fallback
       }
     };
-
     getServerTime();
   }, []);
 
-  const { data, isLoading } = useQuery<{
+  const { data, isLoading, refetch } = useQuery<{
     oneTimeQuests: Quest[];
     quests: Quest[];
     featuredQuests: Quest[];
   }>({
     queryKey: ["/api/quests"],
     queryFn: async () => {
-      const res = await apiRequestV2(
-        "GET",
-        "/api/quests"
-      );
-
+      const res = await apiRequestV2("GET", "/api/quests");
       return res;
     },
-    refetchInterval: 60000,
+    refetchInterval: 300000,
     refetchIntervalInBackground: true,
   });
 
-  useEffect(() => {
-    const value: Record<string, string[]> = {};
-
-    value[userId] = visitedTasks;
-
-    localStorage.setItem(
-      "nexura:one-time-quest:visited",
-      JSON.stringify(value)
-    );
-  }, [visitedTasks]);
-
-  useEffect(() => {
-    const value: Record<string, string[]> = {};
-
-    value[userId] = claimedTasks;
-
-    localStorage.setItem(
-      "nexura:one-time-quest:claimed",
-      JSON.stringify(value)
-    );
-  }, [claimedTasks]);
-
   const allQuests: Quest[] = data?.quests ?? [];
 
-  const isScheduled = (q: Quest) => {
-    const nowMs = Date.now() + serverOffset;
-
-    return (
-      q.status === "Scheduled" ||
-      (!!q.starts_at &&
-        new Date(q.starts_at).getTime() > nowMs &&
-        q.status !== "Ended" &&
-        q.status !== "Save")
-    );
-  };
-
-const nowMs = Date.now() + serverOffset;
-
-const activeQuests = allQuests.filter((q) => {
-  const start = q.starts_at ? new Date(q.starts_at).getTime() : null;
-  const end = q.ends_at ? new Date(q.ends_at).getTime() : null;
-
-  const hasStarted = !start || nowMs >= start;
-  const notEnded = !end || nowMs <= end;
-
-  return hasStarted && notEnded;
-});
-
-  const scheduledQuests = allQuests.filter(isScheduled);
+  const activeQuests = allQuests.filter(isActiveQuest);
+  const upcomingQuests = allQuests.filter(isScheduledQuest);
+  const endedQuests = allQuests.filter(isEndedQuest);
 
   // COUNTDOWN TIMER
   useEffect(() => {
-    if (scheduledQuests.length === 0) return;
+    if (upcomingQuests.length === 0) return;
 
     const tick = () => {
       const n = Date.now() + serverOffset;
-
       const newCountdowns: Record<string, string> = {};
+      let anyExpired = false;
 
-      for (const q of scheduledQuests) {
-        const diff =
-          new Date(q.starts_at!).getTime() - n;
+      for (const q of upcomingQuests) {
+        const diff = new Date(q.starts_at!).getTime() - n;
 
         if (diff <= 0) {
+          anyExpired = true;
           newCountdowns[q._id] = "Starting...";
         } else {
           const d = Math.floor(diff / 86400000);
-          const h = Math.floor(
-            (diff % 86400000) / 3600000
-          );
+          const h = Math.floor((diff % 86400000) / 3600000);
+          const m = Math.floor((diff % 3600000) / 60000);
+          const s = Math.floor((diff % 60000) / 1000);
 
-          const m = Math.floor(
-            (diff % 3600000) / 60000
-          );
-
-          const s = Math.floor(
-            (diff % 60000) / 1000
-          );
-
-          newCountdowns[q._id] =
-            d > 0
-              ? `${d}d ${h}h ${m}m ${s}s`
-              : `${h}h ${m}m ${s}s`;
+          newCountdowns[q._id] = d > 0 ? `${d}d ${h}h ${m}m ${s}s` : h > 0 ? `${h}h ${m}m ${s}s` : `${m}m ${s}s`;
         }
       }
 
       setCountdowns(newCountdowns);
+      if (anyExpired) refetch();
     };
 
     tick();
-
     const interval = setInterval(tick, 1000);
-
     return () => clearInterval(interval);
-  }, [scheduledQuests.length, serverOffset]);
+  }, [upcomingQuests, serverOffset, refetch]);
 
   const startQuest = async (quest: Quest) => {
+    if (isEndedQuest(quest)) return;
+
     if (!quest.joined) {
       try {
-        await apiRequestV2(
-          "POST",
-          "/api/quest/start-quest",
-          {
-            questId: quest._id,
-          }
-        );
+        await apiRequestV2("POST", "/api/quest/start-quest", {
+          questId: quest._id,
+        });
 
         toast({
           title: "Quest Started",
@@ -217,11 +136,9 @@ const activeQuests = allQuests.filter((q) => {
       } catch (error) {
         toast({
           title: "Error",
-          description:
-            "Failed to start the quest. Please try again.",
+          description: "Failed to start the quest. Please try again.",
           variant: "destructive",
         });
-
         return;
       }
     }
@@ -231,28 +148,22 @@ const activeQuests = allQuests.filter((q) => {
 
   const renderQuestCard = (
     quest: Quest,
-    isActive: boolean = true,
+    state: "active" | "upcoming" | "ended",
     index: number = 0
   ) => {
+    const isActive = state === "active";
+    const isUpcoming = state === "upcoming";
+
     const formatDate = (dateStr?: string) => {
       if (!dateStr) return "N/A";
-
-      return new Date(dateStr).toLocaleDateString(
-        "en-GB",
-        {
-          day: "numeric",
-          month: "long",
-        }
-      );
+      return new Date(dateStr).toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "long",
+      });
     };
 
-    const durationText = isActive
-      ? quest.starts_at && quest.ends_at
-        ? `${formatDate(quest.starts_at)} – ${formatDate(quest.ends_at)}`
-        : "Ongoing"
-      : countdowns[quest._id]
-      ? `Starts in ${countdowns[quest._id]}`
-      : "Coming Soon";
+    const starts_atFormatted = quest.starts_at ? formatDate(quest.starts_at) : "";
+    const ends_atFormatted = quest.ends_at ? formatDate(quest.ends_at) : "TBA";
 
     return (
       <motion.div
@@ -283,13 +194,17 @@ const activeQuests = allQuests.filter((q) => {
                 <Badge className="bg-green-500/20 text-green-400 border border-green-500/30 text-[0.65rem] sm:text-xs">
                   Active
                 </Badge>
-              ) : (
+              ) : isUpcoming ? (
                 <div className="bg-black/60 backdrop-blur-sm border border-purple-500/30 rounded-lg px-2 py-1 flex items-center gap-1.5">
                   <Clock className="w-3 h-3 text-purple-400 animate-pulse" />
                   <span className="text-purple-300 text-[0.6rem] sm:text-xs font-mono font-semibold">
-                    {countdowns[quest._id] || "Coming Soon"}
+                    {countdowns[quest._id] || "Loading..."}
                   </span>
                 </div>
+              ) : (
+                <Badge className="bg-gray-500/20 text-gray-200 border border-gray-500/30 text-[0.65rem] sm:text-xs">
+                  Ended
+                </Badge>
               )}
             </div>
 
@@ -324,13 +239,15 @@ const activeQuests = allQuests.filter((q) => {
               </span>
             </div>
 
-            <div className="flex flex-row justify-between text-xs items-center">
-              <span className="text-gray-500">Duration:</span>
-              <span className="text-white flex items-center gap-1">
-                <Clock className="w-3 h-3" />
-                {durationText}
-              </span>
-            </div>
+            {quest.starts_at && (
+              <div className="flex flex-row justify-between text-xs items-center">
+                <span className="text-gray-500">Duration:</span>
+                <span className="text-white flex items-center gap-1">
+                  <Clock className="w-3 h-3" />
+                  {starts_atFormatted} – {ends_atFormatted}
+                </span>
+              </div>
+            )}
 
             <Button
               className={`w-full mt-auto pt-2 py-2 text-xs font-medium rounded-2xl ${
@@ -340,7 +257,7 @@ const activeQuests = allQuests.filter((q) => {
               }`}
               onClick={(e) => {
                 e.stopPropagation();
-                startQuest(quest);
+                if (isActive) startQuest(quest);
               }}
               disabled={!isActive}
             >
@@ -349,10 +266,15 @@ const activeQuests = allQuests.filter((q) => {
                   <ExternalLink className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                   {quest.joined ? "Continue Quest" : "Start Quest"}
                 </>
+              ) : isUpcoming ? (
+                <>
+                  <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                  Starts in {countdowns[quest._id] || "..."}
+                </>
               ) : (
                 <>
                   <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                  Coming Soon
+                  Quest Ended
                 </>
               )}
             </Button>
@@ -367,12 +289,10 @@ const activeQuests = allQuests.filter((q) => {
       <AnimatedBackground />
 
       <div className="max-w-4xl sm:max-w-6xl mx-auto space-y-6 sm:space-y-8 relative z-10">
-
         {/* HEADER */}
         <div className="space-y-1">
           <div className="flex items-center gap-2 mb-3">
             <div className="w-1.5 h-1.5 rounded-full bg-[#8B3EFE] animate-pulse" />
-
             <span className="text-[#8B3EFE] text-[11px] font-semibold uppercase tracking-widest">
               Quests
             </span>
@@ -391,42 +311,49 @@ const activeQuests = allQuests.filter((q) => {
         <div className="space-y-4 sm:space-y-6">
           <h2 className="text-lg sm:text-2xl font-semibold text-white">Active Quests</h2>
           {isLoading ? (
-            <div className="text-center py-6 sm:py-12 text-muted-foreground">
-              Loading quests...
-            </div>
+            <div className="text-center py-6 sm:py-12 text-muted-foreground">Loading quests...</div>
           ) : activeQuests.length === 0 ? (
             <Card className="glass glass-hover rounded-3xl p-6 sm:p-8 text-center">
-              <p className="text-white/60">
-                No active quests at the moment. Check back soon.
-              </p>
+              <p className="text-white/60">No active quests at the moment. Check back soon.</p>
             </Card>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-              {activeQuests.map((quest, i) =>
-                renderQuestCard(quest, true, i)
-              )}
+              {activeQuests.map((quest, i) => renderQuestCard(quest, "active", i))}
             </div>
           )}
         </div>
 
         {/* UPCOMING QUESTS */}
-        {scheduledQuests.length > 0 && (
-          <div className="space-y-4 sm:space-y-6 mt-8 sm:mt-12">
-            <h2 className="text-lg sm:text-2xl font-semibold text-white">
-              Upcoming Quests
-            </h2>
+        <div className="space-y-4 sm:space-y-6 mt-8 sm:mt-12">
+          <h2 className="text-lg sm:text-2xl font-semibold text-white">Upcoming Quests</h2>
+          {isLoading ? (
+            <div className="text-center py-6 sm:py-12 text-muted-foreground">Loading quests...</div>
+          ) : upcomingQuests.length === 0 ? (
+            <Card className="glass glass-hover rounded-3xl p-6 sm:p-8 text-center">
+              <p className="text-white/60">No upcoming quests.</p>
+            </Card>
+          ) : (
             <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-              {scheduledQuests.map((quest, i) =>
-                renderQuestCard(
-                  quest,
-                  false,
-                  i
-                )
-              )}
+              {upcomingQuests.map((quest, i) => renderQuestCard(quest, "upcoming", i))}
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
+        {/* ENDED QUESTS */}
+        <div className="space-y-4 sm:space-y-6 mt-8 sm:mt-12">
+          <h2 className="text-lg sm:text-2xl font-semibold text-white">Ended Quests</h2>
+          {isLoading ? (
+            <div className="text-center py-6 sm:py-12 text-muted-foreground">Loading quests...</div>
+          ) : endedQuests.length === 0 ? (
+            <Card className="glass glass-hover rounded-3xl p-6 sm:p-8 text-center">
+              <p className="text-white/60">No ended quests yet.</p>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+              {endedQuests.map((quest, i) => renderQuestCard(quest, "ended", i))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
