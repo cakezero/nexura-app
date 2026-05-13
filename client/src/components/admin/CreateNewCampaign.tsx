@@ -328,6 +328,7 @@ useEffect(() => {
           if (tag === "portal") return "Check Out the Portal Claims";
           if (tag === "feedback") return "Give Feedback";
           if (tag === "create-post") return "Create a Post";
+          if (tag === "trust-name") return "Own a .trust username";
           if (tag === "repost-x") return "Retweet on X";
           if (tag === "telegram") return "Join Our Telegram";
           if (tag === "hold-token") return "Hold an ERC20 Token";
@@ -344,7 +345,7 @@ useEffect(() => {
         const tagToValidation = (tag: string) => {
           if (tag === "join" || tag === "join-discord") return "Discord Auth";
           if (tag === "acquire-role-discord" || tag === "send-message-discord" || tag === "message-discord" || tag === "message") return "Discord Auth";
-          if (tag === "portal") return "Auto Verified";
+          if (tag === "portal" || tag === "trust-name") return "Auto Verified";
           return "Manual Validation";
         };
         if (qRes.campaignQuests) {
@@ -539,6 +540,7 @@ const typeToTag = (type: string) => {
   if (type === "Check Out the Portal Claims") return "portal";
   if (type === "Give Feedback") return "feedback";
   if (type === "Create a Post") return "create-post";
+  if (type === "Own a .trust username") return "trust-name";
   return "other";
 };
 const platformToCategory = (platform: string) => {
@@ -1985,17 +1987,18 @@ const isActive =
               const isPortal = type === "Check Out the Portal Claims";
               const isOther = type === "others";
               const isFeedback = type === "Give Feedback";
+              const isTrustName = type === "Own a .trust username";
               setNewTask({
                 ...newTask,
                 type,
-                platform: isDiscord ? "Discord" : isTwitter ? "Twitter" : (isPortal || isOther || isFeedback) ? "" : newTask.platform,
-                evidence: isDiscord || isPortal ? "" : isTwitter ? "submit_link" : isFeedback ? "" : newTask.evidence,
-                validation: isDiscord ? "Discord Auth" : isPortal ? "Auto Verified" : isFeedback ? "Manual Validation" : (newTask.validation === "Discord Auth" || newTask.validation === "Auto Verified" ? "Manual Validation" : newTask.validation),
-                verificationMode: isFeedback ? "feedback" : "",
+                platform: isDiscord ? "Discord" : isTwitter ? "Twitter" : (isPortal || isOther || isFeedback || isTrustName) ? "" : newTask.platform,
+                evidence: (isDiscord || isPortal || isTrustName) ? "" : isTwitter ? "submit_link" : isFeedback ? "" : newTask.evidence,
+                validation: isDiscord ? "Discord Auth" : (isPortal || isTrustName) ? "Auto Verified" : isFeedback ? "Manual Validation" : (newTask.validation === "Discord Auth" || newTask.validation === "Auto Verified" ? "Manual Validation" : newTask.validation),
+                verificationMode: isFeedback ? "feedback" : (isPortal || isTrustName) ? "auto" : "",
                 roleId: isDiscordRole ? newTask.roleId : "",
                 channelId: isDiscordMessage ? newTask.channelId : "",
                 guildId: isDiscord ? (newTask.guildId || hubGuildId || "") : "",
-                handleOrUrl: type === "Create a Post" ? "https://x.com" : newTask.handleOrUrl,
+                handleOrUrl: type === "Create a Post" ? "https://x.com" : isTrustName ? "https://tns.intuition.box" : newTask.handleOrUrl,
               });
             }}
           >
@@ -2006,6 +2009,7 @@ const isActive =
             <option value="Join Us On Discord">Join Discord</option>
             <option value={DISCORD_ROLE_TASK_TYPE}>Acquire a Role (Discord)</option>
             <option value={DISCORD_MESSAGE_TASK_TYPE}>Send Message in Channel (Discord)</option>
+            <option value="Own a .trust username">Own a .trust username</option>
             <option value="Check Out the Portal Claims">Portal Claims</option>
             <option value="Give Feedback">Give Feedback</option>
             <option value="others">Others</option>
@@ -2166,14 +2170,18 @@ const isActive =
               <p className="text-xs text-white/50 mt-0.5">Users must connect their Discord account. Verification is automatic.</p>
             </div>
           </div>
-        ) : newTask.type === "Check Out the Portal Claims" ? (
+        ) : (newTask.type === "Check Out the Portal Claims" || newTask.type === "Own a .trust username") ? (
           <div className="flex items-center gap-3 rounded-lg bg-purple-900/50 border border-purple-500/50 px-4 py-3">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-purple-400 flex-shrink-0">
               <path fillRule="evenodd" d="M8.603 3.799A4.49 4.49 0 0 1 12 2.25c1.357 0 2.573.6 3.397 1.549a4.49 4.49 0 0 1 3.498 1.307 4.491 4.491 0 0 1 1.307 3.497A4.49 4.49 0 0 1 21.75 12a4.49 4.49 0 0 1-1.549 3.397 4.491 4.491 0 0 1-1.307 3.497 4.491 4.491 0 0 1-3.497 1.307A4.49 4.49 0 0 1 12 21.75a4.49 4.49 0 0 1-3.397-1.549 4.49 4.49 0 0 1-3.498-1.306 4.491 4.491 0 0 1-1.307-3.498A4.49 4.49 0 0 1 2.25 12c0-1.357.6-2.573 1.549-3.397a4.49 4.49 0 0 1 1.307-3.497 4.49 4.49 0 0 1 3.497-1.307Zm7.007 6.387a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z" clipRule="evenodd" />
             </svg>
             <div>
-              <p className="text-sm text-purple-300 font-medium">Auto-verified via Portal</p>
-              <p className="text-xs text-white/50 mt-0.5">Completion is verified automatically after the user completes the task.</p>
+              <p className="text-sm text-purple-300 font-medium">{newTask.type === "Own a .trust username" ? "Verified by TNS" : "Auto-verified via Portal"}</p>
+              <p className="text-xs text-white/50 mt-0.5">
+                {newTask.type === "Own a .trust username" 
+                  ? "Completion is verified automatically by checking the user's TNS records."
+                  : "Completion is verified automatically after the user completes the task."}
+              </p>
             </div>
           </div>
         ) : newTask.type === "Give Feedback" ? (

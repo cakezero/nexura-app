@@ -836,7 +836,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
             </div>
 
             {/* Validation & Evidence - Matches Campaign UI for standard tasks */}
-            {newTask.validation && (newTask.type === "Portal Claims" || newTask.type === "Give Feedback") ? (
+            {newTask.validation && (newTask.type === "Portal Claims" || newTask.type === "Give Feedback" || newTask.type === "Own a .trust username") ? (
               <div className={`mb-6 flex items-center gap-3 rounded-lg px-4 py-3 border ${newTask.type === "Give Feedback" ? "bg-emerald-900/50 border-emerald-500/50" : "bg-purple-900/50 border-purple-500/50"}`}>
                 {newTask.type === "Give Feedback" ? (
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-emerald-400 flex-shrink-0">
@@ -848,11 +848,15 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                   </svg>
                 )}
                 <div>
-                  <p className={`text-sm font-medium ${newTask.type === "Give Feedback" ? "text-emerald-300" : "text-purple-300"}`}>{newTask.validation}</p>
+                  <p className={`text-sm font-medium ${newTask.type === "Give Feedback" ? "text-emerald-300" : "text-purple-300"}`}>
+                    {newTask.type === "Own a .trust username" ? "Verified by TNS" : newTask.type === "Portal Claims" ? "Auto-verified via Portal" : newTask.validation}
+                  </p>
                   <p className="text-xs text-white/50 mt-0.5">
                     {newTask.type === "Give Feedback" 
                       ? "Users will visit the website and submit written feedback (min. 200 characters). Reviewed manually."
-                      : "Completion is verified automatically after the user completes the task."}
+                      : newTask.type === "Own a .trust username"
+                        ? "Completion is verified automatically by checking the user's TNS records."
+                        : "Completion is verified automatically after the user completes the task."}
                   </p>
                 </div>
               </div>

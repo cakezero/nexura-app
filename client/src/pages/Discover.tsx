@@ -714,6 +714,7 @@ const quests = questsRaw.filter(isActiveQuest);
                     rewards={`${quest.reward || quest.rewards || 0} XP`}
                     starts_at={quest.starts_at}
                     ends_at={quest.ends_at}
+                    participants={quest.participants}
                   />
                 </div>
               );

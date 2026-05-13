@@ -181,9 +181,7 @@ export default function Quests() {
     const starts_atFormatted = quest.starts_at ? formatDate(quest.starts_at) : "";
     const ends_atFormatted = quest.ends_at ? formatDate(quest.ends_at) : "TBA";
 
-    const allowedParticipants = quest.maxParticipants && quest.maxParticipants > 0
-      ? quest.maxParticipants
-      : (quest.participants || 0);
+    const participantCount = quest.participants || 0;
 
     return (
       <motion.div
@@ -256,7 +254,7 @@ export default function Quests() {
               <span className="text-gray-500">Participants:</span>
               <span className="text-white flex items-center gap-1">
                 <Users className="w-3 h-3" />
-                {allowedParticipants.toLocaleString()}
+                {participantCount.toLocaleString()}
               </span>
             </div>
 

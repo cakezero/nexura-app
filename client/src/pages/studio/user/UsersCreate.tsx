@@ -86,6 +86,16 @@ export default function UsersCreate() {
       return;
     }
 
+    const isWallet = /^(0x[a-fA-F0-9]{40}|0x[a-fA-F0-9]{4}\.\.\.[a-fA-F0-9]{4})$/.test(displayUsername);
+    if (isWallet) {
+      toast({
+        title: "Username required",
+        description: "Please set a custom username in your main profile before signing up for Studio.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setCreating(true);
     try {
       const usernameToUse = mainAppUsername || walletAddress || email.split("@")[0];
@@ -166,10 +176,10 @@ export default function UsersCreate() {
                 <Loader2 className="absolute right-4 w-4 h-4 text-[#8a3efe] animate-spin" />
               )}
             </div>
-            {mainAppUsername ? (
+            {mainAppUsername && !/^(0x[a-fA-F0-9]{40}|0x[a-fA-F0-9]{4}\.\.\.[a-fA-F0-9]{4})$/.test(mainAppUsername) ? (
               <p className="text-[11px] text-emerald-400 mt-1">✓ Synced from your Nexura profile</p>
-            ) : walletAddress && !profileLoading ? (
-              <p className="text-[11px] text-white/50 mt-1">Using wallet-derived username — set a username on the main app for your profile name</p>
+            ) : (walletAddress || mainAppUsername) && !profileLoading ? (
+              <p className="text-[11px] text-red-400 mt-1">⚠ Please set a username in your main profile</p>
             ) : !walletAddress ? (
               <p className="text-[11px] text-red-400 mt-1">⚠ Wallet not connected — return and connect your wallet</p>
             ) : null}
