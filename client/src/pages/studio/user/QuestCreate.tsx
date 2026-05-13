@@ -164,7 +164,17 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
     if (tag === "feedback") return "Give Feedback";
     if (tag === "trust-name") return "Own a .trust username";
     if (tag === "create-post") return "Create a Post";
-    return "";
+    if (tag === "repost-x") return "Retweet on X";
+    if (tag === "telegram") return "Join Telegram Channel";
+    if (tag === "join-discord") return "Join Discord Server";
+    if (tag === "acquire-role-discord") return "Acquire a Discord Role";
+    if (tag === "send-message-discord" || tag === "message-discord" || tag === "message") return "Send a Discord Message";
+    if (tag === "hold-token") return "Hold an ERC20 Token";
+    if (tag === "hold-nft") return "Hold an NFT";
+    if (tag === "submit-wallet") return "Submit Wallet Address";
+    if (tag === "watch-youtube") return "Watch YouTube Video";
+    if (tag === "visit-website") return "Visit a Link";
+    return "Other";
   };
 
   const typeToTag = (type: string) => {
@@ -174,6 +184,16 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
     if (type === "Give Feedback") return "feedback";
     if (type === "Create a Post") return "create-post";
     if (type === "Own a .trust username") return "trust-name";
+    if (type === "Retweet on X") return "repost-x";
+    if (type === "Join Telegram Channel") return "telegram";
+    if (type === "Join Discord Server") return "join-discord";
+    if (type === "Acquire a Discord Role") return "acquire-role-discord";
+    if (type === "Send a Discord Message") return "send-message-discord";
+    if (type === "Hold an ERC20 Token") return "hold-token";
+    if (type === "Hold an NFT") return "hold-nft";
+    if (type === "Submit Wallet Address") return "submit-wallet";
+    if (type === "Watch YouTube Video") return "watch-youtube";
+    if (type === "Visit a Link") return "visit-website";
     return "other";
   };
 

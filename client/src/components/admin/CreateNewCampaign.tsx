@@ -328,6 +328,12 @@ useEffect(() => {
           if (tag === "portal") return "Check Out the Portal Claims";
           if (tag === "feedback") return "Give Feedback";
           if (tag === "create-post") return "Create a Post";
+          if (tag === "repost-x") return "Retweet on X";
+          if (tag === "telegram") return "Join Our Telegram";
+          if (tag === "hold-token") return "Hold an ERC20 Token";
+          if (tag === "hold-nft") return "Hold an NFT";
+          if (tag === "submit-wallet") return "Submit Wallet Address";
+          if (tag === "watch-youtube") return "Watch YouTube Video";
           return "others";
         };
         const catToPlatform = (cat: string) => {
