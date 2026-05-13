@@ -805,11 +805,26 @@ const handleSaveTask = () => {
     return setError("All fields are required.");
   }
 
+  const isTwitterTask = finalTask.type === "Comment on our X post" || finalTask.type === "Follow us on X" || finalTask.type === "Retweet on X";
+  
   // Enforce x.com for Twitter tasks
-  if (finalTask.platform === "Twitter" && finalTask.type !== "Create a Post") {
+  if (isTwitterTask) {
     const url = finalTask.handleOrUrl.toLowerCase();
     if (!url.includes("x.com")) {
       return setError("Twitter links must use the x.com domain.");
+    }
+  }
+
+  // Enforce Portal prefixes for Portal Claims tasks
+  if (finalTask.type === "Check Out the Portal Claims") {
+    const url = finalTask.handleOrUrl.toLowerCase();
+    const allowedPrefixes = [
+      "nexura.intuition.box/portal-claims/",
+      "portal.intuition.systems/atoms/triples"
+    ];
+    const isAllowed = allowedPrefixes.some(prefix => url.includes(prefix));
+    if (!isAllowed) {
+      return setError("Portal Claims must be from Nexura Portal or Intuition Portal triples.");
     }
   }
 

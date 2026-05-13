@@ -329,8 +329,10 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
       return setError("All fields are required.");
     }
 
+    const isTwitterTask = finalTask.type === "Comment on X" || finalTask.type === "Follow on X" || finalTask.type === "Retweet on X";
+    
     // Enforce x.com for Twitter tasks
-    if (finalTask.platform === "Twitter" && finalTask.type !== "Create a Post") {
+    if (isTwitterTask) {
       const url = finalTask.handleOrUrl.toLowerCase();
       if (!url.includes("x.com")) {
         return setError("Twitter links must use the x.com domain.");
