@@ -2080,7 +2080,11 @@ const isActive =
           <label className="text-sm text-white/70 mb-2 block">{newTask.type === "Give Feedback" ? "Task Description" : "Task Description"}</label>
           <input
             type="text"
-            placeholder={newTask.type === "Give Feedback" ? "e.g. Tell us what you think about our platform" : "..."}
+            placeholder={
+              newTask.type === "Give Feedback" ? "e.g. Tell us what you think about our platform" : 
+              newTask.type === "Check Out the Portal Claims" ? "Support or oppose this claim" :
+              "..."
+            }
             value={newTask.description}
             onChange={(e) =>
               setNewTask({ ...newTask, description: e.target.value })

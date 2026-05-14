@@ -773,7 +773,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                     newTask.type === "Comment on X" ? "e.g. Reply to our latest announcement" :
                     newTask.type === "Follow on X" ? "e.g. Follow @NexuraApp for updates" :
                     newTask.type === "Own a .trust username" ? "e.g. Acquire your unique identity on TNS" :
-                    newTask.type === "Portal Claims" ? "e.g. Claim your rewards from the portal" :
+                    newTask.type === "Portal Claims" ? "Support or oppose this claim" :
                     newTask.type === "Give Feedback" ? "e.g. Tell us about your experience" :
                     "e.g. Complete this task to earn rewards"
                   }
