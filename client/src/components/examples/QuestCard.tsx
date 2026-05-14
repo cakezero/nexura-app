@@ -7,16 +7,16 @@ export default function QuestCardExample() {
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
       <QuestCard
         title="Introduction to Kinetiq"
-        projectName="Kinetiq"
-        projectLogo={siteLogo}
+        creatorName="Kinetiq"
+        creatorLogo={siteLogo}
         heroImage={questHero}
         participants={1100}
         tags={["New"]}
       />
       <QuestCard
         title="DeFi Staking on Avalanche"
-        projectName="LFJ"
-        projectLogo={siteLogo}
+        creatorName="LFJ"
+        creatorLogo={siteLogo}
         heroImage={questHero}
         participants={5600}
         isLocked={true}
@@ -25,8 +25,8 @@ export default function QuestCardExample() {
       <QuestCard
         title="Syndicate: Mainnet"
         description="Learn about Syndicate's mainnet deployment and complete onchain actions"
-        projectName="Syndicate"
-        projectLogo={siteLogo}
+        creatorName="Syndicate"
+        creatorLogo={siteLogo}
         heroImage={questHero}
         participants={1100}
         rewards="500 SYNDI"

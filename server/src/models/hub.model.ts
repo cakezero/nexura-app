@@ -63,13 +63,17 @@ const hubSchema = new Schema({
     type: Number,
     default: 0
   },
+  questsCreated: {
+    type: Number,
+    default: 0
+  },
   noOfPayments: {
     type: Number,
     default: 0
   },
   xpAllocated: {
     type: Number,
-    default: 200
+    default: 500
   },
   superAdmin: {
     type: mongoose.Schema.Types.ObjectId,
@@ -83,6 +87,7 @@ const hubSchema = new Schema({
 }, { timestamps: true });
 
 export const hub = mongoose.model("hubs", hubSchema, "projects");
+export const projectModel = mongoose.model("project", hubSchema, "projects");
 
 const hubAdminSchema = new mongoose.Schema({
   email: {
@@ -103,6 +108,13 @@ const hubAdminSchema = new mongoose.Schema({
     enum: ["superadmin", "admin"],
     required: true
   },
+  emailVerified: {
+    type: Boolean,
+    default: false
+  },
+  otp: {
+    type: Number,
+  },
   hub: {
     type: Schema.Types.ObjectId,
     ref: 'hubs',
@@ -114,3 +126,89 @@ const hubAdminSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 export const hubAdmin = mongoose.model("hub-admins", hubAdminSchema);
+
+const userHubSchema = new Schema({
+  systemKey: {
+    type: String,
+    unique: true,
+    sparse: true,
+  },
+  name: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  logo: {
+    type: String,
+    required: false
+  },
+  description: {
+    type: String,
+    required: false,
+    default: ""
+  },
+  xAccount: {
+    type: String,
+    required: false,
+    default: ""
+  },
+  questsCreated: {
+    type: Number,
+    default: 0
+  },
+  noOfPayments: {
+    type: Number,
+    default: 0
+  },
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "users",
+    required: true
+  },
+  superAdmin: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "user-hub-admins",
+    required: false
+  },
+  pendingTxHash: {
+    type: String,
+    default: null,
+  }
+}, { timestamps: true });
+
+export const userHub = mongoose.model("user-hubs", userHubSchema);
+
+const userHubAdminSchema = new mongoose.Schema({
+  email: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  password: {
+    type: String,
+    required: true
+  },
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "users",
+    required: true,
+  },
+  name: {
+    type: String,
+    required: true,
+  },
+  emailVerified: {
+    type: Boolean,
+    default: false
+  },
+  hub: {
+    type: Schema.Types.ObjectId,
+    ref: 'user-hubs',
+  },
+  pendingTxHash: {
+    type: String,
+    default: null,
+  }
+}, { timestamps: true });
+
+export const userHubAdmin = mongoose.model("user-hub-admins", userHubAdminSchema);
