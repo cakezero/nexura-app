@@ -55,7 +55,7 @@ export default function ProjectCreate() {
   const allPwdValid = Object.values(pwdChecks).every(Boolean);
 
   const canGoToStep2 = allPwdValid && !!name && !!email && password === confirmPassword && !loading;
-  const canSubmit = !!hubName && description.length >= 50 && description.length <= 100 && !!imageFile && !loading;
+  const canSubmit = !!hubName && description.length >= 150 && description.length <= 300 && !!imageFile && !loading;
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
