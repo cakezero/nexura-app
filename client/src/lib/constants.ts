@@ -4,8 +4,6 @@ export const network: "testnet" | "mainnet" = normalizedNetwork === "mainnet" ? 
 
 const DEFAULT_BACKEND_URL = "https://api-nexura.intuition.box";
 
-export const environment = (import.meta as any).env.VITE_ENVIRONMENT as "development" | "production";
-
 function normalizeBackendUrl(value: string | undefined) {
 	const trimmed = value?.trim();
 	const candidate = trimmed && trimmed.length > 0 ? trimmed : DEFAULT_BACKEND_URL;
@@ -24,13 +22,7 @@ function normalizeBackendUrl(value: string | undefined) {
 const rawBackendUrl = ((import.meta as any).env?.VITE_BACKEND_URL as string | undefined)?.trim();
 export const BACKEND_URL = normalizeBackendUrl(rawBackendUrl);
 
-export const AUTHORIZED_ADDRESS = network === "testnet" ? "0x4167E3Afdc91c8b15A16041F813E2a19EAaEcAE0" : "0xF6499B880CcD28080E6aF32A04b9201adCb655a9";
-
-export const LESSON_FEE_CONTRACT_USER = network === "testnet" ? "0x3F68e0b7f2601d4146d1DABaE9b36b56724A0EC6" : "0x95DF721C7582910785BbC4BC23BcbC7140Cc8BF1";
-
-export const LESSON_FEE_CONTRACT_PROJECT = network === "testnet" ? "0x3F68e0b7f2601d4146d1DABaE9b36b56724A0EC6" : "0xc2718280c37E24c6F0b1A77f24f07413755fd21D";
-
-export const QUEST_FEE_CONTRACT = network === "testnet" ? "0x3F68e0b7f2601d4146d1DABaE9b36b56724A0EC6" : "0x1B7d6307E76846c7459FC0D7d09Cadfa33c62a89";
+export const AUTHORIZED_ADDRESS = "0x4167E3Afdc91c8b15A16041F813E2a19EAaEcAE0";
 
 export const MULTIVAULT_ADDRESS = network === "testnet" ? "0x2Ece8D4dEdcB9918A398528f3fa4688b1d2CAB91" : "0x6E35cF57A41fA15eA0EaE9C33e751b01A784Fe7e";
 

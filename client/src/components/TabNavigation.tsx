@@ -20,6 +20,7 @@ export default function TabNavigation({ onTabChange }: TabNavigationProps) {
   const handleTabClick = (tabId: string) => {
     setActiveTab(tabId);
     onTabChange?.(tabId);
+    console.log(`Tab ${tabId} selected`); // todo: remove mock functionality
   };
 
   return (

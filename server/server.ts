@@ -17,15 +17,6 @@ server.set("trust proxy", 1);
 server.use(express.json());
 server.use(express.urlencoded({ extended: true }));
 
-server.use((req, res, next) => {
-	const start = Date.now();
-	res.on("finish", () => {
-		const duration = Date.now() - start;
-		logger.info(`${req.method} ${req.url} ${res.statusCode} ${duration}ms`);
-	});
-	next();
-});
-
 server.use("/api", appRoutes);
 
 const client = new Client({

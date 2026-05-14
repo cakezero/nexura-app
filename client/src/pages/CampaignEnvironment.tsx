@@ -19,7 +19,6 @@ import { useAuth } from "../lib/auth";
 import { claimCampaignOnchainReward } from "../lib/performOnchainAction";
 import { createProofOfAction } from "../services/web3";
 import ProofOfActionModal from "../components/ProofOfActionModal";
-import { environment } from "../lib/constants";
 
 type Quest = {
   _id: string;
@@ -134,7 +133,7 @@ export default function CampaignEnvironment() {
         quest: q.quest,
         status: q.status,
         reward: q.reward ?? 0,
-        tag: q.tag ?? "feedback", // default to "other" if missing
+        tag: q.tag ?? "other", // default to "other" if missing
         link: q.link ?? "#",
         guildId: q.guildId ?? q.metadata?.guildId ?? "",
         roleId: q.roleId ?? q.metadata?.roleId ?? "",
@@ -252,7 +251,7 @@ export default function CampaignEnvironment() {
     }
 
     try {
-      if (environment === "production" && !user?.socialProfiles.x.connected) {
+      if (!user?.socialProfiles.x.connected) {
         throw new Error("X not connected yet, go to profile to connect.");
       }
 
@@ -309,7 +308,7 @@ export default function CampaignEnvironment() {
           //   }
           // } else 
           if (["join", "message", "join-discord", "message-discord", "acquire-role-discord", "send-message-discord"].includes(quest.tag)) {
-            if (environment === "production" && !user?.socialProfiles.discord.connected) {
+            if (!user?.socialProfiles.discord.connected) {
               throw new Error("discord not connected yet, go to profile to connect");
             }
 
@@ -317,24 +316,19 @@ export default function CampaignEnvironment() {
             const resolvedGuildId = quest.guildId || quest.metadata?.guildId;
             const resolvedChannelId = quest.channelId || quest.metadata?.channelId || (isLegacyDiscordTag ? id : "");
             const resolvedRoleId = quest.roleId || quest.metadata?.roleId;
-            if (environment === "production") {
-              const { success } = await apiRequestV2("POST", "/api/check-discord", {
-                campaignId,
-                id: quest._id,
-                tag: quest.tag,
-                ...(resolvedGuildId ? { guildId: resolvedGuildId } : {}),
-                ...(resolvedChannelId ? { channelId: resolvedChannelId } : {}),
-                ...(resolvedRoleId ? { roleId: resolvedRoleId } : {}),
-              });
-
-              if (!success) {
-                throw new Error(`Kindly ${quest.tag} the discord channel`);
-              }
+            const { success } = await apiRequestV2("POST", "/api/check-discord", {
+              campaignId,
+              id: quest._id,
+              tag: quest.tag,
+              ...(resolvedGuildId ? { guildId: resolvedGuildId } : {}),
+              ...(resolvedChannelId ? { channelId: resolvedChannelId } : {}),
+              ...(resolvedRoleId ? { roleId: resolvedRoleId } : {}),
+            });
+            if (!success) {
+              throw new Error(`Kindly ${quest.tag} the discord channel`);
             }
           } else if (quest.tag === "portal") {
             await apiRequestV2("POST", "/api/quest/check-portal-task", { termId: id, id: quest._id, questId: campaignId, page: "campaign" });
-          } else if (quest.tag === "trust-name") {
-            await apiRequestV2("POST", "/api/quest/check-trust-name", { id: quest._id, campaignId });
           }
         // }
       } catch (error: any) {
@@ -342,7 +336,7 @@ export default function CampaignEnvironment() {
         throw new Error(error.message);
       }
 
-      if (quest.tag !== "portal" && quest.tag !== "trust-name") {
+      if (quest.tag !== "portal") {
         const res = await apiRequest(
           "POST",
           `/api/quest/perform-campaign-quest`,
@@ -414,6 +408,7 @@ export default function CampaignEnvironment() {
       await apiRequestV2("POST", `/api/campaign/join-campaign?id=${campaignId}`);
       setJoinedCampaign(true);
       setCampaignRefreshToken((prev) => prev + 1);
+      toast({ title: "Campaign joined", description: "You can now start completing quests." });
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
@@ -570,8 +565,7 @@ export default function CampaignEnvironment() {
             quests.map((quest) => {
               const requiresProof = ["comment", "follow", "comment-x", "follow-x", "repost-x", "feedback", "create-post"].includes(quest.tag);
               const isFeedback = quest.tag === "feedback";
-              const isTns = quest.tag === "trust-name";
-              const visited = visitedQuests.includes(quest._id) || isTns;
+              const visited = visitedQuests.includes(quest._id);
               const claimed = quest.done || claimedQuests.includes(quest._id);
               const pending = quest.status === "pending" || pendingQuests.includes(quest._id);
               const failed = failedQuests.includes(quest._id);
@@ -616,7 +610,7 @@ export default function CampaignEnvironment() {
                           onClick={() => claimQuest(quest)}
                           className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-sm sm:text-base font-semibold bg-purple-700 hover:bg-purple-800 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          {isTns ? "Verify" : "Claim"}
+                          Claim
                         </button>
                       )}
                       {visited && !claimed && requiresProof && !pending && (
@@ -634,7 +628,7 @@ export default function CampaignEnvironment() {
                       {!claimed && pending && requiresProof && (
                         <span className="text-sm text-white font-semibold">Pending Verification</span>
                       )}
-                      {!claimed && retry && !isTns && (
+                      {!claimed && retry && (
                         <button
                           onClick={() => markQuestAsVisited(quest)}
                           className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-sm sm:text-base font-semibold bg-orange-600 hover:bg-orange-700"

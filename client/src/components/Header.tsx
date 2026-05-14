@@ -16,7 +16,7 @@ export default function Header() {
   ];
 
   const handleNavClick = (label: string) => {
-    // Real implementation would go here
+    console.log(`${label} navigation clicked`); // todo: remove mock functionality
   };
 
   return (

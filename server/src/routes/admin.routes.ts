@@ -16,23 +16,10 @@ import {
   getAdminLeaderboard,
   markTask,
   removeAdmin,
-  manageAdmin,
-  getStudioCampaigns,
-  getXpHistory,
-  deleteStudioCampaign,
-  getDeletedStudioCampaigns,
-  restoreStudioCampaign,
-  permanentlyDeleteStudioCampaign,
-  getAdminHubQuests,
-  getAdminQuestDetail,
-  getStudioQuests,
-  getStudioLessons,
-  searchUserXpHistory,
-  publishAdminQuest,
-  deleteQuestAdmin,
-  deleteLessonAdmin,
+  manageAdmin
 } from "@/controllers/admin.controller";
-import { deleteQuest, saveQuest } from "@/controllers/quest.controller";
+import { publishAdminCampaign } from "@/controllers/adminCampaign.controller";
+import { addCampaignAddress, closeCampaign, deleteCampaign, fetchHubCampaigns, recordCampaignRewardsWithdrawal, reopenCampaign } from "@/controllers/campaign.controller";
 import { fetchChannels, fetchRoles, fetchServers } from "@/controllers/hub.auth.controller";
 import { disconnectHubDiscord, getCampaign, getHub, saveCampaign, saveCampaignWithQuests, updateHub } from "@/controllers/hub.controller";
 import {
@@ -57,9 +44,6 @@ import {
 } from "@/controllers/lesson.controller";
 import { upload } from "@/config/multer";
 import { attachAdminCampaignHub, requireAdminSuperadmin } from "@/middlewares/auth.middleware";
-import { publishAdminCampaign } from "@/controllers/adminCampaign.controller";
-import { noPaymentRequired } from "@/controllers/adminPublish.controller";
-import { addCampaignAddress, closeCampaign, deleteCampaign, fetchHubCampaigns, recordCampaignRewardsWithdrawal, reopenCampaign } from "@/controllers/campaign.controller";
 
 const router = Router();
 
@@ -73,7 +57,6 @@ router
   .post("/manage-admin", manageAdmin)
   .post("/reward-xp", rewardXp)
   .post("/reward-xp-batch", rewardXpBatch)
-  .post("/search-xp-history", searchUserXpHistory)
   .post("/ban-user", banUser)
   .post("/unban-user", unBanUser)
   .get("/me", attachAdminCampaignHub, getHub)
@@ -87,13 +70,8 @@ router
   .patch("/save-campaign", requireAdminSuperadmin, attachAdminCampaignHub, upload.single("coverImage"), saveCampaign)
   .patch("/save-campaign-quests", requireAdminSuperadmin, attachAdminCampaignHub, upload.single("coverImage"), saveCampaignWithQuests)
   .patch("/add-campaign-address", requireAdminSuperadmin, attachAdminCampaignHub, addCampaignAddress)
-  .patch("/publish-campaign", requireAdminSuperadmin, attachAdminCampaignHub, noPaymentRequired, publishAdminCampaign)
-  .patch("/publish-quest", requireAdminSuperadmin, attachAdminCampaignHub, noPaymentRequired, publishAdminQuest)
-  .patch("/save-quest", requireAdminSuperadmin, attachAdminCampaignHub, upload.single("coverImage"), saveQuest)
+  .patch("/publish-campaign", requireAdminSuperadmin, attachAdminCampaignHub, publishAdminCampaign)
   .delete("/delete-campaign", requireAdminSuperadmin, attachAdminCampaignHub, deleteCampaign)
-  .delete("/delete-quest", requireAdminSuperadmin, attachAdminCampaignHub, deleteQuest)
-  .delete("/delete-fraud-quest", requireAdminSuperadmin, deleteQuestAdmin)
-  .delete("/delete-fraud-lesson", requireAdminSuperadmin, deleteLessonAdmin)
   .patch("/close-campaign", requireAdminSuperadmin, attachAdminCampaignHub, closeCampaign)
   .patch("/reopen-campaign", requireAdminSuperadmin, attachAdminCampaignHub, reopenCampaign)
   .patch("/record-campaign-rewards-withdrawal", requireAdminSuperadmin, attachAdminCampaignHub, recordCampaignRewardsWithdrawal)
@@ -114,20 +92,12 @@ router
   .patch("/unpublish-lesson", unpublishLesson)
   .patch("/update-question-intro", updateQuestionIntro)
   .get("/get-banned-users", getBannedUsers)
-  .get("/get-xp-history", getXpHistory)
-  .get("/get-admins", getAdmins)
-  .get("/get-admin-quests", attachAdminCampaignHub, getAdminHubQuests)
-  .get("/get-quest-detail", attachAdminCampaignHub, getAdminQuestDetail)
   .get("/get-quests", attachAdminCampaignHub, getTasks)
+  .get("/get-admins", getAdmins)
+  .delete("/delete-invite", deleteAdminInvite)
   .get("/user-summary", getUserSummary)
   .get("/leaderboard", getAdminLeaderboard)
-  .get("/get-lessons", getStudioLessons)
-  .get("/studio-campaigns", getStudioCampaigns)
-  .get("/deleted-studio-campaigns", getDeletedStudioCampaigns)
-  .delete("/studio-campaigns", deleteStudioCampaign)
-  .patch("/restore-studio-campaign", restoreStudioCampaign)
-  .delete("/permanent-studio-campaign", permanentlyDeleteStudioCampaign)
-  .get("/studio-quests", getStudioQuests)
-  .get("/studio-lessons", getStudioLessons);
+  .get("/get-lesson-details", getLessonDetailsForAdmin)
+  .get("/get-lessons", getAllLessons);
 
 export default router;

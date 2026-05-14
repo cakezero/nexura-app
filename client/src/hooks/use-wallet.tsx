@@ -7,18 +7,6 @@ import { useToast } from "./use-toast";
 
 const STORAGE_KEY = "nexura:wallet";
 
-function getStoredWalletAddress(): string | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw)?.address ?? null;
-  } catch {}
-  try {
-    const raw = localStorage.getItem("nexura-project:info");
-    if (raw) return JSON.parse(raw)?.walletAddress ?? null;
-  } catch {}
-  return null;
-}
-
 // Module-level flags so they survive component unmount/remount cycles
 // (e.g. ProfileBar unmounts SignUpPopup once wagmi reports isConnected)
 let _pendingAuth = false;
@@ -107,11 +95,12 @@ export function useWallet() {
       _pendingPurpose = opts?.purpose;
 
       if (!isConnected) {
+        // If session token already exists, just re-link the wallet provider —
+        // don't force another login signature + reload.
         const hasExistingToken =
           !!localStorage.getItem("nexura:token") ||
           !!localStorage.getItem("nexura:proj-token");
-        if (hasExistingToken) return null;
-        _pendingAuth = true;
+        _pendingAuth = !hasExistingToken;
         openConnectModal?.();
         return null;
       }
@@ -146,3 +135,4 @@ export function useWallet() {
     connectors: [] as any[],
   } as const;
 }
+

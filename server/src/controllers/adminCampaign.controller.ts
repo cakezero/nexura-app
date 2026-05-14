@@ -2,7 +2,7 @@ import logger from "@/config/logger";
 import { campaign } from "@/models/campaign.model";
 import { hub } from "@/models/hub.model";
 import { campaignQuest } from "@/models/quests.model";
-import { parseDate } from "@/utils/dates";
+import { parseCampaignDate } from "@/utils/campaignDates";
 import { BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_FOUND, OK } from "@/utils/status.utils";
 
 const DISCORD_CAMPAIGN_TAGS = new Set([
@@ -132,7 +132,7 @@ export const publishAdminCampaign = async (req: GlobalRequest, res: GlobalRespon
       );
     }
 
-    const startsAt = parseDate(campaignExists.starts_at);
+    const startsAt = parseCampaignDate(campaignExists.starts_at);
     campaignExists.status = startsAt && startsAt > new Date() ? "Scheduled" : "Active";
     nexuraHub.campaignsCreated += 1;
 

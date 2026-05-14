@@ -94,24 +94,6 @@ export const resetEmail = async (email: string, link: string) => {
   }
 };
 
-export const resetPasswordOTPEmail = async (email: string, code: string) => {
-  try {
-    console.log(`[TEST] OTP for ${email}: ${code}`);
-    await transporter.sendMail({
-      from: EMAIL_USER,
-      to: email,
-      subject: "Password Reset Code",
-      template: "reset-otp",
-      context: {
-        code
-      },
-    } as MailOptions);
-  } catch (error: any) {
-    logger.error(error);
-    // throw new Error(error.message); // Don't throw for now so I can test the flow
-  }
-};
-
 export const sendAdminResetEmail = async (email: string, token: string, origin?: string) => {
   try {
     const baseUrl = (origin || ADMIN_URL).replace(/\/$/, "");
@@ -158,22 +140,6 @@ export const addHubAdminEmail = async (email: string, code: string, origin?: str
     logger.info(`Admin invite email sent successfully to ${email}`);
   } catch (error: any) {
     logger.error(`Failed to send admin invite email to ${email}:`, error.message);
-    throw new Error(error.message);
-  }
-};
-
-export const sendOTPConfirmEmail = async ({ email, code }: { email: string, code: string }) => {
-  try {
-    await transporter.sendMail({
-      from: EMAIL_USER,
-      to: email,
-      subject: "Your Nexura Verification Code",
-      template: "confirm-email",
-      context: {
-        code,
-      },
-    } as MailOptions);
-  } catch (error: any) {
     throw new Error(error.message);
   }
 };

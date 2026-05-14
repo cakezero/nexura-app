@@ -2,13 +2,6 @@ import { useEffect, useState } from "react";
 import { useParams } from "wouter";
 import { Card } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "../components/ui/dialog";
 import { Play, CheckCircle2, RotateCcw } from "lucide-react";
 import AnimatedBackground from "../components/AnimatedBackground";
 import { getStoredAccessToken, apiRequestV2, apiRequest } from "../lib/queryClient";
@@ -16,7 +9,6 @@ import { useToast } from "../hooks/use-toast";
 import { useAuth } from "../lib/auth";
 import { createProofOfAction } from "../services/web3";
 import ProofOfActionModal from "../components/ProofOfActionModal";
-import { environment } from "../lib/constants";
 
 type Quest = {
   text: string;
@@ -26,13 +18,6 @@ type Quest = {
   reward: string;
   link: string;
   status: string;
-};
-
-type HubInfo = {
-  id?: string;
-  name: string;
-  description?: string;
-  logo?: string;
 };
 
 const questsInitial: Quest[] = [
@@ -48,7 +33,6 @@ export default function QuestEnvironment() {
   const [miniQuests, setMiniQuests] = useState<Quest[]>(questsInitial);
   const [totalXP, setTotalXP] = useState(0);
   const { user } = useAuth();
-  const [hubId, setHubId] = useState<string | null>(null);
   const [expandedQuestId, setExpandedQuestId] = useState<string | null>(null);
   const [proofLinks, setProofLinks] = useState<Record<string, string>>({});
 
@@ -59,13 +43,6 @@ export default function QuestEnvironment() {
   const [completed, setCompleted] = useState<boolean>(false);
   // const [miniQuestsCompleted, setMiniQuestsCompleted] = useState<boolean>(false);
   const [title, setTitle] = useState<string>("");
-  const [questDescription, setQuestDescription] = useState<string>("");
-  const [creatorCoverImage, setCreatorCoverImage] = useState<string>("");
-  const [creatorName, setCreatorName] = useState("");
-  const [creatorImage, setCreatorImage] = useState("");
-  const [hubInfo, setHubInfo] = useState<HubInfo | null>(null);
-  const [showHubModal, setShowHubModal] = useState(false);
-
   const [visitedQuests, setVisitedQuests] = useState<string[]>(() => {
     return JSON.parse(localStorage.getItem('nexura:quest:visited') || '{}')[userId] || [];
   });
@@ -94,11 +71,7 @@ export default function QuestEnvironment() {
         title: t,
         questNumber: quest_no,
         sub_title: st,
-        questCompleted: comp,
-        hub,
-        hubInfo: fetchedHubInfo,
-        creatorCoverImage: pci,
-        description: questDescription,
+        questCompleted: comp
       } = await apiRequestV2("GET", `/api/quest/fetch-mini-quests?id=${questId}`);
 
       setCompleted(comp);
@@ -108,18 +81,6 @@ export default function QuestEnvironment() {
       setQuestNumber(quest_no);
       setTitle(t);
       setSubTitle(st);
-      setQuestDescription(questDescription || "");
-      setCreatorCoverImage(pci || "/quest.png");
-      if (hub) setHubId(hub);
-
-      const nextHubInfo: HubInfo = fetchedHubInfo ?? {
-        name: "Unknown Creator",
-        description: "",
-        logo: "",
-      };
-      setHubInfo(nextHubInfo);
-      setCreatorName(nextHubInfo.name || "");
-      setCreatorImage(nextHubInfo.logo || "");
     })();
   }, []);
 
@@ -166,9 +127,6 @@ export default function QuestEnvironment() {
     return url.split("/").pop(); // return the last item in the array
   }
 
-  // Tags that require manual proof submission (not auto-verifiable)
-  const MANUAL_PROOF_TAGS = ["comment", "comment-x", "follow", "follow-x", "feedback", "create-post"];
-
   const claimReward = async (miniQuest: Quest) => {
     try {
 
@@ -182,7 +140,7 @@ export default function QuestEnvironment() {
         return;
       }
 
-      if (MANUAL_PROOF_TAGS.includes(miniQuest.tag)) {
+      if (miniQuest.tag === "comment") {
         toast({
           title: "Manual verification required",
           description: "Submit proof instead.",
@@ -193,43 +151,40 @@ export default function QuestEnvironment() {
 
 
       const id = getId(miniQuest.link);
+      // const isSubmitProof = quest.tag === "comment";
 
       try {
-        if (["join", "join-discord", "message", "message-discord", "send-message-discord"].includes(miniQuest.tag)) {
-          if (environment === "production" && !user?.socialProfiles.discord.connected) {
+        // if (["follow", "repost"].includes(miniQuest.tag)) {
+        //   if (!user?.socialProfiles.x.connected) {
+        //     throw new Error("x not connected yet, go to profile to connect.");
+        //   }
+        //   const { success } = await apiRequestV2("POST", "/api/check-x", { id, tag: miniQuest.tag, questId: miniQuest._id, page: "quest" });
+        //   if (!success) {
+        //     // alert(`Kindly ${miniQuest.tag !== "follow" ? miniQuest.tag + " the post" : "follow the account"}`);
+        //     throw new Error(`Kindly ${miniQuest.tag !== "follow" ? miniQuest.tag + " the post" : "follow the account"}`);
+        //   }
+        // } else 
+        if (["join", "message"].includes(miniQuest.tag)) {
+          if (!user?.socialProfiles.discord.connected) {
+            // toast({ title: "Error", description: "discord not connected yet, go to profile to connect", variant: "destructive" });
             throw new Error("discord not connected yet, go to profile to connect");
           }
 
-          if (environment === "production") {
-            const { success } = await apiRequestV2("POST", "/api/check-discord", { questId, id: miniQuest._id, channelId: id, tag: miniQuest.tag });
-            if (!success) {
-              throw new Error(`Kindly ${miniQuest.tag} the discord channel`);
-            }
+          const { success } = await apiRequestV2("POST", "/api/check-discord", { questId, id: miniQuest._id, channelId: id, tag: miniQuest.tag });
+          if (!success) {
+            // toast({ title: "Error", description: `Kindly ${miniQuest.tag} the discord channel`, variant: "destructive"});
+            throw new Error(`Kindly ${miniQuest.tag} the discord channel`);
           }
-
-        } else if (["acquire-role-discord"].includes(miniQuest.tag)) {
-          if (environment === "production" && !user?.socialProfiles.discord.connected) {
-            throw new Error("discord not connected yet, go to profile to connect");
-          }
-
-          if (environment === "production") {
-            const { success } = await apiRequestV2("POST", "/api/check-discord", { questId, id: miniQuest._id, channelId: id, tag: miniQuest.tag });
-            if (!success) {
-              throw new Error("You must acquire the required role first");
-            }
-          }
-
         } else if (miniQuest.tag === "portal") {
           await apiRequestV2("POST", "/api/quest/check-portal-task", { termId: id, id: miniQuest._id, questId, page: "quest" });
-        } else if (miniQuest.tag === "trust-name") {
-          await apiRequestV2("POST", "/api/quest/check-trust-name", { id: miniQuest._id, questId });
         }
       } catch (error: any) {
         console.error(error);
+        // toast({title: "Error", description: error.message, variant: "destructive" });
         throw new Error(error.message);
       }
 
-      if (miniQuest.tag !== "portal" && miniQuest.tag !== "trust-name") {
+      if (miniQuest.tag !== "portal") {
         const res = await apiRequest("POST", `/api/quest/claim-mini-quest`, { id: miniQuest._id, questId });
 
         if (!res.ok) return;
@@ -243,6 +198,7 @@ export default function QuestEnvironment() {
         )
       );
 
+      // window.location.reload();
     } catch (error: any) {
       console.error(error);
       setMiniQuests(prev => prev.map(q => q._id === miniQuest._id ? { ...q, status: "retry" } : q));
@@ -300,20 +256,23 @@ export default function QuestEnvironment() {
     if (!link) {
       toast({
         title: "Missing link or username",
-        description: "Please paste your proof link.",
+        description: "Please paste your comment link or twitter username.",
         variant: "destructive",
       });
       return;
     }
 
     try {
+      if (!user?.socialProfiles.x.connected) {
+        throw new Error("X not connected yet, go to profile to connect.");
+      }
+
       await apiRequestV2("POST", "/api/quest/submit-quest", {
         questId,
         id: quest._id,
         submissionLink: link,
         page: "quest",
         tag: quest.tag,
-        hub: hubId,
       });
 
       toast({
@@ -332,13 +291,13 @@ export default function QuestEnvironment() {
     }
   };
 
+
   const renderQuestRow = (quest: Quest, index: number) => {
-    const isTns = quest.tag === "trust-name";
-    const visited = visitedQuests.includes(quest._id) || isTns;
+    const visited = visitedQuests.includes(quest._id);
     const claimed = quest.done || claimedQuests.includes(quest._id);
     const pending = quest.status === "pending" || pendingQuests.includes(quest._id);
     const isRetry = quest.status === "retry";
-    const isSubmitProof = MANUAL_PROOF_TAGS.includes(quest.tag);
+    const isSubmitProof = ["comment", "follow"].includes(quest.tag);
     const isExpanded = expandedQuestId === quest._id;
     const isPortalTask = quest.tag === "portal";
 
@@ -369,7 +328,7 @@ export default function QuestEnvironment() {
               onClick={() => claimReward(quest)}
               className="px-5 py-2 rounded-full bg-purple-700 hover:bg-purple-800 text-sm font-semibold"
             >
-              {isTns ? "Verify" : "Claim"}
+              Claim
             </button>
           )}
 
@@ -391,7 +350,7 @@ export default function QuestEnvironment() {
             <span className="text-sm text-white font-semibold">Pending Verification</span>
           )}
 
-          {isRetry && !claimed && !isTns && (
+          {isRetry && !claimed && (
             <button
               onClick={() => visitQuest(quest)}
               className="px-5 py-2 rounded-full bg-orange-600 hover:bg-orange-700 text-sm font-semibold"
@@ -436,8 +395,6 @@ export default function QuestEnvironment() {
     );
   };
 
-  const activeHubInfo = hubInfo || { name: creatorName || "Unknown Project", description: "No description provided.", logo: creatorImage };
-
   return (
     <div className="min-h-screen bg-[#0a0615] text-white relative p-6">
       <AnimatedBackground />
@@ -447,33 +404,9 @@ export default function QuestEnvironment() {
         {/* Banner with Progress */}
         <div className="w-full bg-gradient-to-r from-purple-700/40 to-purple-900/40 border border-white/10 rounded-2xl p-4 sm:p-6 space-y-3 sm:space-y-4">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-            <div className="flex items-center gap-3">
-              <div
-                onClick={() => setShowHubModal(true)}
-                className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl overflow-hidden border border-white/10 bg-white/5 cursor-pointer hover:border-purple-500/50 transition-colors"
-              >
-                {creatorImage ? (
-                  <img src={creatorImage} alt={creatorName} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-white/5 text-white/50 text-xl font-bold uppercase">
-                    {(creatorName || "N").slice(0, 1)}
-                  </div>
-                )}
-              </div>
-              <div className="min-w-0">
-                <div
-                  onClick={() => setShowHubModal(true)}
-                  className="flex items-center gap-1.5 cursor-pointer group"
-                >
-                  <p className="uppercase text-[0.6rem] sm:text-xs opacity-60 group-hover:opacity-100 group-hover:text-purple-400 transition-all">
-                    {creatorName || "Nexura"}
-                  </p>
-                  <div className="w-1 h-1 rounded-full bg-white/20 group-hover:bg-purple-400/50 transition-colors" />
-                </div>
-                <p className="text-lg sm:text-xl font-semibold truncate max-w-[250px] sm:max-w-md">
-                  {sub_title || title}
-                </p>
-              </div>
+            <div>
+              <p className="uppercase text-[0.6rem] sm:text-xs opacity-60">{title}</p>
+              <p className="text-lg sm:text-xl font-semibold">{sub_title}</p>
             </div>
 
             <div className="flex items-center gap-2 sm:gap-3">
@@ -499,7 +432,7 @@ export default function QuestEnvironment() {
           <div className="grid grid-cols-1 md:grid-cols-2">
             <div className="h-48 md:h-full">
               <img
-                src={creatorCoverImage || "/quest.png"}
+                src="/quest.png"
                 alt="Quest"
                 className="w-full h-full object-cover"
               />
@@ -507,22 +440,13 @@ export default function QuestEnvironment() {
 
             <div className="p-5 md:p-6 flex flex-col justify-between">
               <div>
-                <p className="text-xs opacity-50 uppercase mb-1">{creatorName || "Nexura"}</p>
+                <p className="text-xs opacity-50 uppercase mb-1">Nexura</p>
                 <p className="text-lg md:text-xl font-bold leading-tight">Quest {questNumber}:<br />{sub_title}</p>
-
-                {questDescription && (
-                  <div className="mt-4">
-                    <p className="uppercase text-xs opacity-50">Description</p>
-                    <p className="text-sm opacity-80 leading-relaxed mt-1">
-                      {questDescription}
-                    </p>
-                  </div>
-                )}
 
                 <div className="mt-4">
                   <p className="uppercase text-xs opacity-50">Start Quest</p>
                   <p className="text-sm opacity-80 leading-relaxed mt-1">
-                    {title || sub_title || "Complete simple quests in the Nexura ecosystem and earn rewards."}
+                    Complete simple quests in the Nexura ecosystem and earn rewards.
                   </p>
                 </div>
                 <div className="mt-3 space-y-1">
@@ -551,41 +475,6 @@ export default function QuestEnvironment() {
         {miniQuests.map((quest, i) => renderQuestRow(quest, i))}
       </div>
 
-      <Dialog open={showHubModal} onOpenChange={setShowHubModal}>
-        <DialogContent className="w-[94vw] max-w-3xl bg-[#0d1117] border-white/10 text-white p-0 overflow-hidden">
-          <div className="p-4 sm:p-5 space-y-4">
-            <DialogHeader className="space-y-1">
-              <DialogTitle>Creator Information</DialogTitle>
-              <DialogDescription className="text-white/60">
-                Creator details.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="grid grid-cols-1 sm:grid-cols-[170px,1fr] gap-4 items-start">
-              <div className="w-full h-28 sm:h-40 rounded-xl overflow-hidden border border-white/10 bg-white/5">
-                {activeHubInfo.logo ? (
-                  <img src={activeHubInfo.logo} alt={activeHubInfo.name} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#1a2233] to-[#121826] text-white/70 text-2xl font-semibold">
-                    {(activeHubInfo.name || "H").slice(0, 1).toUpperCase()}
-                  </div>
-                )}
-              </div>
-
-              <div className="min-w-0 space-y-3">
-                <p className="text-lg sm:text-xl font-semibold break-words">{activeHubInfo.name || "Unknown Creator"}</p>
-                <div className="rounded-xl border border-white/10 bg-black/20 p-3">
-                  <p className="text-xs uppercase text-white/50 mb-1.5">Description</p>
-                  <p className="text-sm text-white/85 leading-relaxed whitespace-pre-wrap break-words">
-                    {activeHubInfo.description?.trim() ? activeHubInfo.description : "No creator description provided."}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
       <ProofOfActionModal
         open={showProofModal}
         onOpenChange={setShowProofModal}
@@ -597,4 +486,4 @@ export default function QuestEnvironment() {
       />
     </div>
   );
-}
+};

@@ -10,15 +10,11 @@ import appRoutes from "./app.routes.ts";
 import lessonRoutes from "./lesson.routes.ts";
 import {
 	fetchEcosystemDapps,
-	fetchMiniQuests,
 	fetchQuests,
 } from "@/controllers/quest.controller.ts";
 import { signIn } from "@/controllers/auth.controller";
 import { createAdmin, adminLogin, forgotAdminPassword, resetAdminPassword } from "@/controllers/admin.controller";
 import { authenticateUser2, authenticateAdmin, authenticateUser } from "@/middlewares/auth.middleware";
-import userHubRoutes from "./userHub.routes.ts";
-// import testSeedRoutes from "./test-seed.routes.ts";
-import { confirmHubEmailValidation, validateHubEmail } from "@/controllers/hub.auth.controller.ts";
 
 const router = Router();
 
@@ -37,14 +33,10 @@ router
 	.get("/quests", authenticateUser2, fetchQuests)
 	.get("/campaigns", authenticateUser2, fetchCampaigns)
 	.use("/campaign", campaignRoutes)
-  .get("/leaderboard", authenticateUser2, getLeaderboard)
-	.get("/quest/fetch-mini-quests", authenticateUser2, fetchMiniQuests)
-  .use("/hub", hubRoutes)
-	.use("/user-hub", userHubRoutes)
-	.use("/quest", authenticateUser, questRoutes)
-  .use("/lesson", lessonRoutes)
-  .post("/hub-auth/validate-email", validateHubEmail)
-	.post("/auth/confirm-hub-email-validation", confirmHubEmailValidation)
+	.get("/leaderboard", authenticateUser2, getLeaderboard)
+	.use("/hub", hubRoutes)
+	.use("/quest", questRoutes)
+	.use("/lesson", lessonRoutes)
 	.use("/user", authenticateUser, userRoutes);
 
 export default router;

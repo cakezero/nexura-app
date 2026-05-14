@@ -52,8 +52,32 @@ export default function Leaderboard() {
   const currentUserId = user?._id;
   const currentUser = user;
 
-// Use real list when available
-const podiumList = list;
+  /////////////////// mock dataaaaaaaaaaaaaa
+  {/* Temporary mock data fallback for design/testing */}
+const mockPodium = [
+  {
+    _id: "mock-1",
+    display_name: "Sophia",
+    xp: 12450,
+    profilePic: null,
+  },
+  {
+    _id: "mock-2",
+    display_name: "Jeremy",
+    xp: 18200,
+    profilePic: null,
+  },
+  {
+    _id: "mock-3",
+    display_name: "Daniel",
+    xp: 10980,
+    profilePic: null,
+  },
+];
+
+// Use real list when available, otherwise use mock data while loading
+const podiumList =
+  !loading && !error && list.length >= 3 ? list : mockPodium;
 
   return (
     <div className="min-h-screen bg-black text-white p-4 sm:p-6 relative">

@@ -1,7 +1,7 @@
 import logger from "@/config/logger";
 import { admin } from "@/models/admin.model";
 import { bannedUser } from "@/models/bannedUser.model";
-import { hubAdmin, userHubAdmin } from "@/models/hub.model";
+import { hubAdmin } from "@/models/hub.model";
 import { user } from "@/models/user.model";
 import { resolveAdminCampaignHub } from "@/utils/adminCampaignHub";
 import { BAD_REQUEST, INTERNAL_SERVER_ERROR, UNAUTHORIZED } from "@/utils/status.utils";
@@ -67,54 +67,6 @@ export const authenticateHubAdmin = async (req: GlobalRequest, res: GlobalRespon
 
 		res.status(INTERNAL_SERVER_ERROR).json({ error: "Invalid authentication token, kindly re-login." });
 	}
-}
-
-export const authenticateUserHub = async (req: GlobalRequest, res: GlobalResponse, next: GlobalNextFunction) => {
-  try {
-   	const authHeader = req.headers.authorization;
-		if (!authHeader?.startsWith("Bearer ")) {
-			res.status(401).json({
-				error: "authorization token is missing or invalid",
-			});
-			return;
-      }
-  
-      const token = authHeader.split(" ")[1]!;
-  
-      // Redis logout check — non-fatal if Redis is unreachable
-      try {
-        const loggedOut = await REDIS.get(`logout:${token}`);
-        if (loggedOut) {
-          res.status(BAD_REQUEST).json({ error: "admin is logged out, kindly login again" });
-          return;
-        }
-      } catch (redisErr) {
-        logger.warn("Redis unavailable in authenticateUserHub, skipping logout check");
-      }
-
-      const { id } = await JWT.verify(token) as decodedDataType;
-
-      const exists = await userHubAdmin.findById(id).lean();
-      if (!exists) {
-        res.status(UNAUTHORIZED).json({ error: "route is available only to user hub admin" });
-        return;
-      }
-
-      req.id = id as string;
-      req.adminName = exists.name;
-      req.admin = exists;
-      req.token = token;
-
-		next();
-  } catch (error: any) {
-    logger.error(error);
-		if (error?.trim() === "jwt expired") {
-			res.status(BAD_REQUEST).json({ error: "Token has expired, kindly re-login" });
-			return
-		}
-
-		res.status(INTERNAL_SERVER_ERROR).json({ error: "Invalid authentication token, kindly re-login." });
-  }
 }
 
 export const authenticateHubAdmin2 = async (req: GlobalRequest, res: GlobalResponse, next: GlobalNextFunction) => {
@@ -191,6 +143,9 @@ export const authenticateUser = async (req: GlobalRequest, res: GlobalResponse, 
 
 		const { id } = await JWT.verify(token) as decodedDataType;
 
+    req.id = id as string;
+		req.token = token;
+
 		const userExists = await user.findById(id);
 		if (!userExists) {
 			res.status(BAD_REQUEST).json({ error: "id associated with user is invalid" });
@@ -201,11 +156,7 @@ export const authenticateUser = async (req: GlobalRequest, res: GlobalResponse, 
 		if (userBanned) {
 			res.status(BAD_REQUEST).json({ error: "user is banned" });
 			return;
-    }
-
-    req.id = id as string;
-    req.token = token;
-		req.user = userExists;
+		}
 
 		next();
 	} catch (error: any) {
@@ -263,33 +214,26 @@ export const authenticateAdmin = async (req: GlobalRequest, res: GlobalResponse,
       return;
     }
 
-    const id = (await JWT.verify(token) as decodedDataType).id;
+    const { id } = await JWT.verify(token) as decodedDataType;
 
-    let isAdmin = await admin.findById(id).lean();
-    let isHubAdmin: any = null;
-
+    const isAdmin = await admin.findById(id);
     if (!isAdmin) {
-      isHubAdmin = await hubAdmin.findById(id).lean();
-    }
-
-    if (!isAdmin && !isHubAdmin) {
       res.status(UNAUTHORIZED).json({ error: "only admins can use this route" });
       return;
     }
 
-    const adminUser = isAdmin || isHubAdmin;
+    const normalizedAdmin = isAdmin.toObject();
     const adminName =
-      adminUser.username?.trim() ||
-      adminUser.name?.trim() ||
-      adminUser.email.split("@")[0] ||
+      normalizedAdmin.username?.trim() ||
+      normalizedAdmin.email.split("@")[0] ||
       "Administrator";
 
     req.id = id;
     req.token = token;
-    req.role = adminUser.role;
+    req.role = isAdmin.role;
     req.adminName = adminName;
     req.admin = {
-      ...adminUser,
+      ...normalizedAdmin,
       name: adminName,
     };
 

@@ -6,7 +6,6 @@ import { token } from "@/models/tokens.model";
 import { campaignQuest, miniQuest, quest } from "@/models/quests.model";
 import { user } from "@/models/user.model";
 import { hub } from "@/models/hub.model";
-import { TNSProvider } from "@samoris/tns-sdk";
 import { performIntuitionOnchainAction, serverWalletAddress } from "@/utils/account";
 import { BOT_TOKEN, network, STUDIO_FEE_CONTRACT, THIRD_PARTY_API_KEY } from "@/utils/env.utils";
 import {
@@ -35,7 +34,6 @@ import { campaign, campaignCompleted } from "@/models/campaign.model";
 import { dailySignIn } from "@/models/dailySignIn.model";
 import { startOfDayUTC, updateLevel, getAmountPaid } from "@/utils/utils";
 import { lesson, lessonCompleted } from "@/models/lesson.model";
-import { xpLog } from "@/models/xpLog.model";
 
 const client = new GraphQLClient(GRAPHQL_API_URL);
 
@@ -48,104 +46,10 @@ export const getStudioPaymentConfig = async (_req: GlobalRequest, res: GlobalRes
     network,
     contractAddress: STUDIO_FEE_CONTRACT,
     chainId: network === "mainnet" ? "0x483" : "0x350b",
-    amount: "60",
+    amount: "2",
     authorizedAddress: serverWalletAddress,
   });
 };
-
-const getTrustProvider = () => {
-  let trustProvider: TNSProvider | null = null;
-
-  if (!trustProvider) {
-    trustProvider = new TNSProvider();
-  }
-
-  return trustProvider;
-}
-
-export const validateTrustNameTask = async (req: GlobalRequest, res: GlobalResponse) => {
-  try {
-    const { campaignId: campaignIdFromBody, questId: questIdFromBody }: { campaignId?: string; questId?: string } = req.body;
-    const id = (req.query.id as string) || (req.body.id as string) || (req.body.questId as string);
-    if (!id) {
-      res.status(BAD_REQUEST).json({ error: "Quest ID is required" });
-      return;
-    }
-
-    // Try to find if it's a campaign quest or a mini quest
-    let parentId = campaignIdFromBody || questIdFromBody;
-    let isCampaign = !!campaignIdFromBody;
-    
-    const campaignQuestData = await campaignQuest.findById(id).lean();
-    const miniQuestData = !campaignQuestData ? await miniQuest.findById(id).lean() : null;
-
-    if (!campaignQuestData && !miniQuestData) {
-      res.status(NOT_FOUND).json({ error: "task not found" });
-      return;
-    }
-
-    if (campaignQuestData) {
-      parentId = parentId || campaignQuestData.campaign?.toString();
-      isCampaign = true;
-    } else if (miniQuestData) {
-      parentId = parentId || miniQuestData.quest?.toString();
-      isCampaign = false;
-    }
-
-    if (!parentId) {
-      res.status(BAD_REQUEST).json({ error: "id and (campaignId or questId) are required" });
-      return;
-    }
-
-    const filter = isCampaign 
-      ? { campaignQuest: id, campaign: parentId, user: req.id }
-      : { miniQuest: id, quest: parentId, user: req.id };
-    
-    const Model = isCampaign ? (campaignQuestCompleted as any) : (miniQuestCompleted as any);
-    const taskExists = await Model.findOne(filter);
-
-    const provider = getTrustProvider();
-
-    const hasTrustName = await provider.lookupAddress(req.user.address);
-    if (!hasTrustName) {
-      if (!taskExists) {
-        await Model.create({
-          ...filter,
-          done: false,
-          status: "retry",
-        });
-      } else {
-        taskExists.done = false;
-        taskExists.status = "retry";
-
-        await taskExists.save();
-      }
-
-      res.status(BAD_REQUEST).json({ error: "You don't have a Trust Name" });
-      return;
-    }
-
-    if (!taskExists) {
-      await Model.create({
-        ...filter,
-        done: true,
-        status: "done",
-      });
-    } else {
-      taskExists.done = true;
-      taskExists.status = "done";
-
-      await taskExists.save();
-    }
-
-    await user.findByIdAndUpdate(req.id, { trustName: hasTrustName });
-
-    res.status(OK).json({ message: "user has a trust name and completed the task" });
-  } catch (error) {
-    logger.error(error);
-    res.status(INTERNAL_SERVER_ERROR).json({ error: "error validating trust name task" });
-  }
-}
 
 export const allowNexonsMint = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
@@ -285,17 +189,8 @@ export const claimDepositXp = async (req: GlobalRequest, res: GlobalResponse) =>
       return;
     }
 
-    const depositXp = 500;
-
     trustUser.dailyTrustXpDate = exactDate as string;
-    trustUser.xp += depositXp;
-
-    await xpLog.create({
-			address: trustUser.address,
-			amount: depositXp,
-			status: "success",
-			type: "deposit-xp"
-		});
+    trustUser.xp += 500;
 
     await trustUser.save();
 
@@ -1460,9 +1355,7 @@ export const performDailySignIn = async (req: GlobalRequest, res: GlobalResponse
       userExists.streak = 1;
     }
 
-    const dailyXpAmount = 20;
-
-    userExists.xp += dailyXpAmount;
+    userExists.xp += 20;
     userExists.lastSignInDate = onlyDate;
 
     if (userExists.streak > (userExists.longestStreak || 0)) {
@@ -1475,13 +1368,6 @@ export const performDailySignIn = async (req: GlobalRequest, res: GlobalResponse
       userExists._id.toString(),
     );
     userExists.level = level;
-
-    await xpLog.create({
-			address: userExists.address,
-			amount: dailyXpAmount,
-			status: "success",
-			type: "daily-xp"
-		});
 
     await userExists.save();
 
@@ -1878,17 +1764,12 @@ export const claimReferreralReward = async (req: GlobalRequest, res: GlobalRespo
       return;
     }
 
-    let xpGiven = 0;
-
     if (referrer.tier === 0 && tier === 2) {
       referrer.xp += 5000;
-      xpGiven = 5000;
     } else if (referrer.tier === 0 && tier === 3) {
       referrer.xp += 10000;
-      xpGiven = 10000;
     } else {
       referrer.xp += xpByTier;
-      xpGiven = xpByTier;
     }
 
     referrer.tier = tier;
@@ -1896,13 +1777,6 @@ export const claimReferreralReward = async (req: GlobalRequest, res: GlobalRespo
     if (tier === 3) {
       referrer.refRewardClaimed = true;
     }
-
-    await xpLog.create({
-			address: referrer.address,
-			amount: xpGiven,
-			status: "success",
-			type: "referral"
-		});
 
     await referrer.save();
 
@@ -1984,7 +1858,7 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
 
         const followKey = `${NEXURA_USERNAME}:follow`;
 
-        const followersInCache = await REDIS.get(followKey) as any;
+        const followersInCache = await REDIS.get(followKey);
 
         const followFound = followersInCache.some(
           (follower: { id: string }) => follower.id === xId,
@@ -2099,7 +1973,7 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
 
         const repostKey = `${postId}:repost`;
 
-        const repostInCache = await REDIS.get(repostKey) as any;
+        const repostInCache = await REDIS.get(repostKey);
 
         const repostFound = repostInCache.some(
           (reposter: { id: string }) => reposter.id === xId,
@@ -2176,7 +2050,7 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
 
         const commentKey = `${postId}:comments`;
 
-        const commentsInCache = await REDIS.get(commentKey) as any;
+        const commentsInCache = await REDIS.get(commentKey);
 
         const commentFound = commentsInCache.some(
           (reply: { author: { id: string } }) => reply.author.id === xId,
@@ -2481,10 +2355,10 @@ export const checkDiscordTask = async (req: GlobalRequest, res: GlobalResponse) 
       campaignId: campaignIdFromBody,
       channelId: channelIdFromBody,
       roleId: roleIdFromBody,
+      id,
     } = req.body;
-    const id = (req.query.id as string) || (req.body.id as string) || (req.body.questId as string);
     if (!id) {
-      res.status(BAD_REQUEST).json({ error: "Quest ID is required" });
+      res.status(BAD_REQUEST).json({ error: "campaign quest id is required" });
       return;
     }
 

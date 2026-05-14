@@ -8,7 +8,7 @@ export const DB_URI = process.env.DB_URI as string;
 export const environment = process.env.ENVIRONMENT as "development" | "production";
 const normalizedNetwork = process.env.NETWORK?.trim().toLowerCase();
 export const network: "testnet" | "mainnet" = normalizedNetwork === "mainnet" ? "mainnet" : "testnet";
-export const STUDIO_FEE_CONTRACT = network === "mainnet" ? "0xF26c210FAa3a7d3cB4107F222C5d994D064DCBa6" : "0xbb8AB9bfFDf563067F849f52e8E810d0084FfEB4";
+export const STUDIO_FEE_CONTRACT = network === "mainnet" ? "" : "0xbb8AB9bfFDf563067F849f52e8E810d0084FfEB4";
 export const JWT_SECRET = process.env.JWT_SECRET as string;
 export const REFRESH_SECRET = process.env.REFRESH_SECRET as string;
 

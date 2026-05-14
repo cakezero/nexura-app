@@ -26,7 +26,7 @@ const submissionSchema = new mongoose.Schema({
   },
   username: {
     type: String,
-    default: ""
+    required: true
   },
   miniQuestId: {
     type: String,
@@ -34,7 +34,7 @@ const submissionSchema = new mongoose.Schema({
   },
   questCompleted: {
     type: String,
-    default: ""
+    required: true
   },
   user: {
     type: mongoose.Schema.Types.ObjectId,

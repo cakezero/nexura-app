@@ -1,6 +1,6 @@
 import chain from "./chain";
 import { getWalletClient, getPublicClient } from "./viem";
-import { network, NEXONS, NEXONS_ABI, REWARD_ABI, REWARD_BYTECODE, LESSON_FEE_CONTRACT_USER, LESSON_FEE_CONTRACT_PROJECT, QUEST_FEE_CONTRACT } from "./constants";
+import { network, NEXONS, NEXONS_ABI, REWARD_ABI, REWARD_BYTECODE } from "./constants";
 import { ethers } from "ethers";
 import { createPublicClient, http, parseAbi, type Address, parseEther, formatEther } from "viem";
 import { getIntuitionNetworkParams } from "./utils";
@@ -94,31 +94,24 @@ const ensureSwitch = async (targetChainId: string) => {
   await (window as any).ethereum.request({ method: "wallet_addEthereumChain", params });
 };
 
-export const payStudioHubFee = async (testAmount?: number, contractAddress?: string): Promise<string> => {
+export const payStudioHubFee = async (): Promise<string> => {
   try {
     if (!window.ethereum) throw new Error("No wallet provider available. Connect a wallet with RainbowKit first.");
-    
     const config = await getStudioPaymentConfig();
-    const finalContractAddress = requireContractAddress(
-      contractAddress || config.contractAddress,
-      "Studio fee contract",
-      config.network ?? "the server"
-    );
-    const targetChainId = config.chainId;
-    const amount = config.amount;
+    const studioFeeContract = requireContractAddress(config.contractAddress, "Studio fee contract", config.network ?? "the server");
 
-    await ensureSwitch(targetChainId);
+    await ensureSwitch(config.chainId);
 
     const provider = new ethers.BrowserProvider((window as any).ethereum);
     const signer = await provider.getSigner();
 
     const contract = new ethers.Contract(
-      finalContractAddress,
+      studioFeeContract,
       STUDIO_FEE_ABI,
       signer
     );
 
-    const tx = await contract.payFee({ value: parseEther(testAmount?.toString() ?? amount) });
+    const tx = await contract.payFee({ value: parseEther(config.amount) });
 
     await tx.wait();
 

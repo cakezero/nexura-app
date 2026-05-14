@@ -12,7 +12,7 @@ const ecosystemQuestSchema = new Schema({
 	logo: {
 		type: String,
 		required: true,
-  },
+	},
 	reward: {
 		type: Number,
 		required: true
@@ -23,8 +23,7 @@ const ecosystemQuestSchema = new Schema({
 	},
 	category: {
 		type: String,
-		required: false,
-		default: "quests",
+		required: true,
 		enum: [
 			"defi",
 			"lending protocols",
@@ -63,7 +62,7 @@ const campaignQuestSchema = new Schema({
 	},
 	tag: {
 		type: String,
-		enum: ["like", "follow", "follow-x", "trust-name", "repost", "repost-x", "join", "join-discord", "portal", "message", "message-discord", "acquire-role-discord", "send-message-discord", "comment", "comment-x", "feedback", "create-post", "other"],
+		enum: ["like", "follow", "follow-x", "repost", "repost-x", "join", "join-discord", "portal", "message", "message-discord", "acquire-role-discord", "send-message-discord", "comment", "comment-x", "feedback", "create-post", "other"],
 		required: true
 	},
 	followers: {
@@ -101,74 +100,44 @@ const questSchema = new Schema({
 	title: {
 		type: String,
 		required: true
-  },
-  project_image: {
-    type: String,
-    default: ""
-  },
-  participants: {
-    type: Number,
-    default: 0
-  },
-  project_name: {
-    type: String,
-    default: ""
-  },
-  projectCoverImage: {
-    type: String,
-    required: true
-  },
+	},
 	sub_title: {
 		type: String
 	},
 	noOfQuests: {
 		type: Number,
 		default: 0
-  },
-  starts_at: {
-    type: String,
-    required: true
-  },
-  ends_at: {
-    type: String,
-    required: true
-	},
+	},	
 	description: {
 		type: String,
-		required: true
 	},
 	tag: {
 		type: String
 	},
 	status: {
 		type: String,
-		enum: ["Active", "Scheduled", "Save", "Ended"],
-		default: "Save"
+		enum: ["active", "upcoming"],
+		default: "active"
 	},
 	questNumber: {
 		type: Number
 	},
 	reward: {
 		type: Number,
-		default: 200,
+		required: true,
 	},
 	link: {
 		type: String,
-  },
-  creator: {
-    type: Schema.Types.ObjectId,
-    required: true,
-    refPath: 'creatorModel',
-  },
-  creatorModel: {
-    type: String,
-    required: true,
-    enum: ['user', 'admin'],
-  },
-  hub: {
-    type: Schema.Types.ObjectId,
-    ref: 'user-hubs',
-  }
+	},
+	category: {
+		type: String,
+		enum: ["one-time", "weekly"],
+	},
+	expires: {
+		type: Date,
+		expires: "14d",
+		required: false,
+	},
 }, { timestamps: true });
 
 export const quest = mongoose.model("quests", questSchema);
@@ -176,27 +145,14 @@ export const quest = mongoose.model("quests", questSchema);
 const miniQuestSchema = new Schema({
 	text: {
 		type: String,
-		default: ""
+		required: true,
 	},
 	guildId: {
 		type: String
 	},
-	roleId: {
-		type: String
-	},
-	channelId: {
-		type: String
-	},
-	verificationMode: {
-		type: String
-	},
-	category: {
-		type: String,
-		enum: ["twitter", "discord", "reddit", "instagram", "facebook", "other"],
-	},
 	tag: {
 		type: String,
-		enum: ["like", "follow", "follow-x", "message", "message-discord", "other", "portal", "comment", "comment-x", "repost", "repost-x", "join", "join-discord", "acquire-role-discord", "send-message-discord", "feedback", "trust-name", "create-post"]
+		enum: ["like", "follow", "message", "other", "portal", "comment", "repost"]
 	},
 	link: {
 		type: String

@@ -1,5 +1,4 @@
 import intuitionLogo from "@assets/image_1758369448125.png";
-import { useLocation } from "wouter";
 
 interface Ecosystem {
   name: string;
@@ -14,10 +13,8 @@ interface EcosystemBadgesProps {
 
 export default function EcosystemBadges({
   title = "Network",
-  ecosystems = []
+  ecosystems = [] // todo: remove mock functionality - passed as prop
 }: EcosystemBadgesProps) {
-  const [, setLocation] = useLocation();
-
   // Only show Intuition ecosystem
   const defaultEcosystems: Ecosystem[] = [
     { name: "Intuition", logo: intuitionLogo, href: "/category/intuition" },
@@ -32,7 +29,7 @@ export default function EcosystemBadges({
           <h2 className="text-2xl font-bold text-foreground">{title}</h2>
           <button
             className="text-sm text-primary hover:text-primary/80 font-medium"
-            onClick={() => setLocation("/discover")}
+            onClick={() => console.log('Show all ecosystems clicked')} // todo: remove mock functionality
             data-testid="button-show-all-ecosystems"
           >
             Show all
@@ -43,7 +40,7 @@ export default function EcosystemBadges({
           {displayEcosystems.map((ecosystem) => (
             <button
               key={ecosystem.name}
-              onClick={() => setLocation(ecosystem.href)}
+              onClick={() => console.log(`${ecosystem.name} ecosystem clicked`)} // todo: remove mock functionality
               className="group flex flex-col items-center p-4 rounded-lg bg-card hover:bg-card/80 border border-card-border hover-elevate transition-colors"
               data-testid={`ecosystem-${ecosystem.name.toLowerCase()}`}
             >

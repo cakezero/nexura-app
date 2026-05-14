@@ -17,26 +17,17 @@ import {
 	BAD_REQUEST,
 	FORBIDDEN,
 	NOT_FOUND,
-  CREATED,
-	NO_CONTENT
+	CREATED,
 } from "@/utils/status.utils";
 import {
 	validateCampaignQuestData,
 	padNumber,
 	validateEcosystemQuestData,
 	validateMiniQuestData,
-	updateLevel,
-  validateQuestData,
-  getMissingFields,
-  validateSaveQuestData
+	updateLevel
 } from "@/utils/utils";
 import mongoose from "mongoose";
-import { hub, userHub } from "@/models/hub.model";
-import { uploadImg } from "@/utils/img.utils";
-import { parseDate, normalizeCampaignDateInput } from "@/utils/dates";
-import { xpLog } from "@/models/xpLog.model";
-import { consumePaymentHash } from "./studioPayment.controller";
-import { environment } from "@/utils/env.utils";
+import { hub } from "@/models/hub.model";
 
 const DISCORD_CAMPAIGN_TAGS = new Set([
 	"join",
@@ -92,45 +83,51 @@ export const fetchEcosystemDapps = async (
 
 export const fetchQuests = async (req: GlobalRequest, res: GlobalResponse) => {
 	try {
-		const questsInDB = await quest.find({ status: { $ne: "Save" } }).lean();
+		const allQuests = await quest.find().lean();
 		const completedQuests = await questCompleted.find({
 			user: new mongoose.Types.ObjectId(req.id),
-		}).lean().select("_id done");
+		}).lean();
 
-		const quests: any[] = [];
+		const oneTimeQuestsInDB = allQuests.filter(
+			(quest) => quest.category === "one-time"
+		);
 
-		for (const singleQuest of questsInDB) {
-			const singleQuestCompleted = completedQuests.find(
-			(completedQuest) => completedQuest.quest?.toString() === singleQuest._id.toString()
+		const oneTimeQuests: any[] = [];
+
+		for (const oneTimeQuest of oneTimeQuestsInDB) {
+			const oneTimeQuestCompleted = completedQuests.find(
+				(completedQuest) => completedQuest.quest?.toString() === oneTimeQuest._id.toString()
 			);
 
-			const mergedQuest: Record<any, unknown> = singleQuest;
+			const mergedQuest: Record<any, unknown> = oneTimeQuest;
 
-			mergedQuest.done = singleQuestCompleted ? singleQuestCompleted.done : false;
-			mergedQuest.joined = !!singleQuestCompleted;
+			mergedQuest.done = oneTimeQuestCompleted ? oneTimeQuestCompleted.done : false;
 
-			const temporalStatus = getTemporalQuestStatus(singleQuest);
-			if (temporalStatus && temporalStatus !== singleQuest.status && singleQuest.status !== "Save" && singleQuest.status !== "Ended") {
-				mergedQuest.status = temporalStatus;
-				(mergedQuest as any)._needsStatusUpdate = temporalStatus;
-			}
-
-			quests.push(mergedQuest);
+			oneTimeQuests.push(mergedQuest);
 		}
 
-		// Persist updated statuses
-		const statusUpdates = quests.filter((q: any) => q._needsStatusUpdate).map((q: any) => ({ _id: q._id, status: q._needsStatusUpdate }));
-		if (statusUpdates.length > 0) {
-			await quest.bulkWrite(
-				statusUpdates.map(({ _id, status }) => ({
-					updateOne: { filter: { _id }, update: { $set: { status } } },
-				}))
+		const weeklyQuestsInDB = allQuests.filter(
+			(quest) => quest.category === "weekly"
+		);
+
+		const weeklyQuests: any[] = [];
+
+		for (const weeklyQuest of weeklyQuestsInDB) {
+			const weeklyQuestCompleted = completedQuests.find(
+				(completedQuest) => completedQuest.quest?.toString() === weeklyQuest._id.toString()
 			);
+
+			const mergedQuest: Record<any, unknown> = weeklyQuest;
+
+			mergedQuest.done = weeklyQuestCompleted ? weeklyQuestCompleted.done : false;
+			mergedQuest.joined = !!weeklyQuestCompleted;
+
+			weeklyQuests.push(mergedQuest);
 		}
 
 		res
 			.status(OK)
-			.json({ message: "quests fetched!", quests });
+			.json({ message: "quests fetched!", oneTimeQuests, weeklyQuests });
 	} catch (error) {
 		logger.error(error);
 		res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching quests" });
@@ -139,11 +136,7 @@ export const fetchQuests = async (req: GlobalRequest, res: GlobalResponse) => {
 
 export const fetchMiniQuests = async (req: GlobalRequest, res: GlobalResponse) => {
 	try {
-		const id = (req.query.id as string) || (req.body.id as string) || (req.body.questId as string);
-		if (!id) {
-			res.status(BAD_REQUEST).json({ error: "Quest ID is required" });
-			return;
-		}
+		const id = req.query.id as string;
 
 		const mainQuest = await quest.findById(id).lean();
 		if (!mainQuest) {
@@ -175,32 +168,9 @@ export const fetchMiniQuests = async (req: GlobalRequest, res: GlobalResponse) =
 
 		const mainQuestCompleted = await questCompleted.findOne({ user: req.id, quest: id });
 
-		const currentHub = mainQuest.hub ? await userHub.findById(mainQuest.hub).lean() : null;
-		const hubInfo = {
-			id: currentHub?._id?.toString?.() ?? "",
-			name: currentHub?.name ?? mainQuest.project_name ?? "",
-			description: currentHub?.description ?? "",
-			logo: currentHub?.logo ?? mainQuest.project_image ?? "",
-			website: (currentHub as any)?.website ?? "",
-			xAccount: (currentHub as any)?.xAccount ?? "",
-			discordServer: (currentHub as any)?.discordServer ?? "",
-		};
-
 		const questNumber = padNumber(mainQuest.questNumber!);
 
-		res.status(OK).json({ 
-			message: "mini quests fetched", 
-			miniQuests, 
-			questCompleted: mainQuestCompleted?.done, 
-			totalXp: mainQuest.reward, 
-			questNumber, 
-			sub_title: mainQuest?.sub_title, 
-			title: mainQuest.title, 
-			description: mainQuest.description,
-			hubInfo,
-			projectCoverImage: mainQuest.projectCoverImage,
-			hub: mainQuest.hub,
-		});
+		res.status(OK).json({ message: "mini quests fetched", miniQuests, questCompleted: mainQuestCompleted?.done, totalXp: mainQuest.reward, questNumber, sub_title: mainQuest?.sub_title, title: mainQuest.title });
 	} catch (error) {
 		logger.error(error);
 		res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching mini quests" });
@@ -209,30 +179,16 @@ export const fetchMiniQuests = async (req: GlobalRequest, res: GlobalResponse) =
 
 export const startQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 	try {
-		const id = (req.query.id as string) || (req.body.id as string) || (req.body.questId as string);
-		if (!id) {
-			res.status(BAD_REQUEST).json({ error: "Quest ID is required" });
-			return;
-    }
+		const id = req.query.id as string;
+		const { category, questId } = req.body;
 
-    const questExists = await quest.findById(id);
-    if (!questExists) {
-      res.status(NOT_FOUND).json({ error: "quest does not exist or id is invalid" });
-      return;
-    }
-
-		const questStarted = await questCompleted.exists({ quest: id, user: req.id });
+		const questStarted = await questCompleted.exists({ quest: questId, user: req.id });
 		if (questStarted) {
-			res.status(OK).json({ message: "quest already started" });
+			res.status(BAD_REQUEST).json({ error: "quest already started" });
 			return;
-    }
+		}
 
-    questExists.participants += 1;
-
-    await Promise.all([
-      questCompleted.create({ quest: id, user: req.id, done: false }),
-      questExists.save()
-    ]);
+		await questCompleted.create({ quest: questId, user: req.id, done: false, category });
 
 		res.status(OK).json({ message: "quest started" });
 	} catch (error) {
@@ -246,11 +202,7 @@ export const fetchCampaignQuests = async (
 	res: GlobalResponse
 ) => {
 	try {
-		const id = (req.query.id as string) || (req.body.id as string) || (req.body.questId as string);
-		if (!id) {
-			res.status(BAD_REQUEST).json({ error: "Campaign ID is required" });
-			return;
-		}
+		const id = req.query.id as string;
 		const userId = req.id!;
 
 		const currentCampaign = await campaign.findById(id).lean();
@@ -590,13 +542,13 @@ export const claimMiniQuest = async (req: GlobalRequest, res: GlobalResponse) =>
 			return
 		}
 
-		if (miniQuestExists.done === true) {
-			res.status(FORBIDDEN).json({ error: "quest already claimed" });
+		if (miniQuestExists.status !== "pending") {
+			res.status(BAD_REQUEST).json({ error: "quest needs to be marked as pending before it can be caimed" });
 			return;
 		}
 
-		if (miniQuestExists.status !== "done" && miniQuestExists.status !== "pending") {
-			res.status(BAD_REQUEST).json({ error: "quest needs to be marked as pending before it can be caimed" });
+		if (miniQuestExists.done === true) {
+			res.status(FORBIDDEN).json({ error: "quest already claimed" });
 			return;
 		}
 
@@ -612,9 +564,10 @@ export const claimMiniQuest = async (req: GlobalRequest, res: GlobalResponse) =>
 
 export const claimQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 	try {
-		const id = (req.query.id as string) || (req.body.id as string) || (req.body.questId as string);
+		const id = req.query.id as string;
+
 		if (!id) {
-			res.status(BAD_REQUEST).json({ error: "Quest ID is required" });
+			res.status(BAD_REQUEST).json({ error: "send quest id" });
 			return;
 		}
 
@@ -664,13 +617,6 @@ export const claimQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 
 		questUser.level = level;
 
-		await xpLog.create({
-			address: questUser.address,
-			amount: questFound.reward,
-			status: "success",
-			type: "quest"
-    });
-
 		await questUser.save();
 
 		res.status(OK).json({ message: "quest done!" });
@@ -685,11 +631,7 @@ export const claimEcosystemQuest = async (
 	res: GlobalResponse
 ) => {
 	try {
-		const id = (req.query.id as string) || (req.body.id as string) || (req.body.questId as string);
-		if (!id) {
-			res.status(BAD_REQUEST).json({ error: "Quest ID is required" });
-			return;
-		}
+		const id = req.query.id;
 
 		const userId = req.id;
 
@@ -738,13 +680,6 @@ export const claimEcosystemQuest = async (
 
 		ecosystemQuestUser.level = level;
 
-		await xpLog.create({
-			address: ecosystemQuestUser.address,
-			amount: ecosystemQuestFound.reward,
-			status: "success",
-			type: "ecosystem-quest"
-    });
-
 		await ecosystemQuestToClaim.save();
 		await ecosystemQuestUser.save();
 
@@ -759,11 +694,7 @@ export const claimEcosystemQuest = async (
 
 export const setTimer = async (req: GlobalRequest, res: GlobalResponse) => {
 	try {
-		const id = (req.query.id as string) || (req.body.id as string) || (req.body.questId as string);
-		if (!id) {
-			res.status(BAD_REQUEST).json({ error: "Quest ID is required" });
-			return;
-		}
+		const id = req.query.id;
 
 		const questForEcosystem = await ecosystemQuest.findById(id).lean();
 		if (!questForEcosystem) {
@@ -817,17 +748,15 @@ export const submitQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 		if (!userExists) {
 			res.status(NOT_FOUND).json({ error: "id is invalid or does not exists" });
 			return;
-    }
+		}
 
-    if (environment === "production") {
-  		if (!userExists.socialProfiles?.x?.connected) {
-  			res.status(BAD_REQUEST).json({ error: "user x profile not linked" });
-  			return;
-      }
+		if (!userExists.socialProfiles?.x) {
+			res.status(BAD_REQUEST).json({ error: "user x profile not linked" });
+			return;
     }
-
+		
     if (hubId) {
-  		const hubExists = (await hub.findById(hubId)) || (await userHub.findById(hubId));
+  		const hubExists = await hub.findById(hubId);
   		if (!hubExists) {
   			res.status(BAD_REQUEST).json({ error: "hub does not exist" });
   			return;
@@ -861,698 +790,11 @@ export const submitQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 			notComplete = await campaignQuestCompleted.create({ campaign: questId, campaignQuest: id, user: userId });
 		}
 
-		await submission.create({ submissionLink, hub: hubId ?? "nexura-hub", taskType: tag, address: userExists.address, username: userExists.socialProfiles?.x?.username || userExists.username, miniQuestId: id, user: userId, page, questCompleted: notComplete._id });
+		await submission.create({ submissionLink, hub: hubId ?? "nexura-hub", taskType: tag, address: userExists.address, username: userExists.socialProfiles?.x?.username, miniQuestId: id, user: userId, page, questCompleted: notComplete._id });
 
 		res.status(OK).json({ message: "quest submitted" });
 	} catch (error: any) {
 		logger.error(error);
 		res.status(INTERNAL_SERVER_ERROR).json({ error: error?.message || "error submitting quest" });
 	}
-};
-
-export const createQuest = async (req: GlobalRequest, res: GlobalResponse) => {
-  try {
-    const requestData: ICreateQuest = req.body;
-		const coverImageAsFile = req.file?.buffer;
-
-    const hubUserId = req.admin.hub;
-
-    const { error } = validateQuestData(req.body);
-    if (error) {
-      const emptyFields = getMissingFields(error);
-      res.status(BAD_REQUEST).json({ error: `Missing required fields: ${emptyFields}` });
-      return;
-    }
-
-    const page = req.body.page;
-
-    let createdHub: any;
-
-    if (page === "user") {
-  		createdHub = await userHub.findById(hubUserId);
-  		if (!createdHub) {
-  			res
-  				.status(NOT_FOUND)
-  				.json({ error: "id associated with user hub is invalid" });
-  			return;
-  		}
-    } else {
-      createdHub = await hub.findById(hubUserId);
-  		if (!createdHub) {
-  			res
-  				.status(NOT_FOUND)
-  				.json({ error: "id associated with hub is invalid" });
-  			return;
-  		}
-    }
-
-		if (!coverImageAsFile) {
-			res
-				.status(BAD_REQUEST)
-				.json({ error: "hub cover image is required" });
-			return;
-		}
-
-		const projectCoverImageUrl = await uploadImg({
-			file: coverImageAsFile,
-			filename: req.file?.originalname as string,
-			folder: "cover-images",
-			maxSize: 2 * 1024 ** 2, // 2 MB
-		});
-
-		const startsAt = parseDate(requestData.starts_at);
-		const endsAt = parseDate(requestData.ends_at);
-		if (startsAt) requestData.starts_at = startsAt;
-		if (endsAt) requestData.ends_at = endsAt;
-
-		requestData.projectCoverImage = projectCoverImageUrl;
-
-		requestData.project_image = createdHub.logo;
-    if (!requestData.project_name) {
-      requestData.project_name = createdHub.name || "";
-    }
-
-    // Use xp from frontend form as reward
-    if (!requestData.reward && (requestData as any).xp) {
-      requestData.reward = Number((requestData as any).xp);
-    }
-
-    if (!(requestData as any).sub_title) {
-      (requestData as any).sub_title = requestData.description || createdHub.description || "";
-    }
-
-		const newQuest = new quest(requestData);
-
-    newQuest.creator = createdHub._id;
-    newQuest.hub = createdHub._id;
-  
-    newQuest.creatorModel = page === "user" ? "user" : "admin";
-
-    // Enforce Save status for all new quests from Studio.
-    // Quests must be explicitly published via /publish-quest which requires payment.
-    newQuest.status = "Save";
-
-    createdHub.questsCreated += 1;
-
-    newQuest.questNumber = createdHub.questsCreated;
-
-		const rawMiniQuests = req.body.miniQuests;
-		const miniQuestsFromBody: Record<string, any>[] = typeof rawMiniQuests === "string"
-      ? (() => { try { return JSON.parse(rawMiniQuests); } catch { return []; } })()
-      : (Array.isArray(rawMiniQuests) ? rawMiniQuests : []);
-
-
-		const manyData: any[] = [];
-
-		if (miniQuestsFromBody.length > 0) {
-			for (const mq of miniQuestsFromBody) {
-				mq.text = mq.quest || mq.text || "";
-				mq.quest = newQuest._id;
-				manyData.push(mq);
-			}
-
-			await miniQuest.insertMany(manyData);
-		}
-
-    newQuest.noOfQuests = miniQuestsFromBody.length;
-
-    await Promise.all([
-  		newQuest.save(),
-  		createdHub.save(),
-    ]);
-
-		res.status(CREATED).json({ message: "quest created!", questId: newQuest._id });
-  } catch(error) {
-    logger.error(error);
-    res.status(INTERNAL_SERVER_ERROR).json({ error: "error creating quest" });
-  }
-}
-
-export const saveQuestWithMiniQuests = async (req: GlobalRequest, res: GlobalResponse) => {
-  try {
-    if (typeof req.body.miniQuests === "string") try { req.body.miniQuests = JSON.parse(req.body.miniQuests); } catch { /* leave */ }
-
-    const { error } = validateQuestData(req.body);
-    if (error) {
-      const emptyFields = getMissingFields(error);
-      res.status(BAD_REQUEST).json({ error: `Missing required fields: ${emptyFields}` });
-      return;
-    }
-
-    let hubFound: any;
-
-    if (req.body.page === "user") {
-      hubFound = await userHub.findById(req.admin.hub).lean();
-      if (!hubFound) {
-        res.status(BAD_REQUEST).json({ error: "create a user hub to continue" });
-        return;
-      }
-    } else {
-      const hubFound = await hub.findById(req.admin.hub).lean();
-      if (!hubFound) {
-        res.status(BAD_REQUEST).json({ error: "create a hub to continue" });
-        return;
-      }
-    }
-
-    const { id } = req.query as { id: string };
-
-    let questId = id;
-    if (!questId) {
-      const coverImageBuffer = req.file?.buffer;
-
-      if (!coverImageBuffer) {
-        res.status(BAD_REQUEST).json({ error: "cover image is required" });
-        return;
-      }
-
-      req.body.projectCoverImage = await uploadImg({
-        file: coverImageBuffer,
-        filename: req.file?.originalname,
-        folder: "cover-images",
-        maxSize: 2 * 1024 ** 2
-      });
-
-      // Enforce Save status for new quests from Studio.
-      req.body.status = "Save";
-
-      const savedQuest = await quest.create(req.body);
-
-      questId = savedQuest._id.toString();
-    } else {
-      const questFound = await quest.findById(questId).lean();
-      if (!questFound) {
-        res.status(NOT_FOUND).json({ error: "quest not found" });
-        return;
-      }
-
-      // If it's a draft, don't allow status update via this endpoint.
-      if (questFound.status === "Save") {
-        delete req.body.status;
-        if (req.body.questData) delete req.body.questData.status;
-      }
-
-      await quest.findByIdAndUpdate(id, req.body.questData || req.body, { new: true });
-    }
-
-    const { error: questError } = validateMiniQuestData(req.body.questData);
-    if (questError) {
-      const emptyFields = getMissingFields(questError);
-      res.status(BAD_REQUEST).json({ error: `Missing required fields: ${emptyFields}` });
-      return;
-    }
-
-    const createdMiniQuests = [];
-
-    const newMiniQuests = [];
-
-    for (const qd of req.body.questData) {
-      const questData = { ...qd };
-
-      if (qd.quest && qd._id) {
-        createdMiniQuests.push({
-          updateOne: {
-            filter: { _id: qd._id },
-            update: {
-              $set: {
-                ...questData,
-              }
-            }
-          }
-        });
-      } else {
-        qd.quest = questId;
-        newMiniQuests.push({ ...qd,  })
-      }
-    }
-
-    if (createdMiniQuests.length && !newMiniQuests.length) {
-      await miniQuest.bulkWrite(createdMiniQuests);
-    } else if (!createdMiniQuests.length && newMiniQuests.length) {
-      await miniQuest.insertMany(newMiniQuests);
-    } else {
-      await miniQuest.bulkWrite(createdMiniQuests);
-      await miniQuest.insertMany(newMiniQuests);
-    }
-
-    res.status(NO_CONTENT).send();
-  } catch (error) {
-    logger.error(error);
-    res.status(INTERNAL_SERVER_ERROR).json({ error: "error saving quest with mini quest" });
-  }
-}
-
-export const saveQuest = async (req: GlobalRequest, res: GlobalResponse) => {
-  try {
-    if (typeof req.body.reward === "string") {
-      try { req.body.reward = JSON.parse(req.body.reward); } catch { /* leave as-is */ }
-    }
-
-    req.body.starts_at = normalizeCampaignDateInput(req.body.starts_at);
-    req.body.ends_at = normalizeCampaignDateInput(req.body.ends_at);
-
-    let hubFound: any;
-
-    const page = req.body.page;
-
-    if (page === "user") {
-      hubFound = await userHub.findById(req.admin.hub).lean();
-      if (!hubFound) {
-        res.status(BAD_REQUEST).json({ error: "create a user hub to continue" });
-        return;
-      }
-    } else {
-      hubFound = await hub.findById(req.admin.hub).lean();
-      if (!hubFound) {
-        res.status(BAD_REQUEST).json({ error: "create a hub to continue" });
-        return;
-      }
-    }
-
-    if (!req.body.nameOfProject) {
-      req.body.nameOfProject = hubFound.name || "";
-    }
-
-    // Parse miniQuests if provided
-    let miniQuestsToSave: any[] | null = null;
-    if (req.body.miniQuests !== undefined) {
-      try {
-        miniQuestsToSave = typeof req.body.miniQuests === "string"
-          ? JSON.parse(req.body.miniQuests)
-          : req.body.miniQuests;
-      } catch { /* ignore */ }
-    }
-
-    const { error } = validateSaveQuestData(req.body);
-    if (error) {
-      const emptyFields = getMissingFields(error);
-      res.status(BAD_REQUEST).json({ error: `Missing required fields: ${emptyFields}` });
-      return;
-    }
-
-    const coverImageBuffer = req.file?.buffer;
-    const { hubCoverImage } = req.body;
-
-    if (hubCoverImage && coverImageBuffer) {
-      // remove previous cover image
-      req.body.coverImage = await uploadImg({
-        file: coverImageBuffer,
-        filename: req.file?.originalname,
-        folder: "cover-images",
-        maxSize: 2 * 1024 ** 2
-      });
-    } else if (coverImageBuffer && !hubCoverImage) {
-      req.body.coverImage = await uploadImg({
-        file: coverImageBuffer,
-        filename: req.file?.originalname,
-        folder: "cover-images",
-        maxSize: 2 * 1024 ** 2
-      });
-    }
-
-    const { id } = req.query as { id: string };
-    if (id && !mongoose.Types.ObjectId.isValid(id)) {
-      res.status(BAD_REQUEST).json({ error: "invalid quest id" });
-      return;
-    }
-    if (!id) {
-      // Fill in defaults for required model fields not yet provided in a draft
-      const [questCount] = await Promise.all([
-        quest.countDocuments({ creator: req.id }),
-      ]);
-
-      const body = {
-        ...req.body,
-        description: req.body.description || hubFound.description || "Untitled Quest",
-        project_image: hubFound.logo ?? "pending",
-        project_name: hubFound.name ?? req.body.nameOfProject ?? "",
-        sub_title: req.body.description || hubFound.description || "",
-        questNumber: questCount + 1,
-        projectCoverImage: req.body.coverImage ?? "pending",
-        creator: req.admin.hub,
-        creatorModel: page === "user" ? "user" : "project",
-        status: "Save", // Enforce Save status for new quests from Studio
-      };
-
-      const savedQuest = await quest.create(body);
-      const savedQuestId = savedQuest._id;
-
-      // Save quests
-      if (miniQuestsToSave !== null) {
-        await miniQuest.deleteMany({ quest: savedQuestId });
-        if (miniQuestsToSave.length > 0) {
-          await miniQuest.insertMany(
-            miniQuestsToSave.map((q: any) => (
-              { ...q, quest: savedQuestId }))
-          );
-        }
-        await quest.findByIdAndUpdate(savedQuestId, { noOfQuests: miniQuestsToSave.length });
-      }
-
-      res.status(CREATED).json({ message: 'Quest saved successfully', questId: savedQuest._id });
-      return;
-    }
-
-    const questFound = await quest.findById(id).lean();
-    if (!questFound) {
-      const questCount = await quest.countDocuments({ creator: req.id });
-      const body = {
-        ...req.body,
-        project_image: hubFound.logo ?? "pending",
-        project_name: hubFound.name ?? req.body.nameOfProject ?? "",
-        sub_title: req.body.description || hubFound.description || "",
-        questNumber: questCount + 1,
-        projectCoverImage: req.body.coverImage ?? "pending",
-        creator: req.admin.hub,
-        creatorModel: page === "user" ? "user" : "project",
-        status: "Save", // Enforce Save status for new quests from Studio
-      };
-
-      const newQuest = await quest.create(body);
-
-      if (miniQuestsToSave !== null) {
-        if (miniQuestsToSave.length > 0) {
-          await miniQuest.insertMany(
-            miniQuestsToSave.map((q: any) => ({ ...q, text: q.quest || q.text || "", quest: newQuest._id }))
-          );
-        }
-        await quest.findByIdAndUpdate(newQuest._id, { noOfQuests: miniQuestsToSave.length });
-      }
-
-      res.status(CREATED).json({ questId: newQuest._id });
-      return;
-    }
-
-    const { miniQuests: _mq, isDraft: _d, existingCoverImage: _e, hubCoverImage: _h, nameOfProject: _n, ...updateFields } = req.body;
-
-    // If it's a draft, don't allow status update via this endpoint.
-    if (questFound.status === "Save") {
-      delete updateFields.status;
-    }
-
-    if (updateFields.description !== undefined) {
-      const trimmed = String(updateFields.description ?? "").trim();
-      if (trimmed) {
-        updateFields.description = trimmed;
-        updateFields.sub_title = trimmed;
-      } else {
-        delete updateFields.description;
-      }
-    }
-
-    const incomingNameOfProject = typeof req.body.nameOfProject === "string"
-      ? req.body.nameOfProject.trim()
-      : "";
-
-    if (req.body.nameOfProject !== undefined || questFound.project_name) {
-      updateFields.project_name = hubFound.name ?? incomingNameOfProject ?? questFound.project_name;
-    }
-
-    // Recalculate status atomically when dates change on a published campaign
-    if (questFound.status !== "Save") {
-      const now = new Date();
-
-      const newStartsAt = updateFields.starts_at
-        ? parseDate(updateFields.starts_at)
-        : parseDate(questFound.starts_at);
-
-      const newEndsAt = updateFields.ends_at
-        ? parseDate(updateFields.ends_at)
-        : parseDate(questFound.ends_at);
-
-      if (newEndsAt && newEndsAt <= now) {
-        updateFields.status = "Ended";
-      } else if (newStartsAt && newStartsAt > now) {
-        updateFields.status = "Scheduled";
-      } else {
-        updateFields.status = "Active";
-      }
-    }
-
-    await quest.findByIdAndUpdate(id, updateFields, { new: true });
-
-    // Update mini quests without destroying existing IDs/submissions
-    if (miniQuestsToSave !== null) {
-      const existingMiniQuests = await miniQuest.find({ quest: id }).select("_id").lean();
-      const existingMiniQuestIds = existingMiniQuests.map((q: any) => q._id.toString());
-      const incomingQuestIds = miniQuestsToSave
-        .map((q: any) => q._id?.toString())
-        .filter(Boolean);
-
-      const miniQuestsToUpdate = miniQuestsToSave.filter((q: any) => q._id);
-      const miniQuestsToInsert = miniQuestsToSave.filter((q: any) => !q._id);
-
-      if (miniQuestsToUpdate.length > 0) {
-        await miniQuest.bulkWrite(
-          miniQuestsToUpdate.map((q: any) => {
-            const { _id, ...rest } = q;
-            if (rest.quest && !rest.text) {
-              rest.text = rest.quest;
-            }
-            delete rest.quest;
-
-            const updatePayload = { ...rest, quest: id };
-
-            return {
-              updateOne: {
-                filter: { _id, quest: id as any },
-                update: { $set: updatePayload },
-              }
-            };
-          })
-        );
-      }
-
-      if (miniQuestsToInsert.length > 0) {
-        await miniQuest.insertMany(
-          miniQuestsToInsert.map((q: any) => (
-              { ...q, text: q.quest || q.text || "", quest: id }
-          ))
-        );
-      }
-
-      const miniuQuestIdsToDelete = existingMiniQuestIds.filter((existingId) => !incomingQuestIds.includes(existingId));
-      if (miniuQuestIdsToDelete.length > 0) {
-        await miniQuest.deleteMany({ _id: { $in: miniuQuestIdsToDelete }, quest: id });
-      }
-
-      await quest.findByIdAndUpdate(id, { noOfQuests: miniQuestsToSave.length });
-    }
-
-    res.status(OK).json({ questId: id });
-  } catch (error: any) {
-    logger.error(error);
-    res.status(INTERNAL_SERVER_ERROR).json({ error: error?.message || "error saving quest" });
-  }
-}
-
-export const deleteQuest = async (req: GlobalRequest, res: GlobalResponse) => {
-  try {
-    const id = (req.query.id as string) || (req.body.id as string) || (req.body.questId as string);
-    if (!id) {
-      res.status(BAD_REQUEST).json({ error: "Quest ID is required" });
-      return;
-    }
-    
-    const exists = await quest.exists({ _id: id }).select("_id").lean();
-    if (!exists) {
-      res.status(NOT_FOUND).json({ error: "quest not found" });
-      return;
-    }
-
-    await Promise.all([
-      quest.findByIdAndDelete(id),
-      miniQuest.deleteMany({ quest: id }),
-      miniQuestCompleted.deleteMany({ quest: id }),
-      questCompleted.deleteMany({ quest: id }),
-    ]);
-
-    res.status(OK).json({ message: "quest deleted successfully" });
-  } catch (error) {
-    logger.error(error);
-    res.status(INTERNAL_SERVER_ERROR).json({ error: "error deleting quest" });
-  }
-}
-
-export const deleteMiniQuest = async (req: GlobalRequest, res: GlobalResponse) => {
-  try {
-    const id = (req.query.id as string) || (req.body.id as string) || (req.body.questId as string);
-    if (!id) {
-      res.status(BAD_REQUEST).json({ error: "Quest ID is required" });
-      return;
-    }
-
-    const exists = await miniQuest.exists({ _id: id }).select("_id").lean();
-    if (!exists) {
-      res.status(NOT_FOUND).json({ error: "mini quest not found" });
-      return;
-    }
-
-    await miniQuest.findByIdAndDelete(id);
-
-    res.status(OK).json({ message: "mini quest deleted successfully" });
-  } catch (error) {
-    logger.error(error);
-    res.status(INTERNAL_SERVER_ERROR).json({ error: "error deleting mini quest" });
-  }
-}
-
-export const getTemporalQuestStatus = (doc: any): string | null => {
-  if (doc.status === "Save") return "Save";
-  if (doc.status === "Ended") return "Ended";
-  if (doc.status === "Deleted") return "Deleted";
-
-  const now = new Date();
-  const startsAt = doc.starts_at ? new Date(doc.starts_at) : null;
-  const endsAt = doc.ends_at ? new Date(doc.ends_at) : null;
-  if (startsAt && startsAt > now) return "Scheduled";
-  if (endsAt && endsAt < now) return "Ended";
-  if (startsAt && startsAt <= now && (!endsAt || endsAt >= now)) return "Active";
-  return null;
-};
-
-export const publishQuest = async (req: GlobalRequest, res: GlobalResponse) => {
-  try {
-    const id = (req.query.id as string) || (req.body.id as string) || (req.body.questId as string);
-    if (!id) {
-      res.status(BAD_REQUEST).json({ error: "Quest ID is required" });
-      return;
-    }
-
-    const questDoc = await quest.findById(id);
-    if (!questDoc) {
-      res.status(NOT_FOUND).json({ error: "Quest not found" });
-      return;
-    }
-
-    const { status } = req.body;
-    if (status === "Ended") {
-      questDoc.status = "Ended";
-      await questDoc.save();
-      res.status(OK).json({ message: "quest closed!" });
-      return;
-    }
-
-    const now = new Date();
-    let newStatus: "Active" | "Scheduled" | "Save" | "Ended";
-
-    if (!questDoc.starts_at || new Date(questDoc.starts_at) <= now) {
-      newStatus = "Active";
-    } else {
-      newStatus = "Scheduled";
-    }
-
-    if (questDoc.ends_at && new Date(questDoc.ends_at) <= now) {
-      res.status(BAD_REQUEST).json({ error: "Cannot publish a quest that has already ended" });
-      return;
-    }
-
-    if (newStatus === "Active") {
-      const numberOfMiniQuests = await miniQuest.countDocuments({ quest: questDoc._id });
-      if (numberOfMiniQuests < 5) {
-        res.status(BAD_REQUEST).json({ error: "mini quests must be up to/greater than 5 to set quest as active" });
-        return;
-      }
-
-      const updatedUser = await user.findByIdAndUpdate(req.admin.userId, { $inc: { xp: 5000 } });
-
-      if (updatedUser) await xpLog.create({ status: "success", amount: 5000, type: "quest-creation", address: updatedUser.address });
-    }
-
-    questDoc.status = newStatus;
-    await questDoc.save();
-
-    await consumePaymentHash((req as any).admin?.hub);
-
-    res.status(OK).json({ message: "quest published!" });
-  } catch (error) {
-    logger.error("Error publishing quest: " + error);
-    res.status(INTERNAL_SERVER_ERROR).json({ error: "Error publishing quest" });
-  }
-};
-
-  export const getHubQuests = async (req: GlobalRequest, res: GlobalResponse) => {
-    try {
-      const hubId = (req as any).hubId || (req as any).admin?.hub;
-      if (!hubId) {
-        res.status(BAD_REQUEST).json({ error: "No hub associated with this admin" });
-        return;
-      }
-
-      const hubModel = await import("@/models/hub.model").then(m => m.hub);
-      const hubDoc = await hubModel.findById(hubId).select("systemKey").lean();
-      if (!hubDoc) {
-        res.status(NOT_FOUND).json({ error: "Hub not found" });
-        return;
-      }
-
-      const isSystemHub = hubDoc.systemKey === "nexura-admin-campaigns";
-
-      const query: any = { status: { $ne: "Deleted" } };
-
-      if (isSystemHub) {
-        query.hub = { $ne: null };
-      } else {
-        query.hub = hubId;
-      }
-
-      const quests = await quest.find(query).sort({ createdAt: -1 }).lean();
-
-      const statusUpdates: any[] = [];
-      const normalizedQuests = quests.map((q: any) => {
-        const temporal = getTemporalQuestStatus(q);
-        if (temporal && temporal !== q.status && q.status !== "Save" && q.status !== "Ended") {
-          statusUpdates.push({ _id: q._id, status: temporal });
-          return { ...q, status: temporal };
-        }
-        return q;
-      });
-
-      if (statusUpdates.length > 0) {
-        await quest.bulkWrite(
-          statusUpdates.map(({ _id, status }) => ({
-            updateOne: { filter: { _id }, update: { $set: { status } } },
-          }))
-        );
-      }
-
-      res.status(OK).json({ message: "Quests fetched!", quests: normalizedQuests });
-    } catch (error) {
-      logger.error(error);
-      res.status(INTERNAL_SERVER_ERROR).json({ error: "Error fetching hub quests" });
-    }
-  };
-
-export const getAdminHubQuests = async (req: GlobalRequest, res: GlobalResponse) => {
-  try {
-    const hubId = (req as any).hubId;
-    if (!hubId) {
-      res.status(BAD_REQUEST).json({ error: "No hub associated with this admin" });
-      return;
-    }
-    const quests = await quest.find({ hub: hubId, status: { $ne: "Deleted" } }).sort({ createdAt: -1 }).lean();
-    res.status(OK).json({ message: "Admin quests fetched!", quests });
-  } catch (error) {
-    logger.error("Error fetching admin hub quests: " + error);
-    res.status(INTERNAL_SERVER_ERROR).json({ error: "Error fetching admin hub quests" });
-  }
-};
-
-export const getAdminQuestDetail = async (req: GlobalRequest, res: GlobalResponse) => {
-  try {
-    const id = (req.query.id as string) || (req.body.id as string) || (req.body.questId as string);
-    if (!id) {
-      res.status(BAD_REQUEST).json({ error: "Quest ID is required" });
-      return;
-    }
-    const q = await quest.findById(id).lean();
-    if (!q) {
-      res.status(NOT_FOUND).json({ error: "Quest not found" });
-      return;
-    }
-    res.status(OK).json({ message: "Quest detail fetched!", quest: q });
-  } catch (error) {
-    logger.error("Error fetching admin quest detail: " + error);
-    res.status(INTERNAL_SERVER_ERROR).json({ error: "Error fetching admin quest detail" });
-  }
 };

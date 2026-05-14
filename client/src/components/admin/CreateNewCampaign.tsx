@@ -108,13 +108,7 @@ export default function CreateNewCampaigns() {
   const [loading, setLoading] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
   const [campaignId, setCampaignId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState(() => {
-    return localStorage.getItem("campaignBuilderActiveTab") || "details";
-  });
-
-  useEffect(() => {
-    localStorage.setItem("campaignBuilderActiveTab", activeTab);
-  }, [activeTab]);
+  const [activeTab, setActiveTab] = useState("details");
   const [showTasks, setShowTasks] = useState(false)
   const [showModal, setShowModal] = useState(false);
   const [validationType, setValidationType] = useState("manual");
@@ -328,13 +322,6 @@ useEffect(() => {
           if (tag === "portal") return "Check Out the Portal Claims";
           if (tag === "feedback") return "Give Feedback";
           if (tag === "create-post") return "Create a Post";
-          if (tag === "trust-name") return "Own a .trust username";
-          if (tag === "repost-x") return "Retweet on X";
-          if (tag === "telegram") return "Join Our Telegram";
-          if (tag === "hold-token") return "Hold an ERC20 Token";
-          if (tag === "hold-nft") return "Hold an NFT";
-          if (tag === "submit-wallet") return "Submit Wallet Address";
-          if (tag === "watch-youtube") return "Watch YouTube Video";
           return "others";
         };
         const catToPlatform = (cat: string) => {
@@ -345,7 +332,7 @@ useEffect(() => {
         const tagToValidation = (tag: string) => {
           if (tag === "join" || tag === "join-discord") return "Discord Auth";
           if (tag === "acquire-role-discord" || tag === "send-message-discord" || tag === "message-discord" || tag === "message") return "Discord Auth";
-          if (tag === "portal" || tag === "trust-name") return "Auto Verified";
+          if (tag === "portal") return "Auto Verified";
           return "Manual Validation";
         };
         if (qRes.campaignQuests) {
@@ -540,7 +527,6 @@ const typeToTag = (type: string) => {
   if (type === "Check Out the Portal Claims") return "portal";
   if (type === "Give Feedback") return "feedback";
   if (type === "Create a Post") return "create-post";
-  if (type === "Own a .trust username") return "trust-name";
   return "other";
 };
 const platformToCategory = (platform: string) => {
@@ -694,10 +680,11 @@ const buildCampaignFormData = (isDraft: boolean): FormData => {
     tasks.map(t => {
       const taskTag = typeToTag(t.type);
       const taskGuildId = t.guildId || hubGuildId || "";
+      const defaultLink = taskTag === "create-post" ? "https://x.com/compose/post" : "#";
       const payload: Record<string, unknown> = {
         _id: t._id,
         quest: t.description || t.type,
-        link: t.handleOrUrl || "https://nexura.io",
+        link: t.handleOrUrl || defaultLink,
         tag: taskTag,
         category: platformToCategory(t.platform),
         verificationMode: t.verificationMode || "",
@@ -791,65 +778,35 @@ const handleSaveTask = () => {
     showViewOnlyToast();
     return;
   }
+  const requiresPlatform = newTask.type !== "Check Out the Portal Claims" && newTask.type !== "others" && newTask.type !== "Give Feedback" && newTask.type !== "Create a Post";
+  const requiresDiscordConnection = newTask.platform === "Discord" || isDiscordFixedTaskType(newTask.type);
+  const requiresRole = isDiscordRoleTaskType(newTask.type);
+  const requiresChannel = isDiscordMessageTaskType(newTask.type);
+  const requiresHandleOrUrl = newTask.type !== "Create a Post";
 
-  const finalTask = { ...newTask };
-  if (finalTask.type === "Create a Post") {
-    finalTask.handleOrUrl = "https://x.com";
-    finalTask.platform = "Twitter";
-  }
-
-  const requiresPlatform = finalTask.type !== "Check Out the Portal Claims" && finalTask.type !== "others" && finalTask.type !== "Give Feedback";
-  const requiresDiscordConnection = finalTask.platform === "Discord" || isDiscordFixedTaskType(finalTask.type);
-  const requiresRole = isDiscordRoleTaskType(finalTask.type);
-  const requiresChannel = isDiscordMessageTaskType(finalTask.type);
-
-  if (!finalTask.type || (requiresPlatform && !finalTask.platform) || !finalTask.handleOrUrl || !finalTask.description) {
+  if (!newTask.type || (requiresPlatform && !newTask.platform) || (requiresHandleOrUrl && !newTask.handleOrUrl) || !newTask.description) {
     return setError("All fields are required.");
   }
-
-  const isTwitterTask = finalTask.type === "Comment on our X post" || finalTask.type === "Follow us on X" || finalTask.type === "Retweet on X";
-  
-  // Enforce x.com for Twitter tasks
-  if (isTwitterTask) {
-    const url = finalTask.handleOrUrl.toLowerCase();
-    if (!url.includes("x.com")) {
-      return setError("Twitter links must use the x.com domain.");
-    }
-  }
-
-  // Enforce Portal prefixes for Portal Claims tasks
-  if (finalTask.type === "Check Out the Portal Claims") {
-    const url = finalTask.handleOrUrl.toLowerCase();
-    const allowedPrefixes = [
-      "nexura.intuition.box/portal-claims/",
-      "portal.intuition.systems/explore/triple/"
-    ];
-    const isAllowed = allowedPrefixes.some(prefix => url.includes(prefix));
-    if (!isAllowed) {
-      return setError("Portal Claims must be from Nexura Portal or Intuition Portal triple.");
-    }
-  }
-
   if (requiresDiscordConnection && !hubDiscordConnected) {
     return setError("Connect Discord in Studio before creating Discord-related tasks.");
   }
   if (requiresDiscordConnection && !hubGuildId) {
     return setError("Finish Discord setup by selecting a server before creating Discord-related tasks.");
   }
-  if (requiresRole && !finalTask.roleId) {
+  if (requiresRole && !newTask.roleId) {
     return setError("Please select a Discord role for this task.");
   }
-  if (requiresChannel && !finalTask.channelId) {
+  if (requiresChannel && !newTask.channelId) {
     return setError("Please select a Discord channel for this task.");
   }
 
   if (editingIndex !== null) {
     const updatedTasks = [...tasks];
-    updatedTasks[editingIndex] = finalTask;
+    updatedTasks[editingIndex] = newTask;
     setTasks(updatedTasks);
     setEditingIndex(null);
   } else {
-    setTasks([...tasks, finalTask]);
+    setTasks([...tasks, newTask]);
   }
 
   setNewTask({ _id: undefined, type: "", platform: "", handleOrUrl: "", description: "", evidence: "", validation: "Manual Validation", verificationMode: "", roleId: "", channelId: "", guildId: "" });
@@ -1983,22 +1940,22 @@ const isActive =
               const isDiscord = isDiscordFixedTaskType(type);
               const isDiscordRole = isDiscordRoleTaskType(type);
               const isDiscordMessage = isDiscordMessageTaskType(type);
-              const isTwitter = type === "Comment on our X post" || type === "Follow us on X" || type === "Create a Post";
+              const isTwitter = type === "Comment on our X post" || type === "Follow us on X";
               const isPortal = type === "Check Out the Portal Claims";
               const isOther = type === "others";
               const isFeedback = type === "Give Feedback";
-              const isTrustName = type === "Own a .trust username";
+              const isCreatePost = type === "Create a Post";
               setNewTask({
                 ...newTask,
                 type,
-                platform: isDiscord ? "Discord" : isTwitter ? "Twitter" : (isPortal || isOther || isFeedback || isTrustName) ? "" : newTask.platform,
-                evidence: (isDiscord || isPortal || isTrustName) ? "" : isTwitter ? "submit_link" : isFeedback ? "" : newTask.evidence,
-                validation: isDiscord ? "Discord Auth" : (isPortal || isTrustName) ? "Auto Verified" : isFeedback ? "Manual Validation" : (newTask.validation === "Discord Auth" || newTask.validation === "Auto Verified" ? "Manual Validation" : newTask.validation),
-                verificationMode: isFeedback ? "feedback" : (isPortal || isTrustName) ? "auto" : "",
+                platform: isDiscord ? "Discord" : isTwitter ? "Twitter" : isCreatePost ? "Twitter" : (isPortal || isOther || isFeedback) ? "" : newTask.platform,
+                evidence: isDiscord || isPortal ? "" : isTwitter || isCreatePost ? "submit_link" : isFeedback ? "" : newTask.evidence,
+                validation: isDiscord ? "Discord Auth" : isPortal ? "Auto Verified" : isFeedback || isCreatePost ? "Manual Validation" : (newTask.validation === "Discord Auth" || newTask.validation === "Auto Verified" ? "Manual Validation" : newTask.validation),
+                verificationMode: isFeedback ? "feedback" : isCreatePost ? "submit_link" : "",
                 roleId: isDiscordRole ? newTask.roleId : "",
                 channelId: isDiscordMessage ? newTask.channelId : "",
                 guildId: isDiscord ? (newTask.guildId || hubGuildId || "") : "",
-                handleOrUrl: type === "Create a Post" ? "https://x.com" : isTrustName ? "https://tns.intuition.box" : newTask.handleOrUrl,
+                handleOrUrl: isCreatePost ? "" : newTask.handleOrUrl,
               });
             }}
           >
@@ -2009,7 +1966,6 @@ const isActive =
             <option value="Join Us On Discord">Join Discord</option>
             <option value={DISCORD_ROLE_TASK_TYPE}>Acquire a Role (Discord)</option>
             <option value={DISCORD_MESSAGE_TASK_TYPE}>Send Message in Channel (Discord)</option>
-            <option value="Own a .trust username">Own a .trust username</option>
             <option value="Check Out the Portal Claims">Portal Claims</option>
             <option value="Give Feedback">Give Feedback</option>
             <option value="others">Others</option>
@@ -2021,14 +1977,34 @@ const isActive =
         <div>
           <label className="text-sm text-white/70 mb-2 block">Platform</label>
           <div className="flex gap-3">
-            {["Twitter", "Discord", "Other"].filter(p => (newTask.platform === "Twitter" && p === "Twitter") || (newTask.platform === "Discord" && p === "Discord") || (newTask.platform === "Other" && p === "Other")).map((p) => (
-              <div
-                key={p}
-                className="flex-1 border py-2 rounded-lg transition text-xs font-semibold text-center bg-[#8B3EFE] text-white border-purple-500 opacity-90 cursor-default"
-              >
-                {p}
-              </div>
-            ))}
+            <button
+              type="button"
+              onClick={() => setNewTask({ ...newTask, platform: "Twitter", evidence: "submit_link", validation: newTask.validation === "Discord Auth" ? "Manual Validation" : newTask.validation, roleId: "", channelId: "", guildId: "" })}
+              className={`flex-1 border py-2 rounded-lg transition ${
+                newTask.platform === "Twitter"
+                  ? "bg-[#8B3EFE] text-white border-purple-500"
+                  : "bg-purple-900 border-purple-800 text-white hover:border-purple-500"
+              }`}
+            >
+              Twitter
+            </button>
+            <button
+              type="button"
+              onClick={() => setNewTask({
+                ...newTask,
+                platform: "Discord",
+                evidence: "",
+                validation: "Discord Auth",
+                guildId: newTask.guildId || hubGuildId || "",
+              })}
+              className={`flex-1 border py-2 rounded-lg transition ${
+                newTask.platform === "Discord"
+                  ? "bg-[#8B3EFE] text-white border-purple-500"
+                  : "bg-purple-900 border-purple-800 text-white hover:border-purple-500"
+              }`}
+            >
+              Discord
+            </button>
           </div>
         </div>
         )}
@@ -2039,40 +2015,40 @@ const isActive =
 
         {/* Handle or URL */}
         {newTask.type !== "Create a Post" && (
-          <div className="mb-4">
-            <label className="text-sm text-white/70 mb-2 block">
-              {newTask.type === "Give Feedback"
-                ? "Website URL"
-                : isDiscordMessageTaskType(newTask.type)
-                  ? "Discord Channel Link"
-                  : newTask.platform === "Discord"
-                    ? "Discord Invite Link"
-                    : newTask.type === "Comment on our X post"
-                      ? "Post URL"
-                      : newTask.type === "Follow us on X" || newTask.platform === "Twitter"
-                        ? "Profile URL"
-                        : "Handle or URL"}
-            </label>
-            <input
-              type="text"
-              placeholder={newTask.type === "Give Feedback"
-                ? "https://example.com"
-                : isDiscordMessageTaskType(newTask.type)
-                  ? "https://discord.com/channels/..."
-                  : newTask.platform === "Discord"
-                    ? "https://discord.gg/..."
-                    : newTask.type === "Comment on our X post"
-                      ? "https://x.com/username/status/..."
-                      : newTask.type === "Follow us on X" || newTask.platform === "Twitter"
-                        ? "https://x.com/username"
-                        : "..."}
-              value={newTask.handleOrUrl}
-              onChange={(e) =>
-                setNewTask({ ...newTask, handleOrUrl: e.target.value })
-              }
-              className="w-full p-2 rounded-lg bg-white/5 text-white border border-white/10 focus:outline-none focus:border-purple-500"
-            />
-          </div>
+        <div className="mb-4">
+          <label className="text-sm text-white/70 mb-2 block">
+            {newTask.type === "Give Feedback"
+              ? "Website URL"
+              : isDiscordMessageTaskType(newTask.type)
+                ? "Discord Channel Link"
+                : newTask.platform === "Discord"
+                  ? "Discord Invite Link"
+                  : newTask.type === "Comment on our X post"
+                    ? "Post URL"
+                    : newTask.type === "Follow us on X" || newTask.platform === "Twitter"
+                      ? "Profile URL"
+                      : "Handle or URL"}
+          </label>
+          <input
+            type="text"
+            placeholder={newTask.type === "Give Feedback"
+              ? "https://example.com"
+              : isDiscordMessageTaskType(newTask.type)
+                ? "https://discord.com/channels/..."
+                : newTask.platform === "Discord"
+                  ? "https://discord.gg/..."
+                  : newTask.type === "Comment on our X post"
+                    ? "https://x.com/username/status/..."
+                    : newTask.type === "Follow us on X" || newTask.platform === "Twitter"
+                      ? "https://x.com/username"
+                      : "..."}
+            value={newTask.handleOrUrl}
+            onChange={(e) =>
+              setNewTask({ ...newTask, handleOrUrl: e.target.value })
+            }
+            className="w-full p-2 rounded-lg bg-white/5 text-white border border-white/10 focus:outline-none focus:border-purple-500"
+          />
+        </div>
         )}
 
         {/* Task Description */}
@@ -2080,11 +2056,7 @@ const isActive =
           <label className="text-sm text-white/70 mb-2 block">{newTask.type === "Give Feedback" ? "Task Description" : "Task Description"}</label>
           <input
             type="text"
-            placeholder={
-              newTask.type === "Give Feedback" ? "e.g. Tell us what you think about our platform" : 
-              newTask.type === "Check Out the Portal Claims" ? "Support or oppose this claim" :
-              "..."
-            }
+            placeholder={newTask.type === "Give Feedback" ? "e.g. Tell us what you think about our platform" : "..."}
             value={newTask.description}
             onChange={(e) =>
               setNewTask({ ...newTask, description: e.target.value })
@@ -2174,18 +2146,14 @@ const isActive =
               <p className="text-xs text-white/50 mt-0.5">Users must connect their Discord account. Verification is automatic.</p>
             </div>
           </div>
-        ) : (newTask.type === "Check Out the Portal Claims" || newTask.type === "Own a .trust username") ? (
+        ) : newTask.type === "Check Out the Portal Claims" ? (
           <div className="flex items-center gap-3 rounded-lg bg-purple-900/50 border border-purple-500/50 px-4 py-3">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-purple-400 flex-shrink-0">
               <path fillRule="evenodd" d="M8.603 3.799A4.49 4.49 0 0 1 12 2.25c1.357 0 2.573.6 3.397 1.549a4.49 4.49 0 0 1 3.498 1.307 4.491 4.491 0 0 1 1.307 3.497A4.49 4.49 0 0 1 21.75 12a4.49 4.49 0 0 1-1.549 3.397 4.491 4.491 0 0 1-1.307 3.497 4.491 4.491 0 0 1-3.497 1.307A4.49 4.49 0 0 1 12 21.75a4.49 4.49 0 0 1-3.397-1.549 4.49 4.49 0 0 1-3.498-1.306 4.491 4.491 0 0 1-1.307-3.498A4.49 4.49 0 0 1 2.25 12c0-1.357.6-2.573 1.549-3.397a4.49 4.49 0 0 1 1.307-3.497 4.49 4.49 0 0 1 3.497-1.307Zm7.007 6.387a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z" clipRule="evenodd" />
             </svg>
             <div>
-              <p className="text-sm text-purple-300 font-medium">{newTask.type === "Own a .trust username" ? "Verified by TNS" : "Auto-verified via Portal"}</p>
-              <p className="text-xs text-white/50 mt-0.5">
-                {newTask.type === "Own a .trust username" 
-                  ? "Completion is verified automatically by checking the user's TNS records."
-                  : "Completion is verified automatically after the user completes the task."}
-              </p>
+              <p className="text-sm text-purple-300 font-medium">Auto-verified via Portal</p>
+              <p className="text-xs text-white/50 mt-0.5">Completion is verified automatically after the user completes the task.</p>
             </div>
           </div>
         ) : newTask.type === "Give Feedback" ? (
@@ -2514,7 +2482,7 @@ const isActive =
   {/* ========================= */}
   {showPublishModal && (
     <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/80 backdrop-blur-sm p-4">
-      <div className="bg-[#0d0d14] w-full max-w-sm border border-purple-500/20 p-5 rounded-2xl relative shadow-[0_0_60px_rgba(131,58,253,0.2)] animate-modal-pop">
+      <div className="bg-[#0d0d14] w-full max-w-md border border-purple-500/20 p-6 rounded-2xl relative shadow-[0_0_60px_rgba(131,58,253,0.2)] animate-modal-pop">
 
         {/* Close Icon */}
         <button
@@ -2525,31 +2493,31 @@ const isActive =
         </button>
 
         {/* Top Activate Image */}
-        <div className="flex justify-center mb-2">
+        <div className="flex justify-center mb-4">
           <img
             src="/activate-studio.png"
             alt=""
-            className="w-36 h-32"
+            className="w-48 h-40"
           />
         </div>
 
         {/* Title + Subtitle */}
-        <div className="text-center mb-4">
-          <h2 className="text-lg font-semibold text-white">
+        <div className="text-center mb-6">
+          <h2 className="text-xl font-semibold text-white">
             Campaign Launch Fee
           </h2>
-          <p className="text-white/70 mt-1 text-sm">
-            Pay the campaign launch fee to publish this campaign and make it live.
+          <p className="text-white/70 mt-2">
+            Pay the campaign launch fee to publish this campaign and make it available for participants.
           </p>
         </div>
 
         {/* Subscription Card */}
         <div className="bg-white/5 border border-white/10 rounded-xl p-4 mb-4">
           <div className="flex justify-between items-center mb-2">
-            <span className="text-white font-semibold text-xs">Campaign Launch Fee</span>
-            <span className="text-purple-400 font-bold text-xs">1000 $TRUST</span>
+            <span className="text-white font-semibold text-sm">Campaign Launch Fee</span>
+            <span className="text-purple-400 font-bold text-sm">1000 $TRUST</span>
           </div>
-          <p className="text-white/60 text-[10px] mb-3 leading-relaxed">
+          <p className="text-white/60 text-xs mb-3">
             A one-time fee of 1000 $TRUST is required to launch and publish this campaign.
           </p>
 
@@ -2559,8 +2527,8 @@ const isActive =
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
               <div className="min-w-0">
-                <p className="text-green-400 text-[10px] font-semibold">Payment confirmed</p>
-                <p className="text-white/40 text-[9px] truncate">{paymentTxHash}</p>
+                <p className="text-green-400 text-xs font-semibold">Payment confirmed</p>
+                <p className="text-white/40 text-[10px] truncate">{paymentTxHash}</p>
               </div>
             </div>
           ) : (
@@ -2570,7 +2538,7 @@ const isActive =
               onClick={async () => {
                 setPaymentLoading(true);
                 try {
-                  const hash = await payStudioHubFee(1000);
+                  const hash = await payStudioHubFee();
                   await projectApiRequest({
                     method: "PATCH",
                     endpoint: "/hub/save-payment-hash",
@@ -2584,10 +2552,10 @@ const isActive =
                   setPaymentLoading(false);
                 }
               }}
-              className="w-full flex items-center justify-center gap-2 bg-[#8B3EFE] hover:bg-[#7b35e6] disabled:opacity-60 text-white text-xs font-semibold rounded-lg px-4 py-2 transition"
+              className="w-full flex items-center justify-center gap-2 bg-[#8B3EFE] hover:bg-[#7b35e6] disabled:opacity-60 text-white text-sm font-semibold rounded-lg px-4 py-2 transition"
             >
               {paymentLoading ? (
-                <><span className="inline-block w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />Waiting...</>
+                <><span className="inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />Waiting for wallet…</>
               ) : (
                 <>Pay 1000 $TRUST</>
               )}
@@ -2597,7 +2565,7 @@ const isActive =
         </div>
 
 <button
-  className="mt-2 w-full py-2.5 px-4 rounded-xl bg-[#8B3EFE] text-white text-sm font-semibold hover:opacity-90 hover:shadow-[0_0_20px_rgba(131,58,253,0.5)] hover:-translate-y-0.5 active:translate-y-0 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:translate-y-0 disabled:shadow-none"
+  className="mt-4 w-full py-2.5 px-4 rounded-xl bg-[#8B3EFE] text-white text-sm font-semibold hover:opacity-90 hover:shadow-[0_0_20px_rgba(131,58,253,0.5)] hover:-translate-y-0.5 active:translate-y-0 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:translate-y-0 disabled:shadow-none"
   onClick={async () => {
     if (!campaignTitle || !campaignName) {
       toast({ title: "Incomplete details", description: "Please fill in campaign name and description.", variant: "destructive" });
@@ -2678,7 +2646,7 @@ const isActive =
   {/* ========================= */}
   {showSuccessModal && (
     <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/80 backdrop-blur-sm p-4">
-      <div className="bg-[#0d0d14] w-full max-w-lg border border-purple-500/20 p-5 rounded-2xl relative shadow-[0_0_60px_rgba(131,58,253,0.2)] animate-modal-pop text-left">
+      <div className="bg-[#0d0d14] w-full max-w-xl border border-purple-500/20 p-6 rounded-2xl relative shadow-[0_0_60px_rgba(131,58,253,0.2)] animate-modal-pop">
 
         {/* Close Icon */}
         <button
@@ -2693,7 +2661,7 @@ const isActive =
           <img
             src="/activate-studio.png"
             alt="Activate Icon"
-            className="w-36 h-28"
+            className="w-40 h-32"
           />
         </div>
 
@@ -2702,7 +2670,7 @@ const isActive =
           <h2 className="text-xl font-semibold text-white">
             {isEditMode ? "Campaign Successfully Updated" : "Payment Successfully Completed"}
           </h2>
-          <p className="text-white/70 mt-2 text-sm">
+          <p className="text-white/70 mt-2">
             {isEditMode
               ? "Your campaign changes have been saved and are now live."
               : "Your 1000 $TRUST payment was confirmed and your project is ready to go live."}
@@ -2710,16 +2678,16 @@ const isActive =
         </div>
 
         {/* Campaign Snapshot Card */}
-        <div className="bg-white/5 backdrop-blur-md rounded-xl border border-purple-500/30 p-4">
+        <div className="bg-white/5 backdrop-blur-md rounded-xl border border-purple-500/30 p-5">
 
-          <h3 className="text-[10px] font-semibold text-white/60 mb-3 uppercase tracking-wider">
+          <h3 className="text-sm font-semibold text-white/80 mb-4">
             CAMPAIGN SNAPSHOT
           </h3>
 
           <div className="flex gap-4">
 
             {/* Left Image */}
-<div className="w-24 h-24 flex-shrink-0 rounded-lg overflow-hidden border border-white/10">
+<div className="w-32 h-32 flex-shrink-0 rounded-lg overflow-hidden">
   <img
     src={publishedCampaign?.coverImage || "/campaign.jpg"}
     alt="Campaign Cover"
@@ -2731,36 +2699,36 @@ const isActive =
 <div className="flex-1 flex flex-col justify-between">
 
   <div>
-    <h3 className="text-base font-semibold text-white leading-tight">
+    <h3 className="text-lg font-semibold text-white">
       {publishedCampaign?.name}
     </h3>
 
-    <p className="text-white/60 text-xs mt-1 line-clamp-2 leading-relaxed">
+    <p className="text-white/70 text-sm mt-1">
       {publishedCampaign?.description}
     </p>
 
-    <p className="text-white/40 text-[10px] mt-2">
+    <p className="text-white/60 text-sm mt-2">
       {isEditMode ? "Campaign updated successfully" : "Campaign published successfully"}
     </p>
   </div>
 
   {/* Bottom Info Blocks */}
-  <div className="flex mt-3 text-white/80 border border-white/10 rounded-lg overflow-hidden">
+  <div className="flex mt-4 text-white/80 border border-white/10 rounded-lg overflow-hidden">
 
-    <div className="flex-1 flex flex-col items-center p-2 border-r border-white/10">
-      <span className="text-[9px] font-semibold uppercase tracking-wide opacity-50">
-        Reward Pool
+    <div className="flex-1 flex flex-col items-center p-3 border-r border-white/10">
+      <span className="text-xs font-semibold uppercase tracking-wide">
+        Total Reward Pool
       </span>
-      <span className="text-white mt-0.5 text-[11px] font-bold">
+      <span className="text-white mt-1 text-sm font-semibold">
         {publishedCampaign?.rewardPool ? `${publishedCampaign.rewardPool} $TRUST` : "—"}
       </span>
     </div>
 
-    <div className="flex-1 flex flex-col items-center p-2">
-      <span className="text-[9px] font-semibold uppercase tracking-wide opacity-50">
+    <div className="flex-1 flex flex-col items-center p-3">
+      <span className="text-xs font-semibold uppercase tracking-wide">
         Status
       </span>
-      <span className="mt-0.5 text-[11px] font-bold text-green-400">
+      <span className="mt-1 text-sm font-semibold text-green-400">
   PUBLISHED
 </span>
     </div>
@@ -2776,7 +2744,7 @@ const isActive =
     setShowSuccessModal(false);
     setLocation("/studio-dashboard/campaigns-tab");
   }}
-  className="mt-6 w-full flex items-center justify-center gap-3 px-4 py-2.5 rounded-xl bg-[#8B3EFE] text-white text-sm font-semibold hover:opacity-90 hover:shadow-[0_0_20px_rgba(131,58,253,0.5)] hover:-translate-y-0.5 active:translate-y-0 transition-all"
+  className="mt-6 w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl bg-[#8B3EFE] text-white text-sm font-semibold hover:opacity-90 hover:shadow-[0_0_20px_rgba(131,58,253,0.5)] hover:-translate-y-0.5 active:translate-y-0 transition-all"
 >
   <span>Continue</span>
 </Button>

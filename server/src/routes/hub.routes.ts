@@ -13,7 +13,6 @@ import {
 } from "@/controllers/hub.auth.controller";
 import { authenticateHubAdmin, authenticateHubAdmin2 } from "@/middlewares/auth.middleware";
 import { fetchHubCampaigns, publishCampaign } from "@/controllers/campaign.controller";
-import { requireStudioPayment } from "@/controllers/studioPayment.controller";
 import { validateCampaignSubmissions, getCampaignSubmissions, getHub, getHubAdmins } from "@/controllers/hub.controller";
 import hubAppRoutes from "./hub.app.routes";
 
@@ -26,7 +25,7 @@ router
   .post("/validate-campaign-submissions", authenticateHubAdmin2, validateCampaignSubmissions)
   .get("/me", authenticateHubAdmin2, getHub)
   .get("/hub-admins", authenticateHubAdmin2, getHubAdmins)
-  .patch("/publish-campaign", authenticateHubAdmin, requireStudioPayment, publishCampaign)
+  .patch("/publish-campaign", authenticateHubAdmin, publishCampaign)
   // --- Public routes ---
   .post("/sign-in", signIn)
   .post("/logout", authenticateHubAdmin2, logout)

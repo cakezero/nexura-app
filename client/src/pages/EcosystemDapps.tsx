@@ -24,6 +24,43 @@ interface Dapp {
   websiteUrl: string;
 }
 
+const DUMMY_DAPP: Dapp[] = [
+  {
+    _id: "dummy-1",
+    name: "NexSwap",
+    description: "A decentralized exchange for fast, low-fee token swaps within the Nexura ecosystem.",
+    category: "DeFi",
+    logo: "https://images.unsplash.com/photo-1639322537228-f710d846310a?q=80&w=1200&auto=format&fit=crop",
+    reward: "50",
+    done: false,
+    isCompleted: false,
+    websiteUrl: "https://example.com"
+  },
+  {
+    _id: "dummy-2",
+    name: "NexBridge",
+    description: "Bridge assets seamlessly across multiple blockchains supported by Nexura.",
+    category: "Infrastructure",
+    logo: "https://images.unsplash.com/photo-1644088379091-d574269d422f?q=80&w=1200&auto=format&fit=crop",
+    reward: "75",
+    done: false,
+    isCompleted: false,
+    websiteUrl: "https://example.com"
+  },
+  {
+    _id: "dummy-3",
+    name: "NexStake",
+    description: "Stake your tokens securely and earn passive rewards over time.",
+    category: "Staking",
+    logo: "https://images.unsplash.com/photo-1620121692029-d088224ddc74?q=80&w=1200&auto=format&fit=crop",
+    reward: "100",
+    done: false,
+    isCompleted: false,
+    websiteUrl: "https://example.com"
+  }
+];
+
+
 export default function EcosystemDapps() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
@@ -42,6 +79,10 @@ export default function EcosystemDapps() {
       setDapps(ecosystemQuests);
     })();
   }, []);
+
+  // useEffect(() => {
+  //   setDapps(DUMMY_DAPP);
+  // }, []);
 
 
   const categories = ["All", ...Array.from(new Set(dapps.map(d => d.category)))];
@@ -238,8 +279,8 @@ export default function EcosystemDapps() {
                     <div>
                       <CardTitle className="text-xl mb-2">{dapp.name}</CardTitle>
                       <Badge className={getCategoryColor(dapp.category)} variant="secondary">
-  {String(dapp.category).toUpperCase()}
-</Badge>
+                        {dapp.category}
+                      </Badge>
                     </div>
                   </div>
                   <CardDescription className="mt-2">{dapp.description}</CardDescription>
