@@ -919,16 +919,16 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
       {/* Publish Modal - Mirrored from Campaign Builder */}
       {showPublishModal && (
         <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/80 backdrop-blur-sm p-4 text-left">
-          <div className="bg-[#0d0d14] w-full max-w-md border border-purple-500/20 p-6 rounded-2xl relative shadow-[0_0_60px_rgba(131,58,253,0.2)] animate-modal-pop">
+          <div className="bg-[#0d0d14] w-full max-w-sm border border-purple-500/20 p-5 rounded-2xl relative shadow-[0_0_60px_rgba(131,58,253,0.2)] animate-modal-pop">
             <button onClick={() => setShowPublishModal(false)} className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-all text-lg leading-none">×</button>
-            <div className="flex justify-center mb-4"><img src="/activate-studio.png" alt="" className="w-48 h-40" /></div>
-            <div className="text-center mb-6">
-              <h2 className="text-xl font-semibold text-white">Quest Launch Fee</h2>
-              <p className="text-white/70 mt-2">Pay the quest launch fee to publish this quest and make it live for participants.</p>
+            <div className="flex justify-center mb-2"><img src="/activate-studio.png" alt="" className="w-36 h-32" /></div>
+            <div className="text-center mb-4">
+              <h2 className="text-lg font-semibold text-white">Quest Launch Fee</h2>
+              <p className="text-white/70 mt-1 text-sm">Pay the quest launch fee to publish this quest and make it live for participants.</p>
             </div>
             <div className="bg-white/5 border border-white/10 rounded-xl p-4 mb-4">
-              <div className="flex justify-between items-center mb-2"><span className="text-white font-semibold text-sm">Quest Launch Fee</span><span className="text-purple-400 font-bold text-sm">0.1 $TRUST</span></div>
-              <p className="text-white/60 text-xs mb-3">A one-time fee of 0.1 $TRUST is required to launch and publish this quest.</p>
+              <div className="flex justify-between items-center mb-2"><span className="text-white font-semibold text-xs">Quest Launch Fee</span><span className="text-purple-400 font-bold text-xs">0.1 $TRUST</span></div>
+              <p className="text-white/60 text-[10px] mb-3 leading-relaxed">A one-time fee of 0.1 $TRUST is required to launch and publish this quest.</p>
               {paymentTxHash ? (
                 <div className="flex items-center gap-2 bg-green-900/40 border border-green-600/50 rounded-lg px-3 py-2">
                   <svg className="w-4 h-4 text-green-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
