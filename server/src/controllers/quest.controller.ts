@@ -92,6 +92,8 @@ export const fetchEcosystemDapps = async (
 
 export const fetchQuests = async (req: GlobalRequest, res: GlobalResponse) => {
 	try {
+		const Hub = (await import('../models/hub.model')).hub;
+		
 		const questsInDB = await quest.find({ status: { $ne: "Save" } }).lean();
 		const completedQuests = await questCompleted.find({
 			user: new mongoose.Types.ObjectId(req.id),
@@ -113,6 +115,20 @@ export const fetchQuests = async (req: GlobalRequest, res: GlobalResponse) => {
 			if (temporalStatus && temporalStatus !== singleQuest.status && singleQuest.status !== "Save" && singleQuest.status !== "Ended") {
 				mergedQuest.status = temporalStatus;
 				(mergedQuest as any)._needsStatusUpdate = temporalStatus;
+			}
+
+			// Set project_name and project_image based on hub
+			if (singleQuest.hub) {
+				const hub = await Hub.findById(singleQuest.hub).select('name logo systemKey').lean();
+				if (hub) {
+					// If it's a system hub (Nexura), show "Nexura" as creator
+					if (hub.systemKey === 'nexura-admin-campaigns') {
+						mergedQuest.project_name = 'Nexura';
+					} else {
+						mergedQuest.project_name = hub.name;
+					}
+					mergedQuest.project_image = hub.logo;
+				}
 			}
 
 			quests.push(mergedQuest);
@@ -175,7 +191,14 @@ export const fetchMiniQuests = async (req: GlobalRequest, res: GlobalResponse) =
 
 		const mainQuestCompleted = await questCompleted.findOne({ user: req.id, quest: id });
 
-		const currentHub = mainQuest.hub ? await userHub.findById(mainQuest.hub).lean() : null;
+		let currentHub: any;
+
+		if (mainQuest.creatorModel === "admin") {
+			currentHub = await hub.findById(mainQuest.hub).lean();
+		} else {
+			currentHub = await userHub.findById(mainQuest.hub).lean();
+		}
+
 		const hubInfo = {
 			id: currentHub?._id?.toString?.() ?? "",
 			name: currentHub?.name ?? mainQuest.project_name ?? "",
