@@ -1,15 +1,17 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import AnimatedBackground from "../../../components/AnimatedBackground";
 import { useLocation } from "wouter";
 import { projectApiRequest, storeProjectSession, base64ToBlob } from "../../../lib/projectApi";
 import { apiRequestV2 } from "../../../lib/queryClient";
 import OTPModal from "../../../components/studio/OTPModal";
 import { useToast } from "../../../hooks/use-toast";
+import { useWallet } from "../../../hooks/use-wallet";
 import { Eye, EyeOff, Info, ArrowRight, Globe, Twitter, Upload } from "lucide-react";
 
 export default function ProjectCreate() {
+  const { address: walletAddress } = useWallet();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [, setLocation] = useLocation();
@@ -27,6 +29,13 @@ export default function ProjectCreate() {
   const [address, setAddress] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Auto-fill wallet address when connected
+  useEffect(() => {
+    if (walletAddress && !address) {
+      setAddress(walletAddress);
+    }
+  }, [walletAddress]);
 
   // Step 2: Project Details
   const [hubName, setHubName] = useState("");
@@ -171,15 +180,19 @@ export default function ProjectCreate() {
               {/* Project Wallet Address */}
               <div className="space-y-2">
                 <label className="block text-[18px] font-bold text-white">Project Wallet Address</label>
-                <div className="bg-[#060210] border border-[#8a3efe] h-[40px] rounded-full px-4 flex items-center overflow-hidden">
+                <div className={`bg-[#060210] border border-[#8a3efe] h-[40px] rounded-full px-4 flex items-center overflow-hidden ${walletAddress ? "opacity-70" : ""}`}>
                   <input
                     type="text"
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
                     placeholder="0x..."
+                    readOnly={!!walletAddress}
                     className="w-full bg-transparent border-none outline-none text-[14px] text-white placeholder-[rgba(255,255,255,0.4)] font-mono"
                   />
                 </div>
+                {walletAddress && (
+                  <p className="text-xs text-white/40 ml-1">Auto-filled from connected wallet</p>
+                )}
               </div>
 
               {/* Password */}
