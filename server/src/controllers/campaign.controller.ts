@@ -892,7 +892,32 @@ export const claimCampaignRewards = async (
 
 export const fetchHubCampaigns = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
-		const hubCampaigns = await campaign.find({ hub: req.admin.hub, status: { $ne: "Deleted" }, deletedAt: null }).lean();
+		const hubId = req.admin.hub;
+		if (!hubId) {
+			res.status(BAD_REQUEST).json({ error: "No hub associated with this admin" });
+			return;
+		}
+
+		const hubDoc = await hub.findById(hubId).select("systemKey").lean();
+		if (!hubDoc) {
+			res.status(NOT_FOUND).json({ error: "Hub not found" });
+			return;
+		}
+
+		const isSystemHub = hubDoc.systemKey === "nexura-admin-campaigns";
+
+		const query: any = {
+			status: { $ne: "Deleted" },
+			deletedAt: null
+		};
+
+		if (isSystemHub) {
+			query.hub = { $ne: null };
+		} else {
+			query.hub = hubId;
+		}
+
+		const hubCampaigns = await campaign.find(query).lean();
 		const statusUpdates: Array<{ _id: any; status: string }> = [];
 		const normalizedCampaigns = hubCampaigns.map((c) => {
 			const normalizedStatus = getTemporalCampaignStatus(c);

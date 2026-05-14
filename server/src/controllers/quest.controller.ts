@@ -1478,9 +1478,26 @@ export const publishQuest = async (req: GlobalRequest, res: GlobalResponse) => {
         res.status(BAD_REQUEST).json({ error: "No hub associated with this admin" });
         return;
       }
-      const quests = await quest.find({ hub: hubId, status: { $ne: "Deleted" } }).sort({ createdAt: -1 }).lean();
 
-      // Recalculate temporal status and persist changes (like campaigns)
+      const hubModel = await import("@/models/hub.model").then(m => m.hub);
+      const hubDoc = await hubModel.findById(hubId).select("systemKey").lean();
+      if (!hubDoc) {
+        res.status(NOT_FOUND).json({ error: "Hub not found" });
+        return;
+      }
+
+      const isSystemHub = hubDoc.systemKey === "nexura-admin-campaigns";
+
+      const query: any = { status: { $ne: "Deleted" } };
+
+      if (isSystemHub) {
+        query.hub = { $ne: null };
+      } else {
+        query.hub = hubId;
+      }
+
+      const quests = await quest.find(query).sort({ createdAt: -1 }).lean();
+
       const statusUpdates: any[] = [];
       const normalizedQuests = quests.map((q: any) => {
         const temporal = getTemporalQuestStatus(q);
