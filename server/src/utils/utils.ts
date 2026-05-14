@@ -146,7 +146,7 @@ export const validateQuestData = (reqData: any) => {
 	const questSchema = z.object({
     title: z.string().trim(),
 		page: z.enum(["user", "project"]),
-		description: z.string().trim(),
+		description: z.string().trim().min(50).max(100),
 		xp: z.union([z.string(), z.number()]).optional(),
 		reward: z.union([z.string(), z.number()]).optional(),
 		campaignQuests: z.array(
@@ -198,7 +198,7 @@ export const validateMiniQuestData = (reqData: any) => {
 export const validateCampaignQuestData = (reqData: any) => {
 	const questSchema = z.object({
 		title: z.string().trim(),
-		description: z.string().trim(),
+		description: z.string().trim().min(50).max(100),
 		url: z.string().trim().optional(),
 		campaign: z.string().trim(),
 		reward: z.object({
@@ -214,7 +214,7 @@ export const validateCampaignQuestData = (reqData: any) => {
 export const validateEcosystemQuestData = (reqData: any) => {
 	const ecosystemSchema = z.object({
 		title: z.string().trim(),
-		description: z.string().trim(),
+		description: z.string().trim().min(50).max(100),
 		timer: z.string().trim(),
 		link: z.string().trim(),
 		tags: z.enum([
@@ -242,7 +242,7 @@ export const validateEcosystemQuestData = (reqData: any) => {
 export const validateHubData = (reqData: any) => {
 	const hubSchema = z.object({
 		name: z.string().trim(),
-    description: z.string().trim(),
+    description: z.string().trim().min(50).max(100),
 		website: z.string().trim().optional(),
 		xAccount: z.string().trim().optional(),
 		discordServer: z.string().trim().optional(),
@@ -256,7 +256,7 @@ export const validateHubData = (reqData: any) => {
 export const validateUserHubData = (reqData: any) => {
 	const useerHubSchema = z.object({
 		name: z.string().trim(),
-    description: z.string().trim(),
+    description: z.string().trim().min(50).max(100),
 		website: z.string().trim().optional(),
 		xAccount: z.string().trim().optional(),
 	});
@@ -316,7 +316,7 @@ export const validateUserSignUpData = (reqData: any) => {
 export const validateSaveCampaignData = (reqData: any) => {
   const campaignSchema = z.object({
 		title: z.string().trim(),
-		description: z.string().trim(),
+		description: z.string().trim().min(50).max(100),
 		nameOfProject: z.string().trim(),
     starts_at: z.string().trim(),
 		projectCoverImage: z.string().optional(),
@@ -337,7 +337,7 @@ export const validateSaveCampaignData = (reqData: any) => {
 export const validateSaveQuestData = (reqData: any) => {
   const questSchema = z.object({
 		title: z.string().trim(),
-		description: z.string().trim(),
+		description: z.string().trim().min(50).max(100),
 		nameOfProject: z.string().trim(),
     starts_at: z.string().trim(),
 		projectCoverImage: z.string().optional(),

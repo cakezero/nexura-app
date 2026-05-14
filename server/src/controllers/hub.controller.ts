@@ -102,7 +102,7 @@ export const createHub = async (req: GlobalRequest, res: GlobalResponse) => {
       return;
     }
 
-    const name = String(req.body.name ?? "").trim();
+    const name = String(req.body.name ?? "").trim().toUpperCase();
 
     const existingHubWithName = await hub.findOne({ name });
     if (existingHubWithName) {
@@ -345,7 +345,7 @@ export const updateHub = async (req: GlobalRequest, res: GlobalResponse) => {
       });
     }
 
-    const trimmedName = typeof name === "string" ? name.trim() : undefined;
+    const trimmedName = typeof name === "string" ? name.trim().toUpperCase() : undefined;
     if (trimmedName) {
       const nameExists = await hub.exists({
         name: trimmedName,
@@ -1044,7 +1044,7 @@ export const createUserHub = async (req: GlobalRequest, res: GlobalResponse) => 
       return;
     }
 
-    const name = String(req.body.name ?? "").trim();
+    const name = String(req.body.name ?? "").trim().toUpperCase();
 
     const existingUserHubWithName = await userHub.findOne({ name });
     if (existingUserHubWithName) {
@@ -1107,7 +1107,7 @@ export const updateUserHub = async (req: GlobalRequest, res: GlobalResponse) => 
     const logoFile = req.file?.buffer;
 
     const updateFields: any = {};
-    if (name) updateFields.name = name;
+    if (name) updateFields.name = String(name).trim().toUpperCase();
     if (bio) updateFields.description = bio;
     if (xAccount) updateFields.xAccount = xAccount;
 

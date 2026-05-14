@@ -7,9 +7,7 @@ import { useToast } from "../../../hooks/use-toast";
 import { useWallet } from "../../../hooks/use-wallet";
 import { BACKEND_URL } from "../../../lib/constants";
 import { apiRequestV2 } from "../../../lib/queryClient";
-import { userApiRequest } from "../../../lib/userApi";
-import { storeUserSession } from "../../../lib/userSession";
-import { getSessionToken } from "../../../lib/session";
+import OTPModal from "../../../components/studio/OTPModal";
 import { Eye, EyeOff, Info, ArrowRight, Loader2, ArrowLeft } from "lucide-react";
 
 export default function UsersCreate() {
@@ -28,6 +26,8 @@ export default function UsersCreate() {
 
   const [profileLoading, setProfileLoading] = useState(true);
   const [mainAppUsername, setMainAppUsername] = useState("");
+
+  const [isOTPModalOpen, setIsOTPModalOpen] = useState(false);
 
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -102,31 +102,17 @@ export default function UsersCreate() {
       const usernameToUse = mainAppUsername || walletAddress || email.split("@")[0];
 
       await apiRequestV2("POST", `/api/hub-auth/validate-email?email=${encodeURIComponent(email)}&name=${encodeURIComponent(usernameToUse)}&page=user`);
-      const res = await userApiRequest<{
-        accessToken?: string;
-        admin?: { _id: string; name: string; email: string; role: string; hub: string };
-        hub?: { logo?: string };
-      }>({
-        method: "POST",
-        endpoint: "/user-hub/sign-up",
-        data: { name: usernameToUse, email, password },
-        token: getSessionToken() || undefined,
-      });
 
-      if (res.accessToken) {
-        storeUserSession({
-          token: res.accessToken,
-          type: "user",
-          role: res.admin?.role || "user",
-          userId: res.admin?._id,
-          name: res.admin?.name || walletAddress,
-          email: res.admin?.email || email,
-          hub: res.admin?.hub,
-          avatar: res.hub?.logo || "",
-        });
-        toast({ title: "Account created!", description: "Welcome to Nexura Studio. Please set up your hub profile." });
-        setLocation("/studio/users-hub");
-      }
+      sessionStorage.setItem("nexura:pending-signup", JSON.stringify({
+        email,
+        password,
+        name: usernameToUse,
+        page: "user",
+        walletAddress,
+        mainAppUsername: mainAppUsername || ""
+      }));
+
+      setIsOTPModalOpen(true);
     } catch (err: any) {
       toast({
         title: "Signup failed",
@@ -302,6 +288,13 @@ export default function UsersCreate() {
           </div>
         </div>
       </div>
+
+      <OTPModal
+        isOpen={isOTPModalOpen}
+        onClose={() => setIsOTPModalOpen(false)}
+        email={email}
+        page="user"
+      />
     </div>
   );
 }

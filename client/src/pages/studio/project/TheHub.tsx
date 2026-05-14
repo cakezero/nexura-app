@@ -42,8 +42,8 @@ export default function TheHub() {
       return;
     }
 
-    if (description.length > 0 && description.length < 150) {
-      toast({ title: "Description too short", description: "Minimum 150 characters required.", variant: "destructive" });
+    if (description.length > 0 && (description.length < 50 || description.length > 100)) {
+      toast({ title: "Description invalid", description: "Minimum 50 and maximum 100 characters required.", variant: "destructive" });
       return;
     }
 
@@ -167,7 +167,7 @@ export default function TheHub() {
             <CardTitle className="text-lg">Project Name</CardTitle>
             <Input
               value={hubName}
-              onChange={(e) => setHubName(e.target.value)}
+              onChange={(e) => setHubName(e.target.value.toUpperCase())}
               placeholder="Enter your Project Name..."
               className="bg-gray-800 border-purple-500 text-white"
             />
@@ -177,20 +177,20 @@ export default function TheHub() {
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg">Description</CardTitle>
-              <span className={`text-xs ${description.length > 0 && description.length < 150 ? "text-red-400" : "text-white/40"}`}>
-                {description.length}/300
+              <span className={`text-xs ${description.length > 0 && (description.length < 50 || description.length > 100) ? "text-red-400" : "text-white/40"}`}>
+                {description.length}/100
               </span>
             </div>
             <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Describe your project or community (150GÇô300 characters)"
-              maxLength={300}
+              placeholder="Describe your project or community (50-100 characters)"
+              maxLength={100}
               className="bg-gray-800 border-purple-500 text-white resize-none h-32"
             />
-            {description.length > 0 && description.length < 150 && (
+            {description.length > 0 && description.length < 50 && (
               <p className="text-xs text-red-400">
-                Minimum 150 characters GÇö {150 - description.length} more needed
+                Minimum 50 characters â€“ {50 - description.length} more needed
               </p>
             )}
           </div>

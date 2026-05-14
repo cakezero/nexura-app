@@ -2570,7 +2570,7 @@ const isActive =
               onClick={async () => {
                 setPaymentLoading(true);
                 try {
-                  const hash = await payStudioHubFee();
+                  const hash = await payStudioHubFee(1000);
                   await projectApiRequest({
                     method: "PATCH",
                     endpoint: "/hub/save-payment-hash",

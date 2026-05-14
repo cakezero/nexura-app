@@ -254,7 +254,7 @@ export default function HubProfile() {
             {isSuperAdmin ? (
               <Input
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => setName(e.target.value.toUpperCase())}
                 placeholder="Enter project name"
                 className="bg-white/[0.06] border-white/15 text-white placeholder:text-white/30 focus:border-purple-500/60 transition-colors"
               />
@@ -278,13 +278,13 @@ export default function HubProfile() {
                 <Textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Describe your project (150GÇô300 characters)"
+                  placeholder="Describe your project (150Gï¿½ï¿½300 characters)"
                   maxLength={300}
                   className="bg-white/[0.06] border-white/15 text-white placeholder:text-white/30 resize-none h-32 focus:border-purple-500/60 transition-colors"
                 />
                 {descTooShort && (
                   <p className="text-xs text-red-400">
-                    Minimum 150 characters GÇö {150 - description.length} more needed
+                    Minimum 150 characters Gï¿½ï¿½ {150 - description.length} more needed
                   </p>
                 )}
               </>
@@ -362,7 +362,7 @@ export default function HubProfile() {
           )}
         </div>
 
-        {/* Save button GÇö superadmin only */}
+        {/* Save button Gï¿½ï¿½ superadmin only */}
         {isSuperAdmin && (
           <div className="flex justify-end pt-8 mt-2 border-t border-white/10">
             <Button

@@ -2,6 +2,13 @@ import { useEffect, useState } from "react";
 import { useParams } from "wouter";
 import { Card } from "../components/ui/card";
 import { Button } from "../components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "../components/ui/dialog";
 import { Play, CheckCircle2, RotateCcw } from "lucide-react";
 import AnimatedBackground from "../components/AnimatedBackground";
 import { getStoredAccessToken, apiRequestV2, apiRequest } from "../lib/queryClient";
@@ -19,6 +26,13 @@ type Quest = {
   reward: string;
   link: string;
   status: string;
+};
+
+type HubInfo = {
+  id?: string;
+  name: string;
+  description?: string;
+  logo?: string;
 };
 
 const questsInitial: Quest[] = [
@@ -45,6 +59,12 @@ export default function QuestEnvironment() {
   const [completed, setCompleted] = useState<boolean>(false);
   // const [miniQuestsCompleted, setMiniQuestsCompleted] = useState<boolean>(false);
   const [title, setTitle] = useState<string>("");
+  const [creatorCoverImage, setCreatorCoverImage] = useState<string>("");
+  const [creatorName, setCreatorName] = useState("");
+  const [creatorImage, setCreatorImage] = useState("");
+  const [hubInfo, setHubInfo] = useState<HubInfo | null>(null);
+  const [showHubModal, setShowHubModal] = useState(false);
+
   const [visitedQuests, setVisitedQuests] = useState<string[]>(() => {
     return JSON.parse(localStorage.getItem('nexura:quest:visited') || '{}')[userId] || [];
   });
@@ -75,6 +95,8 @@ export default function QuestEnvironment() {
         sub_title: st,
         questCompleted: comp,
         hub,
+        hubInfo: fetchedHubInfo,
+        creatorCoverImage: pci,
       } = await apiRequestV2("GET", `/api/quest/fetch-mini-quests?id=${questId}`);
 
       setCompleted(comp);
@@ -84,7 +106,17 @@ export default function QuestEnvironment() {
       setQuestNumber(quest_no);
       setTitle(t);
       setSubTitle(st);
+      setCreatorCoverImage(pci || "/quest.png");
       if (hub) setHubId(hub);
+
+      const nextHubInfo: HubInfo = fetchedHubInfo ?? {
+        name: "Unknown Creator",
+        description: "",
+        logo: "",
+      };
+      setHubInfo(nextHubInfo);
+      setCreatorName(nextHubInfo.name || "");
+      setCreatorImage(nextHubInfo.logo || "");
     })();
   }, []);
 
@@ -401,6 +433,8 @@ export default function QuestEnvironment() {
     );
   };
 
+  const activeHubInfo = hubInfo || { name: creatorName || "Unknown Project", description: "No description provided.", logo: creatorImage };
+
   return (
     <div className="min-h-screen bg-[#0a0615] text-white relative p-6">
       <AnimatedBackground />
@@ -410,9 +444,33 @@ export default function QuestEnvironment() {
         {/* Banner with Progress */}
         <div className="w-full bg-gradient-to-r from-purple-700/40 to-purple-900/40 border border-white/10 rounded-2xl p-4 sm:p-6 space-y-3 sm:space-y-4">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-            <div>
-              <p className="uppercase text-[0.6rem] sm:text-xs opacity-60">{title}</p>
-              <p className="text-lg sm:text-xl font-semibold">{sub_title}</p>
+            <div className="flex items-center gap-3">
+              <div
+                onClick={() => setShowHubModal(true)}
+                className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl overflow-hidden border border-white/10 bg-white/5 cursor-pointer hover:border-purple-500/50 transition-colors"
+              >
+                {creatorImage ? (
+                  <img src={creatorImage} alt={creatorName} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-white/5 text-white/50 text-xl font-bold uppercase">
+                    {(creatorName || "N").slice(0, 1)}
+                  </div>
+                )}
+              </div>
+              <div className="min-w-0">
+                <div
+                  onClick={() => setShowHubModal(true)}
+                  className="flex items-center gap-1.5 cursor-pointer group"
+                >
+                  <p className="uppercase text-[0.6rem] sm:text-xs opacity-60 group-hover:opacity-100 group-hover:text-purple-400 transition-all">
+                    {creatorName || "Nexura"}
+                  </p>
+                  <div className="w-1 h-1 rounded-full bg-white/20 group-hover:bg-purple-400/50 transition-colors" />
+                </div>
+                <p className="text-lg sm:text-xl font-semibold truncate max-w-[250px] sm:max-w-md">
+                  {sub_title || title}
+                </p>
+              </div>
             </div>
 
             <div className="flex items-center gap-2 sm:gap-3">
@@ -438,7 +496,7 @@ export default function QuestEnvironment() {
           <div className="grid grid-cols-1 md:grid-cols-2">
             <div className="h-48 md:h-full">
               <img
-                src="/quest.png"
+                src={creatorCoverImage || "/quest.png"}
                 alt="Quest"
                 className="w-full h-full object-cover"
               />
@@ -446,13 +504,13 @@ export default function QuestEnvironment() {
 
             <div className="p-5 md:p-6 flex flex-col justify-between">
               <div>
-                <p className="text-xs opacity-50 uppercase mb-1">Nexura</p>
+                <p className="text-xs opacity-50 uppercase mb-1">{creatorName || "Nexura"}</p>
                 <p className="text-lg md:text-xl font-bold leading-tight">Quest {questNumber}:<br />{sub_title}</p>
 
                 <div className="mt-4">
                   <p className="uppercase text-xs opacity-50">Start Quest</p>
                   <p className="text-sm opacity-80 leading-relaxed mt-1">
-                    Complete simple quests in the Nexura ecosystem and earn rewards.
+                    {title || sub_title || "Complete simple quests in the Nexura ecosystem and earn rewards."}
                   </p>
                 </div>
                 <div className="mt-3 space-y-1">
@@ -481,6 +539,41 @@ export default function QuestEnvironment() {
         {miniQuests.map((quest, i) => renderQuestRow(quest, i))}
       </div>
 
+      <Dialog open={showHubModal} onOpenChange={setShowHubModal}>
+        <DialogContent className="w-[94vw] max-w-3xl bg-[#0d1117] border-white/10 text-white p-0 overflow-hidden">
+          <div className="p-4 sm:p-5 space-y-4">
+            <DialogHeader className="space-y-1">
+              <DialogTitle>Creator Information</DialogTitle>
+              <DialogDescription className="text-white/60">
+                Creator details.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="grid grid-cols-1 sm:grid-cols-[170px,1fr] gap-4 items-start">
+              <div className="w-full h-28 sm:h-40 rounded-xl overflow-hidden border border-white/10 bg-white/5">
+                {activeHubInfo.logo ? (
+                  <img src={activeHubInfo.logo} alt={activeHubInfo.name} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#1a2233] to-[#121826] text-white/70 text-2xl font-semibold">
+                    {(activeHubInfo.name || "H").slice(0, 1).toUpperCase()}
+                  </div>
+                )}
+              </div>
+
+              <div className="min-w-0 space-y-3">
+                <p className="text-lg sm:text-xl font-semibold break-words">{activeHubInfo.name || "Unknown Creator"}</p>
+                <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+                  <p className="text-xs uppercase text-white/50 mb-1.5">Description</p>
+                  <p className="text-sm text-white/85 leading-relaxed whitespace-pre-wrap break-words">
+                    {activeHubInfo.description?.trim() ? activeHubInfo.description : "No creator description provided."}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <ProofOfActionModal
         open={showProofModal}
         onOpenChange={setShowProofModal}
@@ -492,4 +585,4 @@ export default function QuestEnvironment() {
       />
     </div>
   );
-};
+}

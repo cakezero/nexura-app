@@ -130,21 +130,31 @@ export default function UsersHub() {
           </div>
 
           <div className="text-left space-y-1">
-            <span className="text-white/60 text-xs">Short Bio</span>
+            <div className="flex items-center justify-between">
+              <span className="text-white/60 text-xs">Short Bio</span>
+              <span className={`text-[10px] ${description.length < 50 || description.length > 100 ? "text-red-400" : "text-white/40"}`}>
+                {description.length}/100
+              </span>
+            </div>
             <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Tell people about yourself... (this will be your hub description)"
-              maxLength={300}
-              className="bg-gray-800 border-purple-500 text-white h-24"
+              placeholder="Tell people about yourself... (50-100 characters)"
+              maxLength={100}
+              className={`bg-gray-800 border-purple-500 text-white h-24 ${description.length > 0 && (description.length < 50 || description.length > 100) ? "border-red-500/50" : ""}`}
             />
+            {description.length > 0 && description.length < 50 && (
+              <p className="text-[10px] text-red-400">
+                Minimum 50 characters required. {50 - description.length} more needed.
+              </p>
+            )}
           </div>
           </>
         )}
 
         <button
           onClick={handleSubmit}
-          disabled={loading || !canCreate}
+          disabled={loading || !canCreate || description.length < 50 || description.length > 100}
           className="w-full bg-[#8B3EFE] py-3 rounded-xl hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading ? "Creating..." : "Create Hub"}

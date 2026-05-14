@@ -222,6 +222,17 @@ export default function Quests() {
               )}
             </div>
 
+            {/* PROJECT LOGO OVERLAY */}
+            <div className="absolute bottom-3 left-3">
+              <div className="w-12 h-12 rounded-xl overflow-hidden border border-white/10 bg-[#1D1526] backdrop-blur-md shadow-lg">
+                <img
+                  src={(quest as any).project_image || "/quest-1.png"}
+                  alt={quest.project_name || "Project"}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            </div>
+
             {/* Category */}
             {quest.category && (
               <div className="absolute top-2 left-2 text-[0.65rem] sm:text-xs text-white/80 font-medium">

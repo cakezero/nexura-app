@@ -66,7 +66,6 @@ import UsersHub from "./pages/studio/user/UsersHub.tsx";
 import UsersCreate from "./pages/studio/user/UsersCreate.tsx";
 import UserSignup from "./pages/studio/user/UserSignup.tsx";
 import UserSignIn from "./pages/studio/user/UserSignin.tsx";
-import OtpVerify from "./pages/studio/OtpVerify.tsx";
 import QuestsTab from "./components/admin/QuestsTab.tsx";
 import QuestCard from "./components/QuestCard.tsx";
 
@@ -221,7 +220,6 @@ function Router() {
       </Route>
       <Route path="/studio/register" component={AdminSignUp} />
       <Route path="/studio/reset-password" component={ResetHubPassword} />
-        <Route path="/studio/verify-otp" component={OtpVerify} />
       {/* ProjectDashboard route removed - no longer used */}
       {/* Referral */}
       <Route path="/ref/:referrerCode" component={UserReferred} />

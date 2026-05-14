@@ -4,6 +4,8 @@ import React, { useState, useMemo } from "react";
 import AnimatedBackground from "../../../components/AnimatedBackground";
 import { useLocation } from "wouter";
 import { projectApiRequest, storeProjectSession, base64ToBlob } from "../../../lib/projectApi";
+import { apiRequestV2 } from "../../../lib/queryClient";
+import OTPModal from "../../../components/studio/OTPModal";
 import { useToast } from "../../../hooks/use-toast";
 import { Eye, EyeOff, Info, ArrowRight, Globe, Twitter, Upload } from "lucide-react";
 
@@ -33,6 +35,7 @@ export default function ProjectCreate() {
   const [xAccount, setXAccount] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState("");
+  const [isOTPModalOpen, setIsOTPModalOpen] = useState(false);
 
   const pwdChecks = {
     length: password.length >= 8,
@@ -43,7 +46,7 @@ export default function ProjectCreate() {
   const allPwdValid = Object.values(pwdChecks).every(Boolean);
 
   const canGoToStep2 = allPwdValid && !!name && !!email && password === confirmPassword && !loading;
-  const canSubmit = !!hubName && description.length >= 150 && !!imageFile && !loading;
+  const canSubmit = !!hubName && description.length >= 50 && description.length <= 100 && !!imageFile && !loading;
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -78,47 +81,24 @@ export default function ProjectCreate() {
 
     setLoading(true);
     try {
-      // Step 1: Admin Sign Up
-      const res = await projectApiRequest<{
-        message?: string;
-        accessToken?: string;
-        token?: string;
-        admin?: { _id: string; name: string; email: string; role: string; hub?: string };
-      }>({
-        method: "POST",
-        endpoint: "/hub/admin/sign-up",
-        data: { name, email, password },
-      });
+      // Send OTP
+      await apiRequestV2("POST", `/api/hub-auth/validate-email?email=${encodeURIComponent(email)}&name=${encodeURIComponent(name)}&page=project`);
 
-      const token = (res.token ?? res.accessToken) as string | undefined;
-      if (!token) throw new Error("No access token received");
+      sessionStorage.setItem("nexura:pending-signup", JSON.stringify({
+        email,
+        password,
+        name,
+        page: "project",
+        hubDetails: {
+          hubName: hubName.trim(),
+          description,
+          website: website.trim(),
+          xAccount: xAccount.trim(),
+          imagePreview
+        }
+      }));
 
-      storeProjectSession(token, { email, name, role: res.admin?.role ?? "admin", adminId: res.admin?._id ?? "" });
-
-      // Step 2: Hub Creation
-      const fd = new FormData();
-      fd.append("name", hubName.trim());
-      fd.append("description", description);
-      fd.append("website", website.trim());
-      fd.append("xAccount", xAccount.trim());
-
-      if (imagePreview) {
-        const blob = base64ToBlob(imagePreview);
-        fd.append("logo", blob, "logo.png");
-      }
-
-      await projectApiRequest({ 
-        method: "POST", 
-        endpoint: "/hub/create-hub", 
-        formData: fd 
-      });
-
-      toast({
-        title: "Project created!",
-        description: "Welcome to Nexura Studio. Your project hub is ready.",
-      });
-      
-      setLocation("/studio-dashboard/connect-discord");
+      setIsOTPModalOpen(true);
     } catch (err: unknown) {
       const msg =
         err instanceof Error ? err.message : "Creation failed. Please try again.";
@@ -277,7 +257,7 @@ export default function ProjectCreate() {
                   <input
                     type="text"
                     value={hubName}
-                    onChange={(e) => setHubName(e.target.value)}
+                    onChange={(e) => setHubName(e.target.value.toUpperCase())}
                     placeholder="Enter your Project Name..."
                     className="w-full bg-transparent border-none outline-none text-[14px] text-white placeholder-[rgba(255,255,255,0.4)]"
                   />
@@ -410,6 +390,13 @@ export default function ProjectCreate() {
           </div>
         </form>
       </div>
+
+      <OTPModal
+        isOpen={isOTPModalOpen}
+        onClose={() => setIsOTPModalOpen(false)}
+        email={email}
+        page="project"
+      />
     </div>
   );
 }

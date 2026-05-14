@@ -232,6 +232,11 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
       return null;
     }
 
+    if (questDescription.length > 0 && (questDescription.length < 50 || questDescription.length > 100)) {
+      toast({ title: "Invalid Description", description: "Quest description must be between 50 and 100 characters.", variant: "destructive" });
+      return null;
+    }
+
     if (thenNavigate === "review" && tasks.length < 5) {
       toast({ title: "Incomplete", description: "Please add at least 5 tasks before reviewing.", variant: "destructive" });
       return null;
@@ -265,6 +270,11 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
       return;
     }
 
+    if (questDescription.length < 50 || questDescription.length > 100) {
+      toast({ title: "Invalid Description", description: "Quest description must be between 50 and 100 characters.", variant: "destructive" });
+      return;
+    }
+
     setLoading(true);
     try {
       const savedId = questId ?? await handleSaveDraft();
@@ -294,6 +304,12 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
 
   const handleUpdateQuest = async () => {
     if (!questId) return;
+
+    if (questDescription.length < 50 || questDescription.length > 100) {
+      toast({ title: "Invalid Description", description: "Quest description must be between 50 and 100 characters.", variant: "destructive" });
+      return;
+    }
+
     setLoading(true);
     try {
       const fd = buildQuestFormData(false); // status: Active
@@ -439,13 +455,28 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
               </div>
 
               <div>
-                <label className="block mb-2 text-sm font-medium text-white">Quest Description</label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-white">Quest Description</label>
+                  <span className={`text-[10px] ${questDescription.length < 50 || questDescription.length > 100 ? "text-red-400" : "text-white/40"}`}>
+                    {questDescription.length}/100
+                  </span>
+                </div>
                 <textarea
-                  placeholder="Explain what learners will get out of this quest..."
-                  className="min-h-[80px] w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  placeholder="Explain what learners will get out of this quest... (50-100 characters)"
+                  className={`min-h-[80px] w-full rounded-xl border bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                    questDescription.length > 0 && (questDescription.length < 50 || questDescription.length > 100)
+                      ? "border-red-500/50"
+                      : "border-white/10"
+                  }`}
                   value={questDescription}
+                  maxLength={100}
                   onChange={(e) => setQuestDescription(e.target.value)}
                 />
+                {questDescription.length > 0 && questDescription.length < 50 && (
+                  <p className="text-[10px] text-red-400 mt-1">
+                    Minimum 50 characters required. {50 - questDescription.length} more needed.
+                  </p>
+                )}
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -927,8 +958,8 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
               <p className="text-white/70 mt-1 text-sm">Pay the quest launch fee to publish this quest and make it live for participants.</p>
             </div>
             <div className="bg-white/5 border border-white/10 rounded-xl p-4 mb-4">
-              <div className="flex justify-between items-center mb-2"><span className="text-white font-semibold text-xs">Quest Launch Fee</span><span className="text-purple-400 font-bold text-xs">0.1 $TRUST</span></div>
-              <p className="text-white/60 text-[10px] mb-3 leading-relaxed">A one-time fee of 0.1 $TRUST is required to launch and publish this quest.</p>
+              <div className="flex justify-between items-center mb-2"><span className="text-white font-semibold text-xs">Quest Launch Fee</span><span className="text-purple-400 font-bold text-xs">60 $TRUST</span></div>
+              <p className="text-white/60 text-[10px] mb-3 leading-relaxed">A one-time fee of 60 $TRUST is required to launch and publish this quest.</p>
               {paymentTxHash ? (
                 <div className="flex items-center gap-2 bg-green-900/40 border border-green-600/50 rounded-lg px-3 py-2">
                   <svg className="w-4 h-4 text-green-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
@@ -944,11 +975,11 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                     const hash = await payStudioHubFee(undefined, QUEST_FEE_CONTRACT);
                     setPaymentTxHash(hash);
                     await apiRequest({ method: "PATCH", endpoint: `/${apiPrefix}/save-payment-hash`, data: { txHash: hash } });
-                    toast({ title: "Payment successful", description: "0.1 $TRUST sent." });
+                    toast({ title: "Payment successful", description: "60 $TRUST sent." });
                   } catch (err: any) {
                     toast({ title: "Payment failed", description: err.message, variant: "destructive" });
                   } finally { setPaymentLoading(false); }
-                }} className="w-full bg-[#8B3EFE] hover:bg-[#7b35e6] text-white py-2 rounded-lg font-semibold flex items-center justify-center gap-2">{paymentLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Pay 0.1 $TRUST"}</button>
+                }} className="w-full bg-[#8B3EFE] hover:bg-[#7b35e6] text-white py-2 rounded-lg font-semibold flex items-center justify-center gap-2">{paymentLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Pay 60 $TRUST"}</button>
               )}
             </div>
             <button className="w-full py-2.5 bg-[#8B3EFE] text-white rounded-xl font-semibold mb-2 disabled:opacity-50 flex items-center justify-center gap-2 hover:opacity-90" onClick={handlePublish} disabled={!paymentTxHash || loading}>{loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Publish"}</button>
@@ -965,7 +996,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
             <div className="flex justify-center mb-4"><img src="/activate-studio.png" alt="" className="w-36 h-28" /></div>
             <div className="text-center mb-6">
               <h2 className="text-xl font-semibold text-white">Quest Successfully Published</h2>
-              <p className="text-white/70 mt-2 text-sm">Your 0.1 $TRUST payment was confirmed and your quest is now live.</p>
+              <p className="text-white/70 mt-2 text-sm">Your 60 $TRUST payment was confirmed and your quest is now live.</p>
             </div>
             <div className="bg-white/5 backdrop-blur-md rounded-xl border border-purple-500/30 p-4">
               <h3 className="text-[10px] font-semibold text-white/60 mb-3 uppercase tracking-wider">Quest Snapshot</h3>

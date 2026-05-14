@@ -10,6 +10,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { useLocation } from "wouter";
 import { useToast } from "../../../hooks/use-toast";
 import { useWallet } from "../../../hooks/use-wallet";
+import OTPModal from "../../../components/studio/OTPModal";
 import { apiRequestV2 } from "../../../lib/queryClient";
 
 export default function SharedAccessCredentials() {
@@ -25,11 +26,12 @@ export default function SharedAccessCredentials() {
   const [creating, setCreating] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isOTPModalOpen, setIsOTPModalOpen] = useState(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { address: walletAddress, isConnected } = useWallet();
 
-  // Track step GÇö only during creation flow (not if already signed in)
+  // Track step Gï¿½ï¿½ only during creation flow (not if already signed in)
   useEffect(() => {
     const hasFullSession =
       !!localStorage.getItem("nexura-project:token") ||
@@ -70,15 +72,19 @@ export default function SharedAccessCredentials() {
 
       setCreating(true);
 
-      // Save credentials GÇö API call happens on TheHub after hub details are filled in
-      const { accessToken } = await apiRequestV2("POST", "/api/hub/sign-up", { email, address, name, password });
+      // Send OTP
+      await apiRequestV2("POST", `/api/hub-auth/validate-email?email=${encodeURIComponent(email)}&name=${encodeURIComponent(name)}&page=project`);
 
-      localStorage.setItem("nexura-project:token", accessToken);
+      sessionStorage.setItem("nexura:pending-signup", JSON.stringify({
+        email,
+        password,
+        name,
+        page: "project",
+        walletAddress: address
+      }));
 
-      setCreating(false);
-
-      setLocation("/projects/create/the-hub");
-    } catch (error: any) {
+      setIsOTPModalOpen(true);
+      } catch (error: any) {
       console.error(error);
       setCreating(false);
       const msg: string = error?.message || "Failed to sign up.";
@@ -231,6 +237,13 @@ export default function SharedAccessCredentials() {
             </CardFooter>
           </Card>
       </div>
+
+      <OTPModal
+        isOpen={isOTPModalOpen}
+        onClose={() => setIsOTPModalOpen(false)}
+        email={email}
+        page="project"
+      />
     </div>
   );
 }

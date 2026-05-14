@@ -97,11 +97,11 @@ export const superAdminSignUp = async (req: GlobalRequest, res: GlobalResponse) 
 
     const strippedEmail = email.trim().toLowerCase();
 
-    // const verified = await verifiedEmail.exists({ email: strippedEmail }).lean().select("_id");
-    // if (!verified) {
-    //   res.status(UNAUTHORIZED).json({ error: "email address has not been verified" });
-    //   return;
-    // }
+    const verified = await verifiedEmail.exists({ email: strippedEmail }).lean().select("_id");
+    if (!verified) {
+      res.status(UNAUTHORIZED).json({ error: "email address has not been verified" });
+      return;
+    }
 
     const emailExists = await hubAdmin.exists({ email: strippedEmail });
     if (emailExists) {
@@ -118,7 +118,7 @@ export const superAdminSignUp = async (req: GlobalRequest, res: GlobalResponse) 
       role: "superadmin",
     });
 
-		// await verifiedEmail.findByIdAndDelete(verified._id)
+		await verifiedEmail.findByIdAndDelete(verified._id)
 
     const accessToken = JWT.sign(ha._id);
 		const refreshToken = getRefreshToken(ha._id);
@@ -275,18 +275,18 @@ export const hubAdminSignUp = async (req: GlobalRequest, res: GlobalResponse) =>
 			return;
 		}
 
-		// const otp = await OTP.findOne({ code, email }).lean();
-		// if (!otp) {
-		// 	res.status(BAD_REQUEST).json({ error: "otp has expired" });
-		// 	return;
-		// }
+		const otp = await OTP.findOne({ code, email }).lean();
+		if (!otp) {
+			res.status(BAD_REQUEST).json({ error: "otp has expired" });
+			return;
+		}
 
-		// const now = new Date();
+		const now = new Date();
 
-		// if (otp.expiresAt < now) {
-		// 	res.status(BAD_REQUEST).json({ error: "otp has expired" });
-		// 	return;
-		// };
+		if (otp.expiresAt < now) {
+			res.status(BAD_REQUEST).json({ error: "otp has expired" });
+			return;
+		};
 
 		const strippedEmail = email.trim().toLowerCase();
 		const trimmedName = String(req.body.name ?? "").trim();
@@ -301,8 +301,8 @@ export const hubAdminSignUp = async (req: GlobalRequest, res: GlobalResponse) =>
 			return;
 		}
 
-		req.body.hub = ""; // otp.hubId;
-		req.body.role = "superadmin"; // otp.role || "admin";
+		req.body.hub = otp.hubId;
+		req.body.role = otp.role || "admin";
 		req.body.name = trimmedName;
 		req.body.email = strippedEmail;
 		req.body.password = await hashPassword(req.body.password);
@@ -552,11 +552,11 @@ export const userHubAdminSignUp = async (req: GlobalRequest, res: GlobalResponse
     const strippedEmail = email.trim().toLowerCase();
     const trimmedName = name.trim();
 
-    // const verified = await verifiedEmail.exists({ email: strippedEmail }).lean().select("_id");
-    // if (!verified) {
-    //   res.status(UNAUTHORIZED).json({ error: "email address has not been verified" });
-    //   return;
-    // }
+    const verified = await verifiedEmail.exists({ email: strippedEmail }).lean().select("_id");
+    if (!verified) {
+      res.status(UNAUTHORIZED).json({ error: "email address has not been verified" });
+      return;
+    }
 
     const adminExists = await userHubAdmin.findOne({
       $or: [{ email: strippedEmail }, { name: trimmedName }]
@@ -767,14 +767,14 @@ export const validateHubEmail = async (req: GlobalRequest, res: GlobalResponse) 
       return;
     }
 
-    // const code = generateOTP();
+    const code = generateOTP();
 
-    // await OTP.deleteMany({ email: strippedEmail }),
+    await OTP.deleteMany({ email: strippedEmail });
 
-    // await Promise.all([
-    //   OTP.create({ code, email: strippedEmail, page: page || "project", role: "admin" }),
-    //   sendOTPConfirmEmail({ email: strippedEmail, code })
-    // ]);
+    await Promise.all([
+      OTP.create({ code, email: strippedEmail, page: page || "project", role: "admin" }),
+      sendOTPConfirmEmail({ email: strippedEmail, code })
+    ]);
 
     res.status(OK).json({ message: "otp for email confirmation sent!" });
   } catch (error) {
@@ -808,11 +808,14 @@ export const confirmHubEmailValidation = async (req: GlobalRequest, res: GlobalR
 
     await OTP.deleteOne({ email: strippedEmail, code });
 
-    await verifiedEmail.create({ email: strippedEmail });
+    const existingVerification = await verifiedEmail.findOne({ email: strippedEmail }).lean();
+    if (!existingVerification) {
+      await verifiedEmail.create({ email: strippedEmail });
+    }
 
     res.status(OK).json({ message: "otp verified" });
   } catch (error) {
-    logger.error(error);
-    res.status(INTERNAL_SERVER_ERROR).json({ error: "error confirming otp for email validation" });
+    logger.error("CONFIRM_HUB_EMAIL_ERROR:", error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error confirming otp for email validation", details: error instanceof Error ? error.message : String(error) });
   }
-}
+  }

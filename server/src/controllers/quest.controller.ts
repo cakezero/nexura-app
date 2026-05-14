@@ -175,9 +175,32 @@ export const fetchMiniQuests = async (req: GlobalRequest, res: GlobalResponse) =
 
 		const mainQuestCompleted = await questCompleted.findOne({ user: req.id, quest: id });
 
+		const currentHub = mainQuest.hub ? await userHub.findById(mainQuest.hub).lean() : null;
+		const hubInfo = {
+			id: currentHub?._id?.toString?.() ?? "",
+			name: currentHub?.name ?? mainQuest.project_name ?? "",
+			description: currentHub?.description ?? "",
+			logo: currentHub?.logo ?? mainQuest.project_image ?? "",
+			website: (currentHub as any)?.website ?? "",
+			xAccount: (currentHub as any)?.xAccount ?? "",
+			discordServer: (currentHub as any)?.discordServer ?? "",
+		};
+
 		const questNumber = padNumber(mainQuest.questNumber!);
 
-		res.status(OK).json({ message: "mini quests fetched", miniQuests, questCompleted: mainQuestCompleted?.done, totalXp: mainQuest.reward, questNumber, sub_title: mainQuest?.sub_title, title: mainQuest.title, description: mainQuest.description });
+		res.status(OK).json({ 
+			message: "mini quests fetched", 
+			miniQuests, 
+			questCompleted: mainQuestCompleted?.done, 
+			totalXp: mainQuest.reward, 
+			questNumber, 
+			sub_title: mainQuest?.sub_title, 
+			title: mainQuest.title, 
+			description: mainQuest.description,
+			hubInfo,
+			projectCoverImage: mainQuest.projectCoverImage,
+			hub: mainQuest.hub,
+		});
 	} catch (error) {
 		logger.error(error);
 		res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching mini quests" });
