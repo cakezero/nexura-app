@@ -92,8 +92,8 @@ export default function UserSignup() {
     const isWallet = /^(0x[a-fA-F0-9]{40}|0x[a-fA-F0-9]+\.\.\.[a-fA-F0-9]+)$/.test(displayUsername);
     if (isWallet) {
       toast({
-        title: "Username required",
-        description: "Please set a custom username in your main profile before signing up for Studio.",
+        title: "Identity incomplete",
+        description: "Please set a custom username and profile picture in your main profile before signing up for Studio.",
         variant: "destructive",
       });
       return;
@@ -187,7 +187,7 @@ export default function UserSignup() {
                 </p>
               ) : (walletAddress || mainAppUsername) && !profileLoading ? (
                 <p className="text-[10px] text-red-400 mt-0.5">
-                  ⚠ Please set a username in your main profile
+                  ⚠ Please set a username and profile picture in your main profile
                 </p>
               ) : !walletAddress ? (
                 <p className="text-[10px] text-red-400 mt-0.5">

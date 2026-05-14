@@ -135,13 +135,9 @@ export default function Quests() {
           questId: quest._id,
         });
 
-        toast({
-          title: "Quest Started",
-          description: `You have started the quest: ${quest.title}`,
-        });
-        
         // Refetch to update joined status
         await refetch();
+
       } catch (error: any) {
         // If the error is "quest already started", we can ignore it and just proceed
         const errorData = error.info || {};

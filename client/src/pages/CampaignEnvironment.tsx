@@ -414,7 +414,6 @@ export default function CampaignEnvironment() {
       await apiRequestV2("POST", `/api/campaign/join-campaign?id=${campaignId}`);
       setJoinedCampaign(true);
       setCampaignRefreshToken((prev) => prev + 1);
-      toast({ title: "Campaign joined", description: "You can now start completing quests." });
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
