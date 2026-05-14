@@ -344,7 +344,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
       const url = finalTask.handleOrUrl.toLowerCase();
       const allowedPrefixes = [
         "nexura.intuition.box/portal-claims/",
-        "portal.intuition.systems/atoms/triple"
+        "portal.intuition.systems/atoms/triple/"
       ];
       const isAllowed = allowedPrefixes.some(prefix => url.includes(prefix));
       if (!isAllowed) {
@@ -813,7 +813,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                       else if (newTask.type === "Portal Claims") {
                         const allowedPrefixes = [
                           "nexura.intuition.box/portal-claims/",
-                          "portal.intuition.systems/explore/triple"
+                          "portal.intuition.systems/explore/triple/"
                         ];
                         const isAllowed = allowedPrefixes.some(prefix => valLower.includes(prefix));
                         if (!isAllowed) {
