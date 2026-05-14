@@ -822,11 +822,11 @@ const handleSaveTask = () => {
     const url = finalTask.handleOrUrl.toLowerCase();
     const allowedPrefixes = [
       "nexura.intuition.box/portal-claims/",
-      "portal.intuition.systems/explore/triples"
+      "portal.intuition.systems/explore/triple"
     ];
     const isAllowed = allowedPrefixes.some(prefix => url.includes(prefix));
     if (!isAllowed) {
-      return setError("Portal Claims must be from Nexura Portal or Intuition Portal triples.");
+      return setError("Portal Claims must be from Nexura Portal or Intuition Portal triple.");
     }
   }
 
