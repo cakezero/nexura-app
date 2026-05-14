@@ -112,7 +112,7 @@ export default function Analytics() {
   const totalTransactions = claimsCount + paymentsCount + nexonsMintedCount + othersCount;
 
   const transactionsData = [
-    { id: "Claims Bought", value: claimsCount, color: "#00E1A2" },
+    { id: "Claims", value: claimsCount, color: "#00E1A2" },
     { id: "Payments", value: paymentsCount, color: "#8A3FFD" },
     { id: "Nexons", value: nexonsMintedCount, color: "#B65FC8" },
     { id: "Others", value: othersCount, color: "#FFFFFF" },
@@ -324,7 +324,7 @@ const formatNumber = (num: number) => {
   )}
 </div>
 
- <div className="mt-12 flex flex-col sm:flex-row gap-2 sm:gap-4 w-full">
+<div className="mt-12 flex flex-col sm:flex-row gap-2 sm:gap-4 w-full">
   {cards.map((card, idx) => (
 <div
   key={idx}
@@ -720,7 +720,7 @@ const formatNumber = (num: number) => {
   />
   {/* Content */}
     <div className="flex items-center justify-between">
-      <span className="text-xs font-semibold uppercase text-white">PROOF OF ACTION</span>
+      <span className="text-xs font-semibold uppercase text-white max-w-[60%] leading-tight">PROOF OF ACTION</span>
       <img src="/nexxx.png" alt="Intuition Logo" className="w-6 h-6 object-contain" />
     </div>
     <div className="mt-4">

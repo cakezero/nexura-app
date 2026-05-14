@@ -21,8 +21,8 @@ import DiscordCallback from "./pages/DiscordCallback";
 import XCallback from "./pages/XCallback";
 import Levels from "./pages/Levels";
 import UserReferred from "./pages/UserReferred";
-import ProjectCreate from "./pages/studio/ProjectCreate";
-import ProjectDashboard from "./pages/project/ProjectDashboard";
+import ProjectCreate from "./pages/studio/project/ProjectCreate";
+// ProjectDashboard route removed - no longer used
 import NexuraSidebar from "./components/QuestflowSidebar";
 import ProfileBar from "./components/ProfileBar";
 import { WalletProvider } from "./lib/wallet";
@@ -34,34 +34,40 @@ import PortalClaims from "./pages/PortalClaims";
 import AnimatedBackground from "./components/AnimatedBackground";
 import Home from "./pages/Home.tsx";
 import Analytics from "./pages/Analytics.tsx";
-// import Analyticss from "./pages/Analyticss.tsx"; // dummy analytics — replaced back by main
 import NexuraStudio from "./pages/NexuraStudio.tsx";
-import CreateHub from "./pages/studio/CreateHub.tsx";
-import SignInToHub from "./pages/studio/SignInToHub.tsx";
-import TheHub from "./pages/studio/TheHub.tsx";
-import ConnectedDiscord from "./pages/studio/ConnectedDiscord.tsx";
-import StudioDashboard from "./pages/studio/StudioDashboard.tsx"
-import StudioLayout from "./pages/studio/StudioLayout.tsx"
+import CreateHub from "./pages/studio/project/CreateHub.tsx";
+import SignInToHub from "./pages/studio/project/SignInToHub.tsx";
+import TheHub from "./pages/studio/project/TheHub.tsx";
+import ConnectedDiscord from "./pages/studio/project/ConnectedDiscord.tsx";
+import StudioDashboard from "./pages/studio/project/StudioDashboard.tsx"
+import StudioLayout from "./pages/studio/project/StudioLayout.tsx"
 import CampaignsTab from "./components/admin/CampaignsTab.tsx";
-import QuestsTab from "./components/admin/QuestsTab.tsx";
 import { getStoredAccessToken, apiRequest } from './lib/config'
 import { clearProjectSession, getStoredProjectToken, projectApiRequest } from './lib/projectApi'
 import CreateNewCampaigns from "./components/admin/CreateNewCampaign.tsx";
 import MyCampaign from "./components/admin/MyCampaign.tsx"
-import MyQuest from "./components/admin/MyQuest.tsx";
 import AdminManagement from "./components/admin/AdminManagement.tsx";
-import AdminSignUp from "./pages/studio/AdminSignUp.tsx";
-import HubProfile from "./pages/studio/HubProfile.tsx";
-import UserProfile from "./pages/studio/UserProfile.tsx"
+import AdminSignUp from "./pages/studio/project/AdminSignUp.tsx";
+import HubProfile from "./pages/studio/project/HubProfile.tsx";
 import ClaimDetails from "./pages/ClaimDetails";
-import ConnectDiscord from "./pages/studio/ConnectDiscord.tsx";
+import ConnectDiscord from "./pages/studio/project/ConnectDiscord.tsx";
 import Docs from "./pages/Docs.tsx"
 import LessonPage from "./pages/LessonPage";
-import ResetHubPassword from "./pages/studio/ResetHubPassword.tsx";
+import ResetHubPassword from "./pages/studio/project/ResetHubPassword.tsx";
 import AnalyticsBackground from "./components/AnalyticsBackground.tsx"
-import UserDashboard from "./pages/studio/UserDashboard.tsx";
-import CreateNewQuests from "./components/admin/CreateNewQuest.tsx";
-import UserLayout from "./pages/studio/UserLayout.tsx";
+import LessonCreate from "./pages/studio/project/LessonCreate";
+import Lessons from "./pages/studio/project/Lessons";
+import UserDashboard from "./pages/studio/user/UserDashboard.tsx";
+import UserLayout from "./pages/studio/user/UserLayout.tsx";
+import QuestCreate from "./pages/studio/user/QuestCreate.tsx";
+import SelectRole from "./pages/studio/SelectRole.tsx";
+import ProjectsHub from "./pages/studio/project/ProjectsHub.tsx";
+import UsersHub from "./pages/studio/user/UsersHub.tsx";
+import UsersCreate from "./pages/studio/user/UsersCreate.tsx";
+import UserSignup from "./pages/studio/user/UserSignup.tsx";
+import UserSignIn from "./pages/studio/user/UserSignin.tsx";
+import QuestsTab from "./components/admin/QuestsTab.tsx";
+import QuestCard from "./components/QuestCard.tsx";
 
 function Router() {
    const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -70,12 +76,18 @@ function Router() {
     // Clear admin session
     localStorage.removeItem('nexura-admin:token');
     localStorage.removeItem('nexura-admin:info');
+    localStorage.removeItem('nexura_user_session');
+    
     // Clear project session and call server logout if project is signed in
     if (getStoredProjectToken()) {
       projectApiRequest({ method: 'POST', endpoint: '/hub/logout' }).catch(() => {});
     }
+    
     clearProjectSession();
     setIsAuthenticated(false);
+    
+    // Force redirect to studio landing page to ensure all state is wiped
+    window.location.href = "/studio";
   }
 
   return (
@@ -110,7 +122,38 @@ function Router() {
       <Route path="/achievements" component={Achievements} />
       <Route path="/leaderboard" component={Leaderboard} />
       {/* Developer pages */}
-      <Route path="/projects/create" component={ProjectCreate} />
+      <Route path="/studio/select-role" component={SelectRole} />
+      <Route path="/studio/projects-hub" component={ProjectsHub} />
+      <Route path="/studio/users-hub" component={UsersHub} />
+      <Route path="/studio/users/create" component={UsersCreate} />
+      <Route path="/studio/users/user-signup" component={UserSignup} />
+      <Route path="/studio/users/user-signin" component={UserSignIn} />
+      <Route path="/user-dashboard">
+        <UserLayout title="Dashboard" onLogout={handleLogout}>
+          <UserDashboard />
+        </UserLayout>
+      </Route>
+      <Route path="/user-dashboard/quests-tab">
+        <UserLayout title="Quests" onLogout={handleLogout}>
+          <QuestsTab />
+        </UserLayout>
+      </Route>
+      <Route path="/user-dashboard/create-new-quest">
+        <UserLayout title="Create Quest" onLogout={handleLogout}>
+          <QuestCreate />
+        </UserLayout>
+      </Route>
+      <Route path="/user-dashboard/lessons-tab">
+        <UserLayout title="Lessons" onLogout={handleLogout}>
+          <Lessons />
+        </UserLayout>
+      </Route>
+      <Route path="/user-dashboard/create-lesson">
+        <UserLayout title="Create Lesson" onLogout={handleLogout}>
+          <LessonCreate />
+        </UserLayout>
+      </Route>
+      <Route path="/studio/projects/create" component={ProjectCreate} />
       <Route path="/projects/create/create-hub" component={CreateHub} />
       <Route path="/projects/create/signin-to-hub" component={SignInToHub} />
       <Route path="/projects/create/the-hub" component={TheHub} />
@@ -120,92 +163,64 @@ function Router() {
       <Route path="/studio-dashboard/dashboard">
         <StudioDashboard onLogout={handleLogout} />
       </Route>
-      <Route path="/user-dashboard">
-        <UserDashboard onLogout={handleLogout} />
+      <Route path="/studio-dashboard/create-new-campaign">
+        <StudioLayout title="Create Campaign" onLogout={handleLogout}>
+          <CreateNewCampaigns />
+        </StudioLayout>
       </Route>
-
-<Route path="/studio-dashboard/create-new-campaign">
-  <StudioLayout title="Create Campaign" onLogout={handleLogout}>
-    <CreateNewCampaigns />
-  </StudioLayout>
-</Route>
-
-<Route path="/user-dashboard/create-new-quest">
-  <UserLayout title="Create Quest" onLogout={handleLogout}>
-    <CreateNewQuests />
-  </UserLayout>
-</Route>
-
-<Route path="/studio-dashboard/campaigns-tab">
-  <StudioLayout title="Campaigns" onLogout={handleLogout}>
-    <CampaignsTab />
-  </StudioLayout>
-</Route>
-
-<Route path="/user-dashboard/quests-tab">
-  <UserLayout title="Quests" onLogout={handleLogout}>
-    <QuestsTab />
-  </UserLayout>
-</Route>
-
-<Route path="/studio-dashboard/admin-management">
-  <StudioLayout title="User Administration" onLogout={handleLogout}>
-    <AdminManagement />
-  </StudioLayout>
-</Route>
-
-<Route path="/studio-dashboard/my-campaign">
-  <StudioLayout title="My Campaign" onLogout={handleLogout}>
-    <MyCampaign />
-  </StudioLayout>
-</Route>
-
-<Route path="/user-dashboard/my-quest">
-  <UserLayout title="My Quest" onLogout={handleLogout}>
-    <MyQuest />
-  </UserLayout>
-</Route>
-
-<Route path="/studio-dashboard/hub-profile">
-  <StudioLayout title="Project Profile" onLogout={handleLogout}>
-    <HubProfile />
-  </StudioLayout>
-</Route>
-
-<Route path="/user-dashboard/user-profile">
-  <UserLayout title="User Profile" onLogout={handleLogout}>
-    <UserProfile />
-  </UserLayout>
-</Route>
-
-<Route path="/studio-dashboard/connect-discord">
-  <StudioLayout title="Connect Discord" onLogout={handleLogout}>
-    <ConnectDiscord />
-  </StudioLayout>
-</Route>
-
-<Route path="/studio-dashboard/connected-discord">
-  <StudioLayout title="Connect Discord" onLogout={handleLogout}>
-    <ConnectedDiscord />
-  </StudioLayout>
-</Route>
-
-<Route path="/connect-discord">
-  <UserLayout title="Connect Discord" onLogout={handleLogout}>
-    <ConnectDiscord />
-  </UserLayout>
-</Route>
-
-<Route path="/project/connected-discord">
-  <UserLayout title="Connect Discord" onLogout={handleLogout}>
-    <ConnectedDiscord />
-  </UserLayout>
-</Route>
-
+      <Route path="/studio-dashboard/create-lesson">
+        <StudioLayout title="Create Lesson" onLogout={handleLogout}>
+          <LessonCreate />
+        </StudioLayout>
+      </Route>
+      <Route path="/studio-dashboard/lessons-tab">
+        <StudioLayout title="Manage Lessons" onLogout={handleLogout}>
+          <Lessons />
+        </StudioLayout>
+      </Route>
+      <Route path="/studio-dashboard/campaigns-tab">
+        <StudioLayout title="Campaigns" onLogout={handleLogout}>
+          <CampaignsTab />
+        </StudioLayout>
+      </Route>
+      <Route path="/studio-dashboard/admin-management">
+        <StudioLayout title="User Administration" onLogout={handleLogout}>
+          <AdminManagement />
+        </StudioLayout>
+      </Route>
+      <Route path="/studio-dashboard/my-campaign">
+        <StudioLayout title="My Campaign" onLogout={handleLogout}>
+          <MyCampaign />
+        </StudioLayout>
+      </Route>
+      <Route path="/studio-dashboard/hub-profile">
+        <StudioLayout title="Project Profile" onLogout={handleLogout}>
+          <HubProfile />
+        </StudioLayout>
+      </Route>
+      <Route path="/studio-dashboard/connect-discord">
+        <StudioLayout title="Connect Discord" onLogout={handleLogout}>
+          <ConnectDiscord />
+        </StudioLayout>
+      </Route>
+      <Route path="/studio-dashboard/connected-discord">
+        <StudioLayout title="Connect Discord" onLogout={handleLogout}>
+          <ConnectedDiscord />
+        </StudioLayout>
+      </Route>
+      <Route path="/connect-discord">
+        <StudioLayout title="Connect Discord" onLogout={handleLogout}>
+          <ConnectDiscord />
+        </StudioLayout>
+      </Route>
+      <Route path="/project/connected-discord">
+        <StudioLayout title="Connect Discord" onLogout={handleLogout}>
+          <ConnectedDiscord />
+        </StudioLayout>
+      </Route>
       <Route path="/studio/register" component={AdminSignUp} />
       <Route path="/studio/reset-password" component={ResetHubPassword} />
-      <Route path="/project/:projectId/*" component={ProjectDashboard} />
-      <Route path="/project/:projectId/:rest*" component={ProjectDashboard} />
+      {/* ProjectDashboard route removed - no longer used */}
       {/* Referral */}
       <Route path="/ref/:referrerCode" component={UserReferred} />
       {/* Fallback to 404 */}
@@ -239,7 +254,6 @@ function App() {
     };
   }, [location]);
 
-  
   // NEXURA-style sidebar configuration
   const sidebarStyle = {
     "--sidebar-width": "12rem",
@@ -255,14 +269,16 @@ function App() {
                 
 
                 const isHome = location === "/" || location === "/home";
-                const isUserRoutes = location.startsWith("/user-dashboard");
+                const isUser = location.startsWith("/user-dashboard")
                 const isStudio =
                   location === "/studio" ||
                   location.startsWith("/studio-dashboard") ||
                   location.startsWith("/connect-discord") ||
                   location.startsWith("/project/connected-discord") ||
                   location.startsWith("/studio/register") ||
-                  location.startsWith("/studio/reset-password");
+                  location.startsWith("/studio/reset-password") ||
+                  location.startsWith("/studio/") ||
+                  location.startsWith("/projects/");
                 const isProject = location.startsWith("/project/");
                 const isProjectCreate = location.startsWith("/projects/create");
                 const isDocs = location.startsWith("/docs")
@@ -273,12 +289,12 @@ function App() {
 {isDocs ? <AnalyticsBackground /> : <AnimatedBackground />}
 
                     {/* Sidebar */}
-                    {!isHome && !isStudio &&!isUserRoutes && !isDocs && !isProjectCreate && <NexuraSidebar />}
+                    {!isHome && !isStudio &&!isUser && !isDocs && !isProjectCreate && <NexuraSidebar />}
 
                     {/* Main content */}
 <div className="flex-1 flex flex-col relative z-10">
   
-  {!isHome && !isStudio &&!isUserRoutes && !isProjectCreate && (
+  {!isHome && !isStudio &&!isUser && !isProjectCreate && (
     <header className="flex items-center p-4 app-header">
       
       {/* LEFT: Logo (only for docs) */}

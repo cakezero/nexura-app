@@ -51,7 +51,7 @@ const LEVELS = [
   { name: "Nexon Vanguard", xp: 65000 },
 ].map((lvl, idx) => ({ ...lvl, img: `/LEVELS/${LEVEL_IMAGES[idx]}` }));
 
-function WalletDropdown() {
+function WalletDropdown({ trustName }: { trustName?: string }) {
   const { isConnected, connectWallet, address, disconnect } = useWallet();
   const { signOut } = useAuth();
 
@@ -72,10 +72,14 @@ function WalletDropdown() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size="sm">
-          {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Profile"}
+          {trustName ? trustName : (address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Profile")}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48 p-2">
+        <DropdownMenuItem className="cursor-default p-2 text-sm text-white/60">
+          <span>{trustName || (address ? `${address.slice(0, 6)}...${address.slice(-4)}` : 'Profile')}</span>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <Link href="/profile" className="w-full cursor-pointer p-2 text-base">My Profile</Link>
         </DropdownMenuItem>
@@ -137,6 +141,7 @@ export default function Profile() {
       longestStreak: 0,
       badges: [],
       socialProfiles: { x: "", discord: "" },
+      trustName: "",
     };
 
     if (!user) return base;
@@ -164,7 +169,8 @@ export default function Profile() {
       socialProfiles: {
         x: user.socialProfiles?.x ?? "",
         discord: user.socialProfiles?.discord ?? "",
-      }
+      },
+      trustName: user.trustName ?? "",
     };
   }, [user, address]);
 
@@ -277,7 +283,7 @@ export default function Profile() {
                 <Edit2 className="w-4 h-4 mr-2" />Edit Profile
               </Button>
             </Link>
-            <WalletDropdown />
+            <WalletDropdown trustName={user?.trustName} />
           </div>
         </div>
 
@@ -337,6 +343,13 @@ export default function Profile() {
                     ? `@${userData.socialProfiles.discord.username}`
                     : "Not connected"}
                 </div>
+
+                {userData.trustName && (
+                  <div className="flex items-center gap-2 text-sm bg-blue-900/30 px-3 py-1 rounded-full border border-blue-500/30">
+                    <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
+                    <span className="text-blue-300 font-bold tracking-tight">{userData.trustName}</span>
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>

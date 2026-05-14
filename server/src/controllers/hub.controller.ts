@@ -1,9 +1,10 @@
 import { OTP } from '@/models/otp.model';
-import { hub, hubAdmin } from '@/models/hub.model';
+import { hub, hubAdmin, userHub, userHubAdmin } from '@/models/hub.model';
+import { user } from '@/models/user.model';
 import { addHubAdminEmail } from '@/utils/sendMail';
 import { BAD_REQUEST, INTERNAL_SERVER_ERROR, CREATED, OK, NO_CONTENT, NOT_FOUND, FORBIDDEN } from '@/utils/status.utils';
 import { CLIENT_URL } from '@/utils/env.utils';
-import { generateOTP, validateHubData, getMissingFields, validateCampaignData, validateCampaignQuestData, validateSaveCampaignData } from '@/utils/utils';
+import { generateOTP, validateHubData, getMissingFields, validateCampaignData, validateCampaignQuestData, validateSaveCampaignData, validateUserHubData } from '@/utils/utils';
 import logger from '@/config/logger';
 import { submission } from '@/models/submission.model';
 import { miniQuestCompleted, campaignQuestCompleted } from '@/models/questsCompleted.models';
@@ -11,7 +12,7 @@ import { campaign } from '@/models/campaign.model';
 import { campaignQuest } from '@/models/quests.model';
 import { uploadImg } from "@/utils/img.utils";
 import { uploadFile } from "@/utils/file.utils";
-import { normalizeCampaignDateInput, normalizeCampaignDatesForResponse, parseCampaignDate } from "@/utils/campaignDates";
+import { normalizeCampaignDateInput, normalizeCampaignDatesForResponse, parseDate } from "@/utils/dates";
 
 const DISCORD_CAMPAIGN_TAGS = new Set([
   "discord",
@@ -101,10 +102,22 @@ export const createHub = async (req: GlobalRequest, res: GlobalResponse) => {
       return;
     }
 
-    const name = String(req.body.name ?? "").trim();
+    const name = String(req.body.name ?? "").trim().toUpperCase();
 
-    const nameExists = await hub.exists({ name });
-    if (nameExists) {
+    const existingHubWithName = await hub.findOne({ name });
+    if (existingHubWithName) {
+      // If it's already their hub, we can just update it or proceed
+      if (String(existingHubWithName.superAdmin) === String(req.id)) {
+        // Proceed to update or just return success if already exists
+        await hub.findByIdAndUpdate(existingHubWithName._id, {
+          description: req.body.description ?? existingHubWithName.description,
+          website: String(req.body.website ?? existingHubWithName.website).trim(),
+          xAccount: String(req.body.xAccount ?? existingHubWithName.xAccount).trim(),
+          discordServer: String(req.body.discordServer ?? existingHubWithName.discordServer).trim(),
+        });
+        res.status(OK).json({ message: "hub updated!" });
+        return;
+      }
       res.status(BAD_REQUEST).json({ error: "name is already in use" });
       return;
     }
@@ -332,7 +345,7 @@ export const updateHub = async (req: GlobalRequest, res: GlobalResponse) => {
       });
     }
 
-    const trimmedName = typeof name === "string" ? name.trim() : undefined;
+    const trimmedName = typeof name === "string" ? name.trim().toUpperCase() : undefined;
     if (trimmedName) {
       const nameExists = await hub.exists({
         name: trimmedName,
@@ -543,7 +556,7 @@ export const validateCampaignSubmissions = async (req: GlobalRequest, res: Globa
 
     let model;
 
-    if (userSubmission.page === "quest") {
+    if (userSubmission.page === "quest" || userSubmission.page === "user") {
       model = await miniQuestCompleted.findOne({ _id: userSubmission.questCompleted, status: { $in: ["pending", "retry"] } });
       if (!model) {
         res.status(NOT_FOUND).json({ error: "mini quest already completed or id is invalid" });
@@ -695,7 +708,7 @@ export const saveCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
           trustTokens: reward.trust ?? 0,
         },
       };
-      body.hub = req.admin.hub;
+
       const savedCampaign = await campaign.create(body);
       const savedCampaignId = savedCampaign._id;
 
@@ -721,14 +734,17 @@ export const saveCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
       res.status(NOT_FOUND).json({ error: "campaign not found" });
       return;
     }
+
     const lockedDiscordGuildId = campaignFound.status !== "Save"
       ? await resolveCampaignDiscordLaunchGuildId(campaignFound)
       : "";
+
     const discordGuildIdForCampaign = lockedDiscordGuildId || String(hubFound.guildId ?? "").trim();
 
     const incomingNameOfProject = typeof req.body.nameOfProject === "string"
       ? req.body.nameOfProject.trim()
       : "";
+
     const { campaignQuests: _cq, isDraft: _d, existingCoverImage: _e, hubCoverImage: _h, nameOfProject: _n, ...updateFields } = req.body;
 
     if (updateFields.reward && typeof updateFields.reward === "object") {
@@ -759,15 +775,15 @@ export const saveCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
 
     const existingPool = Number(campaignFound.reward?.pool ?? 0);
     const existingMaxParticipants = Number((campaignFound as any).maxParticipants ?? campaignFound.participants ?? 0);
-    const existingStartsAt = parseCampaignDate(campaignFound.starts_at);
-    const existingEndsAt = parseCampaignDate(campaignFound.ends_at);
+    const existingStartsAt = parseDate(campaignFound.starts_at);
+    const existingEndsAt = parseDate(campaignFound.ends_at);
     const incomingPool = updateFields.reward
       ? Number((updateFields.reward as Record<string, unknown>).pool ?? existingPool)
       : existingPool;
     const incomingMaxParticipants = updateFields.maxParticipants !== undefined
       ? Number(updateFields.maxParticipants ?? existingMaxParticipants)
       : existingMaxParticipants;
-    const incomingEndsAt = updateFields.ends_at ? parseCampaignDate(updateFields.ends_at) : existingEndsAt;
+    const incomingEndsAt = updateFields.ends_at ? parseDate(updateFields.ends_at) : existingEndsAt;
     const rewardsContractSettled = Boolean((campaignFound as any).rewardsDeployment?.remainderWithdrawalTxHash);
     const campaignHasStarted = existingStartsAt ? existingStartsAt.getTime() <= Date.now() : false;
 
@@ -801,11 +817,11 @@ export const saveCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
     if (campaignFound.status !== "Save") {
       const now = new Date();
       const newStartsAt = updateFields.starts_at
-        ? parseCampaignDate(updateFields.starts_at)
-        : parseCampaignDate(campaignFound.starts_at);
+        ? parseDate(updateFields.starts_at)
+        : parseDate(campaignFound.starts_at);
       const newEndsAt = updateFields.ends_at
-        ? parseCampaignDate(updateFields.ends_at)
-        : parseCampaignDate(campaignFound.ends_at);
+        ? parseDate(updateFields.ends_at)
+        : parseDate(campaignFound.ends_at);
 
       if (newEndsAt && newEndsAt <= now) {
         updateFields.status = "Ended";
@@ -816,7 +832,7 @@ export const saveCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
       }
     }
 
-    const updatedCampaign = await campaign.findByIdAndUpdate(id, updateFields, { new: true });
+    await campaign.findByIdAndUpdate(id, updateFields, { new: true });
 
     // Update quests without destroying existing IDs/submissions
     if (questsToSave !== null) {
@@ -1015,3 +1031,159 @@ export const updateCamapaignQuest = async (req: GlobalRequest, res: GlobalRespon
     res.status(INTERNAL_SERVER_ERROR).json({ error: "error updating quest" });
   }
 }
+
+export const createUserHub = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const { error } = validateUserHubData(req.body);
+    if (error) {
+      const emptyFields = getMissingFields(error);
+
+      res
+        .status(BAD_REQUEST)
+        .json({ error: `these field(s) are required: ${emptyFields}` });
+      return;
+    }
+
+    const name = String(req.body.name ?? "").trim().toUpperCase();
+
+    const existingUserHubWithName = await userHub.findOne({ name });
+    if (existingUserHubWithName) {
+      if (String(existingUserHubWithName.superAdmin) === String(req.id)) {
+        // Already their hub, just update description and return success
+        await userHub.findByIdAndUpdate(existingUserHubWithName._id, {
+          description: req.body.description ?? existingUserHubWithName.description,
+          xAccount: String(req.body.xAccount ?? existingUserHubWithName.xAccount).trim(),
+        });
+        res.status(OK).json({ message: "user hub updated!" });
+        return;
+      }
+      res.status(BAD_REQUEST).json({ error: "name is already in use" });
+      return;
+    }
+
+    const xAccount = String(req.body.xAccount ?? "").trim();
+
+            const hubAdminDoc = await userHubAdmin.findById(req.id).lean();
+    const adminName = (hubAdminDoc as any)?.name;
+    let logoUrl = "";
+    if (adminName) {
+      const mainUser = await user.findOne({ username: adminName }).lean();
+      logoUrl = (mainUser as any)?.profilePic || "";
+    }
+const createdHub = await userHub.create({
+      name,
+      description: req.body.description ?? "",
+      xAccount,
+      logo: logoUrl,
+      superAdmin: req.id,
+    });
+
+    const adminDoc = req.admin as any;
+    await userHubAdmin.findByIdAndUpdate(req.id, { hub: createdHub._id, pendingTxHash: null });
+
+    // Migrate any pending payment hash from admins to hub (payment represents completed on-chain studio fee)
+    if (adminDoc?.pendingTxHash) {
+      await userHub.findByIdAndUpdate(createdHub._id, { pendingTxHash: adminDoc.pendingTxHash, $inc: { noOfPayments: 1 } });
+    }
+
+    res.status(CREATED).json({ message: "user hub created!" });
+  } catch (error: any) {
+    logger.error(error);
+    res
+      .status(INTERNAL_SERVER_ERROR)
+      .json({ error: error?.message || "Error creating user hub" });
+  }
+};
+
+export const updateUserHub = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const hubId = req.admin.hub;
+    if (!hubId) {
+      res.status(BAD_REQUEST).json({ error: "no hub associated with this account" });
+      return;
+    }
+
+    const { name, bio, xAccount } = req.body;
+    const logoFile = req.file?.buffer;
+
+    const updateFields: any = {};
+    if (name) updateFields.name = String(name).trim().toUpperCase();
+    if (bio) updateFields.description = bio;
+    if (xAccount) updateFields.xAccount = xAccount;
+
+    if (logoFile) {
+      updateFields.logo = await uploadImg({
+        file: logoFile,
+        filename: req.file?.originalname as string,
+        folder: "user-hub-logos",
+        maxSize: 1 * 1024 ** 2,
+      });
+    }
+
+    const updated = await userHub.findByIdAndUpdate(hubId, updateFields, { new: true });
+    if (!updated) {
+      res.status(NOT_FOUND).json({ error: "user hub not found" });
+      return;
+    }
+
+    res.status(OK).json({ message: "user hub updated!", hub: updated });
+  } catch (error: any) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: error?.message || "Error updating user hub" });
+  }
+};
+
+export const getUserHub = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const hubId = req.admin.hub;
+    const hubFound = await userHub.findById(hubId).lean() as any;
+    const adminHash = (req.admin as any).pendingTxHash ?? null;
+    const pendingTxHash = hubFound?.pendingTxHash ?? adminHash;
+    const adminInfo = { _id: req.id, name: req.admin.name, email: req.admin.email, role: "admin" };
+    res.status(OK).json({ hub: hubFound ? { ...hubFound, pendingTxHash } : { pendingTxHash }, admin: adminInfo });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "Error getting user hub" });
+  }
+};
+
+export const deleteUserHub = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const hubId = req.admin.hub;
+    if (!hubId) {
+      res.status(BAD_REQUEST).json({ error: "no hub associated with this account" });
+      return;
+    }
+
+    await userHub.findByIdAndDelete(hubId);
+    await userHubAdmin.findByIdAndUpdate(req.id, { $unset: { hub: "" } });
+
+    res.status(OK).json({ message: "user hub deleted successfully" });
+  } catch (error: any) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: error?.message || "Error deleting user hub" });
+  }
+};
+
+
+
+export const getUserProfileByWallet = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const { address } = req.query as { address?: string };
+    if (!address) {
+      res.status(BAD_REQUEST).json({ error: "address query param is required" });
+      return;
+    }
+
+    const userFound = await user.findOne({ address: address.toLowerCase() }, { username: 1, profilePic: 1 }).lean();
+    if (!userFound) {
+      res.status(NOT_FOUND).json({ error: "no user found for this wallet" });
+      return;
+    }
+
+    res.status(OK).json({ username: userFound.username, profilePic: userFound.profilePic || "" });
+  } catch (error: any) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: error?.message || "Error fetching user profile" });
+  }
+};
