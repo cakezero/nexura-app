@@ -59,6 +59,7 @@ export default function QuestEnvironment() {
   const [completed, setCompleted] = useState<boolean>(false);
   // const [miniQuestsCompleted, setMiniQuestsCompleted] = useState<boolean>(false);
   const [title, setTitle] = useState<string>("");
+  const [questDescription, setQuestDescription] = useState<string>("");
   const [creatorCoverImage, setCreatorCoverImage] = useState<string>("");
   const [creatorName, setCreatorName] = useState("");
   const [creatorImage, setCreatorImage] = useState("");
@@ -97,6 +98,7 @@ export default function QuestEnvironment() {
         hub,
         hubInfo: fetchedHubInfo,
         creatorCoverImage: pci,
+        description: questDescription,
       } = await apiRequestV2("GET", `/api/quest/fetch-mini-quests?id=${questId}`);
 
       setCompleted(comp);
@@ -106,6 +108,7 @@ export default function QuestEnvironment() {
       setQuestNumber(quest_no);
       setTitle(t);
       setSubTitle(st);
+      setQuestDescription(questDescription || "");
       setCreatorCoverImage(pci || "/quest.png");
       if (hub) setHubId(hub);
 
@@ -506,6 +509,15 @@ export default function QuestEnvironment() {
               <div>
                 <p className="text-xs opacity-50 uppercase mb-1">{creatorName || "Nexura"}</p>
                 <p className="text-lg md:text-xl font-bold leading-tight">Quest {questNumber}:<br />{sub_title}</p>
+
+                {questDescription && (
+                  <div className="mt-4">
+                    <p className="uppercase text-xs opacity-50">Description</p>
+                    <p className="text-sm opacity-80 leading-relaxed mt-1">
+                      {questDescription}
+                    </p>
+                  </div>
+                )}
 
                 <div className="mt-4">
                   <p className="uppercase text-xs opacity-50">Start Quest</p>
