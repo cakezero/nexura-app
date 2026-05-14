@@ -35,7 +35,7 @@ import { upload } from "@/config/multer";
 const router = Router();
 
 router
-  .post("/create-user-hub", upload.none(), createUserHub)
+  .post("/create-user-hub", createUserHub)
   .get("/get-quests", getHubQuests)
   .get("/me", getUserHub)
   .get("/quest-submissions", getCampaignSubmissions)

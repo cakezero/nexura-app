@@ -1034,8 +1034,20 @@ export const updateCamapaignQuest = async (req: GlobalRequest, res: GlobalRespon
 
 export const createUserHub = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
-    const { error } = validateUserHubData(req.body);
+    // Log received data for debugging
+    console.log('[createUserHub] Received data:', {
+      bodyKeys: Object.keys(req.body || {}),
+      name: req.body?.name,
+      description: req.body?.description,
+      descriptionLength: req.body?.description?.length
+    });
+
+    // Handle both JSON body and FormData
+    const bodyData = req.body || {};
+    const { error } = validateUserHubData(bodyData);
+    
     if (error) {
+      console.log('[createUserHub] Validation error:', error);
       const emptyFields = getMissingFields(error);
 
       res
@@ -1044,15 +1056,15 @@ export const createUserHub = async (req: GlobalRequest, res: GlobalResponse) => 
       return;
     }
 
-    const name = String(req.body.name ?? "").trim().toUpperCase();
+    const name = String(bodyData.name ?? "").trim().toUpperCase();
 
     const existingUserHubWithName = await userHub.findOne({ name });
     if (existingUserHubWithName) {
       if (String(existingUserHubWithName.superAdmin) === String(req.id)) {
         // Already their hub, just update description and return success
         await userHub.findByIdAndUpdate(existingUserHubWithName._id, {
-          description: req.body.description ?? existingUserHubWithName.description,
-          xAccount: String(req.body.xAccount ?? existingUserHubWithName.xAccount).trim(),
+          description: bodyData.description ?? existingUserHubWithName.description,
+          xAccount: String(bodyData.xAccount ?? existingUserHubWithName.xAccount).trim(),
         });
         res.status(OK).json({ message: "user hub updated!" });
         return;
@@ -1061,7 +1073,7 @@ export const createUserHub = async (req: GlobalRequest, res: GlobalResponse) => 
       return;
     }
 
-    const xAccount = String(req.body.xAccount ?? "").trim();
+    const xAccount = String(bodyData.xAccount ?? "").trim();
 
             const hubAdminDoc = await userHubAdmin.findById(req.id).lean();
     const adminName = (hubAdminDoc as any)?.name;
@@ -1072,7 +1084,7 @@ export const createUserHub = async (req: GlobalRequest, res: GlobalResponse) => 
     }
 const createdHub = await userHub.create({
       name,
-      description: req.body.description ?? "",
+      description: bodyData.description ?? "",
       xAccount,
       logo: logoUrl,
       superAdmin: req.id,
@@ -1085,6 +1097,12 @@ const createdHub = await userHub.create({
     if (adminDoc?.pendingTxHash) {
       await userHub.findByIdAndUpdate(createdHub._id, { pendingTxHash: adminDoc.pendingTxHash, $inc: { noOfPayments: 1 } });
     }
+
+    console.log('[createUserHub] Hub created successfully:', {
+      hubId: createdHub._id,
+      name: createdHub.name,
+      description: createdHub.description
+    });
 
     res.status(CREATED).json({ message: "user hub created!" });
   } catch (error: any) {
