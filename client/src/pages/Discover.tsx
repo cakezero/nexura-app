@@ -118,7 +118,7 @@ export default function Discover() {
   },
 });
 
-const campaignsToRender = campaigns;
+const campaignsToRender = campaigns.filter((c: any) => isActiveCampaign(c));
 
 const [dapps, setDapps] = useState<any[]>([]);
 
