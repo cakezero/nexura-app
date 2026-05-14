@@ -586,6 +586,7 @@ export const userHubAdminSignUp = async (req: GlobalRequest, res: GlobalResponse
       name: trimmedName,
       email: strippedEmail,
       password: hashedPassword,
+      userId: req.id
     });
 
     // Fetch main app profile picture for hub logo

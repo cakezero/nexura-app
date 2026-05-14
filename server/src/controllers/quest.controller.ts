@@ -958,10 +958,6 @@ export const createQuest = async (req: GlobalRequest, res: GlobalResponse) => {
   		createdHub.save(),
     ]);
 
-    if (page === "user") {
-      await user.findByIdAndUpdate(createdHub.userId, { $inc: { xp: 5000 } });
-    }
-
 		res.status(CREATED).json({ message: "quest created!", questId: newQuest._id });
   } catch(error) {
     logger.error(error);
@@ -1434,6 +1430,8 @@ export const publishQuest = async (req: GlobalRequest, res: GlobalResponse) => {
         res.status(BAD_REQUEST).json({ error: "mini quests must be up to/greater than 5 to set quest as active" });
         return;
       }
+
+      await user.findByIdAndUpdate(req.admin.userId, { $inc: { xp: 5000 } });
     }
 
     questDoc.status = newStatus;
