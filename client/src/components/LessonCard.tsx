@@ -34,7 +34,7 @@ export default function LessonCard({
   const displayDescription = description || lesson.description;
   const displayImage = heroImage || lesson.coverImage || "/learn-image.png";
   const creatorName = lesson.creatorName || "Jeremiah";
-  const creatorLogo = lesson.creatorLogo || "/quest-1.png";
+  const creatorLogo = lesson.profileImage || lesson.creatorLogo || "/quest-1.png";
 
   return (
     <div
@@ -91,9 +91,13 @@ export default function LessonCard({
         </p>
 
         {/* CREATOR */}
-<div className="flex items-center justify-between text-sm text-white">
-  <span>Creator:</span>
-    <span className="text-white/80">{creatorName}</span>
+<div className="flex items-center gap-2 text-sm">
+  <img
+    src={creatorLogo}
+    alt={creatorName}
+    className="w-5 h-5 rounded-full object-cover"
+  />
+  <span className="text-white/80">{creatorName}</span>
 </div>
 
         {/* META */}

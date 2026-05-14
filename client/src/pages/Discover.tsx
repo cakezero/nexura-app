@@ -12,7 +12,6 @@ import QuestCard from "../components/QuestCard";
 import EcosystemCard from "../components/EcosystemCard";
 // import AnalyticsBackground from "../components/AnalyticsBackground";
 import ReusableBackground from "../components/ReusableBackground";
-import { dummyCampaigns } from "../types/dummyCampaign";
 
 
 export default function Discover() {
@@ -92,17 +91,40 @@ export default function Discover() {
     new Date(campaign.ends_at).getTime() <= currentTime;
 
   const isActiveCampaign = (campaign: any) => {
-    if (isCompletedCampaign(campaign)) return false;
+    const startTime = campaign.starts_at
+      ? new Date(campaign.starts_at).getTime()
+      : null;
+    const endTime = campaign.ends_at
+      ? new Date(campaign.ends_at).getTime()
+      : null;
+    const status = String(campaign.status ?? "").toLowerCase();
 
-    if (campaign.starts_at) {
-      return (
-        new Date(campaign.starts_at).getTime() <= currentTime
-      );
+    // If campaign is manually ended or has ended status, it's not active
+    if (status === "ended") return false;
+
+    // If campaign has ended based on time, it's not active
+    if (endTime && endTime <= currentTime) return false;
+
+    // If campaign hasn't started yet, it's not active
+    if (startTime && startTime > currentTime) return false;
+
+    // If we have both start and end times, check if we're in between
+    if (startTime && endTime) {
+      return startTime <= currentTime && endTime > currentTime;
     }
 
-    return (
-      String(campaign.status ?? "").toLowerCase() === "active"
-    );
+    // If only start time exists and we're past it, it's active
+    if (startTime) {
+      return startTime <= currentTime;
+    }
+
+    // If only end time exists and we're before it, it's active
+    if (endTime) {
+      return endTime > currentTime;
+    }
+
+    // Fall back to status field if no timestamps
+    return status === "active";
   };
 
   
@@ -119,12 +141,7 @@ export default function Discover() {
   },
 });
 
-// const campaignsToRender =
-//   trendingCampaigns && trendingCampaigns.length > 0
-//     ? trendingCampaigns
-//     : dummyCampaigns;
-
-const campaignsToRender = dummyCampaigns;
+const campaignsToRender = campaigns.filter((c: any) => isActiveCampaign(c));
 
 const [dapps, setDapps] = useState<any[]>([]);
 
@@ -557,7 +574,7 @@ const quests = questsRaw.filter(isActiveQuest);
                     lesson={lesson}
                     title={title}
                     description={description}
-                    heroImage={lesson.project_image || "/lesson-1.png"}
+                    heroImage={lesson.coverImage || lesson.project_image || "/lesson-1.png"}
                   />
                 </div>
               );
