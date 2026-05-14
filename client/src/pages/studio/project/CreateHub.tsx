@@ -31,7 +31,7 @@ export default function SharedAccessCredentials() {
   const { toast } = useToast();
   const { address: walletAddress, isConnected } = useWallet();
 
-  // Track step G�� only during creation flow (not if already signed in)
+  // Track step -- only during creation flow (not if already signed in)
   useEffect(() => {
     const hasFullSession =
       !!localStorage.getItem("nexura-project:token") ||

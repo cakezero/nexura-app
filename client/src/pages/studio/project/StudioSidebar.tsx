@@ -63,7 +63,7 @@ export default function StudioSidebar({
             }
           }
         })
-        .catch(() => { /* ignore G�� offline or no hub yet */ });
+        .catch(() => { /* ignore -- offline or no hub yet */ });
   }, []);
 
   const routeByTab: Record<TabType, string> = {
@@ -80,7 +80,7 @@ export default function StudioSidebar({
 
   return (
     <>
-      {/* G��G�� Desktop sidebar G��G�� */}
+      {/* -- Desktop sidebar -- */}
       <div className="w-[16rem] border-r border-white/10 hidden md:flex flex-col z-20">
         <div className="p-6 border-b border-white/10 relative">
           <StudioBackground className="absolute inset-0 z-0" />
@@ -89,7 +89,7 @@ export default function StudioSidebar({
             <img src="/nexura-logo.png" alt="Nexura" className="w-40 h-auto" />
           </div>
 
-          {/* Project pill G�� clickable, navigates to hub profile */}
+          {/* Project pill -- clickable, navigates to hub profile */}
           <button
             onClick={() => {
               setActiveTab("hubProfile");
@@ -164,7 +164,7 @@ export default function StudioSidebar({
         </div>
       </div>
 
-      {/* G��G�� Mobile top bar G��G�� */}
+      {/* -- Mobile top bar -- */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-30 flex items-center justify-between px-4 py-3 bg-black/80 backdrop-blur-xl border-b border-white/10">
         <img src="/nexura-logo.png" alt="Nexura" className="h-7 w-auto" />
         <button

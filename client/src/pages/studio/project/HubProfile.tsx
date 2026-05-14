@@ -104,16 +104,16 @@ export default function HubProfile() {
         fd.append("logo", blob, "logo.png");
       }
 
-      await projectApiRequest({ method: "PATCH", endpoint: "/hub/update-hub", formData: fd });
+      const response = await projectApiRequest<{ logo?: string; name?: string }>({ method: "PATCH", endpoint: "/hub/update-hub", formData: fd });
 
-      // Update cached session
+      // Update cached session with the actual logo URL from backend
       const token = getStoredProjectToken();
       const existing = getStoredProjectInfo() ?? {};
       if (token) {
         storeProjectSession(token, {
           ...existing,
           name: name.trim(),
-          logo: imagePreview || logoUrl,
+          logo: response.logo || imagePreview || logoUrl,
         });
       }
 
@@ -278,13 +278,13 @@ export default function HubProfile() {
                 <Textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Describe your project (150G��300 characters)"
+                  placeholder="Describe your project (150–300 characters)"
                   maxLength={300}
                   className="bg-white/[0.06] border-white/15 text-white placeholder:text-white/30 resize-none h-32 focus:border-purple-500/60 transition-colors"
                 />
                 {descTooShort && (
                   <p className="text-xs text-red-400">
-                    Minimum 150 characters G�� {150 - description.length} more needed
+                    Minimum 150 characters – {150 - description.length} more needed
                   </p>
                 )}
               </>
@@ -362,7 +362,7 @@ export default function HubProfile() {
           )}
         </div>
 
-        {/* Save button G�� superadmin only */}
+        {/* Save button -- superadmin only */}
         {isSuperAdmin && (
           <div className="flex justify-end pt-8 mt-2 border-t border-white/10">
             <Button

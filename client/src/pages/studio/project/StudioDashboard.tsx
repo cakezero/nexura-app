@@ -57,7 +57,7 @@ export default function StudioDashboard({ onLogout }: StudioDashboardProps) {
     setActiveTab(deriveTab());
   }, [location]);
 
-  // Auth guard G�� redirect to /studio if no valid session
+  // Auth guard - redirect to /studio if no valid session
   useEffect(() => {
     if (!isProjectSignedIn()) {
       setLocation("/studio");
