@@ -97,8 +97,12 @@ export default function Discover() {
     const endTime = campaign.ends_at
       ? new Date(campaign.ends_at).getTime()
       : null;
+    const status = String(campaign.status ?? "").toLowerCase();
 
-    // If campaign has ended, it's not active
+    // If campaign is manually ended or has ended status, it's not active
+    if (status === "ended") return false;
+
+    // If campaign has ended based on time, it's not active
     if (endTime && endTime <= currentTime) return false;
 
     // If campaign hasn't started yet, it's not active
@@ -114,13 +118,13 @@ export default function Discover() {
       return startTime <= currentTime;
     }
 
-    // If only end time exists and we're before it, check status
+    // If only end time exists and we're before it, it's active
     if (endTime) {
       return endTime > currentTime;
     }
 
     // Fall back to status field if no timestamps
-    return String(campaign.status ?? "").toLowerCase() === "active";
+    return status === "active";
   };
 
   
