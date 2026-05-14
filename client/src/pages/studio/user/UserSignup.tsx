@@ -13,6 +13,7 @@ import { BACKEND_URL } from "../../../lib/constants";
 import { apiRequestV2 } from "../../../lib/queryClient";
 import { userApiRequest } from "../../../lib/userApi";
 import { storeUserSession } from "../../../lib/userSession";
+import { getSessionToken } from "../../../lib/session";
 
 export default function UserSignup() {
   const [email, setEmail] = useState("");
@@ -115,6 +116,7 @@ export default function UserSignup() {
         method: "POST",
         endpoint: "/user-hub/sign-up",
         data: { name: usernameToUse, email, password },
+        token: getSessionToken() || undefined,
       });
 
       if (res.accessToken) {

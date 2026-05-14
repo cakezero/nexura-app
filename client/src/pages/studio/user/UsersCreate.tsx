@@ -9,6 +9,7 @@ import { BACKEND_URL } from "../../../lib/constants";
 import { apiRequestV2 } from "../../../lib/queryClient";
 import { userApiRequest } from "../../../lib/userApi";
 import { storeUserSession } from "../../../lib/userSession";
+import { getSessionToken } from "../../../lib/session";
 import { Eye, EyeOff, Info, ArrowRight, Loader2, ArrowLeft } from "lucide-react";
 
 export default function UsersCreate() {
@@ -101,7 +102,6 @@ export default function UsersCreate() {
       const usernameToUse = mainAppUsername || walletAddress || email.split("@")[0];
 
       await apiRequestV2("POST", `/api/hub-auth/validate-email?email=${encodeURIComponent(email)}&name=${encodeURIComponent(usernameToUse)}&page=user`);
-
       const res = await userApiRequest<{
         accessToken?: string;
         admin?: { _id: string; name: string; email: string; role: string; hub: string };
@@ -110,6 +110,7 @@ export default function UsersCreate() {
         method: "POST",
         endpoint: "/user-hub/sign-up",
         data: { name: usernameToUse, email, password },
+        token: getSessionToken() || undefined,
       });
 
       if (res.accessToken) {

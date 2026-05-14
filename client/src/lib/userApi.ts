@@ -56,14 +56,16 @@ export const userApiRequest = async <T = unknown>({
   data,
   formData,
   params,
+  token: tokenOverride,
 }: {
   method: string;
   endpoint: string;
   data?: unknown;
   formData?: FormData;
   params?: Record<string, string>;
+  token?: string;
 }): Promise<T> => {
-  const token = getStoredUserToken();
+  const token = tokenOverride || getStoredUserToken();
 
   const headers: Record<string, string> = {};
   if (token) headers["Authorization"] = `Bearer ${token}`;
