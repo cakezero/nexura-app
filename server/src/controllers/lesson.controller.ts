@@ -469,8 +469,13 @@ export const rewardLessonXp = async (req: GlobalRequest, res: GlobalResponse) =>
 
 export const getLessons = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
-    const lessons = await lesson.find({ status: "published" }).sort({ createdAt: 1 }).lean();
+    const lessons = await lesson.find({ status: "published" })
+      .sort({ createdAt: 1 })
+      .populate('creator', 'name logo')
+      .lean();
     const lessonsCompleted = await lessonCompleted.find({ user: req.id }).lean();
+
+    const Hub = (await import('../models/hub.model')).hub;
 
     const mergedLessons: any[] = [];
 
@@ -483,6 +488,26 @@ export const getLessons = async (req: GlobalRequest, res: GlobalResponse) => {
       const mergedSingleLesson: Record<any, unknown> = singleLesson;
 
       mergedSingleLesson.done = singleLessonCompleted ? singleLessonCompleted.done : false;
+
+      // Set creatorName and profileImage based on creatorModel
+      if (singleLesson.creatorModel === 'user-hubs' && singleLesson.creator) {
+        const hub = await Hub.findById(singleLesson.creator).select('name logo systemKey').lean();
+        if (hub) {
+          mergedSingleLesson.creatorName = hub.name;
+          mergedSingleLesson.profileImage = hub.logo;
+        }
+      } else if (singleLesson.creatorModel === 'admin' && singleLesson.creator) {
+        // Check if it's a system hub (Nexura)
+        const hub = await Hub.findById(singleLesson.creator).select('name logo systemKey').lean();
+        if (hub?.systemKey === 'nexura-admin-campaigns') {
+          mergedSingleLesson.creatorName = 'Nexura';
+          mergedSingleLesson.profileImage = hub.logo;
+        } else if (hub) {
+          mergedSingleLesson.creatorName = hub.name;
+          mergedSingleLesson.profileImage = hub.logo;
+        }
+      }
+
       mergedLessons.push(mergedSingleLesson);
     }
 
