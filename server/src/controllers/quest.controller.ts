@@ -1428,6 +1428,14 @@ export const publishQuest = async (req: GlobalRequest, res: GlobalResponse) => {
       return;
     }
 
+    if (newStatus === "Active") {
+      const numberOfMiniQuests = await miniQuest.countDocuments({ quest: questDoc._id });
+      if (numberOfMiniQuests < 5) {
+        res.status(BAD_REQUEST).json({ error: "mini quests must be up to/greater than 5 to set quest as active" });
+        return;
+      }
+    }
+
     questDoc.status = newStatus;
     await questDoc.save();
 
