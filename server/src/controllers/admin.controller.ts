@@ -1,17 +1,21 @@
-import { updateAdminLastActivity } from "@/utils/adminActivityCron";
+﻿import { updateAdminLastActivity } from "@/utils/adminActivityCron";
 import bcrypt from "bcrypt";
 import mongoose from "mongoose";
 import logger from "@/config/logger";
-import { quest } from "@/models/quests.model";
+import { quest, miniQuest } from "@/models/quests.model";
+import { lesson, lessonCompleted, miniLesson, question, questionCompleted, videoLesson } from "@/models/lesson.model";
 import { admin } from "@/models/admin.model";
-import { BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND, OK, UNAUTHORIZED } from "@/utils/status.utils";
+import { BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND, NO_CONTENT, OK, UNAUTHORIZED, FORBIDDEN } from "@/utils/status.utils";
+import { campaign as campaignModel, campaignCompleted } from "@/models/campaign.model";
 import { generateOTP, getRefreshToken, hashPassword, JWT, validateQuestData } from "@/utils/utils";
 import { sendAdminResetEmail, sendEmailToAdmin } from "@/utils/sendMail";
-import { campaignQuestCompleted, miniQuestCompleted } from "@/models/questsCompleted.models";
+import { campaignQuestCompleted, miniQuestCompleted, questCompleted } from "@/models/questsCompleted.models";
 import { submission } from "@/models/submission.model";
 import { user } from "@/models/user.model";
+import { hub, userHub, userHubAdmin } from "@/models/hub.model";
 import { bannedUser } from "@/models/bannedUser.model";
 import { REDIS } from "@/utils/redis.utils";
+import { xpLog } from "@/models/xpLog.model";
 
 const MAX_ADMIN_LEADERBOARD_LIMIT = 500;
 const DEFAULT_ADMIN_LEADERBOARD_LIMIT = 500;
@@ -84,6 +88,87 @@ const buildAdminAuthPayload = (record: {
   };
 };
 
+export const deleteQuestAdmin = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const id = (req.query.id as string) || (req.body.id as string) || (req.body.questId as string);
+    if (!id) {
+      res.status(BAD_REQUEST).json({ error: "Quest ID is required" });
+      return;
+    }
+    
+    const exists = await quest.exists({ _id: id }).select("_id creator creatorModel").lean();
+    if (!exists) {
+      res.status(NOT_FOUND).json({ error: "quest not found" });
+      return;
+    }
+
+    if (exists.creatorModel === "user") {
+      const userHubFound = await userHub.findById(exists.creator).select("name").lean();
+
+      if (!userHubFound) {
+        res.status(NOT_FOUND).json({ error: "hub id attached to quest does not exist" });
+        return;
+      }
+
+      await user.findByIdAndUpdate(userHubFound.userId, { $inc: { xp: -5000 } });
+    }
+
+    await Promise.all([
+      quest.findByIdAndDelete(id),
+      miniQuest.deleteMany({ quest: id }),
+      miniQuestCompleted.deleteMany({ quest: id }),
+      questCompleted.deleteMany({ quest: id }),
+    ]);
+
+    res.status(OK).json({ message: "quest deleted successfully" });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error deleting quest" });
+  }
+}
+
+export const deleteLessonAdmin = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const { id: lessonId } = req.query as { id: string };
+
+    if (!lessonId) {
+      res.status(BAD_REQUEST).json({ error: "lesson id is required" });
+      return;
+    }
+
+    const lessonCreator = await lesson.findById(lessonId).select("creator creatorModel").lean();
+    if (!lessonCreator) {
+      res.status(NOT_FOUND).json({ error: "lesson to be deleted does not exists" });
+      return;
+    }
+
+    if (lessonCreator.creatorModel === "user-hubs") {
+      const userHubFound = await userHub.findById(lessonCreator.creator);
+
+      if (!userHubFound) {
+        res.status(NOT_FOUND).json({ error: "hub id attached to lesson does not exist" });
+        return;
+      }
+
+      await user.updateOne({ username: userHubFound.name }, { $inc: { xp: -3500 } });
+    }
+
+    await Promise.all([
+      lesson.deleteOne({ _id: lessonId }),
+      miniLesson.deleteMany({ lesson: lessonId }),
+      question.deleteMany({ lesson: lessonId }),
+      videoLesson.deleteMany({ lesson: lessonId }),
+      lessonCompleted.deleteMany({ lesson: lessonId }),
+      questionCompleted.deleteMany({ lesson: lessonId }),
+    ]);
+
+    res.status(OK).json({ message: "lesson deleted" });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error deleting lesson" });
+  }
+};
+
 export const createQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 	try {
 		const { success } = validateQuestData(req.body);
@@ -94,16 +179,19 @@ export const createQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 			return;
 		}
 
-		const newQuest = new quest(req.body);
-		if (newQuest.category !== "weekly") {
-			await newQuest.save();
-		} else {
-			// new Date(new Date(Date.now() + 86400000).setHours(0, 60, 0, 0)); (quests expire at 12am UTC. For now, it expires 1 day after creation)
-			newQuest.expires = new Date(Date.now() + 86400000);
-			await newQuest.save();
-		}
+		const hubUserId = req.admin.hub;
 
-		res.status(OK).json({ message: "quest quest created!" });
+		const createdHub = await hub.findById(hubUserId);
+		if (!createdHub) {
+			res
+				.status(NOT_FOUND)
+				.json({ error: "id associated with hub is invalid" });
+			return;
+    }
+
+    await quest.create({ ...req.body, hub: createdHub._id });
+
+		res.status(OK).json({ message: "quest created!" });
 	} catch (error) {
 		logger.error(error);
 		res.status(INTERNAL_SERVER_ERROR).json({ error: "error creating quest" });
@@ -119,7 +207,29 @@ export const rewardXp = async (req: GlobalRequest, res: GlobalResponse) => {
 			return;
 		}
 
-		await user.updateOne({ address: address.toLowerCase() }, { $inc: { xp: parseInt(xp, 10), eventsWon: 1 } });
+		const xpAmount = parseInt(xp, 10);
+		const userExists = await user.findOne({ address: address.toLowerCase() });
+
+		if (userExists) {
+			await user.updateOne({ address: address.toLowerCase() }, { $inc: { xp: xpAmount, eventsWon: 1 } });
+			await xpLog.create({
+				address: address.toLowerCase(),
+				amount: xpAmount,
+				status: "success",
+				type: "single",
+				adminId: req.id ? new mongoose.Types.ObjectId(req.id) : undefined
+			});
+		} else {
+			await xpLog.create({
+				address: address.toLowerCase(),
+				amount: xpAmount,
+				status: "failed",
+				type: "single",
+				adminId: req.id ? new mongoose.Types.ObjectId(req.id) : undefined
+			});
+			res.status(NOT_FOUND).json({ error: "user not found" });
+			return;
+		}
 
 		res.status(OK).json({ message: "xp rewarded" });
 	} catch (error) {
@@ -184,6 +294,33 @@ export const rewardXpBatch = async (req: GlobalRequest, res: GlobalResponse) => 
 		const matched = normalized.filter((addr) => existingSet.has(addr));
 		const notFound = normalized.filter((addr) => !existingSet.has(addr));
 
+		const logs: any[] = [];
+		const adminObjId = req.id ? new mongoose.Types.ObjectId(req.id) : undefined;
+
+		for (const addr of matched) {
+			logs.push({
+				address: addr,
+				amount: xpAmount,
+				status: "success",
+				type: "batch",
+				adminId: adminObjId
+			});
+		}
+
+		for (const addr of notFound) {
+			logs.push({
+				address: addr,
+				amount: xpAmount,
+				status: "failed",
+				type: "batch",
+				adminId: adminObjId
+			});
+		}
+
+		if (logs.length > 0) {
+			await xpLog.insertMany(logs);
+		}
+
 		if (matched.length > 0) {
 			await user.updateMany(
 				{ address: { $in: matched } },
@@ -201,7 +338,7 @@ export const rewardXpBatch = async (req: GlobalRequest, res: GlobalResponse) => 
 		});
 	} catch (error) {
 		logger.error(error);
-		res.status(INTERNAL_SERVER_ERROR).json({ error: "Internal Server Error" });
+		res.status(INTERNAL_SERVER_ERROR).json({ error: "error performing batch xp reward" });
 	}
 };
 
@@ -502,10 +639,121 @@ export const createAdmin = async (req: GlobalRequest, res: GlobalResponse) => {
 	}
 };
 
+export const getAdminQuestDetail = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const id = (req.query.id as string) || (req.body.id as string) || (req.body.questId as string);
+    if (!id) {
+      res.status(BAD_REQUEST).json({ error: "Quest ID is required" });
+      return;
+    }
+
+    const found = await quest.findById(id).lean();
+    if (!found) {
+      res.status(NOT_FOUND).json({ error: "quest not found" });
+      return;
+    }
+
+    const now = new Date();
+    const parseDate = (val: unknown): Date | null => {
+      if (!val) return null;
+      const d = new Date(val as string | Date);
+      return isNaN(d.getTime()) ? null : d;
+    };
+
+    const s = parseDate(found.starts_at);
+    const e = parseDate(found.ends_at);
+    let temporalStatus = found.status ?? "Active";
+    if (e && e <= now) temporalStatus = "Ended";
+    else if (s && s > now) temporalStatus = "Scheduled";
+    else if (found.status !== "Save") temporalStatus = "Active";
+
+    const questTasks = ((found as any).campaignQuests || (found as any).quests || []).map((t: any) => ({
+      type: t.type || t.taskType || "",
+      platform: t.platform || "",
+      handleOrUrl: t.handleOrUrl || t.handle || "",
+      description: t.description || "",
+      evidence: t.evidence || "",
+      validation: t.validation || "Manual Validation",
+      verificationMode: t.verificationMode || "",
+      roleId: t.roleId || "",
+      channelId: t.channelId || "",
+      guildId: t.guildId || "",
+    }));
+
+    res.status(OK).json({
+      quest: {
+        _id: String(found._id),
+        title: found.title || "",
+        description: found.description || found.project_name || "",
+        status: temporalStatus,
+        starts_at: found.starts_at ?? null,
+        ends_at: found.ends_at ?? null,
+        reward: found.reward ?? 0,
+        page: (found as any).page ?? "",
+        projectCoverImage: found.projectCoverImage || found.project_image || "",
+        tasks: questTasks,
+      },
+    });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching quest detail" });
+  }
+};
+
+export const getAdminHubQuests = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const adminHub = req.admin?.hub ? String(req.admin.hub) : null;
+    if (!adminHub) {
+      res.status(BAD_REQUEST).json({ error: "admin has no associated hub" });
+      return;
+    }
+
+    const quests = await quest
+      .find({ hub: adminHub, status: { $ne: "Deleted" } })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const now = new Date();
+    const parseDate = (val: unknown): Date | null => {
+      if (!val) return null;
+      const d = new Date(val as string | Date);
+      return isNaN(d.getTime()) ? null : d;
+    };
+
+    const getStatus = (q: any) => {
+      if (q.status === "Save") return "Save";
+      if (q.status === "Deleted") return "Deleted";
+      if (q.status === "Ended") return "Ended";
+      const s = parseDate(q.starts_at);
+      const e = parseDate(q.ends_at);
+      if (e && e <= now) return "Ended";
+      if (s && s > now) return "Scheduled";
+      return "Active";
+    };
+
+    const normalized = quests.map((q: any) => ({
+      _id: String(q._id),
+      title: q.title || "",
+      description: q.description || q.project_name || "",
+      projectCoverImage: q.projectCoverImage || "",
+      status: getStatus(q),
+      starts_at: q.starts_at ?? null,
+      ends_at: q.ends_at ?? null,
+      reward: q.reward ?? 0,
+      page: q.page ?? "",
+    }));
+
+    res.status(OK).json({ quests: normalized });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching admin hub quests" });
+  }
+};
+
 export const getTasks = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
     // Submissions persist `hub` as a string (the hub's ObjectId stringified)
-    // — see quest.controller.ts:793. Match the admin's resolved hub instead
+    // â€” see quest.controller.ts:793. Match the admin's resolved hub instead
     // of the historical "nexura-hub" placeholder so multi-hub campaigns'
     // submissions actually surface in the dashboard.
     const adminHub = req.admin?.hub ? String(req.admin.hub) : null;
@@ -525,6 +773,34 @@ export const getTasks = async (req: GlobalRequest, res: GlobalResponse) => {
     res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching tasks" });
   }
 };
+
+export const getXpHistory = async (req: GlobalRequest, res: GlobalResponse) => {
+	try {
+		const history = await xpLog.find().sort({ timestamp: -1 }).limit(100).lean();
+		res.status(OK).json({ history });
+	} catch (error) {
+		logger.error(error);
+		res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching xp history" });
+	}
+};
+
+export const searchUserXpHistory = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const { address } = req.query;
+    if (!address) {
+      res.status(BAD_REQUEST).json({ error: "address query parameter is required" });
+      return;
+    }
+
+    const normalizedAddress = String(address).trim().toLowerCase();
+    const history = await xpLog.find({ address: normalizedAddress }).sort({ timestamp: -1 }).limit(100).lean();
+
+    res.status(OK).json({ history });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error searching user xp history" });
+  }
+}
 
 export const getBannedUsers = async (req: GlobalRequest, res: GlobalResponse) => {
 	try {
@@ -808,3 +1084,296 @@ export const markTask = async (req: GlobalRequest, res: GlobalResponse) => {
 		res.status(INTERNAL_SERVER_ERROR).json({ error: "error marking submission" });
 	}
 }
+
+export const getStudioCampaigns = async (_req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const campaigns = await campaignModel
+      .find({ status: { $ne: "Deleted" }, deletedAt: null })
+      .populate({ path: "hub", select: "name logo" })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const normalized = campaigns.map((c: any) => ({
+      _id: String(c._id),
+      title: c.description || c.title || "",
+      projectName: c.project_name || "",
+      status: c.status || "â€”",
+      starts_at: c.starts_at ?? null,
+      ends_at: c.ends_at ?? null,
+      reward: {
+        xp: Number(c.reward?.xp ?? 0),
+        pool: Number(c.reward?.pool ?? 0),
+        trustTokens: Number(c.reward?.trustTokens ?? 0),
+      },
+      participants: Number(c.participants ?? 0),
+      creator: {
+        id: c.hub?._id ? String(c.hub._id) : "",
+        name: c.hub?.name || c.project_name || "Unknown",
+        logo: c.hub?.logo || c.project_image || "",
+      },
+      createdAt: c.createdAt ?? null,
+    }));
+
+    res.status(OK).json({ studioCampaigns: normalized });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching studio campaigns" });
+  }
+};
+
+export const deleteStudioCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const id = typeof req.query.id === "string" ? req.query.id.trim() : "";
+    if (!id) {
+      res.status(BAD_REQUEST).json({ error: "campaign id is required" });
+      return;
+    }
+
+    const updated = await campaignModel.findByIdAndUpdate(
+      id,
+      { status: "Deleted", deletedAt: new Date() },
+      { new: true }
+    );
+
+    if (!updated) {
+      res.status(NOT_FOUND).json({ error: "campaign not found" });
+      return;
+    }
+
+    res.status(NO_CONTENT).send();
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error deleting studio campaign" });
+  }
+};
+
+export const getDeletedStudioCampaigns = async (_req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const campaigns = await campaignModel
+      .find({ status: "Deleted" })
+      .populate({ path: "hub", select: "name logo" })
+      .sort({ deletedAt: -1, createdAt: -1 })
+      .lean();
+
+    const normalized = campaigns.map((c: any) => ({
+      _id: String(c._id),
+      title: c.description || c.title || "",
+      projectName: c.project_name || "",
+      status: c.status || "â€”",
+      starts_at: c.starts_at ?? null,
+      ends_at: c.ends_at ?? null,
+      reward: {
+        xp: Number(c.reward?.xp ?? 0),
+        pool: Number(c.reward?.pool ?? 0),
+        trustTokens: Number(c.reward?.trustTokens ?? 0),
+      },
+      participants: Number(c.participants ?? 0),
+      creator: {
+        id: c.hub?._id ? String(c.hub._id) : "",
+        name: c.hub?.name || c.project_name || "Unknown",
+        logo: c.hub?.logo || c.project_image || "",
+      },
+      createdAt: c.createdAt ?? null,
+      deletedAt: c.deletedAt ?? null,
+    }));
+
+    res.status(OK).json({ deletedCampaigns: normalized });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching deleted campaigns" });
+  }
+};
+
+export const restoreStudioCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const id = typeof req.query.id === "string" ? req.query.id.trim() : "";
+    if (!id) {
+      res.status(BAD_REQUEST).json({ error: "campaign id is required" });
+      return;
+    }
+
+    const campaignToRestore = await campaignModel.findById(id);
+    if (!campaignToRestore) {
+      res.status(NOT_FOUND).json({ error: "campaign not found" });
+      return;
+    }
+
+    const now = new Date();
+    const startsAtStr = String(campaignToRestore.starts_at || "");
+    const endsAtStr = String(campaignToRestore.ends_at || "");
+    const startsAt = startsAtStr ? new Date(startsAtStr) : null;
+    const endsAt = endsAtStr ? new Date(endsAtStr) : null;
+
+    let targetStatus = "Active";
+    if (endsAt && !isNaN(endsAt.getTime()) && endsAt <= now) {
+      targetStatus = "Ended";
+    } else if (startsAt && !isNaN(startsAt.getTime()) && startsAt > now) {
+      targetStatus = "Scheduled";
+    }
+
+    // Use findByIdAndUpdate to avoid validation errors on existing invalid documents
+    const updated = await campaignModel.findByIdAndUpdate(
+      id,
+      { 
+        status: targetStatus, 
+        $unset: { deletedAt: "" } 
+      },
+      { new: true }
+    );
+
+    if (!updated) {
+      res.status(NOT_FOUND).json({ error: "campaign not found" });
+      return;
+    }
+
+    res.status(OK).json({ message: "campaign restored successfully" });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error restoring campaign" });
+  }
+};
+
+export const permanentlyDeleteStudioCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const id = typeof req.query.id === "string" ? req.query.id.trim() : "";
+    if (!id) {
+      res.status(BAD_REQUEST).json({ error: "campaign id is required" });
+      return;
+    }
+
+    const result = await campaignModel.findByIdAndDelete(id);
+    if (!result) {
+      res.status(NOT_FOUND).json({ error: "campaign not found" });
+      return;
+    }
+
+    res.status(NO_CONTENT).send();
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error permanently deleting campaign" });
+  }
+};
+
+export const getStudioQuests = async (_req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const quests = await quest
+      .find({ creatorModel: "project", status: { $ne: "Deleted" } })
+      .populate({ path: "creator", select: "name logo" })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const normalized = quests.map((q: any) => ({
+      _id: String(q._id),
+      title: q.title || "",
+      projectName: q.project_name || "",
+      status: q.status || "â€”",
+      starts_at: q.starts_at ?? null,
+      ends_at: q.ends_at ?? null,
+      reward: { xp: Number(q.reward ?? 0) },
+      creator: {
+        id: q.creator?._id ? String(q.creator._id) : "",
+        name: q.creator?.name || q.project_name || "Unknown",
+        logo: q.creator?.logo || q.project_image || "",
+      },
+      createdAt: q.createdAt ?? null,
+    }));
+
+    res.status(OK).json({ studioQuests: normalized });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching studio quests" });
+  }
+};
+
+export const getStudioLessons = async (_req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const lessonsList = await lesson
+      .find({ creatorModel: "project" })
+      .populate({ path: "creator", select: "name logo" })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const normalized = lessonsList.map((l: any) => ({
+      _id: String(l._id),
+      title: l.title || "",
+      projectName: l.creator?.name || "Hub",
+      status: l.status === "published" ? "Active" : "Save",
+      reward: { xp: Number(l.reward ?? 0) },
+      creator: {
+        id: l.creator?._id ? String(l.creator._id) : "",
+        name: l.creator?.name || "Unknown",
+        logo: l.creator?.logo || l.profileImage || "",
+      },
+      createdAt: l.createdAt ?? null,
+    }));
+
+    res.status(OK).json({ studioLessons: normalized });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching studio lessons" });
+  }
+};
+
+export const publishAdminQuest = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const id = (req.query.id as string) || (req.body.id as string) || (req.body.questId as string);
+    if (!id) {
+      res.status(BAD_REQUEST).json({ error: "Quest ID is required" });
+      return;
+    }
+
+    const adminHub = req.admin?.hub ? String(req.admin.hub) : null;
+    if (!adminHub) {
+      res.status(BAD_REQUEST).json({ error: "Admin has no associated hub" });
+      return;
+    }
+
+    const questDoc = await quest.findById(id);
+    if (!questDoc) {
+      res.status(NOT_FOUND).json({ error: "Quest not found" });
+      return;
+    }
+
+    if (String(questDoc.creator) !== adminHub) {
+      res.status(FORBIDDEN).json({ error: "You are not allowed to publish this quest" });
+      return;
+    }
+
+    const { status } = req.body;
+    if (status === "Ended") {
+      questDoc.status = "Ended";
+      await questDoc.save();
+      res.status(OK).json({ message: "Quest closed successfully!" });
+      return;
+    }
+
+    if (questDoc.status !== "Save") {
+      res.status(BAD_REQUEST).json({ error: "Quest is not in draft status" });
+      return;
+    }
+
+    const now = new Date();
+    let newStatus: "Active" | "Scheduled";
+
+    if (!questDoc.starts_at || new Date(questDoc.starts_at) <= now) {
+      newStatus = "Active";
+    } else {
+      newStatus = "Scheduled";
+    }
+
+    if (questDoc.ends_at && new Date(questDoc.ends_at) <= now) {
+      res.status(BAD_REQUEST).json({ error: "Cannot publish a quest that has already ended" });
+      return;
+    }
+
+    questDoc.status = newStatus;
+    await questDoc.save();
+
+    res.status(OK).json({ message: "Quest published successfully!" });
+  } catch (error: any) {
+    logger.error("Error publishing quest: " + error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: error?.message || "Error publishing quest" });
+  }
+};
+
+// export const getXpHistory

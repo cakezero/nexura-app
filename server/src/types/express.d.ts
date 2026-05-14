@@ -10,6 +10,32 @@ declare global {
     admin?: any;
     token?: string;
     campaignCreator?: any;
+    user?: any;
+    paymentTxHash?: string;
+  }
+
+  interface ICreateCampaign {
+	project_name: string;
+	reward: IReward;
+	starts_at: Date;
+	project_image: string;
+	projectCoverImage: string;
+	creator: string;
+	ends_at: Date;
+	title: string;
+	description: string;
+  }
+
+  interface ICreateQuest {
+	project_name: string;
+	reward: IReward;
+	starts_at: Date;
+	project_image: string;
+	projectCoverImage: string;
+	creator: string;
+	ends_at: Date;
+	title: string;
+	description: string;
   }
 
   type Unit =

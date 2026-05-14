@@ -1,17 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Button } from "../components/ui/button";
-import { Badge } from "../components/ui/badge";
-import { Card } from "../components/ui/card";
-import { ExternalLink, Clock } from "lucide-react";
+import { useEffect, useState, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import { ExternalLink, Clock, Users } from "lucide-react";
 import AnimatedBackground from "../components/AnimatedBackground";
-import { apiRequestV2, getStoredAccessToken } from "../lib/queryClient";
+import { apiRequestV2 } from "../lib/queryClient";
 import { useToast } from "../hooks/use-toast";
 import { useAuth } from "../lib/auth";
 import { motion } from "framer-motion";
+import { Button } from "../components/ui/button";
+import { Card } from "../components/ui/card";
+import { Badge } from "../components/ui/badge";
 
 interface Quest {
   _id: string;
@@ -20,7 +20,7 @@ interface Quest {
   project_name?: string;
   description?: string;
   done: boolean;
-  project_image?: string;
+  projectCoverImage?: string;
   starts_at?: string;
   ends_at?: string;
   link?: string;
@@ -31,55 +31,9 @@ interface Quest {
   actionLabel?: string;
   status: string;
   tag?: string;
+  participants?: number;
+  maxParticipants?: number;
 }
-
-export const DUMMY_QUESTS: Quest[] = [
-  {
-    _id: "tasks-card",
-    joined: true,
-    title: "Start Tasks",
-    sub_title: "Complete tasks to earn XP and unlock new features",
-    done: false,
-    description: "Complete unique tasks in the Nexura ecosystem and earn rewards",
-    project_name: "Intuition Ecosystem",
-    reward: "500",
-    project_image: "/quest-1.png",
-    starts_at: new Date().toISOString(),
-    ends_at: new Date(new Date().getTime() + 1000 * 60 * 60 * 24 * 365).toISOString(),
-    category: "Weekly",
-    status: "active"
-  },
-  {
-    _id: "social-card",
-    joined: true,
-    title: "Social Boost",
-    sub_title: "Engage on social platforms to earn rewards",
-    done: false,
-    description: "Like, share, and comment to earn XP",
-    project_name: "Nexura Social",
-    reward: "300",
-    project_image: "/quest-2.png",
-    starts_at: new Date().toISOString(),
-    ends_at: new Date(new Date().getTime() + 1000 * 60 * 60 * 24 * 180).toISOString(),
-    category: "Daily",
-    status: "active"
-  },
-  {
-    _id: "referral-card",
-    joined: true,
-    title: "Referral Sprint",
-    sub_title: "Invite friends and climb the leaderboard",
-    done: false,
-    description: "Earn XP for each successful referral",
-    project_name: "Nexura Referral",
-    reward: "800",
-    project_image: "/quest-3.png",
-    starts_at: new Date().toISOString(),
-    ends_at: new Date(new Date().getTime() + 1000 * 60 * 60 * 24 * 90).toISOString(),
-    category: "Weekly",
-    status: "active"
-  }
-];
 
 export default function Quests() {
   const [, setLocation] = useLocation();
@@ -87,18 +41,36 @@ export default function Quests() {
 
   const userId = user?._id || "";
 
-  const [visitedTasks, setVisitedTasks] = useState<string[]>(() => {
-    return JSON.parse(localStorage.getItem('nexura:one-time-quest:visited') || '[]')[userId] || [];
-  });
-  const [claimedTasks, setClaimedTasks] = useState<string[]>(() => {
-    return JSON.parse(localStorage.getItem('nexura:one-time-quest:claimed') || '[]')[userId] || [];
-  });
+  const [serverOffset, setServerOffset] = useState(0);
+  const [countdowns, setCountdowns] = useState<Record<string, string>>({});
 
   const { toast } = useToast();
 
-  const { data: quests, isLoading } = useQuery<{
+  const now = Date.now() + serverOffset;
+
+  const isEndedQuest = (quest: Quest) =>
+    quest.status === "Ended" || (!!quest.ends_at && new Date(quest.ends_at).getTime() <= now);
+  const isScheduledQuest = (quest: Quest) =>
+    !isEndedQuest(quest) && !!quest.starts_at && new Date(quest.starts_at).getTime() > now;
+  const isActiveQuest = (quest: Quest) =>
+    !isScheduledQuest(quest) && !isEndedQuest(quest) && quest.status !== "Save";
+
+  // SERVER TIME SYNC
+  useEffect(() => {
+    const getServerTime = async () => {
+      try {
+        const res = await apiRequestV2("GET", "/api/server-time");
+        setServerOffset(res.serverTime - Date.now());
+      } catch {
+        // fallback
+      }
+    };
+    getServerTime();
+  }, []);
+
+  const { data, isLoading, refetch } = useQuery<{
     oneTimeQuests: Quest[];
-    weeklyQuests: Quest[];
+    quests: Quest[];
     featuredQuests: Quest[];
   }>({
     queryKey: ["/api/quests"],
@@ -106,115 +78,240 @@ export default function Quests() {
       const res = await apiRequestV2("GET", "/api/quests");
       return res;
     },
-    refetchInterval: 60000,
+    refetchInterval: 300000,
     refetchIntervalInBackground: true,
   });
 
+  const allQuests: Quest[] = data?.quests ?? [];
+
+  const activeQuests = allQuests.filter(isActiveQuest);
+  const upcomingQuests = allQuests.filter(isScheduledQuest);
+  const endedQuests = allQuests.filter(isEndedQuest);
+
+  // COUNTDOWN TIMER
   useEffect(() => {
-    const value: Record<string, string[]> = {};
-    value[userId] = visitedTasks;
-    localStorage.setItem('nexura:one-time-quest:visited', JSON.stringify(value));
-  }, [visitedTasks]);
+    if (upcomingQuests.length === 0) return;
 
-  useEffect(() => {
-    const value: Record<string, string[]> = {};
-    value[userId] = claimedTasks;
-    localStorage.setItem('nexura:one-time-quest:claimed', JSON.stringify(value));
-  }, [claimedTasks]);
+    const tick = () => {
+      const n = Date.now() + serverOffset;
+      const newCountdowns: Record<string, string> = {};
+      let anyExpired = false;
 
-  const allQuests: Quest[] = quests?.weeklyQuests ?? DUMMY_QUESTS;
+      for (const q of upcomingQuests) {
+        const diff = new Date(q.starts_at!).getTime() - n;
 
-  const activeQuests = allQuests.filter((q) => q.status === "active");
-  const upcomingQuests = allQuests.filter((q) => q.status === "upcoming");
+        if (diff <= 0) {
+          anyExpired = true;
+          newCountdowns[q._id] = "Starting...";
+        } else {
+          const d = Math.floor(diff / 86400000);
+          const h = Math.floor((diff % 86400000) / 3600000);
+          const m = Math.floor((diff % 3600000) / 60000);
+          const s = Math.floor((diff % 60000) / 1000);
+
+          newCountdowns[q._id] = d > 0 ? `${d}d ${h}h ${m}m ${s}s` : h > 0 ? `${h}h ${m}m ${s}s` : `${m}m ${s}s`;
+        }
+      }
+
+      setCountdowns(newCountdowns);
+      if (anyExpired) refetch();
+    };
+
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [upcomingQuests, serverOffset, refetch]);
+
+  const [isStartingQuest, setIsStartingQuest] = useState<string | null>(null);
 
   const startQuest = async (quest: Quest) => {
+    if (isEndedQuest(quest)) return;
+    if (isStartingQuest === quest._id) return;
+
     if (!quest.joined) {
+      setIsStartingQuest(quest._id);
       try {
         await apiRequestV2("POST", "/api/quest/start-quest", {
           questId: quest._id,
-          category: quest.category.toLowerCase(),
-        });
-        toast({
-          title: "Quest Started",
-          description: `You have started the quest: ${quest.title}`,
-        });
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: "Failed to start the quest. Please try again.",
-          variant: "destructive",
         });
 
-        return;
+        // Refetch to update joined status
+        await refetch();
+
+      } catch (error: any) {
+        // If the error is "quest already started", we can ignore it and just proceed
+        const errorData = error.info || {};
+        if (errorData.error !== "quest already started") {
+          toast({
+            title: "Error",
+            description: errorData.error || "Failed to start the quest. Please try again.",
+            variant: "destructive",
+          });
+          setIsStartingQuest(null);
+          return;
+        }
+      } finally {
+        setIsStartingQuest(null);
       }
     }
 
     setLocation(`/quest/${quest._id}`);
-  }
+  };
 
-  const renderQuestCard = (quest: Quest, isActive: boolean = true, index: number = 0) => {
+  const renderQuestCard = (
+    quest: Quest,
+    state: "active" | "upcoming" | "ended",
+    index: number = 0
+  ) => {
+    const isActive = state === "active";
+    const isUpcoming = state === "upcoming";
+
+    const formatDate = (dateStr?: string) => {
+      if (!dateStr) return "N/A";
+      return new Date(dateStr).toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "long",
+      });
+    };
+
+    const starts_atFormatted = quest.starts_at ? formatDate(quest.starts_at) : "";
+    const ends_atFormatted = quest.ends_at ? formatDate(quest.ends_at) : "TBA";
+
+    const participantCount = quest.participants || 0;
+
     return (
       <motion.div
         key={quest._id}
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.45, delay: index * 0.08, ease: "easeOut" }}
+        transition={{
+          duration: 0.45,
+          delay: index * 0.08,
+          ease: "easeOut",
+        }}
       >
-        <Card className="bg-[#0d1117] border border-white/5 rounded-xl overflow-hidden transition hover:shadow-lg flex flex-col">
-          {/* Image / Badge Section */}
-          <div className="relative w-full h-44 sm:h-40 flex-shrink-0">
-            <img
-              src={quest.project_image ?? "/quest-1.png"}
-              alt={quest.title}
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+        <Card className="bg-[#170f1f] h-full border border-white/5 rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition flex flex-col">
+          {/* Quest Banner */}
+          <div className="relative h-36 bg-black w-full">
+            {quest.projectCoverImage && (
+              <img
+                src={quest.projectCoverImage}
+                alt={quest.title}
+                className="w-full h-full object-cover rounded-t-2xl"
+              />
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+
+            {/* Status Badge / Countdown */}
             <div className="absolute top-2 right-2">
-              <Badge className="text-xs">{isActive ? "Active" : "Soon"}</Badge>
+              {isActive ? (
+                <Badge className="bg-green-500/20 text-green-400 border border-green-500/30 text-[0.65rem] sm:text-xs">
+                  Active
+                </Badge>
+              ) : isUpcoming ? (
+                <div className="bg-black/60 backdrop-blur-sm border border-purple-500/30 rounded-lg px-2 py-1 flex items-center gap-1.5">
+                  <Clock className="w-3 h-3 text-purple-400 animate-pulse" />
+                  <span className="text-purple-300 text-[0.6rem] sm:text-xs font-mono font-semibold">
+                    {countdowns[quest._id] || "Loading..."}
+                  </span>
+                </div>
+              ) : (
+                <Badge className="bg-gray-500/20 text-gray-200 border border-gray-500/30 text-[0.65rem] sm:text-xs">
+                  Ended
+                </Badge>
+              )}
             </div>
-            {/* <div className="absolute top-3 left-3 text-xs text-white/80 font-medium">
-              {quest.category}
-            </div> */}
+
+            {/* PROJECT LOGO OVERLAY */}
+            <div className="absolute bottom-3 left-3">
+              <div className="w-12 h-12 rounded-xl overflow-hidden border border-white/10 bg-[#1D1526] backdrop-blur-md shadow-lg">
+                <img
+                  src={(quest as any).project_image || "/quest-1.png"}
+                  alt={quest.project_name || "Project"}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            </div>
+
+            {/* Category */}
+            {quest.category && (
+              <div className="absolute top-2 left-2 text-[0.65rem] sm:text-xs text-white/80 font-medium">
+                {quest.category}
+              </div>
+            )}
           </div>
 
-          {/* Content */}
-          <div className="p-4 sm:p-5 flex flex-col gap-3 flex-1">
-            <h2 className="text-lg sm:text-xl font-semibold text-white line-clamp-2">
+          {/* Quest Details */}
+          <div className="p-3 sm:p-4 flex flex-1 flex-col space-y-1.5">
+            <h2
+              className="text-sm font-semibold text-white leading-snug line-clamp-2 min-h-[2.25rem] break-words"
+              title={quest.title}
+            >
               {quest.title}
             </h2>
 
-            <p className="text-xs sm:text-sm text-white/90 line-clamp-2">
-              {quest.sub_title}
-            </p>
-
-            {/* {quest.project_name && ( */}
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Project:</span>
-                <span className="text-white">{quest.project_name ?? "Intuition Ecosystem"}</span>
-              </div>
-            {/* )} */}
-
-            <div className="flex justify-between text-sm items-center">
-              <span className="text-gray-500">Reward:</span>
-              <span className="text-white font-semibold">{quest.reward} XP</span>
+            <div className="flex flex-row justify-between text-xs gap-1 items-center">
+              <span className="text-gray-500">Creator:</span>
+              <span className="text-white line-clamp-1 break-all max-w-[65%] text-right">
+                {quest.project_name || "Nexura Ecosystem"}
+              </span>
             </div>
 
+            <div className="flex flex-row justify-between text-xs gap-1 items-center">
+              <span className="text-gray-500">Participants:</span>
+              <span className="text-white flex items-center gap-1">
+                <Users className="w-3 h-3" />
+                {participantCount.toLocaleString()}
+              </span>
+            </div>
+
+            <div className="flex flex-row justify-between text-xs items-center">
+              <span className="text-gray-500">Reward:</span>
+              <span className="text-white flex items-center gap-1 text-right">
+                {quest.reward} XP
+              </span>
+            </div>
+
+            {quest.starts_at && (
+              <div className="flex flex-row justify-between text-xs items-center">
+                <span className="text-gray-500">Duration:</span>
+                <span className="text-white flex items-center gap-1">
+                  <Clock className="w-3 h-3" />
+                  {starts_atFormatted} – {ends_atFormatted}
+                </span>
+              </div>
+            )}
+
             <Button
-              className="w-full bg-gradient-to-r from-purple-700 via-purple-800 to-indigo-900 
-                hover:from-purple-600 hover:via-purple-700 hover:to-indigo-800
-                text-white font-medium rounded-lg mt-2 py-2 flex items-center justify-center space-x-2 
-                active:scale-[0.98] transition-all"
-              onClick={() => startQuest(quest)}
+              className={`w-full mt-auto pt-2 py-2 text-xs font-medium rounded-2xl ${
+                isActive
+                  ? "bg-[#8b3efe] hover:bg-[#B65FC8] text-white"
+                  : "bg-gray-600 cursor-not-allowed text-gray-300"
+              }`}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (isActive) startQuest(quest);
+              }}
+              disabled={!isActive || isStartingQuest === quest._id}
             >
               {isActive ? (
                 <>
-                  <ExternalLink className="w-4 h-4" />
-                  <span>{quest.joined ? "Continue Quest" : "Start Task"}</span>
+                  {isStartingQuest === quest._id ? (
+                    <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 animate-spin" />
+                  ) : (
+                    <ExternalLink className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                  )}
+                  {isStartingQuest === quest._id ? "Joining..." : (quest.joined ? "Continue Quest" : "Start Quest")}
+                </>
+              ) : isUpcoming ? (
+                <>
+                  <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                  Starts in {countdowns[quest._id] || "..."}
                 </>
               ) : (
                 <>
-                  <Clock className="w-4 h-4" />
-                  <span>Coming Soon</span>
+                  <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                  Quest Ended
                 </>
               )}
             </Button>
@@ -225,44 +322,75 @@ export default function Quests() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0b0718] via-[#0a0615] to-black text-white p-6 relative">
+    <div className="min-h-screen bg-black text-white overflow-auto p-6 relative">
       <AnimatedBackground />
 
-      <div className="mx-auto space-y-6 relative z-10 max-w-full sm:max-w-6xl px-1 sm:px-0">
-        {/* Heading */}
-        <div className="space-y-1 mb-6">
+      <div className="max-w-4xl sm:max-w-6xl mx-auto space-y-6 sm:space-y-8 relative z-10">
+        {/* HEADER */}
+        <div className="space-y-1">
           <div className="flex items-center gap-2 mb-3">
-            <div className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
-            <span className="text-purple-400 text-xs font-semibold uppercase tracking-widest">Quests</span>
+            <div className="w-1.5 h-1.5 rounded-full bg-[#8B3EFE] animate-pulse" />
+            <span className="text-[#8B3EFE] text-[11px] font-semibold uppercase tracking-widest">
+              Quests
+            </span>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold bg-gradient-to-r from-white via-purple-200 to-purple-400 bg-clip-text text-transparent">Quests</h1>
-          <p className="text-sm text-white/50 mt-1">
+
+          <h1 className="text-3xl sm:text-4xl font-extrabold bg-gradient-to-r from-white via-purple-200 to-purple-400 bg-clip-text text-transparent mb-2">
+            Quests
+          </h1>
+
+          <p className="text-xs sm:text-sm text-muted-foreground">
             Complete these quests to earn rewards
           </p>
         </div>
 
-        {/* Active Quests */}
-        {isLoading ? (
-          <div className="text-center py-12 text-white/60">Loading quests...</div>
-        ) : activeQuests.length === 0 ? (
-          <Card className="glass glass-hover rounded-3xl p-8 text-center">
-            <p className="text-white/60">No active quests at the moment. Check back soon!</p>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {activeQuests.map((quest, i) => renderQuestCard(quest, true, i))}
-          </div>
-        )}
-
-        {/* Upcoming Quests */}
-        {upcomingQuests.length > 0 && (
-          <div className="space-y-4 sm:space-y-6 mt-8 sm:mt-12">
-            <h2 className="text-lg sm:text-2xl font-semibold text-white">Upcoming Quest(s)</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-              {upcomingQuests.map((quest, i) => renderQuestCard(quest, false, i))}
+        {/* ACTIVE QUESTS */}
+        <div className="space-y-4 sm:space-y-6">
+          <h2 className="text-lg sm:text-2xl font-semibold text-white">Active Quests</h2>
+          {isLoading ? (
+            <div className="text-center py-6 sm:py-12 text-muted-foreground">Loading quests...</div>
+          ) : activeQuests.length === 0 ? (
+            <Card className="glass glass-hover rounded-3xl p-6 sm:p-8 text-center">
+              <p className="text-white/60">No active quests at the moment. Check back soon.</p>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+              {activeQuests.map((quest, i) => renderQuestCard(quest, "active", i))}
             </div>
-          </div>
-        )}
+          )}
+        </div>
+
+        {/* UPCOMING QUESTS */}
+        <div className="space-y-4 sm:space-y-6 mt-8 sm:mt-12">
+          <h2 className="text-lg sm:text-2xl font-semibold text-white">Upcoming Quests</h2>
+          {isLoading ? (
+            <div className="text-center py-6 sm:py-12 text-muted-foreground">Loading quests...</div>
+          ) : upcomingQuests.length === 0 ? (
+            <Card className="glass glass-hover rounded-3xl p-6 sm:p-8 text-center">
+              <p className="text-white/60">No upcoming quests.</p>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+              {upcomingQuests.map((quest, i) => renderQuestCard(quest, "upcoming", i))}
+            </div>
+          )}
+        </div>
+
+        {/* ENDED QUESTS */}
+        <div className="space-y-4 sm:space-y-6 mt-8 sm:mt-12">
+          <h2 className="text-lg sm:text-2xl font-semibold text-white">Ended Quests</h2>
+          {isLoading ? (
+            <div className="text-center py-6 sm:py-12 text-muted-foreground">Loading quests...</div>
+          ) : endedQuests.length === 0 ? (
+            <Card className="glass glass-hover rounded-3xl p-6 sm:p-8 text-center">
+              <p className="text-white/60">No ended quests yet.</p>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+              {endedQuests.map((quest, i) => renderQuestCard(quest, "ended", i))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -146,6 +146,10 @@ const userSchema = new Schema({
 		type: Boolean,
 		default: false
 	},
+	trustName: {
+		type: String,
+		default: ""
+	},
 	status: {
 		type: String,
 		default: "Inactive"

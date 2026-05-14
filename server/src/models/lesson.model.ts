@@ -30,13 +30,26 @@ const lessonSchema = new mongoose.Schema({
     enum: ["draft", "published"],
     default: "draft",
   },
+  creator: {
+    type: mongoose.Schema.Types.ObjectId,
+    refPath: "creatorModel",
+    required: true
+  },
+  creatorModel: {
+    type: String,
+    required: true,
+    enum: ["users", "project", "user-hubs", "admin"]
+  },
   disclaimer: {
+    type: String,
+    default: "",
+  },
+  creatorName: {
     type: String,
     default: "",
   },
   completionTrophy: {
     type: String,
-    enum: ["bronze", "silver", "gold", ""],
     default: "",
   },
   completionTitle: {
@@ -87,7 +100,8 @@ const miniLessonSchema = new mongoose.Schema({
   },
   text: {
     type: String,
-    default: ""
+    required: false,
+    default: "",
   },
   order: {
     type: Number,
@@ -127,19 +141,22 @@ const miniLesson = mongoose.model("mini-lessons", miniLessonSchema);
 const questionSchema = new mongoose.Schema({
   question: {
     type: String,
-    default: ""
+    required: false,
+    default: "",
   },
   order: {
     type: Number,
     default: 0
   },
-  options: {
-    type: [String],
-    default: []
-  },
+  options: [{
+    type: String,
+    required: false,
+    default: "",
+  }],
   solution: {
     type: String,
-    default: ""
+    required: false,
+    default: "",
   },
   lesson: {
     type: mongoose.Schema.Types.ObjectId,
@@ -215,7 +232,8 @@ const videoLessonSchema = new mongoose.Schema({
   },
   url: {
     type: String,
-    default: ""
+    required: false,
+    default: "",
   },
   order: {
     type: Number,

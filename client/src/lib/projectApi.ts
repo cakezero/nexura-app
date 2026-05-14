@@ -7,9 +7,20 @@ function getApiUrl(path: string) {
   return `${PROJECT_API_URL}/api${path}`;
 }
 
+import { getStoredUserToken, clearUserSession, getStoredUserSession } from "./userSession";
+
 export function getStoredProjectToken(): string | null {
   try {
-    return localStorage.getItem("nexura-project:token") ?? localStorage.getItem("nexura:proj-token");
+    const projToken = localStorage.getItem("nexura-project:token") ?? localStorage.getItem("nexura:proj-token");
+    if (projToken) return projToken;
+    
+    // Only fallback to user token if it's a Hub session
+    const userSession = getStoredUserSession();
+    if (userSession?.token && userSession?.hub) {
+      return userSession.token;
+    }
+
+    return null;
   } catch {
     return null;
   }
@@ -38,6 +49,7 @@ export function clearProjectSession() {
   localStorage.removeItem("nexura:studio-discord-return");
   localStorage.removeItem("hubData");
   localStorage.removeItem("twitterData");
+  clearUserSession();
   // NOTE: nexura:wallet is intentionally NOT cleared here.
   // It belongs to the main app wallet connection (use-wallet.tsx),
   // not the studio/project session. Clearing it here would
@@ -45,12 +57,15 @@ export function clearProjectSession() {
 }
 
 export function isProjectSignedIn(): boolean {
-  // Email/password session
+  // Email/password session or Hub session
   if (getStoredProjectToken()) return true;
+
   // Wallet-based org session (set by use-wallet org-signin path)
   try { if (localStorage.getItem("nexura:proj-token")) return true; } catch { /* ignore */ }
+  
   // Wallet-based studio session started via BuilderPopup (project mode)
   try { if (localStorage.getItem("nexura:studio-wallet")) return true; } catch { /* ignore */ }
+
   return false;
 }
 
@@ -82,7 +97,6 @@ export const projectApiRequest = async <T = unknown>({
 
   const headers: Record<string, string> = {};
   if (token) headers["Authorization"] = `Bearer ${token}`;
-  // Do NOT set Content-Type for FormData – the browser sets the correct boundary.
   if (!formData) headers["Content-Type"] = "application/json";
 
   let url = getApiUrl(endpoint);

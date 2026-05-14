@@ -7,29 +7,23 @@ import {
 	claimQuest,
 	claimMiniQuest,
 	createMiniQuest,
-	startQuest,
-	fetchMiniQuests,
+	startQuest
 } from "@/controllers/quest.controller";
-import { updateSubmission, validatePortalTask } from "@/controllers/app.controller";
-import {
-	authenticateUser,
-	authenticateUser2,
-} from "@/middlewares/auth.middleware";
+import { updateSubmission, validatePortalTask, validateTrustNameTask } from "@/controllers/app.controller";
 
 const router = Router();
 
 router
-	.post("/claim-ecosystem-quest", authenticateUser, claimEcosystemQuest)
-	.post("/set-timer", authenticateUser, setTimer)
-	// .post("/create-quest", authenticateUser, createQuest)
-	.post("/create-mini-quest", authenticateUser, createMiniQuest)
-	.post("/start-quest", authenticateUser, startQuest)
-	.post("/check-portal-task", authenticateUser, validatePortalTask)
-	.get("/fetch-mini-quests", authenticateUser2, fetchMiniQuests)
-	.post("/claim-mini-quest", authenticateUser, claimMiniQuest)
-	.post("/update-submission", authenticateUser, updateSubmission)
-	.post("/claim-quest", authenticateUser, claimQuest)
-	.post("/perform-campaign-quest", authenticateUser, performCampaignQuest)
-	.post("/submit-quest", authenticateUser, submitQuest);
+	.post("/claim-ecosystem-quest", claimEcosystemQuest)
+	.post("/set-timer", setTimer)
+	.post("/create-mini-quest", createMiniQuest)
+	.post("/start-quest", startQuest)
+  .post("/check-portal-task", validatePortalTask)
+	.post("/check-trust-name", validateTrustNameTask)
+	.post("/claim-mini-quest", claimMiniQuest)
+	.post("/update-submission", updateSubmission)
+	.post("/claim-quest", claimQuest)
+	.post("/perform-campaign-quest", performCampaignQuest)
+	.post("/submit-quest", submitQuest);
 
 export default router;

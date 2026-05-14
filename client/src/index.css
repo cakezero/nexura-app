@@ -3733,3 +3733,84 @@ body {
   50% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
 }
+
+@keyframes ticker {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.ticker {
+  display: flex;
+  width: max-content;
+  animation: ticker 30s linear infinite;
+}
+
+.ticker-container {
+  overflow: hidden;
+  width: 100%;
+}
+
+.ticker-1 {
+  display: flex;
+  width: max-content;
+  animation: ticker 100s linear infinite;
+}
+
+.ticker-container-1 {
+  overflow: hidden;
+  width: 100%;
+}
+
+.ticker-2 {
+  display: flex;
+  width: max-content;
+  animation: ticker 80s linear infinite;
+}
+
+.ticker-container-2 {
+  overflow: hidden;
+  width: 100%;
+}
+
+@keyframes soft-rise {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.soft-rise {
+  animation: soft-rise 2.5s ease-in-out infinite;
+}
+
+@keyframes quest-scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-quest-scroll {
+  animation: quest-scroll 70s linear infinite;
+}
+
+@keyframes lesson-scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-lesson-scroll {
+  animation: quest-scroll 90s linear infinite;
+}

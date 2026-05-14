@@ -16,17 +16,31 @@ import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
 import AnimatedBackground from "../components/AnimatedBackground";
 import { discordAuthUrl } from "../lib/constants";
 import { getAuthUrl } from "../lib/generateXAuthUrl";
+import { useWallet } from "../hooks/use-wallet";
+import { lookupTNSAddress } from "../services/tns";
 
 export default function EditProfile() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
+  const { isConnected, connectWallet, address, disconnect } = useWallet();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
 
+  ////////////// TRUST NAME INTEGRATION
+  const [activeUsernameMode, setActiveUsernameMode] = useState("custom");
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [tnsName, setTnsName] = useState<string | null>(null);
+
+const getFinalUsername = (name: string, mode: string) => {
+  if (!name) return "";
+  return mode === "trust" ? `${name}.trust` : name;
+};
+
   const [profileData, setProfileData] = useState({
     displayName: user?.displayName || user?.username || "User",
+    username: user?.username || "",
     socialProfiles: {
       x: { connected: false, username: "" },
       discord: { connected: false, username: "" }
@@ -34,11 +48,11 @@ export default function EditProfile() {
     avatar: user?.profilePic
   });
 
-  // Load existing profile data
   useEffect(() => {
     if (user) {
       setProfileData({
         displayName: user.displayName || user.username || "User",
+        username: user.username || "",
         socialProfiles: user.socialProfiles ?? {
           x: { connected: false, username: "" },
           discord: { connected: false, username: "" }
@@ -48,57 +62,106 @@ export default function EditProfile() {
     }
   }, [user]);
 
+  useEffect(() => {
+  if (activeUsernameMode !== "trust") return;
+  if (!address) return;
+
+  const runLookup = async () => {
+    setSearchLoading(true);
+
+    const name = await lookupTNSAddress(address);
+
+    setTnsName(name);
+    setSearchLoading(false);
+
+    if (name) {
+      // ONLY fill if user actually owns a .trust
+      setProfileData((prev) => ({
+        ...prev,
+        username: name.replace(".trust", "")
+      }));
+    } else {
+      // CLEAR input if no .trust exists
+      setProfileData((prev) => ({
+        ...prev,
+        username: ""
+      }));
+    }
+  };
+
+  runLookup();
+}, [activeUsernameMode, address]);
+
   const handleSave = async () => {
     try {
-
       let updateUser: FormData | Record<string, unknown>;
-      console.log({ profileData })
+
+      const finalUsername = getFinalUsername(
+        profileData.username,
+        activeUsernameMode
+      );
 
       if (profileData.avatar instanceof File) {
         const formData = new FormData();
 
-        formData.append("username", profileData.displayName);
+        formData.append("username", finalUsername);
         formData.append("profilePic", profileData.avatar);
-        formData.append("socialProfiles", JSON.stringify(profileData.socialProfiles))
+        formData.append(
+          "socialProfiles",
+          JSON.stringify(profileData.socialProfiles)
+        );
 
         updateUser = formData;
       } else {
         updateUser = {
-          username: profileData.displayName,
-          // avatar: profileData.avatar,
+          username: finalUsername,
           socialProfiles: profileData.socialProfiles,
         };
       }
 
-      // Send update to backend
-      await apiRequestV2('PATCH', '/api/user/update', updateUser);
+      await apiRequestV2("PATCH", "/api/user/update", updateUser);
 
-      // Show toast and navigate
-      toast({ title: "Profile updated", description: "Your profile has been successfully updated." });
+      toast({
+        title: "Profile updated",
+        description: "Your profile has been successfully updated."
+      });
+
       setLocation("/profile");
       window.location.reload();
     } catch (e: any) {
-      console.error('Profile update error:', e);
-      toast({ title: "Update failed", description: e.message, variant: "destructive" });
+      console.error("Profile update error:", e);
+      toast({
+        title: "Update failed",
+        description: e.message,
+        variant: "destructive"
+      });
     }
   };
 
   const handleFileSelect = (file: File | null) => {
     if (!file) return;
 
-    if (!file.type.startsWith('image/')) {
-      toast({ title: "Invalid file", description: "Please select an image file", variant: "destructive" });
+    if (!file.type.startsWith("image/")) {
+      toast({
+        title: "Invalid file",
+        description: "Please select an image file",
+        variant: "destructive"
+      });
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      toast({ title: "File too large", description: "Please select an image under 5MB", variant: "destructive" });
+      toast({
+        title: "File too large",
+        description: "Please select an image under 5MB",
+        variant: "destructive"
+      });
       return;
     }
 
     setAvatarPreview(URL.createObjectURL(file));
 
-    setProfileData(prev => ({ ...prev, avatar: file }));
+    setProfileData((prev) => ({ ...prev, avatar: file }));
   };
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -126,14 +189,13 @@ export default function EditProfile() {
 
   const handleRemoveAvatar = () => {
     setAvatarPreview(null);
-    setProfileData(prev => ({ ...prev, avatar: null }));
+    setProfileData((prev) => ({ ...prev, avatar: null }));
     if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      fileInputRef.current.value = "";
     }
   };
 
   const handleConnect = async (service: "x" | "discord") => {
-    // Redirect to actual social media connection sites
     const urls = {
       x: "",
       discord: discordAuthUrl
@@ -146,10 +208,9 @@ export default function EditProfile() {
 
     toast({
       title: `Connecting to ${service}`,
-      description: `Opening ${service} authentication...`,
+      description: `Opening ${service} authentication...`
     });
 
-    // Open in new tab for OAuth flow
     window.location.assign(urls[service]);
   };
 
@@ -160,57 +221,160 @@ export default function EditProfile() {
       } else {
         await apiRequestV2("GET", "/api/auth/discord/logout");
       }
-      setProfileData(prev => ({
+
+      setProfileData((prev) => ({
         ...prev,
         socialProfiles: {
           ...prev.socialProfiles,
           [service]: { connected: false, username: "" }
         }
       }));
+
       toast({
         title: `Disconnected from ${service}`,
-        description: `Your ${service} account has been disconnected.`,
+        description: `Your ${service} account has been disconnected.`
       });
     } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
     }
   };
 
   return (
-    <div className="min-h-screen bg-black text-white overflow-auto p-6 relative" data-testid="edit-profile-page">
+    <div className="min-h-screen bg-black text-white overflow-auto p-6 relative">
       <AnimatedBackground />
+
       <div className="max-w-2xl mx-auto space-y-8 relative z-10">
-        {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <Link href="/profile">
-              <Button variant="ghost" size="sm" data-testid="button-back-to-profile">
+              <Button variant="ghost" size="sm">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back to Profile
               </Button>
             </Link>
-            <h1 className="text-3xl sm:text-4xl font-extrabold bg-gradient-to-r from-white via-purple-200 to-purple-400 bg-clip-text text-transparent">Edit Profile</h1>
+            <h1 className="text-3xl sm:text-4xl font-extrabold bg-gradient-to-r from-white via-purple-200 to-purple-400 bg-clip-text text-transparent">
+              Edit Profile
+            </h1>
           </div>
-          <Button onClick={handleSave} data-testid="button-save-profile">
+
+          <Button onClick={handleSave}>
             <Save className="w-4 h-4 mr-2" />
             Save Changes
           </Button>
         </div>
 
-        {/* Profile Settings */}
         <Card>
           <CardHeader>
             <CardTitle>Profile Information</CardTitle>
           </CardHeader>
+
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="displayName">Display Name</Label>
-              <Input
-                id="displayName"
-                value={profileData.displayName}
-                onChange={(e) => setProfileData(prev => ({ ...prev, displayName: e.target.value }))}
-                data-testid="input-display-name"
-              />
+              <div className="flex items-center justify-between">
+                <Label htmlFor="username">Username</Label>
+
+                <div className="flex items-center border border-white/10 rounded-md bg-white/5 p-1">
+                  {["trust", "custom"].map((mode) => (
+                    <button
+                      key={mode}
+                      className={`px-3 py-1 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 ${
+                        activeUsernameMode === mode
+                          ? "bg-purple-600 text-white shadow-[0_0_8px_rgba(138,63,252,0.6)]"
+                          : "text-white/60 hover:text-white hover:bg-white/10"
+                      }`}
+                      onClick={() => {
+  setActiveUsernameMode(mode);
+}}
+                    >
+                      {mode === "trust" ? ".trust" : "custom"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {activeUsernameMode === "trust" ? (
+  <div className="relative">
+    <Input
+      id="username"
+      value={profileData.username}
+      disabled
+      onChange={(e) =>
+        setProfileData((prev) => ({
+          ...prev,
+          username: e.target.value
+        }))
+      }
+    />
+
+    {searchLoading && (
+      <div className="absolute inset-0 flex items-center justify-center text-xs text-gray-400 bg-black/20 rounded-md">
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+          Searching...
+        </div>
+      </div>
+    )}
+    
+    {!searchLoading && (
+  <div className="mt-2 flex items-center justify-between gap-3">
+    {tnsName ? (
+      <>
+        {/* LEFT: detected badge */}
+        <div
+          className="flex items-center gap-2 px-2 py-1 rounded-md border"
+          style={{
+            backgroundColor: "#10B98133",
+            borderColor: "#10B9814D",
+            color: "#10B981",
+          }}
+        >
+          <span className="text-xs font-medium tracking-wide">
+            TRUST NAME DETECTED
+          </span>
+        </div>
+
+        {/* RIGHT: verified + message */}
+        <div className="flex items-center gap-2 text-sm text-green-500">
+          <img
+            src="/verified.png"
+            alt="verified"
+            className="w-4 h-4"
+          />
+          <span className="text-xs sm:text-sm">
+            Verified — This username is linked to your wallet
+          </span>
+        </div>
+      </>
+    ) : (
+      <p className="text-xs text-red-400">
+        Oops, no .trust username was found for this address. If you want one, you can get your .trust username through{" "}
+        <a
+          href="https://tns.intuition.box"
+          className="text-purple-400 underline hover:text-purple-300"
+        >
+          TNS
+        </a>
+      </p>
+    )}
+  </div>
+)}
+  </div>
+) : (
+  <Input
+    id="username"
+    value={profileData.username}
+    onChange={(e) =>
+      setProfileData((prev) => ({
+        ...prev,
+        username: e.target.value
+      }))
+    }
+  />
+)}
             </div>
 
             <Separator className="my-6" />

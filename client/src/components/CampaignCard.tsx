@@ -1,6 +1,8 @@
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
+import { Clock, ExternalLink, Users } from "lucide-react";
 import { useLocation } from "wouter";
+import { dummyCampaigns } from "../types/dummyCampaign";
 
 interface CampaignCardProps {
   title: string;
@@ -28,7 +30,6 @@ export default function CampaignCard({
   title,
   description,
   project_name,
-  projectLogo,
   projectCoverImage,
   participants,
   maxParticipants,
@@ -38,141 +39,247 @@ export default function CampaignCard({
   reward,
   totalTrustAvailable,
   _id,
-  from
+  from,
 }: CampaignCardProps) {
   const [, setLocation] = useLocation();
-  const formatParticipants = (count: number) => {
-    if (count >= 1000000) {
-      return `${(count / 1000000).toFixed(1)}M`;
-    } else if (count >= 1000) {
-      return `${(count / 1000).toFixed(1)}K`;
-    }
-    return count.toString();
-  };
-
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit'
-    });
-  };
 
   const handleClick = () => {
     if (_id && isLive) {
-      const url = from ? `/campaign/${_id}?from=${from}` : `/campaign/${_id}`;
+      const url = from
+        ? `/campaign/${_id}?from=${from}`
+        : `/campaign/${_id}`;
+
       setLocation(url);
     }
   };
 
-  const allowedParticipants = maxParticipants && maxParticipants > 0 ? maxParticipants : participants;
+const formatDuration = (
+  startDate: string,
+  endDate: string
+) => {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+
+  const sameYear =
+    start.getFullYear() === end.getFullYear();
+
+  const startFormatted = start.toLocaleDateString(
+    "en-GB",
+    sameYear
+      ? {
+          day: "numeric",
+          month: "long",
+        }
+      : {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        }
+  );
+
+  const endFormatted = end.toLocaleDateString(
+    "en-GB",
+    {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }
+  );
+
+  return `${startFormatted} – ${endFormatted}`;
+};
+
+  const allowedParticipants =
+    maxParticipants && maxParticipants > 0
+      ? maxParticipants
+      : participants;
+
   const trustReward = reward
-    ? ((Number(reward.trustTokens) > 0)
+    ? Number(reward.trustTokens) > 0
       ? Number(reward.trustTokens)
-      : (Number(reward.trust) > 0)
+      : Number(reward.trust) > 0
       ? Number(reward.trust)
-      : (Number(reward.pool) > 0 && allowedParticipants > 0)
-      ? Number((Number(reward.pool) / allowedParticipants).toFixed(2))
-      : (totalTrustAvailable && totalTrustAvailable > 0 && allowedParticipants > 0)
-      ? Number((totalTrustAvailable / allowedParticipants).toFixed(2))
-      : 0)
+      : Number(reward.pool) > 0 && allowedParticipants > 0
+      ? Number(
+          (Number(reward.pool) / allowedParticipants).toFixed(2)
+        )
+      : totalTrustAvailable &&
+        totalTrustAvailable > 0 &&
+        allowedParticipants > 0
+      ? Number(
+          (totalTrustAvailable / allowedParticipants).toFixed(2)
+        )
+      : 0
     : 0;
+
+  const hasTrustReward =
+    Number(reward?.pool ?? totalTrustAvailable ?? 0) > 0;
 
   return (
     <Card
-      className="overflow-hidden glass glass-hover cursor-pointer group relative rounded-3xl hover:-translate-y-1 transition-all duration-300"
       onClick={handleClick}
-      data-testid={`campaign-card-${title.toLowerCase().replace(/\s+/g, '-')}`}
+      className="bg-[#170F1F] h-full border border-white/5 rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition cursor-pointer flex flex-col"
     >
-      <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-
-      {/* Hero Image */}
-      <div className="relative h-48 overflow-hidden">
+      {/* Campaign Banner */}
+      <div className="relative h-36 bg-black w-full overflow-hidden">
         <img
           src={projectCoverImage}
           alt={title}
-          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
 
-        {/* Participant Count Overlay */}
-        <div className="absolute top-4 right-4 bg-black/50 backdrop-blur-sm rounded-lg px-3 py-1">
-          <span className="text-white font-bold">{formatParticipants(participants ?? 0)}</span>
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+
+        {/* Status */}
+        <div className="absolute top-2 right-2">
+          {isLive ? (
+            <Badge className="bg-[#00E1A24D] text-[#00E1A2] rounded-2xl text-xs sm:text-xs">
+              ACTIVE 
+            </Badge>
+          ) : (
+            <Badge className="bg-gray-500/20 text-gray-200 border border-gray-500/30 text-[0.65rem] sm:text-xs">
+              Ended
+            </Badge>
+          )}
         </div>
 
-        {/* Status Badge */}
-        <div className="absolute bottom-4 right-4">
-          <Badge
-            variant={isLive ? "default" : "secondary"}
-            className={isLive ? "bg-green-500 text-white" : "bg-gray-500 text-white"}
-          >
-            {isLive ? "Live" : "Ended"}
-          </Badge>
-        </div>
+        {/* PROJECT LOGO */}
+<div className="absolute bottom-3 left-3">
+  <div className="w-14 h-14 rounded-2xl overflow-hidden border border-white/10 bg-[#1D1526] backdrop-blur-md shadow-lg">
+    <img
+      src={projectCoverImage || "/quest-1.png"}
+      alt={project_name || "Project"}
+      className="w-full h-full object-cover"
+    />
+  </div>
+</div>
+
       </div>
 
-      {/* Content */}
-      <div className="p-6">
-        {/* Project Info */}
-        {/* <div className="flex items-center space-x-2 mb-3">
-          <img
-            src={projectLogo}
-            alt={project_name}
-            className="w-6 h-6 rounded-full"
-          />
-          <span className="text-sm text-muted-foreground">{project_name}</span>
-        </div> */}
+      {/* CONTENT */}
+        <div
+  className="relative overflow-hidden p-1 flex flex-col flex-1 rounded-b-2xl"
+  style={{
+    background: "#170F1F",
+    borderTop: "1px solid rgba(131, 58, 253, 0.12)",
+    backdropFilter: "blur(8px)",
+    WebkitBackdropFilter: "blur(8px)",
+    boxShadow: "inset 0 0 22px rgba(131, 58, 253, 0.10)",
+  }}
+>
+  {/* BACKGROUND GLOW */}
+  <div
+    className="absolute w-56 h-56 rounded-full pointer-events-none"
+    style={{
+      background: "#833AFD",
+      top: "-90px",
+      right: "-90px",
+      filter: "blur(70px)",
+      opacity: 0.35,
+    }}
+  />
 
-        <h3
-          className="text-lg font-bold text-card-foreground mb-2 truncate"
+  {/* CONTENT */}
+        <div className="relative p-2 sm:p-2 flex flex-1 flex-col space-y-1">
+        {/* Title */}
+        <h2
+          className="text-sm font-semibold text-white leading-snug line-clamp-2 min-h-[2.25rem] break-words"
           title={title}
         >
           {title}
-        </h3>
-        {description && (
-          <p
-            className="text-sm text-muted-foreground mb-4 line-clamp-2 min-h-10"
-            title={description}
+        </h2>
+
+        {/* Description */}
+<div className="h-[40px]">
+  {description ? (
+    <p className="text-xs text-white/60 line-clamp-2 leading-relaxed">
+      {description}
+    </p>
+  ) : (
+    <p className="text-xs opacity-0">
+      placeholder
+    </p>
+  )}
+</div>
+
+        {/* Project */}
+        <div className="flex flex-row justify-between text-xs gap-1 items-center">
+          <span className="text-gray-500">
+            Project:
+          </span>
+
+          <span
+            className="text-white line-clamp-1 break-all max-w-[65%] text-right"
+            title={project_name}
           >
-            {description}
-          </p>
+            {project_name}
+          </span>
+        </div>
+
+        {/* Participants */}
+        <div className="flex flex-row justify-between text-xs gap-1 items-center">
+          <span className="text-gray-500">
+            Participants:
+          </span>
+
+          <span className="text-white flex items-center gap-1">
+            <Users className="w-3 h-3" />
+            {allowedParticipants.toLocaleString()}
+          </span>
+        </div>
+
+        {/* Rewards */}
+        {(Number(reward?.xp) > 0 || hasTrustReward) && (
+          <div className="flex flex-row justify-between text-xs items-center">
+            <span className="text-gray-500">
+              Reward:
+            </span>
+
+            <span className="text-white flex items-center gap-1 text-right">
+              {hasTrustReward &&
+              Number(reward?.xp) > 0
+                ? `${trustReward} TRUST + ${reward?.xp} XP`
+                : hasTrustReward
+                ? `${trustReward} TRUST`
+                : `${reward?.xp} XP`}
+            </span>
+          </div>
         )}
 
-        {/* Date Range */}
-        {/* <div className="flex items-center space-x-4 mb-4">
-          <div className="text-center">
-            <div className="text-sm font-bold text-card-foreground">
-              {formatDate(starts_at).split(',')[0].split(' ')[0]}
-            </div>
-            <div className="text-lg font-bold text-card-foreground">
-              {formatDate(starts_at).split(' ')[1]}
-            </div>
-          </div>
-          <div className="flex-1 text-xs text-muted-foreground">
-          </div>
-        </div> */}
+        {/* Duration */}
+        <div className="flex flex-row justify-between text-xs items-center">
+          <span className="text-gray-500">
+            Duration:
+          </span>
 
-        {/* Reward Pool */}
-        {reward && (Number(reward.xp) > 0 || trustReward > 0) && (
-          <div className="border-t border-card-border pt-4">
-            <div className="text-sm text-muted-foreground mb-1">Rewards</div>
-            <div className="flex items-center space-x-2">
-              {Number(reward.xp) > 0 && (
-                <span className="text-blue-500 font-bold">{reward.xp} XP</span>
-              )}
-              {Number(reward.xp) > 0 && trustReward > 0 && (
-                <span className="text-muted-foreground">+</span>
-              )}
-              {trustReward > 0 && (
-                <div className="flex items-center space-x-1">
-                  <span className="font-bold text-card-foreground">{trustReward} TRUST</span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+          <span className="text-white flex items-center gap-1 text-right">
+            <Clock className="w-3 h-3" />
+            {formatDuration(starts_at, ends_at)}
+          </span>
+        </div>
+
+        {/* Button */}
+        <button
+          className={`w-full mt-auto pt-2 py-2 text-xs font-medium rounded-xl transition ${
+            isLive
+              ? "bg-[#8B3EFE] hover:bg-[#B65FC8] text-white"
+              : "bg-gray-600 cursor-not-allowed text-gray-300"
+          }`}
+          disabled={!isLive}
+        >
+          {isLive ? (
+            <span className="flex items-center justify-center">
+              <ExternalLink className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+              Start Campaign
+            </span>
+          ) : (
+            <span className="flex items-center justify-center">
+              <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+              Campaign Ended
+            </span>
+          )}
+        </button>
+      </div>
       </div>
     </Card>
   );

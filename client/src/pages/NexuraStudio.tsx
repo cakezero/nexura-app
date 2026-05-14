@@ -16,7 +16,6 @@ const FEATURES = [
 
 export default function NexuraStudio() {
   const [, setLocation] = useLocation();
-  const [redirecting] = useState(() => isProjectSignedIn());
   const { isConnected, address, connectWallet } = useWallet();
   const text = "Nexura Studio";
   const [toggle, setToggle] = useState(false);
@@ -25,14 +24,6 @@ export default function NexuraStudio() {
   const interval = setInterval(() => setToggle(prev => !prev), 2500)
   return () => clearInterval(interval);
 }, []);
-
-  useEffect(() => {
-    if (isProjectSignedIn()) {
-      setLocation("/studio-dashboard");
-    }
-  }, []);
-
-  if (redirecting) return null;
 
   return (
     <div className="min-h-screen bg-black text-white overflow-auto relative">
@@ -51,19 +42,13 @@ export default function NexuraStudio() {
 <div className="relative flex flex-col min-h-screen overflow-hidden">
         <div className="w-full flex items-center justify-between px-4 sm:px-6 pt-4">
           <button
-            onClick={() => setLocation("/discover")}
+            onClick={() => window.location.href = "/discover"}
             className="inline-flex items-center gap-2 px-3 py-2 rounded-full border border-white/30 bg-black/30 hover:bg-black/50 text-white text-xs sm:text-sm"
           >
             <ArrowLeft className="w-4 h-4" />
             Back to Explore
           </button>
 
-          <button
-            onClick={() => connectWallet({ noReload: true })}
-            className="px-3 py-2 rounded-full border border-white/80 text-white bg-transparent hover:bg-purple-600 hover:border-purple-600 transition-all text-xs sm:text-sm"
-          >
-            {isConnected && address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Connect Wallet"}
-          </button>
         </div>
 
         {/* Hero */}
@@ -113,14 +98,13 @@ export default function NexuraStudio() {
 </h1>
 
 <p className="text-sm sm:text-base max-w-lg leading-relaxed mb-5 font-semibold">
-  The all-in-one platform for builders to launch campaigns, distribute rewards,
-  and grow their community on the Intuition network.
+  A tool for projects and users on Intuition, built for intentional engagement and meaningful quests and campaigns.
 </p>
 
           {/* CTA */}
           <div className="flex flex-col items-center gap-2 mb-2">
             <button
-              onClick={() => setLocation("/projects/create")}
+              onClick={() => setLocation("/studio/select-role")}
               className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-transparent border border-white text-white font-semibold text-xs transition-all duration-200 hover:bg-purple-600 hover:border-purple-600 hover:shadow-[0_0_20px_rgba(131,58,253,0.7)] hover:scale-[1.03] active:scale-[0.98]"
             >
               Enter Studio
@@ -167,7 +151,7 @@ export default function NexuraStudio() {
     src="/enter-studio.png"
     alt="Enter Studio"
     className="cursor-pointer w-[200px] max-w-full h-auto transform transition-transform duration-200 hover:scale-105"
-    onClick={() => setLocation("/projects/create")}
+    onClick={() => setLocation("/studio/select-role")}
   />
 </div>
 
