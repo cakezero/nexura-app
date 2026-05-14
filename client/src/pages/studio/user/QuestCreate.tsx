@@ -960,38 +960,38 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
       {/* SUCCESS MODAL */}
       {showSuccessModal && (
         <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/80 backdrop-blur-sm p-4 text-left">
-          <div className="bg-[#0d0d14] w-full max-w-xl border border-purple-500/20 p-6 rounded-2xl relative shadow-[0_0_60px_rgba(131,58,253,0.2)] animate-modal-pop">
+          <div className="bg-[#0d0d14] w-full max-w-lg border border-purple-500/20 p-5 rounded-2xl relative shadow-[0_0_60px_rgba(131,58,253,0.2)] animate-modal-pop">
             <button onClick={() => setShowSuccessModal(false)} className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-all text-lg leading-none">×</button>
-            <div className="flex justify-center mb-4"><img src="/activate-studio.png" alt="" className="w-40 h-32" /></div>
+            <div className="flex justify-center mb-4"><img src="/activate-studio.png" alt="" className="w-36 h-28" /></div>
             <div className="text-center mb-6">
               <h2 className="text-xl font-semibold text-white">Quest Successfully Published</h2>
-              <p className="text-white/70 mt-2">Your 0.1 $TRUST payment was confirmed and your quest is now live.</p>
+              <p className="text-white/70 mt-2 text-sm">Your 0.1 $TRUST payment was confirmed and your quest is now live.</p>
             </div>
-            <div className="bg-white/5 backdrop-blur-md rounded-xl border border-purple-500/30 p-5">
-              <h3 className="text-sm font-semibold text-white/80 mb-4 uppercase tracking-wide">Quest Snapshot</h3>
+            <div className="bg-white/5 backdrop-blur-md rounded-xl border border-purple-500/30 p-4">
+              <h3 className="text-[10px] font-semibold text-white/60 mb-3 uppercase tracking-wider">Quest Snapshot</h3>
               <div className="flex gap-4">
-                <div className="w-32 h-32 flex-shrink-0 rounded-lg overflow-hidden border border-white/10">
+                <div className="w-24 h-24 flex-shrink-0 rounded-lg overflow-hidden border border-white/10">
                   <img src={publishedQuest?.coverImage || "/quest-1.png"} alt="" className="w-full h-full object-cover" />
                 </div>
                 <div className="flex-1 flex flex-col justify-between">
                   <div>
-                    <h3 className="text-lg font-semibold text-white">{publishedQuest?.title}</h3>
-                    <p className="text-white/70 text-sm mt-1 line-clamp-2">{publishedQuest?.description}</p>
+                    <h3 className="text-base font-semibold text-white leading-tight">{publishedQuest?.title}</h3>
+                    <p className="text-white/60 text-xs mt-1 line-clamp-2 leading-relaxed">{publishedQuest?.description}</p>
                   </div>
-                  <div className="flex mt-4 text-white/80 border border-white/10 rounded-lg overflow-hidden">
-                    <div className="flex-1 flex flex-col items-center p-3 border-r border-white/10">
-                      <span className="text-[10px] font-semibold uppercase tracking-wide opacity-60">Reward</span>
-                      <span className="text-white mt-1 text-xs font-bold">{XP_REWARDS} XP</span>
+                  <div className="flex mt-3 text-white/80 border border-white/10 rounded-lg overflow-hidden">
+                    <div className="flex-1 flex flex-col items-center p-2 border-r border-white/10">
+                      <span className="text-[9px] font-semibold uppercase tracking-wide opacity-50">Reward</span>
+                      <span className="text-white mt-0.5 text-[11px] font-bold">{XP_REWARDS} XP</span>
                     </div>
-                    <div className="flex-1 flex flex-col items-center p-3">
-                      <span className="text-[10px] font-semibold uppercase tracking-wide opacity-60">Status</span>
-                      <span className="mt-1 text-xs font-bold text-green-400 uppercase">Live</span>
+                    <div className="flex-1 flex flex-col items-center p-2">
+                      <span className="text-[9px] font-semibold uppercase tracking-wide opacity-50">Status</span>
+                      <span className="mt-0.5 text-[11px] font-bold text-green-400 uppercase">Live</span>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-            <Button onClick={() => setLocation(session?.type === "user" ? "/user-dashboard/quests-tab" : "/studio-dashboard/campaigns-tab")} className="mt-6 w-full py-3 rounded-xl bg-[#8B3EFE] text-white font-semibold hover:opacity-90">Continue</Button>
+            <Button onClick={() => setLocation(session?.type === "user" ? "/user-dashboard/quests-tab" : "/studio-dashboard/campaigns-tab")} className="mt-6 w-full py-2.5 rounded-xl bg-[#8B3EFE] text-white text-sm font-semibold hover:opacity-90">Continue</Button>
           </div>
         </div>
       )}
