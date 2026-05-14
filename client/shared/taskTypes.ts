@@ -72,6 +72,7 @@ export const ONCHAIN_SUBTYPES = {
   COMPLETE_TRANSACTION: 'complete-transaction',
   DEPLOY_CONTRACT: 'deploy-contract',
   INTERACT_CONTRACT: 'interact-contract',
+  TNS_OWNERSHIP: 'trust-name',
 } as const;
 
 export const ONCHAIN_SUBTYPE_LABELS = {
@@ -81,6 +82,7 @@ export const ONCHAIN_SUBTYPE_LABELS = {
   'complete-transaction': 'Complete Transaction',
   'deploy-contract': 'Deploy Contract',
   'interact-contract': 'Interact with Contract',
+  'trust-name': 'Own a Trust Name (TNS)',
 };
 
 // Telegram task subtypes

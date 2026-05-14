@@ -7,7 +7,9 @@ const OTPSchema = new Schema({
   },
   hubId: {
     type: String,
-    required: true
+  },
+  userId: {
+    type: String,
   },
   role: {
     type: String,
@@ -16,8 +18,12 @@ const OTPSchema = new Schema({
   },
   code: {
     type: String,
-    required: true,
-    unique: true
+    required: true
+  },
+  page: {
+    type: String,
+    enum: ["user", "project"],
+    required: true
   },
   expiresAt: {
     type: Date,

@@ -108,13 +108,14 @@ export const validateCampaignData = (reqData: any) => {
 			z.object({
 				link: z.string().optional(),
 				quest: z.string(),
-				tag: z.enum([
+					tag: z.enum([
 					"like",
 					"follow",
 					"follow-x",
 					"repost",
 					"repost-x",
-					"join",
+          "join",
+					"feedback",
 					"join-discord",
 					"message",
 					"message-discord",
@@ -123,6 +124,8 @@ export const validateCampaignData = (reqData: any) => {
 					"portal",
 					"comment",
 					"comment-x",
+					"trust-name",
+					"create-post",
 					"other"
 				]),
 				category: z.enum(["twitter", "discord", "reddit", "instagram", "facebook", "other"]),
@@ -141,14 +144,38 @@ export const validateCampaignData = (reqData: any) => {
 
 export const validateQuestData = (reqData: any) => {
 	const questSchema = z.object({
-		title: z.string().trim(),
-		description: z.string().trim(),
-		category: z.enum(["one-time", "weekly"]),
-		reward: z.object({
-			xp: z.number(),
-			trust: z.number(),
-		}),
-		url: z.string().trim().optional(),
+    title: z.string().trim(),
+		page: z.enum(["user", "project"]),
+		description: z.string().trim().min(50).max(100),
+		xp: z.union([z.string(), z.number()]).optional(),
+		reward: z.union([z.string(), z.number()]).optional(),
+		campaignQuests: z.array(
+      z.object({
+        link: z.string().optional(),
+        quest: z.string(),
+        tag: z.enum([
+          "like",
+          "follow",
+          "follow-x",
+          "repost",
+          "repost-x",
+          "join",
+          "join-discord",
+          "message",
+          "message-discord",
+          "feedback",
+          "acquire-role-discord",
+          "send-message-discord",
+          "portal",
+          "comment",
+          "comment-x",
+          "trust-name",
+          "create-post",
+          "other"
+        ]),
+      }),
+		).optional(),
+		category: z.enum(["twitter", "discord", "reddit", "instagram", "facebook", "other"]).optional(),
 	});
 
 	const parseData = questSchema.safeParse(reqData);
@@ -171,7 +198,7 @@ export const validateMiniQuestData = (reqData: any) => {
 export const validateCampaignQuestData = (reqData: any) => {
 	const questSchema = z.object({
 		title: z.string().trim(),
-		description: z.string().trim(),
+		description: z.string().trim().min(50).max(100),
 		url: z.string().trim().optional(),
 		campaign: z.string().trim(),
 		reward: z.object({
@@ -187,7 +214,7 @@ export const validateCampaignQuestData = (reqData: any) => {
 export const validateEcosystemQuestData = (reqData: any) => {
 	const ecosystemSchema = z.object({
 		title: z.string().trim(),
-		description: z.string().trim(),
+		description: z.string().trim().min(50).max(100),
 		timer: z.string().trim(),
 		link: z.string().trim(),
 		tags: z.enum([
@@ -215,13 +242,26 @@ export const validateEcosystemQuestData = (reqData: any) => {
 export const validateHubData = (reqData: any) => {
 	const hubSchema = z.object({
 		name: z.string().trim(),
-    description: z.string().trim(),
+    description: z.string().trim().min(50).max(100),
 		website: z.string().trim().optional(),
 		xAccount: z.string().trim().optional(),
 		discordServer: z.string().trim().optional(),
 	});
 
 	const parseData = hubSchema.safeParse(reqData);
+
+	return parseData;
+};
+
+export const validateUserHubData = (reqData: any) => {
+	const useerHubSchema = z.object({
+		name: z.string().trim(),
+    description: z.string().trim().min(50).max(100),
+		website: z.string().trim().optional(),
+		xAccount: z.string().trim().optional(),
+	});
+
+	const parseData = useerHubSchema.safeParse(reqData);
 
 	return parseData;
 };
@@ -276,7 +316,7 @@ export const validateUserSignUpData = (reqData: any) => {
 export const validateSaveCampaignData = (reqData: any) => {
   const campaignSchema = z.object({
 		title: z.string().trim(),
-		description: z.string().trim(),
+		description: z.string().trim().min(50).max(100),
 		nameOfProject: z.string().trim(),
     starts_at: z.string().trim(),
 		projectCoverImage: z.string().optional(),
@@ -290,6 +330,22 @@ export const validateSaveCampaignData = (reqData: any) => {
 	});
 
 	const parseData = campaignSchema.safeParse(reqData);
+
+	return parseData;
+};
+
+export const validateSaveQuestData = (reqData: any) => {
+  const questSchema = z.object({
+		title: z.string().trim(),
+		description: z.string().trim().min(50).max(100),
+		nameOfProject: z.string().trim(),
+    starts_at: z.string().trim(),
+		projectCoverImage: z.string().optional(),
+    ends_at: z.string().trim(),
+		page: z.enum(["user", "project"]),
+	});
+
+	const parseData = questSchema.safeParse(reqData);
 
 	return parseData;
 }; 
@@ -388,5 +444,4 @@ export const validateCreateQuestion = (reqData: any) => {
 
 	return parseData;
 }
-
 
