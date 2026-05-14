@@ -191,7 +191,14 @@ export const fetchMiniQuests = async (req: GlobalRequest, res: GlobalResponse) =
 
 		const mainQuestCompleted = await questCompleted.findOne({ user: req.id, quest: id });
 
-		const currentHub = mainQuest.hub ? await userHub.findById(mainQuest.hub).lean() : null;
+		let currentHub: any;
+
+		if (mainQuest.creatorModel === "admin") {
+			currentHub = await hub.findById(mainQuest.hub).lean();
+		} else {
+			currentHub = await userHub.findById(mainQuest.hub).lean();
+		}
+
 		const hubInfo = {
 			id: currentHub?._id?.toString?.() ?? "",
 			name: currentHub?.name ?? mainQuest.project_name ?? "",
