@@ -17,7 +17,7 @@ import AnimatedBackground from "../components/AnimatedBackground";
 import { discordAuthUrl } from "../lib/constants";
 import { getAuthUrl } from "../lib/generateXAuthUrl";
 import { useWallet } from "../hooks/use-wallet";
-import { getTrustUsername } from "../services/tns";
+import { useTNSLookup } from "@samoris/tns-sdk/react";
 
 export default function EditProfile() {
   const [, setLocation] = useLocation();
@@ -30,8 +30,7 @@ export default function EditProfile() {
 
   ////////////// TRUST NAME INTEGRATION
   const [activeUsernameMode, setActiveUsernameMode] = useState("custom");
-  const [searchLoading, setSearchLoading] = useState(false);
-  const [tnsName, setTnsName] = useState<string | null>(null);
+  const { name, loading } = useTNSLookup(address ?? "");
 
 const getFinalUsername = (name: string, mode: string) => {
   if (!name) return "";
@@ -61,37 +60,6 @@ const getFinalUsername = (name: string, mode: string) => {
       });
     }
   }, [user]);
-
-useEffect(() => {
-  if (activeUsernameMode !== "trust") return;
-  if (!address) return;
-
-  const runLookup = async () => {
-    setSearchLoading(true);
-
-    console.log("ACTIVE MODE:", activeUsernameMode);
-    console.log("ADDRESS:", address);
-
-    const label = await getTrustUsername(address);
-
-    console.log("TNS LABEL:", label);
-
-    setSearchLoading(false);
-
-    setTnsName(label);
-
-    setProfileData((prev) => ({
-      ...prev,
-      username: label
-        ? label.endsWith(".trust")
-          ? label.replace(".trust", "")
-          : label
-        : ""
-    }));
-  };
-
-  runLookup();
-}, [activeUsernameMode, address]);
 
   const handleSave = async () => {
     try {
@@ -297,21 +265,16 @@ useEffect(() => {
                 </div>
               </div>
 
-              {activeUsernameMode === "trust" ? (
+      {activeUsernameMode === "trust" ? (
   <div className="relative">
     <Input
       id="username"
-      value={profileData.username}
+      value={name ? `${name}.trust` : ""}
       disabled
-      onChange={(e) =>
-        setProfileData((prev) => ({
-          ...prev,
-          username: e.target.value
-        }))
-      }
     />
 
-    {searchLoading && (
+    {/* LOADING OVERLAY */}
+    {loading && address && (
       <div className="absolute inset-0 flex items-center justify-center text-xs text-gray-400 bg-black/20 rounded-md">
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
@@ -319,50 +282,39 @@ useEffect(() => {
         </div>
       </div>
     )}
-    
-    {!searchLoading && (
-  <div className="mt-2 flex items-center justify-between gap-3">
-    {tnsName ? (
-      <>
-        {/* LEFT: detected badge */}
-        <div
-          className="flex items-center gap-2 px-2 py-1 rounded-md border"
-          style={{
-            backgroundColor: "#10B98133",
-            borderColor: "#10B9814D",
-            color: "#10B981",
-          }}
-        >
-          <span className="text-xs font-medium tracking-wide">
-            TRUST NAME DETECTED
-          </span>
-        </div>
 
-        {/* RIGHT: verified + message */}
-        <div className="flex items-center gap-2 text-sm text-green-500">
-          <img
-            src="/verified.png"
-            alt="verified"
-            className="w-4 h-4"
-          />
-          <span className="text-xs sm:text-sm">
-            Verified — This username is linked to your wallet
-          </span>
-        </div>
-      </>
-    ) : (
-      <p className="text-xs text-red-400">
-        Oops, no .trust username was found for this address. If you want one, you can get your .trust username through{" "}
-        <a
-          href="https://tns.intuition.box"
-          className="text-purple-400 underline hover:text-purple-300"
-        >
-          TNS
-        </a>
-      </p>
+    {/* RESULT STATE */}
+    {!loading && address && (
+      <div className="mt-2 flex items-center justify-between gap-3">
+        {name ? (
+          <>
+            <div
+              className="flex items-center gap-2 px-2 py-1 rounded-md border"
+              style={{
+                backgroundColor: "#10B98133",
+                borderColor: "#10B9814D",
+                color: "#10B981",
+              }}
+            >
+              <span className="text-xs font-medium tracking-wide">
+                TRUST NAME DETECTED
+              </span>
+            </div>
+
+            <div className="flex items-center gap-1 text-sm text-green-500">
+              <img src="/verified.png" alt="verified" className="w-4 h-4" />
+              <span className="text-xs sm:text-sm">
+                {name}.trust linked to wallet
+              </span>
+            </div>
+          </>
+        ) : (
+          <p className="text-xs text-red-400">
+            Oops — no .trust username is linked to this wallet.
+          </p>
+        )}
+      </div>
     )}
-  </div>
-)}
   </div>
 ) : (
   <Input
