@@ -53,14 +53,15 @@ export default function UsersHub() {
     setLoading(true);
 
     try {
-      const fd = new FormData();
-      fd.append("name", name);
-      fd.append("description", description);
+      const payload = {
+        name,
+        description,
+      };
 
       await userApiRequest({
         method: "POST",
         endpoint: "/user-hub/create-user-hub",
-        formData: fd,
+        data: payload,
       });
 
       toast({ title: "Hub created!", description: "Your user hub has been created successfully." });

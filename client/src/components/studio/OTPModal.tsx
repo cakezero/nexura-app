@@ -4,7 +4,7 @@ import { useLocation } from "wouter";
 import { useToast } from "../../hooks/use-toast";
 import { apiRequestV2, getStoredAccessToken } from "../../lib/queryClient";
 import { projectApiRequest, storeProjectSession, base64ToBlob } from "../../lib/projectApi";
-import { storeUserSession } from "../../lib/userSession";
+import { storeUserSession, getStoredUserSession } from "../../lib/userSession";
 import { Dialog, DialogContent, DialogTitle } from "../ui/dialog";
 
 const SIGNUP_DATA_KEY = "nexura:pending-signup";
@@ -168,10 +168,16 @@ export default function OTPModal({ isOpen, onClose, email, page }: OTPModalProps
         sessionStorage.removeItem(SIGNUP_DATA_KEY);
         toast({ title: "Account created!", description: "Welcome to Nexura Studio." });
         onClose();
-        // Small delay to ensure session is stored before redirect
-        setTimeout(() => {
+        // Ensure session is stored before redirect
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        // Verify session is stored before redirecting
+        const session = getStoredUserSession();
+        if (session && session.token) {
           setLocation("/studio/users-hub");
-        }, 100);
+        } else {
+          console.error("Session not stored properly, redirecting anyway");
+          setLocation("/studio/users-hub");
+        }
       }
     }
   }, [setLocation, toast, onClose]);
