@@ -17,7 +17,7 @@ import AnimatedBackground from "../components/AnimatedBackground";
 import { discordAuthUrl } from "../lib/constants";
 import { getAuthUrl } from "../lib/generateXAuthUrl";
 import { useWallet } from "../hooks/use-wallet";
-import { lookupTNSAddress } from "../services/tns";
+import { getTrustUsername } from "../services/tns";
 
 export default function EditProfile() {
   const [, setLocation] = useLocation();
@@ -62,37 +62,28 @@ const getFinalUsername = (name: string, mode: string) => {
     }
   }, [user]);
 
-  useEffect(() => {
+useEffect(() => {
   if (activeUsernameMode !== "trust") return;
   if (!address) return;
 
   const runLookup = async () => {
     setSearchLoading(true);
 
-    const result = await lookupTNSAddress(address);
+    console.log("ACTIVE MODE:", activeUsernameMode);
+    console.log("CONNECTED ADDRESS:", address);
+
+    const name = await getTrustUsername(address);
+
+    console.log("RESULT NAME:", name);
 
     setSearchLoading(false);
 
-    if (!result.success) {
-      console.error("TNS lookup failed:", result.error);
-      return;
-    }
-
-    const name = result.name;
-
     setTnsName(name);
 
-    if (name) {
-      setProfileData((prev) => ({
-        ...prev,
-        username: name.replace(".trust", "")
-      }));
-    } else {
-      setProfileData((prev) => ({
-        ...prev,
-        username: ""
-      }));
-    }
+    setProfileData((prev) => ({
+      ...prev,
+      username: name ? name.replace(".trust", "") : ""
+    }));
   };
 
   runLookup();

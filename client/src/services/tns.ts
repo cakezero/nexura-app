@@ -3,57 +3,23 @@ import { TNSProvider } from "@samoris/tns-sdk";
 const provider = new TNSProvider();
 
 /**
- * Resolve a .trust name → wallet address
- * Returns null if name does not exist
+ * Get .trust name for a wallet (best-effort)
+ * - tries reverse lookup first
+ * - if none, returns null
  */
-export const resolveTNSName = async (name: string) => {
+export const getTrustUsername = async (address: string) => {
   try {
-    const address = await provider.resolveName(name);
-    return address; // string | null
-  } catch (err) {
-    console.error("resolveTNSName error:", err);
-    return null;
-  }
-};
+    if (!address) return null;
 
-/**
- * Lookup wallet address → .trust name
- * Returns null if no name is linked
- */
-export const lookupTNSAddress = async (address: string) => {
-  try {
-    const provider = new TNSProvider();
+    console.log("CHECKING TRUST NAME FOR:", address);
 
     const name = await provider.lookupAddress(address);
 
-    return {
-      success: true,
-      name,
-      error: null,
-    };
-  } catch (err) {
-    console.error("lookupTNSAddress error:", err);
+    console.log("RESULT:", name);
 
-    return {
-      success: false,
-      name: null,
-      error: err,
-    };
-  }
-};
-
-/**
- * Check if a .trust username is available
- * Rule:
- * - If resolveName returns null → AVAILABLE
- * - If it returns address → UNAVAILABLE
- */
-export const checkTNSAvailability = async (name: string) => {
-  try {
-    const result = await provider.resolveName(name);
-    return result === null;
+    return name || null;
   } catch (err) {
-    console.error("checkTNSAvailability error:", err);
-    return false;
+    console.error("getTrustUsername error:", err);
+    return null;
   }
 };
