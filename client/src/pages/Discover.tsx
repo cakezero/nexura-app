@@ -503,18 +503,31 @@ const quests = questsRaw.filter(isActiveQuest);
       </Button>
     </div>
 
-    {campaignsToRender.length === 0 ? (
-      /* EMPTY STATE */
-      <div className="rounded-2xl border border-white/10 bg-[#170F1F] p-5 text-center">
-  <p className="text-sm text-white/80 font-medium">
-    No active campaigns yet
-  </p>
+<div className="w-full">
+  {campaignsToRender.length === 0 ? (
+    /* EMPTY STATE */
+    <div className="w-full flex justify-center">
+      <div className="w-full max-w-[420px] rounded-2xl border border-white/10 bg-[#170F1F] px-5 py-8 text-center">
+        
+        <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-white/5">
+          <img
+            src="/campaigns-empty.png"
+            alt="empty"
+            className="h-5 w-5 opacity-70"
+          />
+        </div>
 
-  <p className="text-xs text-white/50 mt-1">
-    Check back later for new opportunities.
-  </p>
-</div>
-    ) : (
+        <p className="text-sm text-white/85 font-semibold">
+          No active campaigns yet
+        </p>
+
+        <p className="text-xs text-white/50 mt-1 leading-relaxed">
+          Check back later for new opportunities.
+        </p>
+
+      </div>
+    </div>
+  ) : (
       /* CAROUSEL */
       <div className="overflow-hidden">
 
@@ -547,7 +560,7 @@ const quests = questsRaw.filter(isActiveQuest);
 
       </div>
     )}
-
+    </div>
   </section>
 )}
 
