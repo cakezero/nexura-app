@@ -1502,8 +1502,8 @@ export const publishQuest = async (req: GlobalRequest, res: GlobalResponse) => {
         return;
       }
 
-      const hubModel = await import("@/models/hub.model").then(m => m.hub);
-      const hubDoc = await hubModel.findById(hubId).select("systemKey").lean();
+      const { userHub } = await import("@/models/hub.model");
+      const hubDoc = await userHub.findById(hubId).select("systemKey").lean();
       if (!hubDoc) {
         res.status(NOT_FOUND).json({ error: "Hub not found" });
         return;
