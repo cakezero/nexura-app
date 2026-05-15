@@ -1046,6 +1046,12 @@ export const createUserHub = async (req: GlobalRequest, res: GlobalResponse) => 
 
     // Handle both JSON body and FormData
     const bodyData = req.body || {};
+    console.log('[createUserHub] Received request:', {
+      userId: req.id,
+      name: bodyData.name,
+      description: bodyData.description,
+      descriptionLength: bodyData.description?.length
+    });
     const { error } = validateUserHubData(bodyData);
     
     if (error) {
