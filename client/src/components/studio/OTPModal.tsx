@@ -155,6 +155,8 @@ export default function OTPModal({ isOpen, onClose, email, page }: OTPModalProps
       });
 
       if (res.accessToken) {
+        console.log("[OTPModal] Sign-up response:", res);
+        console.log("[OTPModal] Admin hub ID:", res.admin?.hub);
         storeUserSession({
           token: res.accessToken,
           type: "user",
@@ -172,6 +174,7 @@ export default function OTPModal({ isOpen, onClose, email, page }: OTPModalProps
         await new Promise((resolve) => setTimeout(resolve, 500));
         // Verify session is stored before redirecting
         const session = getStoredUserSession();
+        console.log("[OTPModal] Stored session:", session);
         if (session && session.token) {
           setLocation("/studio/users-hub");
         } else {
