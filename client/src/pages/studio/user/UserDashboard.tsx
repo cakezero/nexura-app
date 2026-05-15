@@ -13,11 +13,13 @@ import QuestSubmissions from "../../../components/admin/QuestsSubmissions.tsx";
 import { getStoredUserSession } from "../../../lib/userSession";
 import { userApiRequest } from "../../../lib/userApi";
 import { projectApiRequest } from "../../../lib/projectApi";
+import { useToast } from "../../../hooks/use-toast";
 
 export default function userDashboard() {
   const session = getStoredUserSession();
   const apiPrefix = session?.type === "user" ? "/user-hub" : "/hub";
   const apiRequest = session?.type === "user" ? userApiRequest : projectApiRequest;
+  const { toast } = useToast();
 
   const [viewedSubmissions, setViewedSubmissions] = useState<Set<string>>(new Set());
   const [questTasks, setQuestTasks] = useState<TASKSS[]>([]);
@@ -53,7 +55,10 @@ export default function userDashboard() {
   };
 
   useEffect(() => {
-    fetchQuests();
+    // Only fetch quests if user has a hub
+    if (session?.hub) {
+      fetchQuests();
+    }
   }, [apiPrefix]);
 
   const handleView = (id: string) => {
@@ -66,6 +71,10 @@ export default function userDashboard() {
 
   const handleAction = async (id: string, action: "accept" | "reject") => {
     try {
+      if (!session?.hub) {
+        toast({ title: "Error", description: "Please create your hub first.", variant: "destructive" });
+        return;
+      }
       setLoading(true);
       await apiRequest({
         method: "POST",
