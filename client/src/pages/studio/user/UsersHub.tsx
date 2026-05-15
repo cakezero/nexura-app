@@ -10,6 +10,7 @@ import { userApiRequest } from "../../../lib/userApi";
 import { useToast } from "../../../hooks/use-toast";
 import { useWallet } from "../../../hooks/use-wallet";
 import { BACKEND_URL } from "../../../lib/constants";
+import { getStoredUserToken } from "../../../lib/userSession";
 
 export default function UsersHub() {
   const [loading, setLoading] = useState(false);
@@ -53,6 +54,16 @@ export default function UsersHub() {
     setLoading(true);
 
     try {
+      // Small delay to ensure session is fully stored after sign-up
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      
+      // Verify token is available before making request
+      const token = getStoredUserToken();
+      console.log("[UsersHub] Token available:", !!token);
+      if (!token) {
+        throw new Error("Authentication token not found. Please sign in again.");
+      }
+
       const payload = {
         name,
         description,
