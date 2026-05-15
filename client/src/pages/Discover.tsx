@@ -727,7 +727,6 @@ const quests = questsRaw.filter(isActiveQuest);
 {activeFilter === "all" && (
   <>
     {/* MOBILE VERSION */}
-    <div className="block sm:hidden w-full px-3">
       <div className="grid grid-cols-2 gap-2">
 
         {analyticsCards.map((card, idx) => (
@@ -771,7 +770,6 @@ const quests = questsRaw.filter(isActiveQuest);
           </div>
         ))}
       </div>
-    </div>
 
     {/* DESKTOP VERSION (UNCHANGED) */}
     <div className="hidden sm:block w-full">
