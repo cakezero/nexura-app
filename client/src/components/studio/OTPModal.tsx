@@ -14,6 +14,7 @@ interface PendingSignup {
   password: string;
   name: string;
   page: "user" | "project";
+  bio?: string;
   walletAddress?: string;
   mainAppUsername?: string;
   hubDetails?: {
@@ -327,5 +328,8 @@ export default function OTPModal({ isOpen, onClose, email, page }: OTPModalProps
         </button>
       </DialogContent>
     </Dialog>
+  );
+}
+
   );
 }
