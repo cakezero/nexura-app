@@ -22,6 +22,7 @@ import {
 import { hubAdmin, hub, userHubAdmin, userHub } from "@/models/hub.model";
 import { user } from "@/models/user.model";
 import bcrypt from "bcrypt";
+import mongoose from "mongoose";
 import axios from "axios";
 import { resetEmail, sendOTPConfirmEmail, resetPasswordOTPEmail } from "@/utils/sendMail";
 import { OTP } from "@/models/otp.model";
@@ -590,39 +591,36 @@ export const userHubAdminSignUp = async (req: GlobalRequest, res: GlobalResponse
         { email: strippedEmail },
         { username: trimmedName }
       ]
-    }).lean();
+		}).lean().select("profilePic");
 
-    const userId = mainUser?._id || req.id;
+    const userId = req.id;
 
 	  const superAdmin = await userHubAdmin.create({
       name: trimmedName,
       email: strippedEmail,
       password: hashedPassword,
-      userId: userId
+      userId: new mongoose.Types.ObjectId(userId),
+			emailVerified: true,
     });
 
     // Fetch main app profile picture for hub logo
-    let logoUrl = "";
-    try {
-      const mainUser = await user.findOne({ username: trimmedName }).lean();
-      logoUrl = (mainUser as any)?.profilePic || "";
-    } catch {}
+		const logo = (mainUser as any)?.profilePic || "";
 
     // Create a hub for the new admin immediately
     const createdHub = await userHub.create({
       name: trimmedName,
       description: "",
       website: "",
-      userId: userId,
+      userId: new mongoose.Types.ObjectId(userId),
       xAccount: "",
-      logo: logoUrl,
+      logo,
       superAdmin: superAdmin._id,
     });
 
     // Link the hub to the admin and delete verified email
     await Promise.all([
       userHubAdmin.findByIdAndUpdate(superAdmin._id, { hub: createdHub._id }),
-      // verifiedEmail.findByIdAndDelete(verified._id)
+      verifiedEmail.findByIdAndDelete(verified._id)
     ]);
 
 		const accessToken = JWT.sign(superAdmin._id.toString());
