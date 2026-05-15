@@ -503,20 +503,37 @@ const quests = questsRaw.filter(isActiveQuest);
 </div>
 
     {campaignsToRender.length === 0 ? (
-<div className="rounded-2xl border border-white/10 bg-[#170F1F] px-5 py-8 sm:p-6 text-center">
-  
-  <div className="flex flex-col items-center justify-center gap-2">
+  <div className="w-full sm:w-auto">
+    
+    {/* MOBILE FULL BLEED */}
+    <div className="sm:hidden w-screen -mx-3 px-5 py-8 bg-[#170F1F] border-y border-white/10 text-center">
+      
+      <div className="flex flex-col items-center justify-center gap-2">
+        <p className="text-white/70 text-sm leading-relaxed">
+          No active campaigns at the moment.
+        </p>
 
-    <p className="text-white/70 text-sm sm:text-sm leading-relaxed">
-      No active campaigns at the moment.
-    </p>
+        <span className="text-[11px] text-white/40 max-w-[260px]">
+          New campaigns will appear here once they go live.
+        </span>
+      </div>
 
-  <span className="text-[11px] sm:text-xs text-white/40 max-w-[260px]">
-      New campaigns will appear here once they go live.
-    </span>
+    </div>
+
+    {/* DESKTOP (UNCHANGED LOOK) */}
+    <div className="hidden sm:block rounded-2xl border border-white/10 bg-[#170F1F] px-5 py-8 text-center">
+      <div className="flex flex-col items-center justify-center gap-2">
+        <p className="text-white/70 text-sm leading-relaxed">
+          No active campaigns at the moment.
+        </p>
+
+        <span className="text-xs text-white/40 max-w-[260px]">
+          New campaigns will appear here once they go live.
+        </span>
+      </div>
+    </div>
 
   </div>
-</div>
 ) : (
   <div className="overflow-hidden">
     <div
