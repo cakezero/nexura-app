@@ -727,54 +727,59 @@ const quests = questsRaw.filter(isActiveQuest);
 {activeFilter === "all" && (
   <>
 {/* MOBILE VERSION */}
-<div className="sm:hidden w-full px-4 space-y-3">
+<div className="sm:hidden w-full max-w-full overflow-x-hidden px-3">
 
-  {analyticsCards.map((card, idx) => (
-    <div
-      key={idx}
-      className="
-        relative
-        w-full
-        flex items-center justify-between
-        px-4 py-4
-        rounded-2xl
-        bg-[#170F1F]
-        border border-[rgba(131,58,253,0.18)]
-        overflow-hidden
-      "
-      style={{
-        boxShadow: "inset 0 0 14px rgba(131, 58, 253, 0.08)",
-      }}
-    >
+  <div className="space-y-2 w-full">
 
-      {/* subtle glow - contained and non-intrusive */}
+    {analyticsCards.map((card, idx) => (
       <div
-        className="absolute w-40 h-40 rounded-full"
+        key={idx}
+        className="
+          relative
+          w-full
+          flex items-center justify-between
+          px-3 py-3
+          rounded-xl
+          bg-[#170F1F]
+          border border-[rgba(131,58,253,0.18)]
+          overflow-hidden
+          box-border
+        "
         style={{
-          background: "#833AFD",
-          top: "-50px",
-          right: "-50px",
-          filter: "blur(40px)",
-          opacity: 0.25,
+          boxShadow: "inset 0 0 12px rgba(131, 58, 253, 0.07)",
         }}
-      />
+      >
 
-      {/* LEFT: label */}
-      <div className="relative z-10 flex flex-col">
-        <div className="text-xs uppercase tracking-widest text-white/50">
-          {card.title}
+        {/* glow (contained so it NEVER causes overflow) */}
+        <div
+          className="absolute w-32 h-32 rounded-full"
+          style={{
+            background: "#833AFD",
+            top: "-45px",
+            right: "-45px",
+            filter: "blur(35px)",
+            opacity: 0.22,
+          }}
+        />
+
+        {/* LEFT */}
+        <div className="relative z-10 flex flex-col min-w-0">
+          <div className="text-[10px] uppercase tracking-widest text-white/50 truncate max-w-[60vw]">
+            {card.title}
+          </div>
         </div>
-      </div>
 
-      {/* RIGHT: value */}
-      <div className="relative z-10 text-lg font-semibold text-white">
-        {typeof card.value === "number"
-          ? card.value.toLocaleString()
-          : card.value}
-      </div>
+        {/* RIGHT */}
+        <div className="relative z-10 text-sm font-semibold text-white whitespace-nowrap">
+          {typeof card.value === "number"
+            ? card.value.toLocaleString()
+            : card.value}
+        </div>
 
-    </div>
-  ))}
+      </div>
+    ))}
+
+  </div>
 </div>
 
     {/* DESKTOP VERSION (UNCHANGED) */}
