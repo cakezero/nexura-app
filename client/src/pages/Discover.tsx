@@ -726,10 +726,10 @@ const quests = questsRaw.filter(isActiveQuest);
 
 {activeFilter === "all" && (
   <>
-{/*{/* MOBILE VERSION */}
+{/* MOBILE VERSION */}
 <div className="sm:hidden w-full overflow-x-hidden px-3">
 
-  <div className="space-y-2 w-full">
+  <div className="space-y-2 w-full flex flex-col items-center">
 
     {analyticsCards.map((card, idx) => (
       <div
@@ -737,6 +737,7 @@ const quests = questsRaw.filter(isActiveQuest);
         className="
           relative
           w-full
+          max-w-[320px]
           rounded-xl
           bg-[#170F1F]
           border border-[rgba(131,58,253,0.18)]
@@ -761,7 +762,7 @@ const quests = questsRaw.filter(isActiveQuest);
           }}
         />
 
-        {/* content stack (NO flex layout fighting) */}
+        {/* content */}
         <div className="relative z-10 flex flex-col gap-1">
 
           <div className="text-[10px] uppercase tracking-widest text-white/50 truncate">
@@ -773,12 +774,6 @@ const quests = questsRaw.filter(isActiveQuest);
               ? card.value.toLocaleString()
               : card.value}
           </div>
-
-          {card.description && (
-            <div className="text-[10px] text-white/50 truncate">
-              {card.description}
-            </div>
-          )}
 
         </div>
 
