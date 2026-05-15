@@ -14,6 +14,7 @@ interface PendingSignup {
   password: string;
   name: string;
   page: "user" | "project";
+  bio?: string;
   walletAddress?: string;
   mainAppUsername?: string;
   hubDetails?: {
@@ -141,13 +142,13 @@ export default function OTPModal({ isOpen, onClose, email, page }: OTPModalProps
       }
     } else {
       const usernameToUse = pending.mainAppUsername || pending.walletAddress || pending.name || pending.email.split("@")[0];
-      
+
       // Use apiRequestV2 which properly handles the nexura:token from wallet connection
-      const res = await apiRequestV2<{
+      const res: {
         accessToken?: string;
         admin?: { _id: string; name: string; email: string; role: string; hub: string };
         hub?: { logo?: string };
-      }>("POST", "/api/user-hub/sign-up", {
+      } = await apiRequestV2("POST", "/api/user-hub/sign-up", {
         name: usernameToUse,
         email: pending.email,
         password: pending.password,
