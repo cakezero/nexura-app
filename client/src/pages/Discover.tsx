@@ -729,7 +729,7 @@ const quests = questsRaw.filter(isActiveQuest);
 {/* MOBILE VERSION */}
 <div className="sm:hidden w-full overflow-x-hidden px-3">
 
-  <div className="space-y-2 w-full flex flex-col items-center">
+  <div className="space-y-2 w-full">
 
     {analyticsCards.map((card, idx) => (
       <div
@@ -738,6 +738,7 @@ const quests = questsRaw.filter(isActiveQuest);
           relative
           w-full
           max-w-[320px]
+          mr-auto
           rounded-xl
           bg-[#170F1F]
           border border-[rgba(131,58,253,0.18)]
