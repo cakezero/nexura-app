@@ -22,6 +22,7 @@ import {
 import { hubAdmin, hub, userHubAdmin, userHub } from "@/models/hub.model";
 import { user } from "@/models/user.model";
 import bcrypt from "bcrypt";
+import mongoose from "mongoose";
 import axios from "axios";
 import { resetEmail, sendOTPConfirmEmail, resetPasswordOTPEmail } from "@/utils/sendMail";
 import { OTP } from "@/models/otp.model";
@@ -598,7 +599,7 @@ export const userHubAdminSignUp = async (req: GlobalRequest, res: GlobalResponse
       name: trimmedName,
       email: strippedEmail,
       password: hashedPassword,
-      userId,
+      userId: new mongoose.Types.ObjectId(userId),
 			emailVerified: true,
     });
 
@@ -610,7 +611,7 @@ export const userHubAdminSignUp = async (req: GlobalRequest, res: GlobalResponse
       name: trimmedName,
       description: "",
       website: "",
-      userId,
+      userId: new mongoose.Types.ObjectId(userId),
       xAccount: "",
       logo,
       superAdmin: superAdmin._id,
