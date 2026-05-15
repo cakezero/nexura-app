@@ -506,27 +506,31 @@ const quests = questsRaw.filter(isActiveQuest);
 <div className="w-full">
   {campaignsToRender.length === 0 ? (
     /* EMPTY STATE */
-    <div className="w-full flex justify-center">
-      <div className="w-full max-w-[420px] rounded-2xl border border-white/10 bg-[#170F1F] px-5 py-8 text-center">
-        
-        <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-white/5">
-          <img
-            src="/campaigns-empty.png"
-            alt="empty"
-            className="h-5 w-5 opacity-70"
-          />
-        </div>
+//     <div className="w-screen -ml-3 sm:-ml-4 md:-ml-6">
+//   <div className="w-full flex justify-center px-4">
+    
+//     <div className="w-full max-w-none sm:max-w-[420px] rounded-none sm:rounded-2xl border border-white/10 bg-[#170F1F] px-6 py-10 text-center">
+      
+//       <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-white/5">
+//         <img
+//           src="/campaigns-empty.png"
+//           alt="empty"
+//           className="h-6 w-6 opacity-70"
+//         />
+//       </div>
 
-        <p className="text-sm text-white/85 font-semibold">
-          No active campaigns yet
-        </p>
+//       <p className="text-base font-semibold text-white/90">
+//         No active campaigns yet
+//       </p>
 
-        <p className="text-xs text-white/50 mt-1 leading-relaxed">
-          Check back later for new opportunities.
-        </p>
+//       <p className="text-xs text-white/50 mt-2 leading-relaxed max-w-xs mx-auto">
+//         Check back later for new opportunities.
+//       </p>
 
-      </div>
-    </div>
+//     </div>
+//   </div>
+// </div>
+<div></div>
   ) : (
       /* CAROUSEL */
       <div className="overflow-hidden">
