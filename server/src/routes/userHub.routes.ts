@@ -9,7 +9,7 @@ const router = Router();
 router
   .get("/profile-by-wallet", getUserProfileByWallet)
   .post("/sign-in", userHubSignIn)
-  .post("/sign-up", authenticateUser, userHubAdminSignUp)
+  .post("/sign-up", userHubAdminSignUp)
   .post("/forgot-password", userHubForgotPassword)
   .post("/reset-password", userHubResetPassword)
   .use("/", authenticateUserHub, userHubAppRoutes);

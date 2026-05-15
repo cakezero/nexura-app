@@ -31,11 +31,12 @@ import {
 } from "@/controllers/quest.controller";
 import { Router } from "express";
 import { upload } from "@/config/multer";
+import { authenticateUser2 } from "@/middlewares/auth.middleware";
 
 const router = Router();
 
 router
-  .post("/create-user-hub", createUserHub)
+  .post("/create-user-hub", authenticateUser2, upload.none(), createUserHub)
   .get("/get-quests", getHubQuests)
   .get("/me", getUserHub)
   .get("/quest-submissions", getCampaignSubmissions)

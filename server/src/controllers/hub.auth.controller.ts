@@ -320,7 +320,8 @@ export const hubAdminSignUp = async (req: GlobalRequest, res: GlobalResponse) =>
 			maxAge: 30 * 24 * 60 * 60,
 		});
 
-		// await OTP.deleteOne({ code });
+		// Delete the OTP after successful signup
+		await OTP.deleteOne({ _id: otp._id });
 
 		res.status(OK).json({
 			message: "hub admin signed up!",
@@ -540,6 +541,7 @@ export const userHubSignIn = async (req: GlobalRequest, res: GlobalResponse) => 
 
 export const userHubAdminSignUp = async (req: GlobalRequest, res: GlobalResponse) => {
 	try {
+    console.log('[userHubAdminSignUp] Received request body:', req.body);
 		const { error } = validateSuperAdminData(req.body);
 		if (error) {
 			const missingFields = getMissingFields(error);
@@ -582,11 +584,21 @@ export const userHubAdminSignUp = async (req: GlobalRequest, res: GlobalResponse
 
     const hashedPassword = await hashPassword(password);
 
+    // Find the user from the main users collection
+    const mainUser = await user.findOne({
+      $or: [
+        { email: strippedEmail },
+        { username: trimmedName }
+      ]
+    }).lean();
+
+    const userId = mainUser?._id || req.id;
+
 	  const superAdmin = await userHubAdmin.create({
       name: trimmedName,
       email: strippedEmail,
       password: hashedPassword,
-      userId: req.id
+      userId: userId
     });
 
     // Fetch main app profile picture for hub logo
@@ -601,7 +613,7 @@ export const userHubAdminSignUp = async (req: GlobalRequest, res: GlobalResponse
       name: trimmedName,
       description: "",
       website: "",
-      userId: req.id,
+      userId: userId,
       xAccount: "",
       logo: logoUrl,
       superAdmin: superAdmin._id,

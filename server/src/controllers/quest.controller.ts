@@ -93,7 +93,7 @@ export const fetchEcosystemDapps = async (
 export const fetchQuests = async (req: GlobalRequest, res: GlobalResponse) => {
 	try {
 		const Hub = (await import('../models/hub.model')).hub;
-		
+
 		const questsInDB = await quest.find({ status: { $ne: "Save" } }).lean();
 		const completedQuests = await questCompleted.find({
 			user: new mongoose.Types.ObjectId(req.id),

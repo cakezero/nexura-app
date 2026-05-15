@@ -1039,7 +1039,9 @@ export const createUserHub = async (req: GlobalRequest, res: GlobalResponse) => 
       bodyKeys: Object.keys(req.body || {}),
       name: req.body?.name,
       description: req.body?.description,
-      descriptionLength: req.body?.description?.length
+      descriptionLength: req.body?.description?.length,
+      reqId: req.id,
+      hasAdmin: !!req.admin
     });
 
     // Handle both JSON body and FormData
@@ -1075,27 +1077,27 @@ export const createUserHub = async (req: GlobalRequest, res: GlobalResponse) => 
 
     const xAccount = String(bodyData.xAccount ?? "").trim();
 
-            const hubAdminDoc = await userHubAdmin.findById(req.id).lean();
+    const hubAdminDoc = await userHubAdmin.findById(req.id).lean();
     const adminName = (hubAdminDoc as any)?.name;
     let logoUrl = "";
     if (adminName) {
       const mainUser = await user.findOne({ username: adminName }).lean();
       logoUrl = (mainUser as any)?.profilePic || "";
     }
-const createdHub = await userHub.create({
+    const createdHub = await userHub.create({
       name,
       description: bodyData.description ?? "",
       xAccount,
       logo: logoUrl,
+      userId: req.id,
       superAdmin: req.id,
     });
 
-    const adminDoc = req.admin as any;
     await userHubAdmin.findByIdAndUpdate(req.id, { hub: createdHub._id, pendingTxHash: null });
 
-    // Migrate any pending payment hash from admins to hub (payment represents completed on-chain studio fee)
-    if (adminDoc?.pendingTxHash) {
-      await userHub.findByIdAndUpdate(createdHub._id, { pendingTxHash: adminDoc.pendingTxHash, $inc: { noOfPayments: 1 } });
+    // Migrate any pending payment hash from user to hub (payment represents completed on-chain studio fee)
+    if (hubAdminDoc?.pendingTxHash) {
+      await userHub.findByIdAndUpdate(createdHub._id, { pendingTxHash: hubAdminDoc.pendingTxHash, $inc: { noOfPayments: 1 } });
     }
 
     console.log('[createUserHub] Hub created successfully:', {

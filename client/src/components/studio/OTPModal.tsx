@@ -167,7 +167,10 @@ export default function OTPModal({ isOpen, onClose, email, page }: OTPModalProps
         sessionStorage.removeItem(SIGNUP_DATA_KEY);
         toast({ title: "Account created!", description: "Welcome to Nexura Studio." });
         onClose();
-        setLocation("/studio/users-hub");
+        // Small delay to ensure session is stored before redirect
+        setTimeout(() => {
+          setLocation("/studio/users-hub");
+        }, 100);
       }
     }
   }, [setLocation, toast, onClose]);
