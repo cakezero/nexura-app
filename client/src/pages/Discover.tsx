@@ -524,7 +524,7 @@ const quests = questsRaw.filter(isActiveQuest);
       </p>
 
       <p className="text-xs text-white/50 mt-2 leading-relaxed max-w-xs mx-auto">
-        Check back later for new opportunities.
+        Check back later for new campaigns.
       </p>
 
     </div>
@@ -770,7 +770,6 @@ const quests = questsRaw.filter(isActiveQuest);
             </div>
           </div>
         ))}
-
       </div>
     </div>
 

@@ -22,11 +22,23 @@ export const resolveTNSName = async (name: string) => {
  */
 export const lookupTNSAddress = async (address: string) => {
   try {
+    const provider = new TNSProvider();
+
     const name = await provider.lookupAddress(address);
-    return name; // string | null
+
+    return {
+      success: true,
+      name,
+      error: null,
+    };
   } catch (err) {
     console.error("lookupTNSAddress error:", err);
-    return null;
+
+    return {
+      success: false,
+      name: null,
+      error: err,
+    };
   }
 };
 

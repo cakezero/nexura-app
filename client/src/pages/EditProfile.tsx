@@ -69,19 +69,25 @@ const getFinalUsername = (name: string, mode: string) => {
   const runLookup = async () => {
     setSearchLoading(true);
 
-    const name = await lookupTNSAddress(address);
+    const result = await lookupTNSAddress(address);
 
-    setTnsName(name);
     setSearchLoading(false);
 
+    if (!result.success) {
+      console.error("TNS lookup failed:", result.error);
+      return;
+    }
+
+    const name = result.name;
+
+    setTnsName(name);
+
     if (name) {
-      // ONLY fill if user actually owns a .trust
       setProfileData((prev) => ({
         ...prev,
         username: name.replace(".trust", "")
       }));
     } else {
-      // CLEAR input if no .trust exists
       setProfileData((prev) => ({
         ...prev,
         username: ""
