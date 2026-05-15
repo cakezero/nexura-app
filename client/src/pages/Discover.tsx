@@ -506,31 +506,30 @@ const quests = questsRaw.filter(isActiveQuest);
 <div className="w-full">
   {campaignsToRender.length === 0 ? (
     /* EMPTY STATE */
-//     <div className="w-screen -ml-3 sm:-ml-4 md:-ml-6">
-//   <div className="w-full flex justify-center px-4">
+    <div className="w-screen -ml-3 sm:-ml-4 md:-ml-6">
+  <div className="w-full flex justify-center px-4">
     
-//     <div className="w-full max-w-none sm:max-w-[420px] rounded-none sm:rounded-2xl border border-white/10 bg-[#170F1F] px-6 py-10 text-center">
+    <div className="w-full max-w-none sm:max-w-[420px] rounded-none sm:rounded-2xl border border-white/10 bg-[#170F1F] px-6 py-10 text-center">
       
-//       <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-white/5">
-//         <img
-//           src="/campaigns-empty.png"
-//           alt="empty"
-//           className="h-6 w-6 opacity-70"
-//         />
-//       </div>
+      <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-white/5">
+        <img
+          src="/campaigns-empty.png"
+          alt="empty"
+          className="h-6 w-6 opacity-70"
+        />
+      </div>
 
-//       <p className="text-base font-semibold text-white/90">
-//         No active campaigns yet
-//       </p>
+      <p className="text-base font-semibold text-white/90">
+        No active campaigns yet
+      </p>
 
-//       <p className="text-xs text-white/50 mt-2 leading-relaxed max-w-xs mx-auto">
-//         Check back later for new opportunities.
-//       </p>
+      <p className="text-xs text-white/50 mt-2 leading-relaxed max-w-xs mx-auto">
+        Check back later for new opportunities.
+      </p>
 
-//     </div>
-//   </div>
-// </div>
-<div></div>
+    </div>
+  </div>
+</div>
   ) : (
       /* CAROUSEL */
       <div className="overflow-hidden">
@@ -728,8 +727,8 @@ const quests = questsRaw.filter(isActiveQuest);
 {activeFilter === "all" && (
   <>
     {/* MOBILE VERSION */}
-    <div className="block sm:hidden w-full">
-      <div className="grid grid-cols-2 gap-[1px] rounded-3xl overflow-hidden bg-[rgba(131,58,253,0.18)]">
+    <div className="block sm:hidden w-full px-3">
+      <div className="grid grid-cols-2 gap-2">
 
         {analyticsCards.map((card, idx) => (
           <div
@@ -738,12 +737,12 @@ const quests = questsRaw.filter(isActiveQuest);
               relative
               overflow-hidden
               flex flex-col items-center justify-center
-              py-4 px-3
+              py-5 px-3
               text-center
-              min-h-[85px]
+              min-h-[95px]
+              rounded-2xl
               bg-[#170F1F]
               border border-[rgba(131,58,253,0.18)]
-              backdrop-blur-md
             "
             style={{
               boxShadow: "inset 0 0 22px rgba(131, 58, 253, 0.12)",
