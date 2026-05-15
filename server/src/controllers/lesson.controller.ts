@@ -100,7 +100,7 @@ export const createLesson = async (req: GlobalRequest, res: GlobalResponse) => {
 
 export const updateLesson = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
-    const { lessonId, title, description, reward, disclaimer, completionTrophy, completionTitle, completionMessage } = req.body as {
+    const { lessonId, title, description, reward, disclaimer, completionTrophy, completionTitle, completionMessage, status } = req.body as {
       lessonId?: string;
       title?: string;
       description?: string;
@@ -109,6 +109,7 @@ export const updateLesson = async (req: GlobalRequest, res: GlobalResponse) => {
       completionTrophy?: string;
       completionTitle?: string;
       completionMessage?: string;
+      status?: "draft" | "published";
     };
 
     if (!lessonId) {
@@ -146,6 +147,11 @@ export const updateLesson = async (req: GlobalRequest, res: GlobalResponse) => {
     if (completionTrophy !== undefined) lessonExists.completionTrophy = completionTrophy;
     if (completionTitle !== undefined) lessonExists.completionTitle = completionTitle;
     if (completionMessage !== undefined) lessonExists.completionMessage = completionMessage;
+    
+    // Handle status field - allow updating to draft or published
+    if (status === "draft" || status === "published") {
+      lessonExists.status = status;
+    }
 
     const coverImage = await getUploadedLessonImage(req, "coverImage", "lesson-covers");
     const profileImage = await getUploadedLessonImage(req, "profileImage", "lesson-profiles");
