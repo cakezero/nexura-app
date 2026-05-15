@@ -726,50 +726,56 @@ const quests = questsRaw.filter(isActiveQuest);
 
 {activeFilter === "all" && (
   <>
-    {/* MOBILE VERSION */}
-      <div className="grid grid-cols-2 gap-2">
+{/* MOBILE VERSION */}
+<div className="sm:hidden w-full max-w-full overflow-x-hidden px-4">
+  <div className="grid grid-cols-2 gap-3 w-full">
 
-        {analyticsCards.map((card, idx) => (
-          <div
-            key={idx}
-            className="
-              relative
-              overflow-hidden
-              flex flex-col items-center justify-center
-              py-5 px-3
-              text-center
-              min-h-[95px]
-              rounded-2xl
-              bg-[#170F1F]
-              border border-[rgba(131,58,253,0.18)]
-            "
-            style={{
-              boxShadow: "inset 0 0 22px rgba(131, 58, 253, 0.12)",
-            }}
-          >
-            <div
-              className="absolute w-56 h-56 rounded-full"
-              style={{
-                background: "#833AFD",
-                top: "-80px",
-                right: "-80px",
-                filter: "blur(65px)",
-                opacity: 0.5,
-              }}
-            />
+    {analyticsCards.map((card, idx) => (
+      <div
+        key={idx}
+        className="
+          relative
+          w-full
+          overflow-hidden
+          flex flex-col items-center justify-center
+          py-4 px-3
+          text-center
+          min-h-[90px]
+          rounded-2xl
+          bg-[#170F1F]
+          border border-[rgba(131,58,253,0.18)]
+        "
+        style={{
+          boxShadow: "inset 0 0 18px rgba(131, 58, 253, 0.10)",
+        }}
+      >
+        {/* glow background (scaled down + safer positioning) */}
+        <div
+          className="absolute rounded-full"
+          style={{
+            width: "180px",
+            height: "180px",
+            background: "#833AFD",
+            top: "-60px",
+            right: "-60px",
+            filter: "blur(45px)",
+            opacity: 0.35,
+          }}
+        />
 
-            <div className="relative z-10 text-base font-semibold text-white leading-none soft-rise">
-              {typeof card.value === "number"
-                ? card.value.toLocaleString()
-                : card.value}
-            </div>
+        <div className="relative z-10 text-sm font-semibold text-white leading-none soft-rise">
+          {typeof card.value === "number"
+            ? card.value.toLocaleString()
+            : card.value}
+        </div>
 
-            <div className="relative z-10 text-[9px] tracking-widest uppercase text-white/50 mt-1">
-              {card.title}
-            </div>
-          </div>
-        ))}
+        <div className="relative z-10 text-xs tracking-widest uppercase text-white/50 mt-1 truncate max-w-full">
+          {card.title}
+        </div>
       </div>
+    ))}
+  </div>
+</div>
 
     {/* DESKTOP VERSION (UNCHANGED) */}
     <div className="hidden sm:block w-full">
