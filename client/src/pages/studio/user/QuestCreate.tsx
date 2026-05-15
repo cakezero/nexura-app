@@ -88,7 +88,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
   const [isPublished, setIsPublished] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
 
-  const XP_REWARDS = "500";
+  const XP_REWARDS = "200";
 
   useEffect(() => {
     const editId = new URLSearchParams(window.location.search).get("edit");
