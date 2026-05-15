@@ -480,83 +480,69 @@ const quests = questsRaw.filter(isActiveQuest);
 {/* CAMPAIGNS */}
 {(activeFilter === "all" || activeFilter === "campaigns") && (
   <section className="mb-8">
-<div className="flex items-start justify-between mb-3 mt-8 gap-3">
-  <div className="min-w-0">
-    <h2 className="text-base md:text-lg font-semibold">
-      Active Campaigns
-    </h2>
 
-    <p className="text-xs text-white/60 mt-1 max-w-xl">
-      Explore and participate in active campaigns
-    </p>
-  </div>
+    <div className="flex items-start justify-between mb-3 mt-8 gap-3">
+      <div className="min-w-0">
+        <h2 className="text-base md:text-lg font-semibold">
+          Active Campaigns
+        </h2>
 
-  <Button
-    variant="ghost"
-    size="sm"
-    onClick={() => setLocation("/campaigns")}
-    className="flex items-center justify-center gap-2 text-xs h-8 px-3 border border-[#00E1A299] text-white/80 hover:text-white hover:bg-[#00E1A24D] transition shrink-0"
-  >
-    <span>View all campaigns</span>
-    <img src="/arrow-right.png" className="w-3.5 h-3.5" />
-  </Button>
-</div>
+        <p className="text-xs text-white/60 mt-1 max-w-xl">
+          Explore and participate in active campaigns
+        </p>
+      </div>
+
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => setLocation("/campaigns")}
+        className="flex items-center justify-center gap-2 text-xs h-8 px-3 border border-[#00E1A299] text-white/80 hover:text-white hover:bg-[#00E1A24D] transition shrink-0"
+      >
+        <span>View all campaigns</span>
+        <img src="/arrow-right.png" className="w-3.5 h-3.5" />
+      </Button>
+    </div>
 
     {campaignsToRender.length === 0 ? (
-  <div className="w-full sm:w-auto">
-    
-    {/* MOBILE FULL BLEED */}
-    <div className="sm:hidden w-screen -mx-3 px-5 py-8 bg-[#170F1F] border-y border-white/10 text-center">
-      
-      <div className="flex flex-col items-center justify-center gap-2">
-        <p className="text-white/70 text-sm leading-relaxed">
-          No active campaigns at the moment.
-        </p>
-
-        <span className="text-[11px] text-white/40 max-w-[260px]">
-          New campaigns will appear here once they go live.
-        </span>
+      /* EMPTY STATE */
+      <div className="w-full sm:w-auto -mx-3 sm:mx-0 rounded-none sm:rounded-2xl border border-white/10 bg-[#170F1F] p-6 text-center text-white/60 text-sm">
+        No active campaigns at the moment.
       </div>
 
-    </div>
+    ) : (
+      /* CAROUSEL */
+      <div className="overflow-hidden">
 
-    {/* DESKTOP (UNCHANGED LOOK) */}
-    <div className="hidden sm:block rounded-2xl border border-white/10 bg-[#170F1F] px-5 py-8 text-center">
-      <div className="flex flex-col items-center justify-center gap-2">
-        <p className="text-white/70 text-sm leading-relaxed">
-          No active campaigns at the moment.
-        </p>
-
-        <span className="text-xs text-white/40 max-w-[260px]">
-          New campaigns will appear here once they go live.
-        </span>
-      </div>
-    </div>
-
-  </div>
-) : (
-  <div className="overflow-hidden">
-    <div
-      className={`flex gap-3 w-max ${
-        campaignsToRender.length <= 3 ? "" : "animate-quest-scroll"
-      }`}
-    >
-      {(campaignsToRender.length <= 3
-        ? campaignsToRender
-        : [...campaignsToRender, ...campaignsToRender]
-      ).map((campaign: any, i: number) => (
         <div
-          key={`${campaign._id}-${i}`}
-          className="w-[280px] sm:w-[320px] md:w-[360px] shrink-0"
+          className={`flex gap-3 w-max ${
+            campaignsToRender.length <= 3 ? "" : "animate-quest-scroll"
+          }`}
         >
-          <div className="rounded-2xl border border-white/10 overflow-hidden">
-            <CampaignCard {...campaign} from="explore" />
-          </div>
+
+          {(campaignsToRender.length <= 3
+            ? campaignsToRender
+            : [...campaignsToRender, ...campaignsToRender]
+          ).map((campaign: any, i: number) => (
+            <div
+              key={`${campaign._id}-${i}`}
+              className="
+                w-[280px]
+                sm:w-[320px]
+                md:w-[360px]
+                shrink-0
+              "
+            >
+              <div className="rounded-2xl border border-white/10 overflow-hidden">
+                <CampaignCard {...campaign} from="explore" />
+              </div>
+            </div>
+          ))}
+
         </div>
-      ))}
-    </div>
-  </div>
-)}
+
+      </div>
+    )}
+
   </section>
 )}
 
