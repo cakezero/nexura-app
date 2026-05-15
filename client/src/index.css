@@ -3814,3 +3814,18 @@ body {
 .animate-lesson-scroll {
   animation: quest-scroll 90s linear infinite;
 }
+
+
+@keyframes dapps-marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-dapps-marquee {
+  animation: dapps-marquee 25s linear infinite;
+  will-change: transform;
+}

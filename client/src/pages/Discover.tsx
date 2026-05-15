@@ -310,7 +310,7 @@ const quests = questsRaw.filter(isActiveQuest);
       {/* <AnalyticsBackground /> */}
       <ReusableBackground />
 
-      <div className="relative z-10 space-y-10 px-3 sm:px-4 md:px-6 py-8">
+      <div className="relative z-10 space-y-10 px-2 sm:px-2 md:px-3 py-8">
         <div className="mx-auto w-full max-w-[1100px]">
 
           {/* Top Label */}
@@ -423,45 +423,66 @@ const quests = questsRaw.filter(isActiveQuest);
       </Button>
     </div>
 
-    <div className="ticker-container">
-      <div className="ticker gap-3">
+<>
+{/* MOBILE VERSION */}
+<div className="block sm:hidden relative w-[93vw] overflow-hidden">
+  <div className="flex gap-3 w-max animate-dapps-marquee will-change-transform">
 
-        {/* First set */}
-        {filteredDapps.map((dapp: any, index: number) => (
-          <div
-            key={dapp._id}
-            className="w-[260px] shrink-0"
-          >
-            <EcosystemCard
-              dapp={dapp}
-              index={index}
-            />
-          </div>
-        ))}
-
-        {/* Duplicate set */}
-        {filteredDapps.map((dapp: any, index: number) => (
-          <div
-            key={`${dapp._id}-dup`}
-            className="w-[260px] shrink-0"
-          >
-            <EcosystemCard
-              dapp={dapp}
-              index={index}
-            />
-          </div>
-        ))}
-
+    {filteredDapps.map((dapp: any, index: number) => (
+      <div
+        key={dapp._id}
+        className="w-[190px] shrink-0"
+      >
+        <EcosystemCard dapp={dapp} index={index} />
       </div>
+    ))}
+
+    {filteredDapps.map((dapp: any, index: number) => (
+      <div
+        key={`${dapp._id}-dup`}
+        className="w-[190px] shrink-0"
+      >
+        <EcosystemCard dapp={dapp} index={index} />
+      </div>
+    ))}
+
+  </div>
+</div>
+
+  {/* DESKTOP VERSION */}
+  <div className="hidden sm:block w-full overflow-hidden">
+    <div className="flex gap-3 w-max animate-dapps-marquee will-change-transform">
+
+      {filteredDapps.map((dapp: any, index: number) => (
+        <div
+          key={dapp._id}
+          className="w-[220px] md:w-[260px] shrink-0"
+        >
+          <EcosystemCard dapp={dapp} index={index} />
+        </div>
+      ))}
+
+      {filteredDapps.map((dapp: any, index: number) => (
+        <div
+          key={`${dapp._id}-dup`}
+          className="w-[220px] md:w-[260px] shrink-0"
+        >
+          <EcosystemCard dapp={dapp} index={index} />
+        </div>
+      ))}
+
     </div>
+  </div>
+</>
   </section>
 )}
 
 {/* CAMPAIGNS */}
 {(activeFilter === "all" || activeFilter === "campaigns") && (
   <section className="mb-8">
-    <div className="flex items-start justify-between mb-3 mt-8 gap-2">
-      <div>
+
+    <div className="flex items-start justify-between mb-3 mt-8 gap-3">
+      <div className="min-w-0">
         <h2 className="text-base md:text-lg font-semibold">
           Active Campaigns
         </h2>
@@ -475,7 +496,7 @@ const quests = questsRaw.filter(isActiveQuest);
         variant="ghost"
         size="sm"
         onClick={() => setLocation("/campaigns")}
-        className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] text-white/80 hover:text-white hover:bg-[#00E1A24D] transition"
+        className="flex items-center justify-center gap-2 text-xs h-8 px-3 border border-[#00E1A299] text-white/80 hover:text-white hover:bg-[#00E1A24D] transition shrink-0"
       >
         <span>View all campaigns</span>
         <img src="/arrow-right.png" className="w-3.5 h-3.5" />
@@ -483,59 +504,72 @@ const quests = questsRaw.filter(isActiveQuest);
     </div>
 
     {campaignsToRender.length === 0 ? (
-  <div className="rounded-2xl border border-white/10 bg-[#170F1F] p-6 text-center text-white/60 text-sm">
-    No active campaigns at the moment.
-  </div>
-) : (
-  <div className="overflow-hidden">
-    <div
-      className={`flex gap-3 w-max ${
-        campaignsToRender.length <= 3 ? "" : "animate-quest-scroll"
-      }`}
-    >
-      {(campaignsToRender.length <= 3
-        ? campaignsToRender
-        : [...campaignsToRender, ...campaignsToRender]
-      ).map((campaign: any, i: number) => (
+      /* EMPTY STATE */
+      <div className="w-full sm:w-auto -mx-3 sm:mx-0 rounded-none sm:rounded-2xl border border-white/10 bg-[#170F1F] p-6 text-center text-white/60 text-sm">
+        No active campaigns at the moment.
+      </div>
+
+    ) : (
+      /* CAROUSEL */
+      <div className="overflow-hidden">
+
         <div
-          key={`${campaign._id}-${i}`}
-          className="w-[340px] md:w-[360px] shrink-0"
+          className={`flex gap-3 w-max ${
+            campaignsToRender.length <= 3 ? "" : "animate-quest-scroll"
+          }`}
         >
-          <div className="rounded-2xl border border-white/10 overflow-hidden">
-            <CampaignCard {...campaign} from="explore" />
-          </div>
+
+          {(campaignsToRender.length <= 3
+            ? campaignsToRender
+            : [...campaignsToRender, ...campaignsToRender]
+          ).map((campaign: any, i: number) => (
+            <div
+              key={`${campaign._id}-${i}`}
+              className="
+                w-[280px]
+                sm:w-[320px]
+                md:w-[360px]
+                shrink-0
+              "
+            >
+              <div className="rounded-2xl border border-white/10 overflow-hidden">
+                <CampaignCard {...campaign} from="explore" />
+              </div>
+            </div>
+          ))}
+
         </div>
-      ))}
-    </div>
-  </div>
-)}
+
+      </div>
+    )}
+
   </section>
 )}
 
 {/* LEARNING */}
 {(activeFilter === "all" || activeFilter === "learning") && (
   <section className="mb-8">
-    <div className="flex items-start justify-between mb-3 mt-8 gap-2">
-      <div>
-        <h2 className="text-base md:text-lg font-semibold">
-          Active Lessons
-        </h2>
+<div className="flex items-start justify-between mb-3 mt-8 gap-3">
+  <div className="min-w-0">
+    <h2 className="text-base md:text-lg font-semibold">
+      Active Lessons
+    </h2>
 
-        <p className="text-xs text-white/60 mt-1 max-w-xl">
-          Explore and participate in active lessons
-        </p>
-      </div>
+    <p className="text-xs text-white/60 mt-1 max-w-xl">
+      Explore and participate in active lessons
+    </p>
+  </div>
 
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => setLocation("/learn")}
-        className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] text-white/80 hover:text-white hover:bg-[#00E1A24D] transition"
-      >
-        <span>View all lessons</span>
-        <img src="/arrow-right.png" className="w-3.5 h-3.5" />
-      </Button>
-    </div>
+  <Button
+    variant="ghost"
+    size="sm"
+    onClick={() => setLocation("/learn")}
+    className="flex items-center justify-center gap-2 text-xs h-8 px-3 border border-[#00E1A299] text-white/80 hover:text-white hover:bg-[#00E1A24D] transition shrink-0"
+  >
+    <span>View all lessons</span>
+    <img src="/arrow-right.png" className="w-3.5 h-3.5" />
+  </Button>
+</div>
 
     {/* EMPTY STATE */}
     {!lessons || lessons.length === 0 ? (
@@ -543,111 +577,242 @@ const quests = questsRaw.filter(isActiveQuest);
         Lessons coming soon...
       </div>
     ) : (
-      /* WIDE TICKER (same pattern as quests) */
-      <div className="overflow-hidden">
-        <div
-          className={`flex gap-3 w-max ${
-            lessons.length <= 3 ? "" : "animate-lesson-scroll"
-          }`}
-        >
+      <>
+        {/* MOBILE VERSION */}
+{/* MOBILE VERSION */}
+<div className="block sm:hidden relative w-[93vw] overflow-hidden">
+  <div className="flex gap-3 w-max animate-lesson-scroll will-change-transform">
 
-          {(lessons.length <= 3 ? lessons : [...lessons, ...lessons]).map(
-            (lesson: any, i: number) => {
-              const title = lesson.title || "Untitled Lesson";
+    {/* TRACK 1 */}
+    <div className="flex gap-3">
+      {lessons.map((lesson: any, i: number) => {
+        const title = lesson.title || "Untitled Lesson";
 
-              const description =
-                lesson.description ||
-                lesson.sub_title ||
-                "No description available";
+        const description =
+          lesson.description ||
+          lesson.sub_title ||
+          "No description available";
 
-              const project =
-                lesson.projectName ||
-                lesson.project_name ||
-                "Unknown";
+        const project =
+          lesson.projectName ||
+          lesson.project_name ||
+          "Unknown";
 
-              return (
-                <div
-                  key={`${lesson._id}-${i}`}
-                  className="w-[340px] md:w-[360px] shrink-0"
-                >
-                  <LessonCard
-                    lesson={lesson}
-                    title={title}
-                    description={description}
-                    heroImage={lesson.coverImage || lesson.project_image || "/lesson-1.png"}
-                  />
-                </div>
-              );
-            }
-          )}
+        return (
+          <div
+            key={`${lesson._id}-a-${i}`}
+            className="w-[190px] shrink-0"
+          >
+            <LessonCard
+              lesson={lesson}
+              title={title}
+              description={description}
+              heroImage={
+                lesson.coverImage ||
+                lesson.project_image ||
+                "/lesson-1.png"
+              }
+            />
+          </div>
+        );
+      })}
+    </div>
 
+    {/* TRACK 2 (IDENTICAL CLONE) */}
+    <div className="flex gap-3">
+      {lessons.map((lesson: any, i: number) => {
+        const title = lesson.title || "Untitled Lesson";
+
+        const description =
+          lesson.description ||
+          lesson.sub_title ||
+          "No description available";
+
+        const project =
+          lesson.projectName ||
+          lesson.project_name ||
+          "Unknown";
+
+        return (
+          <div
+            key={`${lesson._id}-b-${i}`}
+            className="w-[190px] shrink-0"
+          >
+            <LessonCard
+              lesson={lesson}
+              title={title}
+              description={description}
+              heroImage={
+                lesson.coverImage ||
+                lesson.project_image ||
+                "/lesson-1.png"
+              }
+            />
+          </div>
+        );
+      })}
+    </div>
+
+  </div>
+</div>
+
+        {/* DESKTOP VERSION */}
+        <div className="hidden sm:block overflow-hidden">
+          <div
+            className={`flex gap-3 w-max ${
+              lessons.length <= 3 ? "" : "animate-lesson-scroll"
+            }`}
+          >
+            {(lessons.length <= 3 ? lessons : [...lessons, ...lessons]).map(
+              (lesson: any, i: number) => {
+                const title = lesson.title || "Untitled Lesson";
+
+                const description =
+                  lesson.description ||
+                  lesson.sub_title ||
+                  "No description available";
+
+                const project =
+                  lesson.projectName ||
+                  lesson.project_name ||
+                  "Unknown";
+
+                return (
+                  <div
+                    key={`${lesson._id}-${i}`}
+                    className="w-[280px] sm:w-[320px] md:w-[360px] shrink-0"
+                  >
+                    <LessonCard
+                      lesson={lesson}
+                      title={title}
+                      description={description}
+                      heroImage={
+                        lesson.coverImage ||
+                        lesson.project_image ||
+                        "/lesson-1.png"
+                      }
+                    />
+                  </div>
+                );
+              }
+            )}
+          </div>
         </div>
-      </div>
+      </>
     )}
   </section>
 )}
 
 {activeFilter === "all" && (
-  <div
-    className="
-      w-full
-      flex
-      rounded-3xl
-      overflow-hidden
-      gap-[1px]
-      bg-[rgba(131,58,253,0.18)]
-    "
-  >
-    {analyticsCards.map((card, idx) => (
-      <div
-        key={idx}
-        className="
-          relative
-          overflow-hidden
-          flex-1
-          flex flex-col items-center justify-center
-          py-4 px-3
-          text-center
-        "
-        style={{
-          background: "#170F1F",
-          border: "1px solid rgba(131, 58, 253, 0.18)",
+  <>
+    {/* MOBILE VERSION */}
+    <div className="block sm:hidden w-full">
+      <div className="grid grid-cols-2 gap-[1px] rounded-3xl overflow-hidden bg-[rgba(131,58,253,0.18)]">
 
-          backdropFilter: "blur(8px)",
-          WebkitBackdropFilter: "blur(8px)",
+        {analyticsCards.map((card, idx) => (
+          <div
+            key={idx}
+            className="
+              relative
+              overflow-hidden
+              flex flex-col items-center justify-center
+              py-4 px-3
+              text-center
+              min-h-[85px]
+              bg-[#170F1F]
+              border border-[rgba(131,58,253,0.18)]
+              backdrop-blur-md
+            "
+            style={{
+              boxShadow: "inset 0 0 22px rgba(131, 58, 253, 0.12)",
+            }}
+          >
+            <div
+              className="absolute w-56 h-56 rounded-full"
+              style={{
+                background: "#833AFD",
+                top: "-80px",
+                right: "-80px",
+                filter: "blur(65px)",
+                opacity: 0.5,
+              }}
+            />
 
-          boxShadow: "inset 0 0 22px rgba(131, 58, 253, 0.12)",
-        }}
-      >
-        <div
-          className="absolute w-56 h-56 rounded-full"
-          style={{
-            background: "#833AFD",
-            top: "-80px",
-            right: "-80px",
-            filter: "blur(65px)",
-            opacity: 0.5,
-          }}
-        />
+            <div className="relative z-10 text-base font-semibold text-white leading-none soft-rise">
+              {typeof card.value === "number"
+                ? card.value.toLocaleString()
+                : card.value}
+            </div>
 
-        {/* VALUE */}
-        <div className="relative z-10 text-lg sm:text-xl font-semibold text-white leading-none soft-rise">
-  {typeof card.value === "number"
-    ? card.value.toLocaleString()
-    : card.value}
-</div>
+            <div className="relative z-10 text-[9px] tracking-widest uppercase text-white/50 mt-1">
+              {card.title}
+            </div>
+          </div>
+        ))}
 
-        {/* LABEL */}
-        <div className="relative z-10 text-[10px] tracking-widest uppercase text-white/50 mt-1">
-          {card.title}
-        </div>
       </div>
-    ))}
-  </div>
+    </div>
+
+    {/* DESKTOP VERSION (UNCHANGED) */}
+    <div className="hidden sm:block w-full">
+      <div
+        className="
+          w-full
+          flex
+          rounded-3xl
+          overflow-hidden
+          gap-[1px]
+          bg-[rgba(131,58,253,0.18)]
+        "
+      >
+        {analyticsCards.map((card, idx) => (
+          <div
+            key={idx}
+            className="
+              relative
+              overflow-hidden
+              flex-1
+              flex flex-col items-center justify-center
+              py-4 px-3
+              text-center
+            "
+            style={{
+              background: "#170F1F",
+              border: "1px solid rgba(131, 58, 253, 0.18)",
+              backdropFilter: "blur(8px)",
+              WebkitBackdropFilter: "blur(8px)",
+              boxShadow: "inset 0 0 22px rgba(131, 58, 253, 0.12)",
+            }}
+          >
+            <div
+              className="absolute w-56 h-56 rounded-full"
+              style={{
+                background: "#833AFD",
+                top: "-80px",
+                right: "-80px",
+                filter: "blur(65px)",
+                opacity: 0.5,
+              }}
+            />
+
+            <div className="relative z-10 text-lg sm:text-xl font-semibold text-white leading-none soft-rise">
+              {typeof card.value === "number"
+                ? card.value.toLocaleString()
+                : card.value}
+            </div>
+
+            <div className="relative z-10 text-[10px] tracking-widest uppercase text-white/50 mt-1">
+              {card.title}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </>
 )}
 
 {activeFilter === "all" && (
-  <div className="mt-2 text-xs text-white/50">
+  <div className="mt-3 text-[11px] sm:text-xs text-white/50 leading-relaxed">
     Track deeper engagement insights.{" "}
     <span
       onClick={() => setLocation("/analytics")}
@@ -666,27 +831,27 @@ const quests = questsRaw.filter(isActiveQuest);
 {/* QUESTS */}
 {(activeFilter === "all" || activeFilter === "quests") && (
   <section className="mb-8">
-    <div className="flex items-start justify-between mb-3 mt-8 gap-2">
-      <div>
-        <h2 className="text-base md:text-lg font-semibold">
-          Active Quests
-        </h2>
+    <div className="flex items-start justify-between mb-3 mt-8 gap-3">
+  <div className="min-w-0">
+    <h2 className="text-base md:text-lg font-semibold">
+      Active Quests
+    </h2>
 
-        <p className="text-xs text-white/60 mt-1 max-w-xl">
-          Explore and participate in active quests
-        </p>
-      </div>
+    <p className="text-xs text-white/60 mt-1 max-w-xl">
+      Explore and participate in active quests
+    </p>
+  </div>
 
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => setLocation("/quests")}
-        className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] text-white/80 hover:text-white hover:bg-[#00E1A24D] transition"
-      >
-        <span>View all quests</span>
-        <img src="/arrow-right.png" className="w-3.5 h-3.5" />
-      </Button>
-    </div>
+  <Button
+    variant="ghost"
+    size="sm"
+    onClick={() => setLocation("/quests")}
+    className="flex items-center justify-center gap-2 text-xs h-8 px-3 border border-[#00E1A299] text-white/80 hover:text-white hover:bg-[#00E1A24D] transition shrink-0"
+  >
+    <span>View all quests</span>
+    <img src="/arrow-right.png" className="w-3.5 h-3.5" />
+  </Button>
+</div>
 
     {/* EMPTY STATE */}
     {!quests || quests.length === 0 ? (
@@ -719,7 +884,7 @@ const quests = questsRaw.filter(isActiveQuest);
               return (
                 <div
                   key={`${quest._id}-${i}`}
-                  className="w-[340px] md:w-[360px] shrink-0"
+                  className="w-[280px] sm:w-[320px] md:w-[360px] shrink-0"
                 >
                   <QuestCard
                     questId={quest._id}
@@ -743,8 +908,10 @@ const quests = questsRaw.filter(isActiveQuest);
     )}
   </section>
 )}
+
         </div>
       </div>
     </div>
+    // </div>
   );
 }
