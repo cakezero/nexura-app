@@ -505,10 +505,15 @@ const quests = questsRaw.filter(isActiveQuest);
 
     {campaignsToRender.length === 0 ? (
       /* EMPTY STATE */
-      <div className="w-full sm:w-auto -mx-3 sm:mx-0 rounded-none sm:rounded-2xl border border-white/10 bg-[#170F1F] p-6 text-center text-white/60 text-sm">
-        No active campaigns at the moment.
-      </div>
+      <div className="rounded-2xl border border-white/10 bg-[#170F1F] p-5 text-center">
+  <p className="text-sm text-white/80 font-medium">
+    No active campaigns yet
+  </p>
 
+  <p className="text-xs text-white/50 mt-1">
+    Check back later for new opportunities.
+  </p>
+</div>
     ) : (
       /* CAROUSEL */
       <div className="overflow-hidden">
