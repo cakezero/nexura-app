@@ -503,9 +503,20 @@ const quests = questsRaw.filter(isActiveQuest);
 </div>
 
     {campaignsToRender.length === 0 ? (
-  <div className="rounded-2xl border border-white/10 bg-[#170F1F] p-6 text-center text-white/60 text-sm">
-    No active campaigns at the moment.
+<div className="rounded-2xl border border-white/10 bg-[#170F1F] px-5 py-8 sm:p-6 text-center">
+  
+  <div className="flex flex-col items-center justify-center gap-2">
+
+    <p className="text-white/70 text-sm sm:text-sm leading-relaxed">
+      No active campaigns at the moment.
+    </p>
+
+  <span className="text-[11px] sm:text-xs text-white/40 max-w-[260px]">
+      New campaigns will appear here once they go live.
+    </span>
+
   </div>
+</div>
 ) : (
   <div className="overflow-hidden">
     <div
