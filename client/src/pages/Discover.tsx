@@ -211,11 +211,11 @@ const analyticsCards = data
       },
       {
         title: "Active Users",
-        value: data.user.activeUsersWeekly,
+        value: data.user.activeUsersMonthly,
       },
       {
         title: "New Users",
-        value: data.user.users24h,
+        value: data.user.users30d,
       },
 
       // REPLACED 1
