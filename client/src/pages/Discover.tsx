@@ -726,7 +726,7 @@ const quests = questsRaw.filter(isActiveQuest);
 
 {activeFilter === "all" && (
   <>
-{/* MOBILE VERSION */}
+{/*{/* MOBILE VERSION */}
 <div className="sm:hidden w-full overflow-x-hidden px-3">
 
   <div className="space-y-2 w-full">
@@ -737,43 +737,49 @@ const quests = questsRaw.filter(isActiveQuest);
         className="
           relative
           w-full
-          flex items-center justify-between
-          px-3 py-3
           rounded-xl
           bg-[#170F1F]
           border border-[rgba(131,58,253,0.18)]
+          px-3 py-3
           overflow-hidden
           box-border
-          min-w-0
         "
         style={{
           boxShadow: "inset 0 0 12px rgba(131, 58, 253, 0.07)",
         }}
       >
 
+        {/* glow */}
         <div
-          className="absolute w-32 h-32 rounded-full"
+          className="absolute w-28 h-28 rounded-full"
           style={{
             background: "#833AFD",
-            top: "-45px",
-            right: "-45px",
-            filter: "blur(35px)",
-            opacity: 0.22,
+            top: "-40px",
+            right: "-40px",
+            filter: "blur(30px)",
+            opacity: 0.2,
           }}
         />
 
-        {/* LEFT */}
-        <div className="relative z-10 flex flex-col min-w-0 flex-1">
+        {/* content stack (NO flex layout fighting) */}
+        <div className="relative z-10 flex flex-col gap-1">
+
           <div className="text-[10px] uppercase tracking-widest text-white/50 truncate">
             {card.title}
           </div>
-        </div>
 
-        {/* RIGHT */}
-        <div className="relative z-10 text-sm font-semibold text-white whitespace-nowrap flex-shrink-0">
-          {typeof card.value === "number"
-            ? card.value.toLocaleString()
-            : card.value}
+          <div className="text-sm font-semibold text-white">
+            {typeof card.value === "number"
+              ? card.value.toLocaleString()
+              : card.value}
+          </div>
+
+          {card.description && (
+            <div className="text-[10px] text-white/50 truncate">
+              {card.description}
+            </div>
+          )}
+
         </div>
 
       </div>
