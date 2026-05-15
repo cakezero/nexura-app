@@ -70,19 +70,23 @@ useEffect(() => {
     setSearchLoading(true);
 
     console.log("ACTIVE MODE:", activeUsernameMode);
-    console.log("CONNECTED ADDRESS:", address);
+    console.log("ADDRESS:", address);
 
-    const name = await getTrustUsername(address);
+    const label = await getTrustUsername(address);
 
-    console.log("RESULT NAME:", name);
+    console.log("TNS LABEL:", label);
 
     setSearchLoading(false);
 
-    setTnsName(name);
+    setTnsName(label);
 
     setProfileData((prev) => ({
       ...prev,
-      username: name ? name.replace(".trust", "") : ""
+      username: label
+        ? label.endsWith(".trust")
+          ? label.replace(".trust", "")
+          : label
+        : ""
     }));
   };
 

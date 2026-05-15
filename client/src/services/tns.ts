@@ -1,23 +1,18 @@
-import { TNSProvider } from "@samoris/tns-sdk";
+import { TNSClient } from "@samoris/tns-sdk";
 
-const provider = new TNSProvider();
+const tns = new TNSClient();
 
-/**
- * Get .trust name for a wallet (best-effort)
- * - tries reverse lookup first
- * - if none, returns null
- */
-export const getTrustUsername = async (address: string) => {
+export const getTrustUsername = async (input: string) => {
   try {
-    if (!address) return null;
+    if (!input) return null;
 
-    console.log("CHECKING TRUST NAME FOR:", address);
+    console.log("DISPLAY INPUT:", input);
 
-    const name = await provider.lookupAddress(address);
+    const label = await tns.displayName(input);
 
-    console.log("RESULT:", name);
+    console.log("DISPLAY RESULT:", label);
 
-    return name || null;
+    return label || null;
   } catch (err) {
     console.error("getTrustUsername error:", err);
     return null;
