@@ -34,7 +34,7 @@ export default function EditProfile() {
 
 const getFinalUsername = (name: string, mode: string) => {
   if (!name) return "";
-  return mode === "trust" ? `${name}.trust` : name;
+  return mode === "trust" ? `${name}` : name;
 };
 
   const [profileData, setProfileData] = useState({
@@ -65,10 +65,10 @@ const getFinalUsername = (name: string, mode: string) => {
     try {
       let updateUser: FormData | Record<string, unknown>;
 
-      const finalUsername = getFinalUsername(
-        profileData.username,
-        activeUsernameMode
-      );
+      const finalUsername =
+  activeUsernameMode === "trust"
+    ? name || profileData.username
+    : profileData.username;
 
       if (profileData.avatar instanceof File) {
         const formData = new FormData();
