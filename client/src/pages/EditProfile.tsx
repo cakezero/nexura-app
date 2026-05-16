@@ -34,7 +34,7 @@ export default function EditProfile() {
 
 const getFinalUsername = (name: string, mode: string) => {
   if (!name) return "";
-  return mode === "trust" ? `${name}.trust` : name;
+  return mode === "trust" ? `${name}` : name;
 };
 
   const [profileData, setProfileData] = useState({
@@ -65,10 +65,10 @@ const getFinalUsername = (name: string, mode: string) => {
     try {
       let updateUser: FormData | Record<string, unknown>;
 
-      const finalUsername = getFinalUsername(
-        profileData.username,
-        activeUsernameMode
-      );
+      const finalUsername =
+  activeUsernameMode === "trust"
+    ? name || profileData.username
+    : profileData.username;
 
       if (profileData.avatar instanceof File) {
         const formData = new FormData();
@@ -269,7 +269,7 @@ const getFinalUsername = (name: string, mode: string) => {
   <div className="relative">
     <Input
       id="username"
-      value={name ? `${name}.trust` : ""}
+      value={name ? `${name}` : ""}
       disabled
     />
 
@@ -304,14 +304,20 @@ const getFinalUsername = (name: string, mode: string) => {
             <div className="flex items-center gap-1 text-sm text-green-500">
               <img src="/verified.png" alt="verified" className="w-4 h-4" />
               <span className="text-xs sm:text-sm">
-                {name}.trust linked to wallet
+                {name} linked to wallet
               </span>
             </div>
           </>
         ) : (
-          <p className="text-xs text-red-400">
-            Oops — no .trust username is linked to this wallet.
-          </p>
+         <p className="text-xs text-red-400">
+        Oops, no .trust username was found for this address. If you want one, you can get your .trust username through{" "}
+        <a
+          href="https://tns.intuition.box"
+          className="text-purple-400 underline hover:text-purple-300"
+        >
+          TNS
+        </a>
+      </p>
         )}
       </div>
     )}

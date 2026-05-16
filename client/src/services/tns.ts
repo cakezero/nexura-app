@@ -1,27 +1,17 @@
-import { TNSClient } from "@samoris/tns-sdk";
+import { TNSProvider } from "@samoris/tns-sdk";
 
-const tns = new TNSClient();
+async function run() {
+  const provider = new TNSProvider();
 
-/**
- * Returns best human-readable identity:
- * - "alice.trust" if user has primary name
- * - "0x1234...abcd" if not
- */
-export const getTrustUsername = async (input: string) => {
-  try {
-    if (!input) return null;
+  console.log("1. Resolving name...");
+  const addr = await provider.resolveName("alice.trust");
+  console.log("ADDRESS:", addr);
 
-    console.log("========== TNS DISPLAY REQUEST ==========");
-    console.log("INPUT:", input);
+  console.log("2. Reverse lookup...");
+  const name = await provider.lookupAddress(
+    "0x15EE5667AF9a2342b18AB9737CDf7D483d8C4936"
+  );
+  console.log("NAME:", name);
+}
 
-    const label = await tns.displayName(input);
-
-    console.log("DISPLAY RESULT:", label);
-    console.log("========================================");
-
-    return label ?? null;
-  } catch (err) {
-    console.error("getTrustUsername error:", err);
-    return null;
-  }
-};
+run().catch(console.error);
