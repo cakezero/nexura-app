@@ -169,27 +169,31 @@ export default function LessonPage() {
       if (typeof value !== "string") return "";
       return value.replace(/[\u200B-\u200D\uFEFF]/g, "").trim();
     };
-    const hasTrophy = (value: unknown): boolean => {
-      return typeof value === "string" && ["bronze", "silver", "gold"].includes(value);
-    };
 
-    // Build steps with intro/outro around QUIZ GROUPS (contiguous sequences of questions)
+    // Auto-generate intro/outro text based on lesson title
+    const lessonTitle = sanitize(lesson?.title) || "this lesson";
+    const defaultIntroHeader = "Ready to test your knowledge?";
+    const defaultIntroBody = `Take a quiz to see how much you understand ${lessonTitle}`;
+    const defaultIntroTrophy: "silver" = "silver";
+    const defaultOutroHeader = "Great job!";
+    const defaultOutroBody = `You finished the quiz on ${lessonTitle}`;
+    const defaultOutroTrophy: "silver" = "silver";
+
+    // Build steps with auto intro/outro around QUIZ GROUPS (contiguous sequences of questions)
     const steps: LessonStep[] = [];
     let i = 0;
     while (i < combined.length) {
       const item = combined[i];
 
       if (item.kind === "question") {
-        // Found start of a quiz group
-        // Check if this quiz has intro content - if so, add intro for the group
-        const introHeader = sanitize(item.entry.introHeader);
-        const introBody = sanitize(item.entry.introBody);
-        const introTrophyValue = hasTrophy(item.entry.introTrophy) ? (item.entry.introTrophy as "bronze" | "silver" | "gold") : "";
-        const hasIntro = Boolean(introHeader || introBody || introTrophyValue);
-
-        if (hasIntro) {
-          steps.push({ kind: "intro" as const, key: `intro-${item.entry._id}`, header: introHeader, body: introBody, trophy: introTrophyValue });
-        }
+        // Found start of a quiz group - add auto intro
+        steps.push({
+          kind: "intro" as const,
+          key: `intro-group-${i}`,
+          header: defaultIntroHeader,
+          body: defaultIntroBody,
+          trophy: defaultIntroTrophy,
+        });
 
         // Add all quizzes in this contiguous group
         while (i < combined.length && combined[i].kind === "question") {
@@ -198,16 +202,14 @@ export default function LessonPage() {
           i++;
         }
 
-        // After the group, check the last quiz for outro content
-        const lastQuiz = combined[i - 1].entry as LessonQuestion;
-        const outroHeader = sanitize(lastQuiz.outroHeader);
-        const outroBody = sanitize(lastQuiz.outroBody);
-        const outroTrophyValue = hasTrophy(lastQuiz.outroTrophy) ? (lastQuiz.outroTrophy as "bronze" | "silver" | "gold") : "";
-        const hasOutro = Boolean(outroHeader || outroBody || outroTrophyValue);
-
-        if (hasOutro) {
-          steps.push({ kind: "outro" as const, key: `outro-${lastQuiz._id}`, header: outroHeader, body: outroBody, trophy: outroTrophyValue });
-        }
+        // After the group, add auto outro
+        steps.push({
+          kind: "outro" as const,
+          key: `outro-group-${i}`,
+          header: defaultOutroHeader,
+          body: defaultOutroBody,
+          trophy: defaultOutroTrophy,
+        });
       } else {
         // Non-quiz item (mini lesson or video) - add normally without intro/outro
         if (item.kind === "mini") {
@@ -220,7 +222,7 @@ export default function LessonPage() {
     }
 
     return [...steps, { kind: "claim" as const, key: "claim" }];
-  }, [miniLessons, questions, videoLessons]);
+  }, [miniLessons, questions, videoLessons, lesson?.title]);
 
   const activeStep = lessonSteps[currentStep];
   const currentQuestion = activeStep?.kind === "question" ? activeStep.question : null;
