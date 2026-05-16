@@ -526,7 +526,9 @@ export const getLessons = async (req: GlobalRequest, res: GlobalResponse) => {
 
 export const getAllLessons = async (_req: GlobalRequest, res: GlobalResponse) => {
   try {
+    logger.info("[getAllLessons] Fetching all lessons");
     const lessons = await lesson.find().sort({ createdAt: 1 }).lean();
+    logger.info(`[getAllLessons] Found ${lessons.length} lessons`);
     res.status(OK).json({ message: "lessons fetched!", lessons });
   } catch (error) {
     logger.error(error);
