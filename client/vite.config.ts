@@ -42,8 +42,7 @@ export default defineConfig({
       strict: true,
       deny: ["**/.*"],
     },
-    // Disable Vite's HMR overlay so runtime errors appear in the browser console
-    // instead of as a blocking overlay. This helps capture the full stack trace.
+    // Disable HMR overlay for better error capture
     hmr: {
       overlay: false,
     },
