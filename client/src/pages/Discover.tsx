@@ -440,7 +440,7 @@ const quests = questsRaw.filter(isActiveQuest);
     {filteredDapps.map((dapp: any, index: number) => (
       <div
         key={`${dapp._id}-dup`}
-        className="w-[220px] shrink-0"
+        className="w-[260px] shrink-0"
       >
         <EcosystemCard dapp={dapp} index={index} />
       </div>
@@ -600,7 +600,7 @@ const quests = questsRaw.filter(isActiveQuest);
         return (
           <div
             key={`${lesson._id}-a-${i}`}
-            className="w-[220px] shrink-0"
+            className="w-[260px] shrink-0"
           >
             <LessonCard
               lesson={lesson}
@@ -635,7 +635,7 @@ const quests = questsRaw.filter(isActiveQuest);
         return (
           <div
             key={`${lesson._id}-b-${i}`}
-            className="w-[220px] shrink-0"
+            className="w-[260px] shrink-0"
           >
             <LessonCard
               lesson={lesson}
@@ -715,7 +715,7 @@ const quests = questsRaw.filter(isActiveQuest);
         className="
           relative
           w-full
-          max-w-[320px]
+          max-w-[360px]
           mr-auto
           rounded-xl
           bg-[#170F1F]
@@ -891,7 +891,7 @@ const quests = questsRaw.filter(isActiveQuest);
             return (
               <div
                 key={`${quest._id}-a-${i}`}
-                className="w-[220px] shrink-0"
+                className="w-[260px] shrink-0"
               >
                 <QuestCard
                   questId={quest._id}
@@ -928,7 +928,7 @@ const quests = questsRaw.filter(isActiveQuest);
             return (
               <div
                 key={`${quest._id}-b-${i}`}
-                className="w-[220px] shrink-0"
+                className="w-[260px] shrink-0"
               >
                 <QuestCard
                   questId={quest._id}
@@ -996,13 +996,10 @@ const quests = questsRaw.filter(isActiveQuest);
     </div>
   </>
 )}
-
   </section>
 )}
-
         </div>
       </div>
     </div>
-    // </div>
   );
 }
