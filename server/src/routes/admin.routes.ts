@@ -46,6 +46,7 @@ import {
   updateVideoLesson,
   deleteVideoLesson,
   getAllLessons,
+  getLessonById,
   getLessonDetailsForAdmin,
   updateLesson,
   updateMiniLesson,
@@ -114,7 +115,9 @@ router
   .patch("/publish-lesson", publishLesson)
   .patch("/unpublish-lesson", unpublishLesson)
   .patch("/update-question-intro", updateQuestionIntro)
+  .get("/get-lesson-by-id", getLessonById)
   .get("/get-lesson-details", getLessonDetailsForAdmin)
+  .get("/get-all-lessons", getAllLessons)
   .get("/get-banned-users", getBannedUsers)
   .get("/get-xp-history", getXpHistory)
   .get("/get-admins", getAdmins)
