@@ -1477,9 +1477,9 @@ export const publishQuest = async (req: GlobalRequest, res: GlobalResponse) => {
         return;
       }
 
-      const updatedUser = await user.findByIdAndUpdate(req.admin.userId, { $inc: { xp: 5000 } });
+      const updatedUser = await user.findByIdAndUpdate(req.admin.userId, { $inc: { xp: 2000 } });
 
-      if (updatedUser) await xpLog.create({ status: "success", amount: 5000, type: "quest-creation", address: updatedUser.address });
+      if (updatedUser) await xpLog.create({ status: "success", amount: 2000, type: "quest-creation", address: updatedUser.address, username: updatedUser.username });
     }
 
     questDoc.status = newStatus;

@@ -110,7 +110,7 @@ export const deleteQuestAdmin = async (req: GlobalRequest, res: GlobalResponse) 
         return;
       }
 
-      await user.findByIdAndUpdate(userHubFound.userId, { $inc: { xp: -5000 } });
+      await user.findByIdAndUpdate(userHubFound.userId, { $inc: { xp: -2000 } });
     }
 
     await Promise.all([
