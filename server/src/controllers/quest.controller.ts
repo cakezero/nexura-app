@@ -689,7 +689,8 @@ export const claimQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 
 		await xpLog.create({
 			address: questUser.address,
-			amount: questFound.reward,
+      amount: questFound.reward,
+			username: questUser.username,
 			status: "success",
 			type: "quest"
     });
@@ -762,7 +763,8 @@ export const claimEcosystemQuest = async (
 		ecosystemQuestUser.level = level;
 
 		await xpLog.create({
-			address: ecosystemQuestUser.address,
+      address: ecosystemQuestUser.address,
+			username: ecosystemQuestUser.username,
 			amount: ecosystemQuestFound.reward,
 			status: "success",
 			type: "ecosystem-quest"

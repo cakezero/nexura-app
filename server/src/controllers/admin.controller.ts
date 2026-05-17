@@ -205,24 +205,27 @@ export const rewardXp = async (req: GlobalRequest, res: GlobalResponse) => {
 		if (!address || !xp) {
 			res.status(BAD_REQUEST).json({ error: "address and xp are required" });
 			return;
-		}
+    }
+
+    const lowerAddress = address.toLowerCase();
 
 		const xpAmount = parseInt(xp, 10);
-		const userExists = await user.findOne({ address: address.toLowerCase() });
+		const userExists = await user.findOne({ address: lowerAddress });
 
 		if (userExists) {
-			await user.updateOne({ address: address.toLowerCase() }, { $inc: { xp: xpAmount, eventsWon: 1 } });
+			await user.updateOne({ address: lowerAddress }, { $inc: { xp: xpAmount, eventsWon: 1 } });
 			await xpLog.create({
-				address: address.toLowerCase(),
+				address: lowerAddress,
 				amount: xpAmount,
 				status: "success",
-				type: "single",
+        type: "single",
+				username: userExists.username,
 				adminId: req.id ? new mongoose.Types.ObjectId(req.id) : undefined
 			});
 		} else {
 			await xpLog.create({
-				address: address.toLowerCase(),
-				amount: xpAmount,
+				address: lowerAddress,
+        amount: xpAmount,
 				status: "failed",
 				type: "single",
 				adminId: req.id ? new mongoose.Types.ObjectId(req.id) : undefined
@@ -289,17 +292,17 @@ export const rewardXpBatch = async (req: GlobalRequest, res: GlobalResponse) => 
 			return;
 		}
 
-		const existing = await user.find({ address: { $in: normalized } }, { address: 1 }).lean();
-		const existingSet = new Set(existing.map((u) => (u.address || "").toLowerCase()));
-		const matched = normalized.filter((addr) => existingSet.has(addr));
-		const notFound = normalized.filter((addr) => !existingSet.has(addr));
+		const existing = await user.find({ address: { $in: normalized } }, { address: 1, username: 1 }).lean();
+		const matched = normalized.filter((addr) => existing.some((u) => (u.address).toLowerCase() === addr)) as unknown as { address: string, username: string }[];
+		const notFound = normalized.filter((addr) => !existing.some((u) => (u.address).toLowerCase() === addr)) as unknown as { address: string, username: string }[];;
 
 		const logs: any[] = [];
 		const adminObjId = req.id ? new mongoose.Types.ObjectId(req.id) : undefined;
 
-		for (const addr of matched) {
+		for (const match of matched) {
 			logs.push({
-				address: addr,
+        address: match.address,
+				username: match.username,
 				amount: xpAmount,
 				status: "success",
 				type: "batch",
@@ -307,9 +310,10 @@ export const rewardXpBatch = async (req: GlobalRequest, res: GlobalResponse) => 
 			});
 		}
 
-		for (const addr of notFound) {
+		for (const nf of notFound) {
 			logs.push({
-				address: addr,
+        address: nf.address,
+				username: nf.username,
 				amount: xpAmount,
 				status: "failed",
 				type: "batch",
@@ -776,7 +780,7 @@ export const getTasks = async (req: GlobalRequest, res: GlobalResponse) => {
 
 export const getXpHistory = async (req: GlobalRequest, res: GlobalResponse) => {
 	try {
-		const history = await xpLog.find().sort({ timestamp: -1 }).limit(100).lean();
+		const history = await xpLog.find().sort({ timestamp: -1 }).limit(1000).lean();
 		res.status(OK).json({ history });
 	} catch (error) {
 		logger.error(error);

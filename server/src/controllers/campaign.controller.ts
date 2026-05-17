@@ -871,7 +871,8 @@ export const claimCampaignRewards = async (
 		userToReward.level = level;
 
 		await xpLog.create({
-			address: userToReward.address,
+      address: userToReward.address,
+			username: userToReward.username,
 			amount: xp,
 			status: "success",
 			type: "campaign"

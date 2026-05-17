@@ -7,26 +7,39 @@ import { campaignQuest, miniQuest, quest } from "@/models/quests.model";
 import { user } from "@/models/user.model";
 import { hub } from "@/models/hub.model";
 import { TNSProvider } from "@samoris/tns-sdk";
-import { performIntuitionOnchainAction, serverWalletAddress } from "@/utils/account";
-import { BOT_TOKEN, network, STUDIO_FEE_CONTRACT, THIRD_PARTY_API_KEY } from "@/utils/env.utils";
+import {
+  performIntuitionOnchainAction,
+  serverWalletAddress,
+} from "@/utils/account";
+import {
+  BOT_TOKEN,
+  network,
+  STUDIO_FEE_CONTRACT,
+  THIRD_PARTY_API_KEY,
+} from "@/utils/env.utils";
 import {
   INTERNAL_SERVER_ERROR,
   OK,
   BAD_REQUEST,
   FORBIDDEN,
   NOT_FOUND,
-  UNAUTHORIZED
+  UNAUTHORIZED,
 } from "@/utils/status.utils";
-import { Client, UserPaginator, type PaginatedResponse, type Schemas } from "@xdevplatform/xdk";
+import {
+  Client,
+  UserPaginator,
+  type PaginatedResponse,
+  type Schemas,
+} from "@xdevplatform/xdk";
 import axios from "axios";
 import { uploadImg } from "@/utils/img.utils";
 import { timer } from "@/models/twitterTimer.model";
 import { REDIS } from "@/utils/redis.utils";
 import { submission } from "@/models/submission.model";
 import {
-	campaignQuestCompleted,
-	miniQuestCompleted,
-  questCompleted
+  campaignQuestCompleted,
+  miniQuestCompleted,
+  questCompleted,
 } from "@/models/questsCompleted.models";
 import { GRAPHQL_API_URL } from "@/utils/constants";
 import { GraphQLClient } from "graphql-request";
@@ -43,7 +56,10 @@ export const home = async (req: GlobalRequest, res: GlobalResponse) => {
   res.send("hi!");
 };
 
-export const getStudioPaymentConfig = async (_req: GlobalRequest, res: GlobalResponse) => {
+export const getStudioPaymentConfig = async (
+  _req: GlobalRequest,
+  res: GlobalResponse,
+) => {
   res.status(OK).json({
     network,
     contractAddress: STUDIO_FEE_CONTRACT,
@@ -61,12 +77,21 @@ const getTrustProvider = () => {
   }
 
   return trustProvider;
-}
+};
 
-export const validateTrustNameTask = async (req: GlobalRequest, res: GlobalResponse) => {
+export const validateTrustNameTask = async (
+  req: GlobalRequest,
+  res: GlobalResponse,
+) => {
   try {
-    const { campaignId: campaignIdFromBody, questId: questIdFromBody }: { campaignId?: string; questId?: string } = req.body;
-    const id = (req.query.id as string) || (req.body.id as string) || (req.body.questId as string);
+    const {
+      campaignId: campaignIdFromBody,
+      questId: questIdFromBody,
+    }: { campaignId?: string; questId?: string } = req.body;
+    const id =
+      (req.query.id as string) ||
+      (req.body.id as string) ||
+      (req.body.questId as string);
     if (!id) {
       res.status(BAD_REQUEST).json({ error: "Quest ID is required" });
       return;
@@ -75,9 +100,11 @@ export const validateTrustNameTask = async (req: GlobalRequest, res: GlobalRespo
     // Try to find if it's a campaign quest or a mini quest
     let parentId = campaignIdFromBody || questIdFromBody;
     let isCampaign = !!campaignIdFromBody;
-    
+
     const campaignQuestData = await campaignQuest.findById(id).lean();
-    const miniQuestData = !campaignQuestData ? await miniQuest.findById(id).lean() : null;
+    const miniQuestData = !campaignQuestData
+      ? await miniQuest.findById(id).lean()
+      : null;
 
     if (!campaignQuestData && !miniQuestData) {
       res.status(NOT_FOUND).json({ error: "task not found" });
@@ -93,15 +120,19 @@ export const validateTrustNameTask = async (req: GlobalRequest, res: GlobalRespo
     }
 
     if (!parentId) {
-      res.status(BAD_REQUEST).json({ error: "id and (campaignId or questId) are required" });
+      res
+        .status(BAD_REQUEST)
+        .json({ error: "id and (campaignId or questId) are required" });
       return;
     }
 
-    const filter = isCampaign 
+    const filter = isCampaign
       ? { campaignQuest: id, campaign: parentId, user: req.id }
       : { miniQuest: id, quest: parentId, user: req.id };
-    
-    const Model = isCampaign ? (campaignQuestCompleted as any) : (miniQuestCompleted as any);
+
+    const Model = isCampaign
+      ? (campaignQuestCompleted as any)
+      : (miniQuestCompleted as any);
     const taskExists = await Model.findOne(filter);
 
     const provider = getTrustProvider();
@@ -140,14 +171,21 @@ export const validateTrustNameTask = async (req: GlobalRequest, res: GlobalRespo
 
     await user.findByIdAndUpdate(req.id, { trustName: hasTrustName });
 
-    res.status(OK).json({ message: "user has a trust name and completed the task" });
+    res
+      .status(OK)
+      .json({ message: "user has a trust name and completed the task" });
   } catch (error) {
     logger.error(error);
-    res.status(INTERNAL_SERVER_ERROR).json({ error: "error validating trust name task" });
+    res
+      .status(INTERNAL_SERVER_ERROR)
+      .json({ error: "error validating trust name task" });
   }
-}
+};
 
-export const allowNexonsMint = async (req: GlobalRequest, res: GlobalResponse) => {
+export const allowNexonsMint = async (
+  req: GlobalRequest,
+  res: GlobalResponse,
+) => {
   try {
     const { id } = req;
 
@@ -241,7 +279,10 @@ export const updateUser = async (req: GlobalRequest, res: GlobalResponse) => {
   }
 };
 
-export const claimDepositXp = async (req: GlobalRequest, res: GlobalResponse) => {
+export const claimDepositXp = async (
+  req: GlobalRequest,
+  res: GlobalResponse,
+) => {
   try {
     const { transactionHash } = req.body;
     const { id } = req;
@@ -291,11 +332,12 @@ export const claimDepositXp = async (req: GlobalRequest, res: GlobalResponse) =>
     trustUser.xp += depositXp;
 
     await xpLog.create({
-			address: trustUser.address,
-			amount: depositXp,
-			status: "success",
-			type: "deposit-xp"
-		});
+      address: trustUser.address,
+      amount: depositXp,
+      username: trustUser.username,
+      status: "success",
+      type: "deposit-xp",
+    });
 
     await trustUser.save();
 
@@ -639,7 +681,10 @@ export const getClaims = async (req: GlobalRequest, res: GlobalResponse) => {
   }
 };
 
-export const updateSubmission = async (req: GlobalRequest, res: GlobalResponse) => {
+export const updateSubmission = async (
+  req: GlobalRequest,
+  res: GlobalResponse,
+) => {
   try {
     const userId = req.id;
     const {
@@ -706,7 +751,10 @@ export const updateSubmission = async (req: GlobalRequest, res: GlobalResponse) 
   }
 };
 
-export const getLeaderboard = async (req: GlobalRequest, res: GlobalResponse) => {
+export const getLeaderboard = async (
+  req: GlobalRequest,
+  res: GlobalResponse,
+) => {
   try {
     const top500 = await user
       .find()
@@ -739,14 +787,12 @@ export const getLeaderboard = async (req: GlobalRequest, res: GlobalResponse) =>
         })) + 1;
     }
 
-    res
-      .status(OK)
-      .json({
-        message: "leaderboard info fetched",
-        rank,
-        me,
-        leaderboardInfo: top500,
-      });
+    res.status(OK).json({
+      message: "leaderboard info fetched",
+      rank,
+      me,
+      leaderboardInfo: top500,
+    });
   } catch (error) {
     logger.error(error);
     res
@@ -809,13 +855,11 @@ export const referralInfo = async (req: GlobalRequest, res: GlobalResponse) => {
       }
     }
 
-    res
-      .status(OK)
-      .json({
-        message: "referral info fetched!",
-        refRewardClaimed: userFetched.refRewardClaimed,
-        usersReferred,
-      });
+    res.status(OK).json({
+      message: "referral info fetched!",
+      refRewardClaimed: userFetched.refRewardClaimed,
+      usersReferred,
+    });
   } catch (error) {
     logger.error(error);
     res
@@ -856,7 +900,10 @@ export const updateBadge = async (req: GlobalRequest, res: GlobalResponse) => {
   }
 };
 
-export const validatePortalTask = async (req: GlobalRequest, res: GlobalResponse) => {
+export const validatePortalTask = async (
+  req: GlobalRequest,
+  res: GlobalResponse,
+) => {
   try {
     const {
       termId,
@@ -966,12 +1013,10 @@ export const validatePortalTask = async (req: GlobalRequest, res: GlobalResponse
         }
       }
 
-      res
-        .status(BAD_REQUEST)
-        .json({
-          error:
-            "User has not supported or opposed a claim or shares is less than 0.01",
-        });
+      res.status(BAD_REQUEST).json({
+        error:
+          "User has not supported or opposed a claim or shares is less than 0.01",
+      });
       return;
     } else {
       const campaignQuestExists = await campaignQuestCompleted.findOne({
@@ -1018,12 +1063,10 @@ export const validatePortalTask = async (req: GlobalRequest, res: GlobalResponse
         }
       }
 
-      res
-        .status(BAD_REQUEST)
-        .json({
-          error:
-            "User has not supported or opposed a claim or shares is less than 0.01",
-        });
+      res.status(BAD_REQUEST).json({
+        error:
+          "User has not supported or opposed a claim or shares is less than 0.01",
+      });
     }
   } catch (error) {
     res
@@ -1034,15 +1077,22 @@ export const validatePortalTask = async (req: GlobalRequest, res: GlobalResponse
 
 export const updateClaims = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
-    const { action, transactionHash }: { action: "buy" | "sell", transactionHash: string } = req.body;
+    const {
+      action,
+      transactionHash,
+    }: { action: "buy" | "sell"; transactionHash: string } = req.body;
 
     if (!transactionHash && !action) {
-      res.status(BAD_REQUEST).json({ error: "transaction hash and action are required" });
+      res
+        .status(BAD_REQUEST)
+        .json({ error: "transaction hash and action are required" });
       return;
     }
 
     if (action !== "buy" && action !== "sell") {
-      res.status(BAD_REQUEST).json({ error: "invalid action. action can only be buy or sell" });
+      res
+        .status(BAD_REQUEST)
+        .json({ error: "invalid action. action can only be buy or sell" });
       return;
     }
 
@@ -1078,7 +1128,10 @@ export const updateClaims = async (req: GlobalRequest, res: GlobalResponse) => {
   }
 };
 
-export const updateClaimsCreated = async (req: GlobalRequest, res: GlobalResponse) => {
+export const updateClaimsCreated = async (
+  req: GlobalRequest,
+  res: GlobalResponse,
+) => {
   try {
     const { txHash }: { txHash: string } = req.body;
 
@@ -1091,13 +1144,17 @@ export const updateClaimsCreated = async (req: GlobalRequest, res: GlobalRespons
       .findById(req.id)
       .select("address noOfClaimsCreated");
     if (!userToUpdate) {
-      res.status(BAD_REQUEST).json({ error: "id associated with user is invalid" });
+      res
+        .status(BAD_REQUEST)
+        .json({ error: "id associated with user is invalid" });
       return;
     }
 
     const { from } = await getAmountPaid(txHash);
     if (from.toLowerCase() !== userToUpdate.address) {
-      res.status(UNAUTHORIZED).json({ error: "tx hash must be from authenticated user" });
+      res
+        .status(UNAUTHORIZED)
+        .json({ error: "tx hash must be from authenticated user" });
       return;
     }
 
@@ -1108,9 +1165,11 @@ export const updateClaimsCreated = async (req: GlobalRequest, res: GlobalRespons
     res.status(OK).json({ message: "no of claims created tracked" });
   } catch (error) {
     logger.error(error);
-    res.status(INTERNAL_SERVER_ERROR).json({ error: "error updating claims created" });
+    res
+      .status(INTERNAL_SERVER_ERROR)
+      .json({ error: "error updating claims created" });
   }
-}
+};
 
 export const getAnalytics = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
@@ -1144,7 +1203,9 @@ export const getAnalytics = async (req: GlobalRequest, res: GlobalResponse) => {
 
     const soldClaims = soldClaimsAggregate[0]?.totalClaimsSold ?? 0;
 
-    const rewardContractDeployed = await campaign.countDocuments({ contractAddress: { $exists: true } });
+    const rewardContractDeployed = await campaign.countDocuments({
+      contractAddress: { $exists: true },
+    });
 
     const others = rewardContractDeployed + soldClaims;
 
@@ -1239,9 +1300,12 @@ export const getAnalytics = async (req: GlobalRequest, res: GlobalResponse) => {
       },
     ).length;
 
-    const mintsFromBadges = usersFound.reduce((sum, u: { badges?: number[] }) => {
-      return sum + (u.badges?.length ?? 0);
-    }, 0);
+    const mintsFromBadges = usersFound.reduce(
+      (sum, u: { badges?: number[] }) => {
+        return sum + (u.badges?.length ?? 0);
+      },
+      0,
+    );
 
     const rewardCampaignsTrust = await campaign.aggregate([
       {
@@ -1421,7 +1485,10 @@ export const getAnalytics = async (req: GlobalRequest, res: GlobalResponse) => {
   }
 };
 
-export const performDailySignIn = async (req: GlobalRequest, res: GlobalResponse) => {
+export const performDailySignIn = async (
+  req: GlobalRequest,
+  res: GlobalResponse,
+) => {
   try {
     const userId = req.id;
 
@@ -1451,7 +1518,8 @@ export const performDailySignIn = async (req: GlobalRequest, res: GlobalResponse
       return;
     }
 
-    const previousStreak = typeof userExists.streak === "number" ? userExists.streak : 0;
+    const previousStreak =
+      typeof userExists.streak === "number" ? userExists.streak : 0;
 
     if (lastSignIn === yesterdayDate) {
       userExists.streak = previousStreak + 1;
@@ -1477,11 +1545,12 @@ export const performDailySignIn = async (req: GlobalRequest, res: GlobalResponse
     userExists.level = level;
 
     await xpLog.create({
-			address: userExists.address,
-			amount: dailyXpAmount,
-			status: "success",
-			type: "daily-xp"
-		});
+      address: userExists.address,
+      username: userExists.username,
+      amount: dailyXpAmount,
+      status: "success",
+      type: "daily-xp",
+    });
 
     await userExists.save();
 
@@ -1495,7 +1564,9 @@ export const performDailySignIn = async (req: GlobalRequest, res: GlobalResponse
         { upsert: true, new: true },
       );
     } catch (syncErr) {
-      logger.warn(`dailySignIn sync failed for user ${userId} (non-fatal): ${syncErr}`);
+      logger.warn(
+        `dailySignIn sync failed for user ${userId} (non-fatal): ${syncErr}`,
+      );
     }
 
     res.json({ message: "Daily sign-in successful", done: true });
@@ -1507,14 +1578,18 @@ export const performDailySignIn = async (req: GlobalRequest, res: GlobalResponse
   }
 };
 
-export const claimsCreated = async (req: GlobalRequest, res: GlobalResponse) =>{
+export const claimsCreated = async (
+  req: GlobalRequest,
+  res: GlobalResponse,
+) => {
   try {
-    
   } catch (error) {
     logger.error(error);
-    res.status(INTERNAL_SERVER_ERROR).json({ error: "error updating claims created" });
+    res
+      .status(INTERNAL_SERVER_ERROR)
+      .json({ error: "error updating claims created" });
   }
-}
+};
 
 export const searchTriple = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
@@ -1655,7 +1730,7 @@ export const searchTriple = async (req: GlobalRequest, res: GlobalResponse) => {
           }
         }
       }
-          
+
       fragment CachedImageFields on cached_images_cached_image {
         url
         safe
@@ -1832,7 +1907,10 @@ export const searchTriple = async (req: GlobalRequest, res: GlobalResponse) => {
   }
 };
 
-export const claimReferreralReward = async (req: GlobalRequest, res: GlobalResponse) => {
+export const claimReferreralReward = async (
+  req: GlobalRequest,
+  res: GlobalResponse,
+) => {
   try {
     const userId = req.id!;
 
@@ -1898,11 +1976,12 @@ export const claimReferreralReward = async (req: GlobalRequest, res: GlobalRespo
     }
 
     await xpLog.create({
-			address: referrer.address,
-			amount: xpGiven,
-			status: "success",
-			type: "referral"
-		});
+      address: referrer.address,
+      amount: xpGiven,
+      username: referrer.username,
+      status: "success",
+      type: "referral",
+    });
 
     await referrer.save();
 
@@ -1940,12 +2019,10 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
 
   const userToken = await token.findOne({ userId: xId });
   if (!userToken) {
-    res
-      .status(UNAUTHORIZED)
-      .json({
-        error:
-          "auth tokens not found for user, kindly disconnect X account and login back",
-      });
+    res.status(UNAUTHORIZED).json({
+      error:
+        "auth tokens not found for user, kindly disconnect X account and login back",
+    });
     return;
   }
 
@@ -1984,7 +2061,7 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
 
         const followKey = `${NEXURA_USERNAME}:follow`;
 
-        const followersInCache = await REDIS.get(followKey) as any;
+        const followersInCache = (await REDIS.get(followKey)) as any;
 
         const followFound = followersInCache.some(
           (follower: { id: string }) => follower.id === xId,
@@ -1998,11 +2075,9 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
           const now = new Date();
 
           if (timeToWait?.time != null && timeToWait.time > now) {
-            res
-              .status(UNAUTHORIZED)
-              .json({
-                error: "task has not been validated, check back after 1 hr",
-              });
+            res.status(UNAUTHORIZED).json({
+              error: "task has not been validated, check back after 1 hr",
+            });
             return;
           }
 
@@ -2099,7 +2174,7 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
 
         const repostKey = `${postId}:repost`;
 
-        const repostInCache = await REDIS.get(repostKey) as any;
+        const repostInCache = (await REDIS.get(repostKey)) as any;
 
         const repostFound = repostInCache.some(
           (reposter: { id: string }) => reposter.id === xId,
@@ -2113,11 +2188,9 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
           const now = new Date();
 
           if (timeToWait?.time != null && timeToWait.time > now) {
-            res
-              .status(UNAUTHORIZED)
-              .json({
-                error: "task has not been validated, check back after 1 hr",
-              });
+            res.status(UNAUTHORIZED).json({
+              error: "task has not been validated, check back after 1 hr",
+            });
             return;
           }
 
@@ -2176,7 +2249,7 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
 
         const commentKey = `${postId}:comments`;
 
-        const commentsInCache = await REDIS.get(commentKey) as any;
+        const commentsInCache = (await REDIS.get(commentKey)) as any;
 
         const commentFound = commentsInCache.some(
           (reply: { author: { id: string } }) => reply.author.id === xId,
@@ -2190,11 +2263,9 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
           const now = new Date();
 
           if (timeToWait?.time != null && timeToWait.time > now) {
-            res
-              .status(UNAUTHORIZED)
-              .json({
-                error: "task has not been validated, check back after 1 hr",
-              });
+            res.status(UNAUTHORIZED).json({
+              error: "task has not been validated, check back after 1 hr",
+            });
             return;
           }
 
@@ -2254,12 +2325,10 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
   } catch (error: any) {
     logger.error(error);
     if (error?.status === 429) {
-      res
-        .status(429)
-        .json({
-          error:
-            "Oops, not fast enough. Rate limited by X API, try again after 16 mins",
-        });
+      res.status(429).json({
+        error:
+          "Oops, not fast enough. Rate limited by X API, try again after 16 mins",
+      });
       return;
     }
     console.error({ error });
@@ -2301,24 +2370,20 @@ export const updateX = async (req: GlobalRequest, res: GlobalResponse) => {
       const disconnectedAt = xAlreadyUsed.socialProfiles?.x?.disconnectedAt;
       if (disconnectedAt) {
         if (now < disconnectedAt) {
-          res
-            .status(BAD_REQUEST)
-            .json({
-              error:
-                "x account disconnected recently, try again after 3 days. Try connecting another account",
-            });
+          res.status(BAD_REQUEST).json({
+            error:
+              "x account disconnected recently, try again after 3 days. Try connecting another account",
+          });
           return;
         }
       }
 
       const userToken = await token.findOne({ userId: x_id });
       if (!userToken) {
-        res
-          .status(BAD_REQUEST)
-          .json({
-            error:
-              "no access token or refresh token found, please connect x again",
-          });
+        res.status(BAD_REQUEST).json({
+          error:
+            "no access token or refresh token found, please connect x again",
+        });
         return;
       }
 
@@ -2339,12 +2404,9 @@ export const updateX = async (req: GlobalRequest, res: GlobalResponse) => {
 
     const userToken = await token.findOne({ userId: x_id });
     if (!userToken) {
-      res
-        .status(BAD_REQUEST)
-        .json({
-          error:
-            "no access token or refresh token found, please connect x again",
-        });
+      res.status(BAD_REQUEST).json({
+        error: "no access token or refresh token found, please connect x again",
+      });
       return;
     }
 
@@ -2363,7 +2425,10 @@ export const updateX = async (req: GlobalRequest, res: GlobalResponse) => {
   }
 };
 
-export const updateDiscord = async (req: GlobalRequest, res: GlobalResponse) => {
+export const updateDiscord = async (
+  req: GlobalRequest,
+  res: GlobalResponse,
+) => {
   try {
     const { id } = req;
     const { discord_id, username } = req.query as {
@@ -2401,12 +2466,10 @@ export const updateDiscord = async (req: GlobalRequest, res: GlobalResponse) => 
         discordAlreadyUsed.socialProfiles?.discord?.disconnectedAt;
       if (disconnectedAt) {
         if (now < disconnectedAt) {
-          res
-            .status(BAD_REQUEST)
-            .json({
-              error:
-                "discord account disconnected recently, try again after 3 days. Try connecting another account",
-            });
+          res.status(BAD_REQUEST).json({
+            error:
+              "discord account disconnected recently, try again after 3 days. Try connecting another account",
+          });
           return;
         }
       }
@@ -2473,7 +2536,10 @@ export const saveCv = async (req: GlobalRequest, res: GlobalResponse) => {
   }
 };
 
-export const checkDiscordTask = async (req: GlobalRequest, res: GlobalResponse) => {
+export const checkDiscordTask = async (
+  req: GlobalRequest,
+  res: GlobalResponse,
+) => {
   try {
     const {
       guildId: guildIdFromBody,
@@ -2482,7 +2548,10 @@ export const checkDiscordTask = async (req: GlobalRequest, res: GlobalResponse) 
       channelId: channelIdFromBody,
       roleId: roleIdFromBody,
     } = req.body;
-    const id = (req.query.id as string) || (req.body.id as string) || (req.body.questId as string);
+    const id =
+      (req.query.id as string) ||
+      (req.body.id as string) ||
+      (req.body.questId as string);
     if (!id) {
       res.status(BAD_REQUEST).json({ error: "Quest ID is required" });
       return;
@@ -2515,11 +2584,9 @@ export const checkDiscordTask = async (req: GlobalRequest, res: GlobalResponse) 
       questCampaignId &&
       questCampaignId !== String(campaignIdFromBody)
     ) {
-      res
-        .status(BAD_REQUEST)
-        .json({
-          error: "campaign quest does not belong to the provided campaign",
-        });
+      res.status(BAD_REQUEST).json({
+        error: "campaign quest does not belong to the provided campaign",
+      });
       return;
     }
 

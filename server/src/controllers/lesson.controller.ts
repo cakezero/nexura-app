@@ -458,7 +458,8 @@ export const rewardLessonXp = async (req: GlobalRequest, res: GlobalResponse) =>
     existingLessonProgress.done = true;
 
     await xpLog.create({
-			address: req.user.address,
+      address: req.user.address,
+			username: req.user.username,
 			amount: rewardAmount,
 			status: "success",
 			type: "lesson"
