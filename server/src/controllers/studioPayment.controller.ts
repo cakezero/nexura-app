@@ -93,6 +93,7 @@ export const savePaymentHash = async (req: GlobalRequest, res: GlobalResponse) =
 
 /** Clears the hub's pending payment hash after publish (called internally) */
 export const consumePaymentHash = async (hubId: string) => {
+  if (!hubId) return;
   await Promise.all([
     hub.findByIdAndUpdate(hubId, { pendingTxHash: null }),
     userHub.findByIdAndUpdate(hubId, { pendingTxHash: null }),
