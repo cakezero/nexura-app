@@ -526,13 +526,13 @@ export default function CampaignEnvironment() {
               <div>
                 <p className="text-xs opacity-50 uppercase mb-1">{projectName}</p>
                 <p className="text-lg md:text-xl font-bold leading-tight">
-                  {description || subTitle || title || `Campaign ${campaignNumber}`}
+                  {title || description || subTitle || `Campaign ${campaignNumber}`}
                 </p>
 
                 <div className="mt-4">
                   <p className="uppercase text-xs opacity-50">Campaign Description</p>
                   <p className="text-sm opacity-80 leading-relaxed mt-1">
-                    {title || subTitle || description || "Complete quests in this campaign and earn rewards."}
+                    {description || title || subTitle || "Complete quests in this campaign and earn rewards."}
                   </p>
                 </div>
                 {(Number(reward.xp) > 0 || hasTrustReward) && (

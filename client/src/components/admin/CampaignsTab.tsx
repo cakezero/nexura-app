@@ -357,7 +357,7 @@ export default function CampaignsTab() {
     return (
       <Card className="w-full h-full bg-gray-900 text-white rounded-xl overflow-hidden shadow-lg flex flex-col">
         {campaign.projectCoverImage ? (
-          <img src={campaign.projectCoverImage} alt={campaign.description || campaign.title} className="w-full h-28 object-cover" />
+          <img src={campaign.projectCoverImage} alt={campaign.title || campaign.description} className="w-full h-28 object-cover" />
         ) : (
           <div className="w-full h-28 bg-gray-700 flex items-center justify-center">
             <span className="text-white/50 text-xs">No Image</span>
@@ -365,8 +365,8 @@ export default function CampaignsTab() {
         )}
 
         <div className="p-3 flex flex-1 flex-col gap-1.5">
-          <h3 className="font-bold text-sm truncate" title={campaign.description || campaign.title}>
-            {campaign.description || campaign.title}
+          <h3 className="font-bold text-sm truncate" title={campaign.title || campaign.description}>
+            {campaign.title || campaign.description}
           </h3>
           <p className="text-white/70 text-xs">
             {formatDate(campaign.starts_at)} - {formatDate(campaign.ends_at)}
@@ -397,7 +397,7 @@ export default function CampaignsTab() {
                 <button
                   title="Close campaign"
                   className="px-2 py-1.5 text-xs bg-yellow-600/20 text-yellow-400 rounded-lg hover:bg-yellow-600/30 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                  onClick={() => setPendingAction({ type: "close", id: campaign._id, title: campaign.description || campaign.title })}
+                  onClick={() => setPendingAction({ type: "close", id: campaign._id, title: campaign.title || campaign.description })}
                   disabled={closingId === campaign._id || deletingId === campaign._id}
                 >
                   {closingId === campaign._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
@@ -424,7 +424,7 @@ export default function CampaignsTab() {
                 <button
                   title="Delete campaign"
                   className="px-2 py-1.5 text-xs bg-red-600/20 text-red-400 rounded-lg hover:bg-red-600/30 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                  onClick={() => setPendingAction({ type: "delete", id: campaign._id, title: campaign.description || campaign.title })}
+                  onClick={() => setPendingAction({ type: "delete", id: campaign._id, title: campaign.title || campaign.description })}
                   disabled={deletingId === campaign._id || closingId === campaign._id}
                 >
                   {deletingId === campaign._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}

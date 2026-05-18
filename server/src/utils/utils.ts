@@ -315,8 +315,8 @@ export const validateUserSignUpData = (reqData: any) => {
 
 export const validateSaveCampaignData = (reqData: any) => {
   const campaignSchema = z.object({
-		title: z.string().trim(),
-		description: z.string().trim().min(50).max(100),
+		title: z.string().trim().max(100),
+		description: z.string().trim().max(500),
 		nameOfProject: z.string().trim(),
     starts_at: z.string().trim(),
 		projectCoverImage: z.string().optional(),
@@ -337,7 +337,7 @@ export const validateSaveCampaignData = (reqData: any) => {
 export const validateSaveQuestData = (reqData: any) => {
   const questSchema = z.object({
 		title: z.string().trim(),
-		description: z.string().trim().min(50).max(100),
+		description: z.string().trim().max(100),
 		nameOfProject: z.string().trim(),
     starts_at: z.string().trim(),
 		projectCoverImage: z.string().optional(),

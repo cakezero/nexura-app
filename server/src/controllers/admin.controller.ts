@@ -1099,7 +1099,7 @@ export const getStudioCampaigns = async (_req: GlobalRequest, res: GlobalRespons
 
     const normalized = campaigns.map((c: any) => ({
       _id: String(c._id),
-      title: c.description || c.title || "",
+      title: c.title || c.description || "",
       projectName: c.project_name || "",
       status: c.status || "â€”",
       starts_at: c.starts_at ?? null,
@@ -1161,7 +1161,7 @@ export const getDeletedStudioCampaigns = async (_req: GlobalRequest, res: Global
 
     const normalized = campaigns.map((c: any) => ({
       _id: String(c._id),
-      title: c.description || c.title || "",
+      title: c.title || c.description || "",
       projectName: c.project_name || "",
       status: c.status || "â€”",
       starts_at: c.starts_at ?? null,
@@ -1291,8 +1291,9 @@ export const getStudioQuests = async (_req: GlobalRequest, res: GlobalResponse) 
 
 export const getStudioLessons = async (_req: GlobalRequest, res: GlobalResponse) => {
   try {
+    // Fetch ALL lessons (not just project-associated ones) to show drafts and lessons without creators
     const lessonsList = await lesson
-      .find({ creatorModel: "project" })
+      .find({})
       .populate({ path: "creator", select: "name logo" })
       .sort({ createdAt: -1 })
       .lean();
@@ -1300,12 +1301,12 @@ export const getStudioLessons = async (_req: GlobalRequest, res: GlobalResponse)
     const normalized = lessonsList.map((l: any) => ({
       _id: String(l._id),
       title: l.title || "",
-      projectName: l.creator?.name || "Hub",
+      projectName: l.creator?.name || (l.creatorModel === "user-hubs" ? "User Hub" : l.creatorModel === "users" ? "User" : "Hub"),
       status: l.status === "published" ? "Active" : "Save",
       reward: { xp: Number(l.reward ?? 0) },
       creator: {
-        id: l.creator?._id ? String(l.creator._id) : "",
-        name: l.creator?.name || "Unknown",
+        id: l.creator?._id ? String(l.creator._id) : (l.creator || ""),
+        name: l.creator?.name || l.creatorName || "Unknown",
         logo: l.creator?.logo || l.profileImage || "",
       },
       createdAt: l.createdAt ?? null,

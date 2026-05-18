@@ -275,8 +275,8 @@ useEffect(() => {
         found.status === "Ended" ||
         (found.ends_at ? new Date(found.ends_at) <= new Date() : false)
       );
-      setCampaignTitle(found.title ?? "");
-      setCampaignName(found.description ?? found.nameOfProject ?? "");
+      setCampaignName(found.title ?? found.nameOfProject ?? "");
+      setCampaignTitle(found.description ?? "");
       const s = parseDateTime(found.starts_at ?? "");
       const e = parseDateTime(found.ends_at ?? "");
       setStartDate(s.date);
@@ -367,8 +367,8 @@ useEffect(() => {
       } catch { /* ignore */ }
 
       setEditBaseline({
-        campaignTitle: found.title ?? "",
-        campaignName: found.description ?? found.nameOfProject ?? "",
+        campaignName: found.title ?? found.nameOfProject ?? "",
+        campaignTitle: found.description ?? "",
         startDate: s.date,
         startTime: s.time,
         endDate: e.date,
@@ -392,8 +392,8 @@ useEffect(() => {
         const onchainParticipants = String(found.rewardsDeployment?.maxClaimableParticipants ?? existingParticipants);
 
         setOnchainBaseline({
-          campaignTitle: found.title ?? "",
-          campaignName: found.description ?? found.nameOfProject ?? "",
+          campaignName: found.title ?? found.nameOfProject ?? "",
+          campaignTitle: found.description ?? "",
           startDate: onchainStart.date,
           startTime: onchainStart.time,
           endDate: e.date,
@@ -677,8 +677,8 @@ const buildCampaignFormData = (isDraft: boolean): FormData => {
       perParticipantTrust = 0;
     }
   }
-  fd.append("title", campaignTitle);
-  fd.append("description", campaignName);
+  fd.append("title", campaignName);
+  fd.append("description", campaignTitle);
   fd.append("nameOfProject", campaignName);
   fd.append("starts_at", toIsoDateTime(startDate, startTime));
   fd.append("ends_at", toIsoDateTime(endDate, endTime));

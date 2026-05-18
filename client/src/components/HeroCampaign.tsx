@@ -92,8 +92,8 @@ export default function HeroCampaign({ campaigns }: HeroCampaignProps) {
       ? Number((currentCampaign.totalTrustAvailable / allowedParticipants).toFixed(2))
       : 0)
     : 0;
-  const heroHeading = currentCampaign.description || currentCampaign.title || "Untitled Campaign";
-  const heroBody = currentCampaign.title || currentCampaign.description || "Explore this campaign and earn rewards.";
+  const heroHeading = currentCampaign.title || currentCampaign.description || "Untitled Campaign";
+  const heroBody = currentCampaign.description || currentCampaign.title || "Explore this campaign and earn rewards.";
 
   return (
     <div

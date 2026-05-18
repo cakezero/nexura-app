@@ -241,7 +241,7 @@ export default function Campaigns() {
           {campaign.projectCoverImage && (
             <img
               src={campaign.projectCoverImage}
-              alt={campaign.description || campaign.title}
+              alt={campaign.title || campaign.description}
               className="w-full h-full object-cover rounded-t-2xl"
             />
           )}
@@ -279,9 +279,9 @@ export default function Campaigns() {
         <div className="p-3 sm:p-4 flex flex-1 flex-col space-y-1.5">
           <h2
           className="text-sm font-semibold text-white leading-snug line-clamp-2 min-h-[2.25rem] break-words"
-          title={campaign.description || campaign.title}
+          title={campaign.title || campaign.description}
           >
-          {campaign.description || campaign.title}
+          {campaign.title || campaign.description}
           </h2>
 
           <div className="flex flex-row justify-between text-xs gap-1 items-center">
