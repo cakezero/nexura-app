@@ -38,6 +38,7 @@ export default function HubProfile() {
   const [discordServer, setDiscordServer] = useState("");
   const [discordConnected, setDiscordConnected] = useState(false);
   const [logoUrl, setLogoUrl] = useState("");
+  const [logoFailed, setLogoFailed] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState("");
   const [loading, setLoading] = useState(true);
@@ -162,7 +163,12 @@ export default function HubProfile() {
     setShowDisconnectWarning(true);
   };
 
-  const displayLogo = imagePreview || logoUrl || "/default-project-logo.png";
+  const displayLogo = imagePreview || logoUrl;
+
+  // Reset logoFailed when a new valid source is set
+  useEffect(() => {
+    if (displayLogo) setLogoFailed(false);
+  }, [displayLogo]);
 
   if (loading) {
     return (
@@ -225,8 +231,19 @@ export default function HubProfile() {
         {/* Logo */}
         <div className="flex flex-col items-center gap-4 pb-8 border-b border-white/10">
           <div className="relative group">
-            <div className="w-32 h-32 rounded-2xl overflow-hidden border-2 border-purple-500/60 shadow-lg shadow-purple-500/10">
-              <img src={displayLogo} alt="Project Logo" className="w-full h-full object-cover" />
+            <div className="w-32 h-32 rounded-2xl overflow-hidden border-2 border-purple-500/60 shadow-lg shadow-purple-500/10 bg-purple-900/30 flex items-center justify-center">
+              {logoFailed || !displayLogo ? (
+                <span className="text-white text-3xl font-bold">
+                  {(name || "P").charAt(0).toUpperCase()}
+                </span>
+              ) : (
+                <img
+                  src={displayLogo}
+                  alt="Project Logo"
+                  className="w-full h-full object-cover"
+                  onError={() => setLogoFailed(true)}
+                />
+              )}
             </div>
             {isSuperAdmin && (
               <label className="absolute inset-0 flex items-center justify-center rounded-2xl bg-black/60 opacity-0 group-hover:opacity-100 transition-all duration-200 cursor-pointer">

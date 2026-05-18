@@ -26,6 +26,7 @@ type MiniLesson = {
   lesson: string;
   order?: number;
   createdAt?: string;
+  section?: 1 | 2;
   introHeader?: string;
   introBody?: string;
   introTrophy?: "bronze" | "silver" | "gold" | "";
@@ -44,6 +45,7 @@ type LessonQuestion = {
   solution?: string;
   order?: number;
   createdAt?: string;
+  section?: 1 | 2;
   introHeader?: string;
   introBody?: string;
   introTrophy?: "bronze" | "silver" | "gold" | "";
@@ -58,6 +60,7 @@ type VideoLesson = {
   lesson: string;
   order?: number;
   createdAt?: string;
+  section?: 1 | 2;
   introHeader?: string;
   introBody?: string;
   introTrophy?: "bronze" | "silver" | "gold" | "";
@@ -156,11 +159,14 @@ export default function LessonPage() {
 
   const lessonSteps = useMemo<LessonStep[]>(() => {
     type AnyItem = { kind: "mini"; entry: MiniLesson } | { kind: "question"; entry: LessonQuestion } | { kind: "video"; entry: VideoLesson };
+    const kindPriority = (k: string) => (k === "mini" ? 0 : k === "video" ? 1 : 2);
     const combined: AnyItem[] = [
       ...miniLessons.map((entry) => ({ kind: "mini" as const, entry })),
       ...questions.map((entry) => ({ kind: "question" as const, entry })),
       ...videoLessons.map((entry) => ({ kind: "video" as const, entry })),
     ].sort((a, b) => {
+      const pk = kindPriority(a.kind) - kindPriority(b.kind);
+      if (pk !== 0) return pk;
       const orderDiff = (a.entry.order ?? 0) - (b.entry.order ?? 0);
       if (orderDiff !== 0) return orderDiff;
       return (a.entry.createdAt ?? "").localeCompare(b.entry.createdAt ?? "");
@@ -170,52 +176,30 @@ export default function LessonPage() {
       return value.replace(/[\u200B-\u200D\uFEFF]/g, "").trim();
     };
 
-    // Auto-generate intro/outro text based on lesson title
     const lessonTitle = sanitize(lesson?.title) || "this lesson";
-    const defaultIntroHeader = "Ready to test your knowledge?";
-    const defaultIntroBody = `Take a quiz to see how much you understand ${lessonTitle}`;
-    const defaultIntroTrophy: "silver" = "silver";
-    const defaultOutroHeader = "Great job!";
-    const defaultOutroBody = `You finished the quiz on ${lessonTitle}`;
-    const defaultOutroTrophy: "silver" = "silver";
+    const introHeader = "Ready to test your knowledge?";
+    const introBody = `Take a quiz to see how much you understand ${lessonTitle}`;
+    const outroHeader = "Great job!";
+    const outroBody = `You finished the quiz on ${lessonTitle}`;
 
-    // Build steps with auto intro/outro around QUIZ GROUPS (contiguous sequences of questions)
+    // Build steps with one intro/outro per contiguous quiz group
     const steps: LessonStep[] = [];
     let i = 0;
     while (i < combined.length) {
       const item = combined[i];
-
       if (item.kind === "question") {
-        // Found start of a quiz group - add auto intro
-        steps.push({
-          kind: "intro" as const,
-          key: `intro-group-${i}`,
-          header: defaultIntroHeader,
-          body: defaultIntroBody,
-          trophy: defaultIntroTrophy,
-        });
-
-        // Add all quizzes in this contiguous group
+        steps.push({ kind: "intro", key: `intro-group-${item.entry._id}`, header: introHeader, body: introBody, trophy: "bronze" });
         while (i < combined.length && combined[i].kind === "question") {
           const qEntry = combined[i].entry;
-          steps.push({ kind: "question" as const, key: `question-${qEntry._id}`, question: qEntry });
+          steps.push({ kind: "question", key: `question-${qEntry._id}`, question: qEntry });
           i++;
         }
-
-        // After the group, add auto outro
-        steps.push({
-          kind: "outro" as const,
-          key: `outro-group-${i}`,
-          header: defaultOutroHeader,
-          body: defaultOutroBody,
-          trophy: defaultOutroTrophy,
-        });
+        steps.push({ kind: "outro", key: `outro-group-${combined[i - 1].entry._id}`, header: outroHeader, body: outroBody, trophy: "silver" });
       } else {
-        // Non-quiz item (mini lesson or video) - add normally without intro/outro
         if (item.kind === "mini") {
-          steps.push({ kind: "mini" as const, key: `mini-${item.entry._id}`, text: item.entry.text });
+          steps.push({ kind: "mini", key: `mini-${item.entry._id}`, text: item.entry.text });
         } else {
-          steps.push({ kind: "video" as const, key: `video-${item.entry._id}`, url: item.entry.url });
+          steps.push({ kind: "video", key: `video-${item.entry._id}`, url: item.entry.url });
         }
         i++;
       }
@@ -897,7 +881,7 @@ export default function LessonPage() {
 
                 /* Congratulations / Claim */
                 ) : (
-                  <div className="flex flex-col items-center justify-center w-full h-full gap-2">
+                  <div className="flex flex-col items-center justify-center w-full h-full gap-4 pt-8">
                     <motion.div
                       className="relative"
                       initial={{ scale: 0, opacity: 0 }}
@@ -907,8 +891,8 @@ export default function LessonPage() {
                       <motion.img
                         src="/nexura-gold.png"
                         alt="Gold Trophy"
-                        className="w-12 h-12 sm:w-14 sm:h-14 object-contain relative z-10"
-                        animate={{ y: [0, -2, 0] }}
+                        className="w-20 h-20 sm:w-28 sm:h-28 object-contain relative z-10"
+                        animate={{ y: [0, -3, 0] }}
                         transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
                       />
                       <div
@@ -928,7 +912,7 @@ export default function LessonPage() {
                         }}
                       />
                     </motion.div>
-                    <div className="mt-1 space-y-1 text-center">
+                    <div className="mt-2 space-y-2 text-center">
                       <motion.h2
                         className="text-sm sm:text-base font-extrabold text-white"
                         initial={{ opacity: 0, y: 10 }}
@@ -951,7 +935,7 @@ export default function LessonPage() {
                     <motion.button
                       onClick={() => void claimXp()}
                       disabled={!allQuestionsDone || claiming || lesson?.done}
-                      className={`mt-2 px-5 py-1.5 rounded-full font-bold text-xs text-white transition-all duration-200 ${
+                      className={`mt-3 px-6 py-2 rounded-full font-bold text-sm text-white transition-all duration-200 ${
                         !allQuestionsDone || lesson?.done
                           ? "bg-white/20 cursor-not-allowed opacity-60"
                           : "bg-[#5B1BA0] hover:bg-[#4a1585] active:scale-95 shadow-[0_0_24px_rgba(91,27,160,0.4)]"

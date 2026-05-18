@@ -59,6 +59,15 @@ const lessonSchema = new mongoose.Schema({
   completionMessage: {
     type: String,
     default: "",
+  },
+  section: {
+    type: Number,
+    enum: [1, 2],
+    default: 1,
+  },
+  section2Name: {
+    type: String,
+    default: "",
   }
 }, { timestamps: true });
 
@@ -132,6 +141,11 @@ const miniLessonSchema = new mongoose.Schema({
     type: String,
     enum: ["bronze", "silver", "gold", ""],
     default: "",
+  },
+  section: {
+    type: Number,
+    enum: [1, 2],
+    default: 1,
   }
 }, { timestamps: true });
 
@@ -188,6 +202,11 @@ const questionSchema = new mongoose.Schema({
     type: String,
     enum: ["bronze", "silver", "gold", ""],
     default: "",
+  },
+  section: {
+    type: Number,
+    enum: [1, 2],
+    default: 1,
   }
 }, { timestamps: true });
 
@@ -264,6 +283,11 @@ const videoLessonSchema = new mongoose.Schema({
     type: String,
     enum: ["bronze", "silver", "gold", ""],
     default: "",
+  },
+  section: {
+    type: Number,
+    enum: [1, 2],
+    default: 1,
   }
 }, { timestamps: true });
 

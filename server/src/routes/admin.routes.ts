@@ -46,6 +46,7 @@ import {
   updateVideoLesson,
   deleteVideoLesson,
   getAllLessons,
+  getAdminLessons,
   getLessonById,
   getLessonDetailsForAdmin,
   updateLesson,
@@ -118,6 +119,7 @@ router
   .get("/get-lesson-by-id", getLessonById)
   .get("/get-lesson-details", getLessonDetailsForAdmin)
   .get("/get-all-lessons", getAllLessons)
+  .get("/get-admin-lessons", getAdminLessons)
   .get("/get-banned-users", getBannedUsers)
   .get("/get-xp-history", getXpHistory)
   .get("/get-admins", getAdmins)
