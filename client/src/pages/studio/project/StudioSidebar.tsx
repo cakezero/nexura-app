@@ -20,6 +20,7 @@ export default function StudioSidebar({
 
   // State to hold project info
   const [projectLogo, setProjectLogo] = useState("/default-project-logo.png");
+  const [logoFailed, setLogoFailed] = useState(false);
   const [projectHandle, setProjectHandle] = useState("@project");
   const [adminRole, setAdminRole] = useState<string>("");
   const [adminName, setAdminName] = useState<string>("Administrator");
@@ -36,7 +37,7 @@ export default function StudioSidebar({
     if (info) {
       const name = (info.name ?? info.email ?? "Project") as string;
       setProjectHandle(name);
-      if (info.logo) setProjectLogo(info.logo as string);
+      if (info.logo) { setProjectLogo(info.logo as string); setLogoFailed(false); }
       if (info.role) setAdminRole(info.role as string);
       if (info.name) setAdminName(info.name as string);
     }
@@ -48,7 +49,7 @@ export default function StudioSidebar({
             const hubName = (hub.name ?? info?.name ?? info?.email ?? "Project") as string;
             const hubLogo = (hub.logo ?? "") as string;
             setProjectHandle(hubName);
-            if (hubLogo) setProjectLogo(hubLogo);
+            if (hubLogo) { setProjectLogo(hubLogo); setLogoFailed(false); }
 
             // Store admin role from server
             if (admin?.role) {
@@ -97,12 +98,19 @@ export default function StudioSidebar({
             }}
             className="flex items-center gap-3 border-2 border-purple-500 rounded-2xl px-3 py-2 relative z-10 w-full min-w-0 hover:bg-white/5 transition-colors cursor-pointer text-left"
           >
-            <div className="w-10 h-10 rounded-2xl overflow-hidden flex-shrink-0">
-              <img
-                src={projectLogo}
-                alt="Project Logo"
-                className="w-full h-full object-cover"
-              />
+            <div className="w-10 h-10 rounded-2xl overflow-hidden flex-shrink-0 bg-purple-900/50 flex items-center justify-center">
+              {logoFailed || !projectLogo || projectLogo === "/default-project-logo.png" ? (
+                <span className="text-white text-sm font-bold">
+                  {String(projectHandle).charAt(0).toUpperCase()}
+                </span>
+              ) : (
+                <img
+                  src={projectLogo}
+                  alt="Project Logo"
+                  className="w-full h-full object-cover"
+                  onError={() => setLogoFailed(true)}
+                />
+              )}
             </div>
             <div className="flex flex-col min-w-0">
               <span className="text-white/60 text-xs">Project</span>

@@ -1583,11 +1583,15 @@ const isActive =
   className="bg-white/5 border-white/10"
   required
   disabled={isEnded}
+  maxLength={150}
   value={campaignTitle}
   onChange={(e) => setCampaignTitle(e.target.value)}
 />
-                      <p className="text-xs text-white/50 mt-2">
-                        Keep it clear and practical.
+                      <p className="text-xs text-white/50 mt-1 flex justify-between">
+                        <span>Keep it clear and practical.</span>
+                        <span className={campaignTitle.length > 130 ? "text-amber-400" : "text-white/50"}>
+                          {campaignTitle.length}/150
+                        </span>
                       </p>
                     </div>
 
