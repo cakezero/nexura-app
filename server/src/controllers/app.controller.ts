@@ -69,16 +69,6 @@ export const getStudioPaymentConfig = async (
   });
 };
 
-const getTrustProvider = () => {
-  let trustProvider: TNSProvider | null = null;
-
-  if (!trustProvider) {
-    trustProvider = new TNSProvider();
-  }
-
-  return trustProvider;
-};
-
 export const validateTrustNameTask = async (
   req: GlobalRequest,
   res: GlobalResponse,
@@ -142,7 +132,7 @@ export const validateTrustNameTask = async (
       return;
     }
 
-    const provider = getTrustProvider();
+    const provider = new TNSProvider();
 
     const hasTrustName = await provider.lookupAddress(questUser.address);
     if (!hasTrustName) {
