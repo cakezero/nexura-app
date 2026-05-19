@@ -18,6 +18,7 @@ import {
   FileText,
   ListChecks,
   Eye,
+  XCircle,
 } from "lucide-react";
 
 interface Campaign {
@@ -136,6 +137,7 @@ const [tasks, setTasks] = useState<Task[]>([]);
 });
 const [editingIndex, setEditingIndex] = useState<number | null>(null);
 const [error, setError] = useState("");
+const [urlError, setUrlError] = useState("");
 const [showPublishModal, setShowPublishModal] = useState(false);
 const [showSuccessModal, setShowSuccessModal] = useState(false);
 const [campaignName, setCampaignName] = useState("");
@@ -798,7 +800,12 @@ const handleSaveTask = () => {
     finalTask.platform = "Twitter";
   }
 
-  const requiresPlatform = finalTask.type !== "Check Out the Portal Claims" && finalTask.type !== "others" && finalTask.type !== "Give Feedback";
+  if (finalTask.type === "Own a .trust username") {
+    finalTask.handleOrUrl = "https://tns.intuition.box";
+    finalTask.platform = "";
+  }
+
+  const requiresPlatform = finalTask.type !== "Check Out the Portal Claims" && finalTask.type !== "others" && finalTask.type !== "Give Feedback" && finalTask.type !== "Own a .trust username";
   const requiresDiscordConnection = finalTask.platform === "Discord" || isDiscordFixedTaskType(finalTask.type);
   const requiresRole = isDiscordRoleTaskType(finalTask.type);
   const requiresChannel = isDiscordMessageTaskType(finalTask.type);
@@ -855,6 +862,7 @@ const handleSaveTask = () => {
   setNewTask({ _id: undefined, type: "", platform: "", handleOrUrl: "", description: "", evidence: "", validation: "Manual Validation", verificationMode: "", roleId: "", channelId: "", guildId: "" });
   setShowModal(false);
   setError("");
+  setUrlError("");
 };
 
 
@@ -1992,17 +2000,23 @@ const isActive =
               const isOther = type === "others";
               const isFeedback = type === "Give Feedback";
               const isTrustName = type === "Own a .trust username";
+              const validationLabel =
+                isTrustName ? "Verified by TNS" :
+                isDiscord ? "Discord Auth" :
+                (isPortal || isOther) ? "Auto Verified" :
+                "Manual Validation";
+              setUrlError("");
               setNewTask({
                 ...newTask,
                 type,
-                platform: isDiscord ? "Discord" : isTwitter ? "Twitter" : (isPortal || isOther || isFeedback || isTrustName) ? "" : newTask.platform,
+                platform: isDiscord ? "Discord" : isTwitter ? "Twitter" : (isPortal || isOther || isFeedback || isTrustName) ? "" : newTask.platform || "Other",
                 evidence: (isDiscord || isPortal || isTrustName) ? "" : isTwitter ? "submit_link" : isFeedback ? "" : newTask.evidence,
-                validation: isDiscord ? "Discord Auth" : (isPortal || isTrustName) ? "Auto Verified" : isFeedback ? "Manual Validation" : (newTask.validation === "Discord Auth" || newTask.validation === "Auto Verified" ? "Manual Validation" : newTask.validation),
-                verificationMode: isFeedback ? "feedback" : (isPortal || isTrustName) ? "auto" : "",
+                validation: validationLabel,
+                verificationMode: (isPortal || isTrustName) ? "auto" : isFeedback ? "feedback" : isOther ? (newTask.verificationMode || "") : "",
                 roleId: isDiscordRole ? newTask.roleId : "",
                 channelId: isDiscordMessage ? newTask.channelId : "",
                 guildId: isDiscord ? (newTask.guildId || hubGuildId || "") : "",
-                handleOrUrl: type === "Create a Post" ? "https://x.com" : isTrustName ? "https://tns.intuition.box" : newTask.handleOrUrl,
+                handleOrUrl: type === "Create a Post" ? "https://x.com" : (isTrustName ? "https://tns.intuition.box" : (newTask.handleOrUrl === "https://x.com" || newTask.handleOrUrl === "https://tns.intuition.box" ? "" : newTask.handleOrUrl)),
               });
             }}
           >
@@ -2021,7 +2035,7 @@ const isActive =
         </div>
 
         {/* Platform */}
-        {newTask.type !== "Check Out the Portal Claims" && newTask.type !== "others" && newTask.type !== "Give Feedback" && !isDiscordFixedTaskType(newTask.type) && (
+        {newTask.type !== "Check Out the Portal Claims" && newTask.type !== "others" && newTask.type !== "Give Feedback" && newTask.type !== "Own a .trust username" && !isDiscordFixedTaskType(newTask.type) && (
         <div>
           <label className="text-sm text-white/70 mb-2 block">Platform</label>
           <div className="flex gap-3">
@@ -2041,8 +2055,32 @@ const isActive =
       {/* TASK DETAILS CARD */}
       <div className="bg-white/5 p-5 rounded-xl mb-6 border border-white/10">
 
-        {/* Handle or URL */}
-        {newTask.type !== "Create a Post" && (
+        {/* Task Description — first, matching quest order */}
+        <div className="mb-4">
+          <label className="text-sm text-white/70 mb-2 block">
+            {newTask.type === "Create a Post" ? "Post Content" : "Task Description"}
+          </label>
+          <input
+            type="text"
+            placeholder={
+              newTask.type === "Create a Post" ? "e.g. Just joined this amazing campaign on Nexura!" :
+              newTask.type === "Comment on our X post" ? "e.g. Reply to our latest announcement" :
+              newTask.type === "Follow us on X" ? "e.g. Follow @NexuraApp for updates" :
+              newTask.type === "Own a .trust username" ? "e.g. Acquire your unique identity on TNS" :
+              newTask.type === "Check Out the Portal Claims" ? "Support or oppose this claim" :
+              newTask.type === "Give Feedback" ? "e.g. Tell us about your experience" :
+              "..."
+            }
+            value={newTask.description}
+            onChange={(e) =>
+              setNewTask({ ...newTask, description: e.target.value })
+            }
+            className="w-full p-2 rounded-lg bg-white/5 text-white border border-white/10 focus:outline-none focus:border-purple-500"
+          />
+        </div>
+
+        {/* Handle or URL — second, with live validation feedback */}
+        {newTask.type !== "Create a Post" && newTask.type !== "Own a .trust username" && (
           <div className="mb-4">
             <label className="text-sm text-white/70 mb-2 block">
               {newTask.type === "Give Feedback"
@@ -2069,33 +2107,52 @@ const isActive =
                       ? "https://x.com/username/status/..."
                       : newTask.type === "Follow us on X" || newTask.platform === "Twitter"
                         ? "https://x.com/username"
-                        : "..."}
+                        : "e.g. https://..."}
               value={newTask.handleOrUrl}
-              onChange={(e) =>
-                setNewTask({ ...newTask, handleOrUrl: e.target.value })
-              }
-              className="w-full p-2 rounded-lg bg-white/5 text-white border border-white/10 focus:outline-none focus:border-purple-500"
+              onChange={(e) => {
+                const val = e.target.value;
+                setNewTask({ ...newTask, handleOrUrl: val });
+
+                const valLower = val.toLowerCase().trim();
+                if (!valLower) {
+                  setUrlError("");
+                  return;
+                }
+
+                // Live validation: x.com enforcement for Twitter tasks
+                if (newTask.platform === "Twitter" && newTask.type !== "Create a Post") {
+                  if (!valLower.includes("x.com")) {
+                    setUrlError("Twitter links must use the x.com domain.");
+                  } else {
+                    setUrlError("");
+                  }
+                }
+                // Live validation: Portal Claims prefix enforcement
+                else if (newTask.type === "Check Out the Portal Claims") {
+                  const allowedPrefixes = [
+                    "nexura.intuition.box/portal-claims/",
+                    "portal.intuition.systems/explore/triple/"
+                  ];
+                  const isAllowed = allowedPrefixes.some(prefix => valLower.includes(prefix));
+                  if (!isAllowed) {
+                    setUrlError("URL must be from Nexura Portal or Intuition Portal triple.");
+                  } else {
+                    setUrlError("");
+                  }
+                }
+                else {
+                  setUrlError("");
+                }
+              }}
+              className={`w-full p-2 rounded-lg bg-white/5 text-white border focus:outline-none focus:border-purple-500 transition-colors ${urlError ? "border-red-500/50" : "border-white/10"}`}
             />
+            {urlError && (
+              <p className="text-red-500 text-[11px] mt-1.5 flex items-center gap-1">
+                <XCircle className="w-3.5 h-3.5" /> {urlError}
+              </p>
+            )}
           </div>
         )}
-
-        {/* Task Description */}
-        <div className="mb-4">
-          <label className="text-sm text-white/70 mb-2 block">{newTask.type === "Give Feedback" ? "Task Description" : "Task Description"}</label>
-          <input
-            type="text"
-            placeholder={
-              newTask.type === "Give Feedback" ? "e.g. Tell us what you think about our platform" : 
-              newTask.type === "Check Out the Portal Claims" ? "Support or oppose this claim" :
-              "..."
-            }
-            value={newTask.description}
-            onChange={(e) =>
-              setNewTask({ ...newTask, description: e.target.value })
-            }
-            className="w-full p-2 rounded-lg bg-white/5 text-white border border-white/10 focus:outline-none focus:border-purple-500"
-          />
-        </div>
 
         {(newTask.platform === "Discord" || isDiscordFixedTaskType(newTask.type)) && (!hubDiscordConnected || !hubGuildId) && (
           <div className="mb-4 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
