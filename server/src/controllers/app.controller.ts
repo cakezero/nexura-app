@@ -69,6 +69,16 @@ export const getStudioPaymentConfig = async (
   });
 };
 
+const getTrustNameProvider = () => {
+  let provider: TNSProvider | null = null;
+
+  if (!provider) {
+    provider = new TNSProvider();
+  }
+
+  return provider;
+}
+
 export const validateTrustNameTask = async (
   req: GlobalRequest,
   res: GlobalResponse,
@@ -125,16 +135,10 @@ export const validateTrustNameTask = async (
       : (miniQuestCompleted as any);
     const taskExists = await Model.findOne(filter);
 
-    const questUser = await user.findById(req.id);
+    const provider = getTrustNameProvider();
 
-    if (!questUser) {
-      res.status(NOT_FOUND).json({ error: "user not found" });
-      return;
-    }
+    const hasTrustName = await provider.lookupAddress(req.user.address);
 
-    const provider = new TNSProvider();
-
-    const hasTrustName = await provider.lookupAddress(questUser.address);
     if (!hasTrustName) {
       if (!taskExists) {
         await Model.create({
@@ -166,11 +170,7 @@ export const validateTrustNameTask = async (
       await taskExists.save();
     }
 
-    questUser.trustName = hasTrustName;
-
-    questUser.username = hasTrustName;
-
-    await questUser.save();
+    await user.findByIdAndUpdate(req.id, { trustName: hasTrustName, username: hasTrustName });
 
     res
       .status(OK)
