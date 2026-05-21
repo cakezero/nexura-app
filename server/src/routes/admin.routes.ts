@@ -31,6 +31,17 @@ import {
   publishAdminQuest,
   deleteQuestAdmin,
   deleteLessonAdmin,
+  deleteStudioQuest,
+  getDeletedStudioQuests,
+  restoreStudioQuest,
+  permanentlyDeleteStudioQuest,
+  deleteStudioLesson,
+  getDeletedStudioLessons,
+  restoreStudioLesson,
+  permanentlyDeleteStudioLesson,
+  banCreator,
+  unbanCreator,
+  getBannedCreators,
 } from "@/controllers/admin.controller";
 import { deleteQuest, saveQuest } from "@/controllers/quest.controller";
 import { fetchChannels, fetchRoles, fetchServers } from "@/controllers/hub.auth.controller";
@@ -79,6 +90,9 @@ router
   .post("/search-xp-history", searchUserXpHistory)
   .post("/ban-user", banUser)
   .post("/unban-user", unBanUser)
+  .post("/ban-creator", banCreator)
+  .post("/unban-creator", unbanCreator)
+  .get("/banned-creators", getBannedCreators)
   .get("/me", attachAdminCampaignHub, getHub)
   .patch("/update-hub", requireAdminSuperadmin, attachAdminCampaignHub, upload.fields([{ name: "logo", maxCount: 1 }, { name: "document", maxCount: 1 }]), updateHub)
   .patch("/disconnect-discord", requireAdminSuperadmin, attachAdminCampaignHub, disconnectHubDiscord)
@@ -135,6 +149,14 @@ router
   .patch("/restore-studio-campaign", restoreStudioCampaign)
   .delete("/permanent-studio-campaign", permanentlyDeleteStudioCampaign)
   .get("/studio-quests", getStudioQuests)
-  .get("/studio-lessons", getStudioLessons);
+  .delete("/studio-quests", deleteStudioQuest)
+  .get("/deleted-studio-quests", getDeletedStudioQuests)
+  .patch("/restore-studio-quest", restoreStudioQuest)
+  .delete("/permanent-studio-quest", permanentlyDeleteStudioQuest)
+  .get("/studio-lessons", getStudioLessons)
+  .delete("/studio-lessons", deleteStudioLesson)
+  .get("/deleted-studio-lessons", getDeletedStudioLessons)
+  .patch("/restore-studio-lesson", restoreStudioLesson)
+  .delete("/permanent-studio-lesson", permanentlyDeleteStudioLesson);
 
 export default router;

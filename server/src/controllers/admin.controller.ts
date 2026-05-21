@@ -12,7 +12,7 @@ import { sendAdminResetEmail, sendEmailToAdmin } from "@/utils/sendMail";
 import { campaignQuestCompleted, miniQuestCompleted, questCompleted } from "@/models/questsCompleted.models";
 import { submission } from "@/models/submission.model";
 import { user } from "@/models/user.model";
-import { hub, userHub, userHubAdmin } from "@/models/hub.model";
+import { hub, hubAdmin, userHub, userHubAdmin } from "@/models/hub.model";
 import { bannedUser } from "@/models/bannedUser.model";
 import { REDIS } from "@/utils/redis.utils";
 import { xpLog } from "@/models/xpLog.model";
@@ -948,6 +948,119 @@ export const getAdminLeaderboard = async (req: GlobalRequest, res: GlobalRespons
 	}
 };
 
+export const banCreator = async (req: GlobalRequest, res: GlobalResponse) => {
+	try {
+		const { creatorId }: { creatorId: string } = req.body;
+
+		if (!creatorId) {
+			res.status(BAD_REQUEST).json({ error: "creator id is required" });
+			return;
+		}
+
+		// Try to find the creator as a user-hub first, then as a project hub
+		let ownerId: string | null = null;
+		let ownerAddress: string | null = null;
+
+		// Check user-hubs
+		const userHubDoc = await userHub.findById(creatorId).lean();
+		if (userHubDoc) {
+			// Find the user-hub admin
+			const uha = await userHubAdmin.findOne({ hub: creatorId }).lean();
+			if (uha) {
+				ownerId = uha._id.toString();
+				ownerAddress = uha.email; // use email as identifier for non-wallet accounts
+			}
+		}
+
+		// Check project hubs
+		if (!ownerId) {
+			const hubDoc = await hub.findById(creatorId).lean();
+			if (hubDoc) {
+				// Find the hub admin
+				const ha = await hubAdmin.findOne({ hub: creatorId }).lean();
+				if (ha) {
+					ownerId = ha._id.toString();
+					ownerAddress = ha.email || "";
+				}
+			}
+		}
+
+		if (!ownerId) {
+			res.status(NOT_FOUND).json({ error: "creator not found" });
+			return;
+		}
+
+		// Skip if already banned
+		const alreadyBanned = await bannedUser.findById(ownerId).lean();
+		if (alreadyBanned) {
+			res.status(BAD_REQUEST).json({ error: "creator is already banned" });
+			return;
+		}
+
+		await bannedUser.create({ userId: ownerId, walletAddress: ownerAddress });
+		res.status(OK).json({ message: "creator banned" });
+	} catch (error) {
+		logger.error(error);
+		res.status(INTERNAL_SERVER_ERROR).json({ error: "error banning creator" });
+	}
+};
+
+export const unbanCreator = async (req: GlobalRequest, res: GlobalResponse) => {
+	try {
+		const { creatorId }: { creatorId: string } = req.body;
+
+		if (!creatorId) {
+			res.status(BAD_REQUEST).json({ error: "creator id is required" });
+			return;
+		}
+
+		// Resolve creator to ownerId (same logic as banCreator)
+		let ownerId: string | null = null;
+
+		const userHubDoc = await userHub.findById(creatorId).lean();
+		if (userHubDoc) {
+			const uha = await userHubAdmin.findOne({ hub: creatorId }).lean();
+			if (uha) ownerId = uha._id.toString();
+		}
+
+		if (!ownerId) {
+			const hubDoc = await hub.findById(creatorId).lean();
+			if (hubDoc) {
+				const ha = await hubAdmin.findOne({ hub: creatorId }).lean();
+				if (ha) ownerId = ha._id.toString();
+			}
+		}
+
+		if (!ownerId) {
+			// Try direct lookup in bannedUser
+			ownerId = creatorId;
+		}
+
+		const banned = await bannedUser.findOne({ userId: ownerId }).lean();
+		if (!banned) {
+			res.status(BAD_REQUEST).json({ error: "creator is not banned" });
+			return;
+		}
+
+		await bannedUser.findOneAndDelete({ userId: ownerId });
+		res.status(OK).json({ message: "creator unbanned" });
+	} catch (error) {
+		logger.error(error);
+		res.status(INTERNAL_SERVER_ERROR).json({ error: "error unbanning creator" });
+	}
+};
+
+export const getBannedCreators = async (_req: GlobalRequest, res: GlobalResponse) => {
+	try {
+		const banned = await bannedUser.find({}).sort({ createdAt: -1 }).lean();
+		const ids = banned.map(b => b.userId);
+		res.status(OK).json({ bannedCreatorIds: ids });
+	} catch (error) {
+		logger.error(error);
+		res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching banned creators" });
+	}
+};
+
 export const unBanUser = async (req: GlobalRequest, res: GlobalResponse) => {
 	try {
 		const { userId }: { userId: string } = req.body;
@@ -1268,23 +1381,23 @@ export const permanentlyDeleteStudioCampaign = async (req: GlobalRequest, res: G
 export const getStudioQuests = async (_req: GlobalRequest, res: GlobalResponse) => {
   try {
     const quests = await quest
-      .find({ creatorModel: "project", status: { $ne: "Deleted" } })
-      .populate({ path: "creator", select: "name logo" })
+      .find({ creatorModel: { $in: ["project", "user"] }, status: { $ne: "Deleted" } })
+      .populate({ path: "hub", select: "name logo" })
       .sort({ createdAt: -1 })
       .lean();
 
     const normalized = quests.map((q: any) => ({
       _id: String(q._id),
       title: q.title || "",
-      projectName: q.project_name || "",
+      projectName: q.project_name || q.hub?.name || "",
       status: q.status || "â€”",
       starts_at: q.starts_at ?? null,
       ends_at: q.ends_at ?? null,
       reward: { xp: Number(q.reward ?? 0) },
       creator: {
-        id: q.creator?._id ? String(q.creator._id) : "",
-        name: q.creator?.name || q.project_name || "Unknown",
-        logo: q.creator?.logo || q.project_image || "",
+        id: q.creator?._id ? String(q.creator._id) : (q.hub?._id ? String(q.hub._id) : ""),
+        name: q.hub?.name || q.creator?.name || q.project_name || "Unknown",
+        logo: q.hub?.logo || q.creator?.logo || q.project_image || "",
       },
       createdAt: q.createdAt ?? null,
     }));
@@ -1298,9 +1411,8 @@ export const getStudioQuests = async (_req: GlobalRequest, res: GlobalResponse) 
 
 export const getStudioLessons = async (_req: GlobalRequest, res: GlobalResponse) => {
   try {
-    // Fetch ALL lessons (not just project-associated ones) to show drafts and lessons without creators
     const lessonsList = await lesson
-      .find({})
+      .find({ deletedAt: null })
       .populate({ path: "creator", select: "name logo" })
       .sort({ createdAt: -1 })
       .lean();
@@ -1323,6 +1435,241 @@ export const getStudioLessons = async (_req: GlobalRequest, res: GlobalResponse)
   } catch (error) {
     logger.error(error);
     res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching studio lessons" });
+  }
+};
+
+// ── Studio Quests: Delete / Restore / Permanent Delete ──
+
+export const deleteStudioQuest = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const id = typeof req.query.id === "string" ? req.query.id.trim() : "";
+    if (!id) {
+      res.status(BAD_REQUEST).json({ error: "quest id is required" });
+      return;
+    }
+
+    const updated = await quest.findByIdAndUpdate(
+      id,
+      { status: "Deleted", deletedAt: new Date() },
+      { new: true }
+    );
+
+    if (!updated) {
+      res.status(NOT_FOUND).json({ error: "quest not found" });
+      return;
+    }
+
+    res.status(NO_CONTENT).send();
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error deleting studio quest" });
+  }
+};
+
+export const getDeletedStudioQuests = async (_req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const quests = await quest
+      .find({ status: "Deleted" })
+      .populate({ path: "hub", select: "name logo" })
+      .sort({ deletedAt: -1, createdAt: -1 })
+      .lean();
+
+    const normalized = quests.map((q: any) => ({
+      _id: String(q._id),
+      title: q.title || "",
+      projectName: q.project_name || q.hub?.name || "",
+      status: q.status || "—",
+      starts_at: q.starts_at ?? null,
+      ends_at: q.ends_at ?? null,
+      reward: { xp: Number(q.reward ?? 0) },
+      creator: {
+        id: q.creator?._id ? String(q.creator._id) : (q.hub?._id ? String(q.hub._id) : ""),
+        name: q.hub?.name || q.creator?.name || q.project_name || "Unknown",
+        logo: q.hub?.logo || q.creator?.logo || q.project_image || "",
+      },
+      createdAt: q.createdAt ?? null,
+      deletedAt: q.deletedAt ?? null,
+    }));
+
+    res.status(OK).json({ deletedQuests: normalized });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching deleted quests" });
+  }
+};
+
+export const restoreStudioQuest = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const id = typeof req.query.id === "string" ? req.query.id.trim() : "";
+    if (!id) {
+      res.status(BAD_REQUEST).json({ error: "quest id is required" });
+      return;
+    }
+
+    const questToRestore = await quest.findById(id);
+    if (!questToRestore) {
+      res.status(NOT_FOUND).json({ error: "quest not found" });
+      return;
+    }
+
+    const now = new Date();
+    const startsAt = questToRestore.starts_at ? new Date(questToRestore.starts_at) : null;
+    const endsAt = questToRestore.ends_at ? new Date(questToRestore.ends_at) : null;
+
+    let targetStatus = "Active";
+    if (endsAt && !isNaN(endsAt.getTime()) && endsAt <= now) {
+      targetStatus = "Ended";
+    } else if (startsAt && !isNaN(startsAt.getTime()) && startsAt > now) {
+      targetStatus = "Scheduled";
+    }
+
+    const updated = await quest.findByIdAndUpdate(
+      id,
+      { status: targetStatus, deletedAt: null },
+      { new: true }
+    );
+
+    if (!updated) {
+      res.status(NOT_FOUND).json({ error: "quest not found" });
+      return;
+    }
+
+    res.status(NO_CONTENT).send();
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error restoring quest" });
+  }
+};
+
+export const permanentlyDeleteStudioQuest = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const id = typeof req.query.id === "string" ? req.query.id.trim() : "";
+    if (!id) {
+      res.status(BAD_REQUEST).json({ error: "quest id is required" });
+      return;
+    }
+
+    const result = await quest.findByIdAndDelete(id);
+    if (!result) {
+      res.status(NOT_FOUND).json({ error: "quest not found" });
+      return;
+    }
+
+    // Also remove associated mini-quests
+    await miniQuest.deleteMany({ quest: id });
+
+    res.status(NO_CONTENT).send();
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error permanently deleting quest" });
+  }
+};
+
+// ── Studio Lessons: Delete / Restore / Permanent Delete ──
+
+export const deleteStudioLesson = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const id = typeof req.query.id === "string" ? req.query.id.trim() : "";
+    if (!id) {
+      res.status(BAD_REQUEST).json({ error: "lesson id is required" });
+      return;
+    }
+
+    const updated = await lesson.findByIdAndUpdate(
+      id,
+      { deletedAt: new Date() },
+      { new: true }
+    );
+
+    if (!updated) {
+      res.status(NOT_FOUND).json({ error: "lesson not found" });
+      return;
+    }
+
+    res.status(NO_CONTENT).send();
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error deleting studio lesson" });
+  }
+};
+
+export const getDeletedStudioLessons = async (_req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const lessonsList = await lesson
+      .find({ deletedAt: { $ne: null } })
+      .populate({ path: "creator", select: "name logo" })
+      .sort({ deletedAt: -1, createdAt: -1 })
+      .lean();
+
+    const normalized = lessonsList.map((l: any) => ({
+      _id: String(l._id),
+      title: l.title || "",
+      projectName: l.creator?.name || "Unknown",
+      status: "Deleted",
+      reward: { xp: Number(l.reward ?? 0) },
+      creator: {
+        id: l.creator?._id ? String(l.creator._id) : (l.creator || ""),
+        name: l.creator?.name || l.creatorName || "Unknown",
+        logo: l.creator?.logo || l.profileImage || "",
+      },
+      createdAt: l.createdAt ?? null,
+      deletedAt: l.deletedAt ?? null,
+    }));
+
+    res.status(OK).json({ deletedLessons: normalized });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching deleted lessons" });
+  }
+};
+
+export const restoreStudioLesson = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const id = typeof req.query.id === "string" ? req.query.id.trim() : "";
+    if (!id) {
+      res.status(BAD_REQUEST).json({ error: "lesson id is required" });
+      return;
+    }
+
+    const updated = await lesson.findByIdAndUpdate(
+      id,
+      { deletedAt: null },
+      { new: true }
+    );
+
+    if (!updated) {
+      res.status(NOT_FOUND).json({ error: "lesson not found" });
+      return;
+    }
+
+    res.status(NO_CONTENT).send();
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error restoring lesson" });
+  }
+};
+
+export const permanentlyDeleteStudioLesson = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const id = typeof req.query.id === "string" ? req.query.id.trim() : "";
+    if (!id) {
+      res.status(BAD_REQUEST).json({ error: "lesson id is required" });
+      return;
+    }
+
+    const result = await lesson.findByIdAndDelete(id);
+    if (!result) {
+      res.status(NOT_FOUND).json({ error: "lesson not found" });
+      return;
+    }
+
+    // Also remove associated mini-lessons
+    await miniLesson.deleteMany({ lesson: id });
+
+    res.status(NO_CONTENT).send();
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error permanently deleting lesson" });
   }
 };
 
