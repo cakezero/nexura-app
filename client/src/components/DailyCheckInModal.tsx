@@ -56,6 +56,10 @@ export default function DailyCheckInModal({ open, onOpenChange, onCheckInSuccess
     try {
       const response = await apiRequest("GET", "/api/user/profile");
       const data = await response.json();
+
+      console.log("FULL PROFILE RESPONSE:", data);
+    console.log("CHECKIN DATES:", data.user?.checkInDates);
+    
       const user = data.user;
       setStreak(user?.streak || 0);
       setLongestStreak(user?.longestStreak || 0);
@@ -128,126 +132,309 @@ export default function DailyCheckInModal({ open, onOpenChange, onCheckInSuccess
     }
   };
 
+  /////////////// NEW MILESTONE PROGRESSION
+  
+
+  
+  const MILESTONES = [
+    { day: 7, xp: 500, label: "7" },
+    { day: 15, xp: 1000, label: "15" },
+    { day: 30, xp: 2500, label: "30" },
+    { day: 45, xp: 5000, label: "45" },
+    { day: 60, xp: 10000, label: "60" },
+    { day: 90, xp: 20000, label: "90" },
+  ];
+  
+  const nextMilestone = MILESTONES.find(m => m.day > streak);
+  const previousMilestone = [...MILESTONES].reverse().find(m => m.day <= streak);
+  
+  const daysUntilNext = nextMilestone ? nextMilestone.day - streak : 0;
+  const nextXP = nextMilestone?.xp || previousMilestone?.xp || 0;
+
+
+const currentMilestone = [...MILESTONES]
+  .slice()
+  .reverse()
+  .find(m => m.day <= streak);
+
+const progressStart = currentMilestone?.day || 0;
+const progressEnd = nextMilestone?.day || progressStart;
+
+const progress =
+  nextMilestone
+    ? ((streak - progressStart) / (progressEnd - progressStart)) * 100
+    : 100;
+
+const daysRemaining = nextMilestone ? nextMilestone.day - streak : 0;
+
+// const totalCheckIns = checkInDates?.length || 0;
+const totalCheckIns = useMemo(() => {
+  return Array.isArray(checkInDates) ? checkInDates.length : 0;
+}, [checkInDates]);
+
+const currentMonth = new Date().getMonth();
+const currentYear = new Date().getFullYear();
+
+const checkInsThisMonth = checkInDates.filter((date) => {
+  const d = new Date(date);
+  return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+});
+
+// ⚠️ placeholder ONLY if backend doesn't provide XP
+const xpThisMonth = checkInsThisMonth.length * 20; // temporary fallback
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[#0d0d14] backdrop-blur-2xl border border-purple-500/20 shadow-[0_0_60px_rgba(131,58,253,0.2)] rounded-2xl max-w-sm p-0 overflow-hidden">
+      <DialogContent className="bg-[#100721] backdrop-blur-3xl border border-[#FFFFFF4D] rounded-2xl w-[92vw] max-w-xl p-0 overflow-hidden">
         {/* Header */}
-        <div className="px-5 pt-5 pb-1">
-          <DialogHeader>
-            <DialogTitle className="text-base font-bold text-white flex items-center gap-2">
-              <img src="/daily.png" alt="" className="w-5 h-5" />
-              Daily Check-In
-            </DialogTitle>
-            <DialogDescription className="text-white/50 text-xs">
-              Check in every day to keep your streak alive
-            </DialogDescription>
-          </DialogHeader>
+<div className="px-3 pt-2 pb-3 text-center">
+  <DialogHeader>
+    <DialogTitle className="text-base font-bold text-white flex items-center justify-center gap-2">
+      <img src="/daily.png" alt="" className="w-5 h-5" />
+      Daily Check-In
+    </DialogTitle>
 
-          {/* Streak badges */}
-          <div className="flex gap-2 mt-3">
-            <div className="flex-1 glass rounded-xl px-2 py-2 text-center">
-              <div className="flex items-center justify-center gap-1 mb-0.5">
-                <Flame className="w-3 h-3 text-purple-400" />
-                <span className="text-[10px] text-white/50 font-medium">Current</span>
-              </div>
-              <span className="text-lg font-bold text-white">{streak}</span>
-              <span className="text-[10px] text-white/40 ml-0.5">days</span>
-            </div>
-            <div className="flex-1 glass rounded-xl px-2 py-2 text-center">
-              <div className="flex items-center justify-center gap-1 mb-0.5">
-                <Trophy className="w-3 h-3 text-purple-400" />
-                <span className="text-[10px] text-white/50 font-medium">Best</span>
-              </div>
-              <span className="text-lg font-bold text-white">{longestStreak}</span>
-              <span className="text-[10px] text-white/40 ml-0.5">days</span>
-            </div>
-          </div>
+    <DialogDescription className="text-white/50 text-xs mt-1">
+      Build your streak, earn XP, and grow your Nexon progression.
+    </DialogDescription>
+  </DialogHeader>
+
+  {/* Streak Circle */}
+  <div className="mt-2 flex justify-center">
+    <div
+      className="relative flex items-center justify-center rounded-full"
+      style={{
+  width: "140px",
+  height: "140px",
+  background: "linear-gradient(135deg, #1E123CE5, #0F0A1EF2)",
+  border: "4px solid #8B5CF6",
+}}
+    >
+      {/* inner thin border */}
+      <div
+        className="absolute inset-[5px] rounded-full"
+        style={{
+          border: "1px solid #8B5CF633",
+        }}
+      />
+
+      {/* content */}
+      <div className="relative flex flex-col items-center justify-center text-center">
+        <img src="/fire.png" alt="" className="w-8 h-8 mb-1" />
+
+        <div className="text-2xl font-bold text-white">{streak}</div>
+
+        <div className="text-[10px] text-white/50 tracking-widest mt-0.5">
+          DAYS STREAK
         </div>
+      </div>
+    </div>
+  </div>
 
-        {/* Calendar */}
-        <div className="px-5 py-2">
-          {/* Month nav */}
-          <div className="flex items-center justify-between mb-2">
-            <button
-              onClick={goToPrevMonth}
-              className="p-1.5 rounded-lg hover:bg-white/10 transition-colors text-white/60 hover:text-white"
+  {/* Below Circle Text */}
+  <div className="mt-2 text-center">
+    <div className="text-sm font-medium text-white">Current Streak</div>
+    <div className="text-xs text-white/40 mt-1">
+  {nextMilestone
+    ? `${daysUntilNext} day${daysUntilNext === 1 ? "" : "s"} until your next milestone`
+    : "All milestones completed"}
+</div>
+  </div>
+</div>
+
+{/* Stats Cards */}
+<div className="px-3 grid grid-cols-2 gap-2">
+
+{/* LEFT CARD - NEXT MILESTONE */}
+<div
+  className="rounded-2xl p-2 flex flex-col justify-between"
+  style={{
+    background: "linear-gradient(135deg, #8B5CF614, #581CDC0D)",
+    border: "1px solid #8B5CF633",
+  }}
+>
+  <div>
+    <div className="text-[10px] font-semibold text-[#8B5CF6B2] tracking-wider">
+      NEXT MILESTONE
+    </div>
+
+    <div className="text-lg font-bold text-white mt-1">
+      {nextMilestone ? `${nextMilestone.day} days` : "Completed"}
+    </div>
+
+    <button
+      className="mt-2 px-3 py-1.5 rounded-full text-[10px] font-medium text-white"
+      style={{
+        background: "#200D4F33",
+        border: "1px solid #8B5CF64D",
+      }}
+    >
+      {nextMilestone
+        ? `Claim ${new Intl.NumberFormat().format(nextMilestone.xp || 0)} XP`
+        : "All rewards claimed"}
+    </button>
+  </div>
+
+  {/* progress */}
+  <div className="mt-3">
+    <div className="w-full h-1.5 rounded-full bg-[#FFFFFF14] overflow-hidden">
+      <div
+        className="h-full rounded-full"
+        style={{
+          width: `${Math.min(progress, 100)}%`,
+          background: "linear-gradient(90deg, #7C3AED, #A78BFA)",
+        }}
+      />
+    </div>
+
+    <div className="text-[10px] text-white/40 mt-1">
+      {nextMilestone ? (
+        <>
+          <span className="text-white/60">{Math.floor(progress)}%</span>{" "}
+          complete ·{" "}
+          <span className="text-white/60">{daysRemaining}</span> days remaining
+        </>
+      ) : (
+        "100% complete · All milestones reached"
+      )}
+    </div>
+  </div>
+</div>
+
+{/* RIGHT CARD - YOUR STATS */}
+<div
+  className="rounded-2xl p-3 flex flex-col"
+  style={{
+    background: "linear-gradient(135deg, #8B5CF614, #581CDC0D)",
+    border: "1px solid #8B5CF633",
+  }}
+>
+  <div className="text-[10px] font-semibold text-[#8B5CF6B2] tracking-wider mb-2">
+    YOUR STATS
+  </div>
+
+  {/* XP */}
+  <div className="flex justify-between items-center">
+    <span className="text-[11px] text-white/60">
+      XP claimed this month
+    </span>
+    <span className="text-white font-semibold">
+      {new Intl.NumberFormat().format(xpThisMonth)}
+    </span>
+  </div>
+
+  <div className="h-[1px] bg-[#8B5CF61A] my-2" />
+
+  {/* Longest Streak */}
+  <div className="flex justify-between items-center">
+    <span className="text-[11px] text-white/60">
+      Highest Streak
+    </span>
+    <span className="text-white font-semibold">
+      {longestStreak} days
+    </span>
+  </div>
+
+  <div className="h-[1px] bg-[#8B5CF61A] my-2" />
+
+  {/* Check-ins */}
+  <div className="flex justify-between items-center">
+    <span className="text-[11px] text-white/60">
+      Total Check-Ins
+    </span>
+    <span className="text-white font-semibold">
+      {totalCheckIns}
+    </span>
+  </div>
+</div>
+</div>
+
+{/* Milestone Title */}
+<div className="px-3 pt-2">
+  <div className="text-[10px] font-semibold text-[#8B5CF6B2] tracking-wider mb-2">
+    MILESTONE PROGRESSIONS
+  </div>
+
+  {/* Card */}
+  <div
+    className="rounded-2xl p-2"
+    style={{
+      background: "linear-gradient(135deg, #8B5CF614, #581CDC0D)",
+      border: "1px solid #8B5CF633",
+    }}
+  >
+    {/* LINE TRACK */}
+    <div className="relative flex items-center justify-between">
+
+      {MILESTONES.map((m, i, arr) => {
+        const isLast = i === arr.length - 1;
+
+        // ✅ REAL LOGIC
+        const reached = streak >= m.day;
+        const isCurrent = streak === m.day;
+
+        return (
+          <div
+            key={m.day}
+            className="flex flex-col items-center flex-1 relative"
+          >
+            {/* Connector Line */}
+            {!isLast && (
+              <div
+                className="absolute top-4 left-1/2 w-full h-[2px] -z-10"
+                style={{
+                  background: "rgba(255,255,255,0.2)",
+                }}
+              />
+            )}
+
+            {/* Circle */}
+            <div
+              className="w-8 h-8 rounded-full flex items-center justify-center relative z-10"
+              style={{
+                background: reached
+                  ? "linear-gradient(135deg, #6D28D9, #7C3AED)"
+                  : "transparent",
+                border: "1px solid #8B5CF64D",
+              }}
             >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <span className="text-sm font-semibold text-white">
-              {MONTH_NAMES[viewMonth]} {viewYear}
-            </span>
-            <button
-              onClick={goToNextMonth}
-              disabled={!canGoNext}
-              className={`p-1.5 rounded-lg transition-colors ${canGoNext ? "hover:bg-white/10 text-white/60 hover:text-white" : "text-white/20 cursor-not-allowed"}`}
+              {reached ? (
+                isCurrent ? (
+                  <Check className="w-4 h-4 text-white" />
+                ) : (
+                  <span className="text-white text-[11px] font-semibold">
+                    {m.day}
+                  </span>
+                )
+              ) : (
+                <img
+                  src="/padlock.png"
+                  className="w-4 h-4 opacity-80"
+                />
+              )}
+            </div>
+
+            {/* XP pill */}
+            <div
+              className="mt-1 px-2 py-0.5 rounded-full text-[10px] text-white"
+              style={{
+                background: "#6D28D94D",
+                border: "1px solid #8B5CF64D",
+              }}
             >
-              <ChevronRight className="w-4 h-4" />
-            </button>
+              {new Intl.NumberFormat().format(m.xp)} XP
+            </div>
+
+            {/* Days label */}
+            <div className="text-[10px] mt-1 text-[#A78BFAB2]">
+              {m.label} Days
+            </div>
           </div>
-
-          {/* Weekday headers */}
-          <div className="grid grid-cols-7 gap-0.5 mb-1">
-            {WEEKDAYS.map((d) => (
-              <div key={d} className="text-center text-[9px] font-medium text-white/30 uppercase tracking-wider">
-                {d}
-              </div>
-            ))}
-          </div>
-
-          {/* Day cells */}
-          <div className="grid grid-cols-7 gap-0.5">
-            {calendarCells.map((day, i) => {
-              if (day === null) {
-                return <div key={`empty-${i}`} className="aspect-square" />;
-              }
-
-              const dateStr = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-              const isToday = dateStr === today;
-              const isCheckedIn = checkInSet.has(dateStr);
-              const isFuture = dateStr > today;
-
-              return (
-                <div
-                  key={dateStr}
-                  className={`aspect-square rounded-lg flex items-center justify-center relative text-[11px] font-medium transition-all duration-200
-                    ${isFuture ? "text-white/15" : "text-white/60"}
-                    ${isToday && !isCheckedIn ? "ring-1 ring-purple-400/40" : ""}
-                    ${isCheckedIn && !isToday ? "bg-purple-500/15 text-purple-300" : ""}
-                    ${isCheckedIn && isToday ? "bg-purple-500/15" : ""}
-                  `}
-                >
-                  {/* Icon for today: flame before check-in, checkmark after */}
-                  {isToday && (
-                    <div className={`absolute inset-0 flex items-center justify-center ${justClaimed ? "animate-bounce" : ""}`}>
-                      <div className="absolute inset-0 bg-gradient-to-b from-purple-500/20 to-transparent rounded-lg" />
-                      {alreadyCheckedIn ? (
-                        <Check
-                          className="w-4 h-4 text-purple-400 drop-shadow-[0_0_8px_rgba(147,51,234,0.6)] transition-all duration-300"
-                        />
-                      ) : (
-                        <Flame
-                          className="w-4 h-4 text-purple-400/50 animate-pulse drop-shadow-[0_0_8px_rgba(147,51,234,0.6)] transition-all duration-300"
-                        />
-                      )}
-                    </div>
-                  )}
-                  {/* Check mark for past check-ins */}
-                  {isCheckedIn && !isToday && (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <Check className="w-3.5 h-3.5 text-purple-400" />
-                    </div>
-                  )}
-                  {/* Day number */}
-                  {!isToday && !isCheckedIn && <span>{day}</span>}
-                  {isToday && !alreadyCheckedIn && !isCheckedIn && (
-                    <span className="sr-only">{day}</span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        );
+      })}
+    </div>
+  </div>
+</div>
 
         {/* Check-in button */}
         <div className="px-5 pb-5 pt-1">
