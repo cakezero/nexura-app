@@ -212,7 +212,7 @@ const xpThisMonth = checkInsThisMonth.length * 20; // temporary fallback
     >
       {/* inner thin border */}
       <div
-        className="absolute inset-[5px] rounded-full"
+        className="absolute inset-[3px] rounded-full"
         style={{
           border: "1px solid #8B5CF633",
         }}
