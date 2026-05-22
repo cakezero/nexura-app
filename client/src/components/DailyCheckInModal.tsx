@@ -51,59 +51,59 @@ export default function DailyCheckInModal({ open, onOpenChange, onCheckInSuccess
     }
   }, [justClaimed]);
 
-  // const fetchHistory = async () => {
-  //   setIsFetching(true);
-  //   try {
-  //     const response = await apiRequest("GET", "/api/user/profile");
-  //     const data = await response.json();
-
-  //     console.log("FULL PROFILE RESPONSE:", data);
-  //   console.log("CHECKIN DATES:", data.user?.checkInDates);
-    
-  //     const user = data.user;
-  //     setStreak(user?.streak || 0);
-  //     setLongestStreak(user?.longestStreak || 0);
-  //     // openDailySignIn is true when user has NOT signed in today
-  //     setAlreadyCheckedIn(!data.openDailySignIn);
-  //     const todayStr = new Date().toISOString().split("T")[0];
-  //     setServerDate(todayStr);
-  //     setCheckInDates(user?.checkInDates || []);
-  //   } catch {
-  //     // silently fail
-  //   } finally {
-  //     setIsFetching(false);
-  //   }
-  // };
-
   const fetchHistory = async () => {
-  setIsFetching(true);
+    setIsFetching(true);
+    try {
+      const response = await apiRequest("GET", "/api/user/profile");
+      const data = await response.json();
 
-  try {
-    // MOCK DATA INSTEAD OF BACKEND
-    const data = {
-  user: {
-    streak: 2,
-    longestStreak: 12,
-    checkInDates: [
-      "2026-05-20",
-      "2026-05-21",
-    ],
-  },
-  openDailySignIn: true,
-};
+      console.log("FULL PROFILE RESPONSE:", data);
+    console.log("CHECKIN DATES:", data.user?.checkInDates);
+    
+      const user = data.user;
+      setStreak(user?.streak || 0);
+      setLongestStreak(user?.longestStreak || 0);
+      // openDailySignIn is true when user has NOT signed in today
+      setAlreadyCheckedIn(!data.openDailySignIn);
+      const todayStr = new Date().toISOString().split("T")[0];
+      setServerDate(todayStr);
+      setCheckInDates(user?.checkInDates || []);
+    } catch {
+      // silently fail
+    } finally {
+      setIsFetching(false);
+    }
+  };
 
-    const user = data.user;
-    const MOCK_TODAY = "2026-05-25";
-    setServerDate(MOCK_TODAY);
+//   const fetchHistory = async () => {
+//   setIsFetching(true);
 
-    setStreak(user.streak);
-    setLongestStreak(user.longestStreak);
-    setAlreadyCheckedIn(!data.openDailySignIn);
-    setCheckInDates(user.checkInDates);
-  } finally {
-    setIsFetching(false);
-  }
-};
+//   try {
+//     // MOCK DATA INSTEAD OF BACKEND
+//     const data = {
+//   user: {
+//     streak: 2,
+//     longestStreak: 12,
+//     checkInDates: [
+//       "2026-05-20",
+//       "2026-05-21",
+//     ],
+//   },
+//   openDailySignIn: true,
+// };
+
+//     const user = data.user;
+//     const MOCK_TODAY = "2026-05-25";
+//     setServerDate(MOCK_TODAY);
+
+//     setStreak(user.streak);
+//     setLongestStreak(user.longestStreak);
+//     setAlreadyCheckedIn(!data.openDailySignIn);
+//     setCheckInDates(user.checkInDates);
+//   } finally {
+//     setIsFetching(false);
+//   }
+// };
 
   const handleCheckIn = async () => {
     if (alreadyCheckedIn || isLoading) return;
@@ -245,7 +245,7 @@ const isBrokenBeforeNextMilestone = useMemo(() => {
 <div className="px-3 pt-2 pb-3 text-center">
   <DialogHeader>
     <DialogTitle className="text-base font-bold text-white flex items-center justify-center gap-2">
-      <img src="/daily.png" alt="" className="w-5 h-5" />
+      {/* <img src="/daily.png" alt="" className="w-5 h-5" /> */}
       Daily Check-In
     </DialogTitle>
 
@@ -259,8 +259,8 @@ const isBrokenBeforeNextMilestone = useMemo(() => {
     <div
       className="relative flex items-center justify-center rounded-full"
       style={{
-  width: "130px",
-  height: "130px",
+  width: "120px",
+  height: "120px",
   background: streakLost
   ? "linear-gradient(135deg, #230A14F2, #0F0812FA)"
   : "linear-gradient(135deg, #1E123CE5, #0F0A1EF2)",
@@ -280,7 +280,7 @@ const isBrokenBeforeNextMilestone = useMemo(() => {
         <img
   src={streakLost ? "/broken-fire.png" : "/fire.png"}
   alt=""
-  className="w-8 h-8 mb-1"
+  className="w-6 h-6 mb-1"
 />
 
         <div className="text-2xl font-bold text-white">
@@ -314,7 +314,7 @@ const isBrokenBeforeNextMilestone = useMemo(() => {
 
 {/* LEFT CARD - NEXT MILESTONE */}
 <div
-  className="rounded-2xl px-4 py-2 flex flex-col justify-between"
+  className="rounded-2xl px-4 py-1 flex flex-col justify-between"
   style={{
     background: "linear-gradient(135deg, #8B5CF614, #581CDC0D)",
     border: "1px solid #8B5CF633",
@@ -326,13 +326,13 @@ const isBrokenBeforeNextMilestone = useMemo(() => {
       {streakLost ? "MILESTONE PROGRESS" : "NEXT MILESTONE"}
     </div>
 
-    <div className="text-lg font-bold text-white mt-1">
+    <div className="text-lg font-bold text-white mt-0.5">
       {nextMilestone ? `${nextMilestone.day} Days` : "Completed"}
     </div>
   </div>
 
   {/* PROGRESS + REWARD */}
-  <div className="mt-2 flex items-center justify-between gap-4">
+  <div className="mt-1 flex items-center justify-between gap-2">
 
     {/* PROGRESS */}
     <div className="flex-1">
@@ -346,7 +346,7 @@ const isBrokenBeforeNextMilestone = useMemo(() => {
         />
       </div>
 
-      <div className="text-[10px] text-white/40 mt-2 leading-relaxed">
+      <div className="text-[10px] text-white/40 mt-1 leading-relaxed">
         {nextMilestone ? (
           <>
             <span className="text-white/60">
@@ -361,16 +361,16 @@ const isBrokenBeforeNextMilestone = useMemo(() => {
     </div>
 
     {/* REWARD BOX */}
-    <div className="relative shrink-0 flex items-center justify-center">
+    <div className="relative shrink-0 flex items-center justify-center -mt-2">
       <img
         src="/reward-box.png"
         alt=""
-        className="w-20 h-20 object-contain"
+        className="w-16 h-16 object-contain"
       />
 
       {/* XP PILL */}
       <div
-        className="absolute -top-2 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[9px] font-semibold whitespace-nowrap"
+        className="absolute -top-1 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[9px] font-semibold whitespace-nowrap"
         style={{
           background: "#200D4FEE",
           border: "1px solid #8B5CF64D",
@@ -380,19 +380,18 @@ const isBrokenBeforeNextMilestone = useMemo(() => {
         +{new Intl.NumberFormat().format(nextMilestone?.xp || 0)} XP
       </div>
     </div>
-
   </div>
 </div>
 
 {/* RIGHT CARD - YOUR STATS */}
 <div
-  className="rounded-2xl p-3 flex flex-col"
+  className="rounded-2xl p-2 flex flex-col"
   style={{
     background: "linear-gradient(135deg, #8B5CF614, #581CDC0D)",
     border: "1px solid #8B5CF633",
   }}
 >
-  <div className="text-[10px] font-semibold text-[#8B5CF6B2] tracking-wider mb-2">
+  <div className="text-[10px] font-semibold text-[#8B5CF6B2] tracking-wider mb-1">
     YOUR STATS
   </div>
 
@@ -401,31 +400,31 @@ const isBrokenBeforeNextMilestone = useMemo(() => {
     <span className="text-[11px] text-white/60">
       XP claimed this month
     </span>
-    <span className="text-white font-semibold">
+    <span className="text-white text-[13px] font-semibold">
       {new Intl.NumberFormat().format(xpThisMonth)}
     </span>
   </div>
 
-  <div className="h-[1px] bg-[#8B5CF61A] my-2" />
+  <div className="h-[1px] bg-[#8B5CF61A] my-0.5" />
 
   {/* Longest Streak */}
   <div className="flex justify-between items-center">
     <span className="text-[11px] text-white/60">
       Highest Streak
     </span>
-    <span className="text-white font-semibold">
+    <span className="text-white text-[13px] font-semibold">
       {longestStreak} days
     </span>
   </div>
 
-  <div className="h-[1px] bg-[#8B5CF61A] my-2" />
+  <div className="h-[1px] bg-[#8B5CF61A] my-0.5" />
 
   {/* Check-ins */}
   <div className="flex justify-between items-center">
     <span className="text-[11px] text-white/60">
       Total Check-Ins
     </span>
-    <span className="text-white font-semibold">
+    <span className="text-white text-[13px] font-semibold">
       {totalCheckIns}
     </span>
   </div>
@@ -478,7 +477,7 @@ const isBrokenBeforeNextMilestone = useMemo(() => {
 
             {/* Circle */}
             <div
-  className="w-8 h-8 rounded-full flex items-center justify-center relative z-10"
+  className="w-7 h-7 rounded-full flex items-center justify-center relative z-10"
   style={{
     background: isBrokenBeforeNextMilestone
       ? "#F87171"
@@ -578,7 +577,7 @@ const isBrokenBeforeNextMilestone = useMemo(() => {
 )}
 
         {/* Check-in button */}
-        <div className="px-5 pb-3">
+        <div className="px-5 pb-2">
           <button
             onClick={handleCheckIn}
             disabled={alreadyCheckedIn || isLoading || isFetching}
