@@ -8,7 +8,7 @@ import {
 } from "./ui/dialog";
 import { apiRequest } from "../lib/queryClient";
 import { useToast } from "../hooks/use-toast";
-import { Check, Flame, ChevronLeft, ChevronRight, Trophy } from "lucide-react";
+import { Check, Flame, ChevronLeft, ChevronRight, Trophy, X } from "lucide-react";
 
 interface DailyCheckInModalProps {
   open: boolean;
@@ -51,29 +51,59 @@ export default function DailyCheckInModal({ open, onOpenChange, onCheckInSuccess
     }
   }, [justClaimed]);
 
-  const fetchHistory = async () => {
-    setIsFetching(true);
-    try {
-      const response = await apiRequest("GET", "/api/user/profile");
-      const data = await response.json();
+  // const fetchHistory = async () => {
+  //   setIsFetching(true);
+  //   try {
+  //     const response = await apiRequest("GET", "/api/user/profile");
+  //     const data = await response.json();
 
-      console.log("FULL PROFILE RESPONSE:", data);
-    console.log("CHECKIN DATES:", data.user?.checkInDates);
+  //     console.log("FULL PROFILE RESPONSE:", data);
+  //   console.log("CHECKIN DATES:", data.user?.checkInDates);
     
-      const user = data.user;
-      setStreak(user?.streak || 0);
-      setLongestStreak(user?.longestStreak || 0);
-      // openDailySignIn is true when user has NOT signed in today
-      setAlreadyCheckedIn(!data.openDailySignIn);
-      const todayStr = new Date().toISOString().split("T")[0];
-      setServerDate(todayStr);
-      setCheckInDates(user?.checkInDates || []);
-    } catch {
-      // silently fail
-    } finally {
-      setIsFetching(false);
-    }
-  };
+  //     const user = data.user;
+  //     setStreak(user?.streak || 0);
+  //     setLongestStreak(user?.longestStreak || 0);
+  //     // openDailySignIn is true when user has NOT signed in today
+  //     setAlreadyCheckedIn(!data.openDailySignIn);
+  //     const todayStr = new Date().toISOString().split("T")[0];
+  //     setServerDate(todayStr);
+  //     setCheckInDates(user?.checkInDates || []);
+  //   } catch {
+  //     // silently fail
+  //   } finally {
+  //     setIsFetching(false);
+  //   }
+  // };
+
+  const fetchHistory = async () => {
+  setIsFetching(true);
+
+  try {
+    // MOCK DATA INSTEAD OF BACKEND
+    const data = {
+  user: {
+    streak: 2,
+    longestStreak: 12,
+    checkInDates: [
+      "2026-05-20",
+      "2026-05-21",
+    ],
+  },
+  openDailySignIn: true,
+};
+
+    const user = data.user;
+    const MOCK_TODAY = "2026-05-25";
+    setServerDate(MOCK_TODAY);
+
+    setStreak(user.streak);
+    setLongestStreak(user.longestStreak);
+    setAlreadyCheckedIn(!data.openDailySignIn);
+    setCheckInDates(user.checkInDates);
+  } finally {
+    setIsFetching(false);
+  }
+};
 
   const handleCheckIn = async () => {
     if (alreadyCheckedIn || isLoading) return;
@@ -98,7 +128,7 @@ export default function DailyCheckInModal({ open, onOpenChange, onCheckInSuccess
     }
   };
 
-  const today = serverDate || new Date().toISOString().split("T")[0];
+  // const today = serverDate || new Date().toISOString().split("T")[0];
   const checkInSet = useMemo(() => new Set(checkInDates), [checkInDates]);
 
   // Calendar grid
@@ -183,6 +213,31 @@ const checkInsThisMonth = checkInDates.filter((date) => {
 // ⚠️ placeholder ONLY if backend doesn't provide XP
 const xpThisMonth = checkInsThisMonth.length * 20; // temporary fallback
 
+const lastCheckInDate = useMemo(() => {
+  if (!checkInDates.length) return null;
+  return new Date(checkInDates[checkInDates.length - 1]);
+}, [checkInDates]);
+
+const streakLost = useMemo(() => {
+  if (!lastCheckInDate) return false;
+
+  const now = new Date();
+  const diffInDays = Math.floor(
+    (now.getTime() - lastCheckInDate.getTime()) / (1000 * 60 * 60 * 24)
+  );
+
+  return diffInDays >= 2;
+}, [lastCheckInDate]);
+
+const nextMilestoneDay = nextMilestone?.day ?? Infinity;
+
+const isBrokenBeforeNextMilestone = useMemo(() => {
+  if (!streakLost) return false;
+  if (streak === 0) return false;
+
+  return streak < nextMilestoneDay;
+}, [streakLost, streak, nextMilestoneDay]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-[#100721] backdrop-blur-3xl border border-[#FFFFFF4D] rounded-2xl w-[92vw] max-w-xl p-0 overflow-hidden">
@@ -194,7 +249,7 @@ const xpThisMonth = checkInsThisMonth.length * 20; // temporary fallback
       Daily Check-In
     </DialogTitle>
 
-    <DialogDescription className="text-white/50 text-xs mt-1">
+    <DialogDescription className="text-white/50 text-xs mt-1 justify-center text-center items-center">
       Build your streak, earn XP, and grow your Nexon progression.
     </DialogDescription>
   </DialogHeader>
@@ -204,9 +259,11 @@ const xpThisMonth = checkInsThisMonth.length * 20; // temporary fallback
     <div
       className="relative flex items-center justify-center rounded-full"
       style={{
-  width: "120px",
-  height: "120px",
-  background: "linear-gradient(135deg, #1E123CE5, #0F0A1EF2)",
+  width: "130px",
+  height: "130px",
+  background: streakLost
+  ? "linear-gradient(135deg, #230A14F2, #0F0812FA)"
+  : "linear-gradient(135deg, #1E123CE5, #0F0A1EF2)",
   border: "4px solid #8B5CF6",
 }}
     >
@@ -220,11 +277,17 @@ const xpThisMonth = checkInsThisMonth.length * 20; // temporary fallback
 
       {/* content */}
       <div className="relative flex flex-col items-center justify-center text-center">
-        <img src="/fire.png" alt="" className="w-8 h-8 mb-1" />
+        <img
+  src={streakLost ? "/broken-fire.png" : "/fire.png"}
+  alt=""
+  className="w-8 h-8 mb-1"
+/>
 
-        <div className="text-2xl font-bold text-white">{streak}</div>
+        <div className="text-2xl font-bold text-white">
+  {streakLost ? `${streak} DAYS LOST` : streak}
+</div>
 
-        <div className="text-[10px] text-white/50 tracking-widest mt-0.5">
+        <div className="text-[9px] text-white/50 tracking-widest mt-0.5">
           DAYS STREAK
         </div>
       </div>
@@ -233,11 +296,15 @@ const xpThisMonth = checkInsThisMonth.length * 20; // temporary fallback
 
   {/* Below Circle Text */}
   <div className="mt-1 text-center">
-    <div className="text-sm font-medium text-white">Current Streak</div>
+    <div className="text-sm font-medium text-white">
+  {streakLost ? "Streak Lost" : "Current Streak"}
+</div>
     <div className="text-xs text-white/40 mt-1">
-  {nextMilestone
-    ? `${daysUntilNext} day${daysUntilNext === 1 ? "" : "s"} until your next milestone`
-    : "All milestones completed"}
+  {streakLost
+    ? "You missed your check-in. Your streak has been reset."
+    : nextMilestone
+      ? `${daysUntilNext} day${daysUntilNext === 1 ? "" : "s"} until your next milestone`
+      : "All milestones completed"}
 </div>
   </div>
 </div>
@@ -247,57 +314,73 @@ const xpThisMonth = checkInsThisMonth.length * 20; // temporary fallback
 
 {/* LEFT CARD - NEXT MILESTONE */}
 <div
-  className="rounded-2xl p-2 flex flex-col justify-between"
+  className="rounded-2xl px-4 py-2 flex flex-col justify-between"
   style={{
     background: "linear-gradient(135deg, #8B5CF614, #581CDC0D)",
     border: "1px solid #8B5CF633",
   }}
 >
+  {/* HEADER */}
   <div>
     <div className="text-[10px] font-semibold text-[#8B5CF6B2] tracking-wider">
-      NEXT MILESTONE
+      {streakLost ? "MILESTONE PROGRESS" : "NEXT MILESTONE"}
     </div>
 
     <div className="text-lg font-bold text-white mt-1">
-      {nextMilestone ? `${nextMilestone.day} days` : "Completed"}
+      {nextMilestone ? `${nextMilestone.day} Days` : "Completed"}
     </div>
-
-    <button
-      className="mt-2 px-3 py-1.5 rounded-full text-[10px] font-medium text-white"
-      style={{
-        background: "#200D4F33",
-        border: "1px solid #8B5CF64D",
-      }}
-    >
-      {nextMilestone
-        ? `Claim ${new Intl.NumberFormat().format(nextMilestone.xp || 0)} XP`
-        : "All rewards claimed"}
-    </button>
   </div>
 
-  {/* progress */}
-  <div className="mt-3">
-    <div className="w-full h-1.5 rounded-full bg-[#FFFFFF14] overflow-hidden">
-      <div
-        className="h-full rounded-full"
-        style={{
-          width: `${Math.min(progress, 100)}%`,
-          background: "linear-gradient(90deg, #7C3AED, #A78BFA)",
-        }}
-      />
+  {/* PROGRESS + REWARD */}
+  <div className="mt-2 flex items-center justify-between gap-4">
+
+    {/* PROGRESS */}
+    <div className="flex-1">
+      <div className="w-full h-1.5 rounded-full bg-[#FFFFFF14] overflow-hidden">
+        <div
+          className="h-full rounded-full"
+          style={{
+            width: `${Math.min(progress, 100)}%`,
+            background: "linear-gradient(90deg, #7C3AED, #A78BFA)",
+          }}
+        />
+      </div>
+
+      <div className="text-[10px] text-white/40 mt-2 leading-relaxed">
+        {nextMilestone ? (
+          <>
+            <span className="text-white/60">
+              {daysRemaining}
+            </span>{" "}
+            days remaining
+          </>
+        ) : (
+          "All milestones reached"
+        )}
+      </div>
     </div>
 
-    <div className="text-[10px] text-white/40 mt-1">
-      {nextMilestone ? (
-        <>
-          <span className="text-white/60">{Math.floor(progress)}%</span>{" "}
-          complete ·{" "}
-          <span className="text-white/60">{daysRemaining}</span> days remaining
-        </>
-      ) : (
-        "100% complete · All milestones reached"
-      )}
+    {/* REWARD BOX */}
+    <div className="relative shrink-0 flex items-center justify-center">
+      <img
+        src="/reward-box.png"
+        alt=""
+        className="w-20 h-20 object-contain"
+      />
+
+      {/* XP PILL */}
+      <div
+        className="absolute -top-2 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[9px] font-semibold whitespace-nowrap"
+        style={{
+          background: "#200D4FEE",
+          border: "1px solid #8B5CF64D",
+          color: "#fff",
+        }}
+      >
+        +{new Intl.NumberFormat().format(nextMilestone?.xp || 0)} XP
+      </div>
     </div>
+
   </div>
 </div>
 
@@ -352,16 +435,21 @@ const xpThisMonth = checkInsThisMonth.length * 20; // temporary fallback
 {/* Milestone Title */}
 <div className="px-3 pt-1 -mt-3">
   <div className="text-[10px] font-semibold text-[#8B5CF6B2] tracking-wider mb-2">
-    MILESTONE PROGRESSIONS
+    MILESTONE PROGRESSION
   </div>
 
   {/* Card */}
   <div
     className="rounded-2xl p-2"
     style={{
-      background: "linear-gradient(135deg, #8B5CF614, #581CDC0D)",
-      border: "1px solid #8B5CF633",
-    }}
+  background: isBrokenBeforeNextMilestone
+    ? "#F8717133"
+    : "linear-gradient(135deg, #8B5CF614, #581CDC0D)",
+
+  border: isBrokenBeforeNextMilestone
+    ? "1px solid #EF4444"
+    : "1px solid #8B5CF633",
+}}
   >
     {/* LINE TRACK */}
     <div className="relative flex items-center justify-between">
@@ -390,43 +478,59 @@ const xpThisMonth = checkInsThisMonth.length * 20; // temporary fallback
 
             {/* Circle */}
             <div
-              className="w-8 h-8 rounded-full flex items-center justify-center relative z-10"
-              style={{
-                background: reached
-                  ? "linear-gradient(135deg, #6D28D9, #7C3AED)"
-                  : "transparent",
-                border: "1px solid #8B5CF64D",
-              }}
-            >
-              {reached ? (
-                isCurrent ? (
-                  <Check className="w-4 h-4 text-white" />
-                ) : (
-                  <span className="text-white text-[11px] font-semibold">
-                    {m.day}
-                  </span>
-                )
-              ) : (
-                <img
-                  src="/padlock.png"
-                  className="w-4 h-4 opacity-80"
-                />
-              )}
+  className="w-8 h-8 rounded-full flex items-center justify-center relative z-10"
+  style={{
+    background: isBrokenBeforeNextMilestone
+      ? "#F87171"
+      : reached
+        ? "linear-gradient(135deg, #6D28D9, #7C3AED)"
+        : "transparent",
+
+    border: isBrokenBeforeNextMilestone
+      ? "1px solid #EF4444"
+      : "1px solid #8B5CF64D",
+  }}
+>
+              {isBrokenBeforeNextMilestone ? (
+  <X className="w-4 h-4 text-white" />
+) : reached ? (
+  isCurrent ? (
+    <Check className="w-4 h-4 text-white" />
+  ) : (
+    <span className="text-white text-[11px] font-semibold">
+      {m.day}
+    </span>
+  )
+) : (
+  <img src="/padlock.png" className="w-4 h-4 opacity-80" />
+)}
             </div>
 
             {/* XP pill */}
             <div
               className="mt-1 px-2 py-0.5 rounded-full text-[10px] text-white"
               style={{
-                background: "#6D28D94D",
-                border: "1px solid #8B5CF64D",
-              }}
+  background: isBrokenBeforeNextMilestone
+    ? "#F8717133"
+    : "#6D28D94D",
+
+  border: isBrokenBeforeNextMilestone
+    ? "1px solid #F8717166"
+    : "1px solid #8B5CF64D",
+
+  color: isBrokenBeforeNextMilestone ? "#F87171" : "#fff",
+}}
             >
               {new Intl.NumberFormat().format(m.xp)} XP
             </div>
 
             {/* Days label */}
-            <div className="text-[10px] mt-1 text-[#A78BFAB2]">
+            <div
+  className="text-[10px] mt-1"
+  style={{
+    color: isBrokenBeforeNextMilestone ? "#F87171" : "#A78BFAB2",
+  }}
+>
               {m.label} Days
             </div>
           </div>
@@ -435,6 +539,43 @@ const xpThisMonth = checkInsThisMonth.length * 20; // temporary fallback
     </div>
   </div>
 </div>
+
+{/* STREAK RESTORATION CARD */}
+{streakLost && (
+  <div
+    className="mt-3 rounded-2xl px-4 py-4 flex items-center justify-between gap-4"
+    style={{
+      background: "linear-gradient(135deg, #1E0E3299, #0F081CB2)",
+      border: "1px solid #8B5CF626",
+    }}
+  >
+    {/* LEFT SIDE */}
+    <div className="w-[70%]">
+      <div className="text-sm font-semibold text-white">
+        Streak Restoration
+      </div>
+
+      <p className="text-[11px] leading-relaxed mt-1 text-[#A78BFA80]">
+        Use at least 5 TRUST to buy into a Nexura-built Intuition claim and
+        restore your streak progression.
+      </p>
+    </div>
+
+    {/* RIGHT SIDE */}
+    <div className="w-[30%] flex justify-end">
+      <button
+        className="px-4 py-2 rounded-xl text-[11px] font-medium whitespace-nowrap"
+        style={{
+          background: "transparent",
+          border: "1px solid #8B5CF666",
+          color: "#A78BFA",
+        }}
+      >
+        Restore Streak
+      </button>
+    </div>
+  </div>
+)}
 
         {/* Check-in button */}
         <div className="px-5 pb-3">
