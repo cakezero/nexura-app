@@ -194,7 +194,7 @@ const lastCheckInDate = useMemo(() => {
 const streakLost = useMemo(() => {
   if (!lastCheckInDate) return false;
 
-  const now = new Date(serverDate)
+  const now = new Date();
 
   const diffInDays = Math.floor(
     (now.getTime() - lastCheckInDate.getTime()) / (1000 * 60 * 60 * 24)
@@ -214,16 +214,16 @@ const isBrokenBeforeNextMilestone = useMemo(() => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[#100721] backdrop-blur-3xl border border-[#FFFFFF4D] rounded-2xl w-[92vw] max-w-xl p-0 overflow-hidden">
+      <DialogContent className="bg-[#100721] backdrop-blur-3xl border border-[#FFFFFF4D] rounded-2xl w-[92vw] max-w-md p-0 overflow-hidden">
         {/* Header */}
-<div className="px-3 pt-2 pb-3 text-center">
+<div className="px-3 pt-2 pb-1.5 text-center">
   <DialogHeader>
     <DialogTitle className="text-base font-bold text-white flex items-center justify-center gap-2">
       {/* <img src="/daily.png" alt="" className="w-5 h-5" /> */}
       Daily Check-In
     </DialogTitle>
 
-    <DialogDescription className="text-white/50 text-xs mt-1 justify-center text-center items-center">
+    <DialogDescription className="text-white/50 text-xs mt-0.5 justify-center text-center items-center">
       Build your streak, earn XP, and grow your Nexon progression.
     </DialogDescription>
   </DialogHeader>
@@ -233,8 +233,8 @@ const isBrokenBeforeNextMilestone = useMemo(() => {
     <div
       className="relative flex items-center justify-center rounded-full"
       style={{
-  width: "120px",
-  height: "120px",
+  width: "100px",
+  height: "100px",
   background: streakLost
   ? "linear-gradient(135deg, #230A14F2, #0F0812FA)"
   : "linear-gradient(135deg, #1E123CE5, #0F0A1EF2)",
@@ -263,7 +263,7 @@ const isBrokenBeforeNextMilestone = useMemo(() => {
     : streak}
 </div>
 
-<div className="text-[9px] text-white/50 tracking-widest mt-0.5">
+<div className="text-[8px] text-white/50 tracking-widest mt-0.5">
   {streakLost
     ? "STREAK BROKEN"
     : `DAY${streak === 1 ? "" : "S"} STREAK`}
@@ -273,11 +273,11 @@ const isBrokenBeforeNextMilestone = useMemo(() => {
   </div>
 
   {/* Below Circle Text */}
-  <div className="mt-1 text-center">
+  <div className="mt-0.5 text-center">
     <div className="text-sm font-medium text-white">
   {streakLost ? "Streak Lost" : "Current Streak"}
 </div>
-    <div className="text-xs text-white/40 mt-1">
+    <div className="text-xs text-white/40 -mt-1 pb-1">
   {streakLost
     ? "You missed your check-in. Your streak has been reset."
     : nextMilestone
@@ -288,11 +288,11 @@ const isBrokenBeforeNextMilestone = useMemo(() => {
 </div>
 
 {/* Stats Cards */}
-<div className="px-3 grid grid-cols-2 gap-2 -mt-3">
+<div className="px-3 grid grid-cols-2 gap-2 -mt-5">
 
 {/* LEFT CARD - NEXT MILESTONE */}
 <div
-  className="rounded-2xl px-4 py-1 flex flex-col justify-between"
+  className="rounded-2xl px-4 py-0.5 flex flex-col justify-between"
   style={{
     background: "linear-gradient(135deg, #8B5CF614, #581CDC0D)",
     border: "1px solid #8B5CF633",
@@ -304,7 +304,7 @@ const isBrokenBeforeNextMilestone = useMemo(() => {
       {streakLost ? "MILESTONE PROGRESS" : "NEXT MILESTONE"}
     </div>
 
-    <div className="text-lg font-bold text-white mt-0.5">
+    <div className="text-sm font-bold text-white mt-0.5">
       {nextMilestone ? `${nextMilestone.day} Days` : "Completed"}
     </div>
   </div>
@@ -313,30 +313,45 @@ const isBrokenBeforeNextMilestone = useMemo(() => {
   <div className="mt-1 flex items-center justify-between gap-2">
 
     {/* PROGRESS */}
-    <div className="flex-1">
-      <div className="w-full h-1.5 rounded-full bg-[#FFFFFF14] overflow-hidden">
-        <div
-          className="h-full rounded-full"
-          style={{
-            width: `${Math.min(progress, 100)}%`,
-            background: "linear-gradient(90deg, #7C3AED, #A78BFA)",
-          }}
-        />
-      </div>
+<div className="flex-1">
+  <div className="w-full h-1.5 rounded-full bg-[#FFFFFF14] overflow-hidden relative">
 
-      <div className="text-[10px] text-white/40 mt-1 leading-relaxed">
-        {nextMilestone ? (
-          <>
-            <span className="text-white/60">
-              {daysRemaining}
-            </span>{" "}
-            days remaining
-          </>
-        ) : (
-          "All milestones reached"
-        )}
-      </div>
-    </div>
+    {/* NORMAL PURPLE PROGRESS */}
+    <div
+      className="h-full rounded-full absolute left-0 top-0"
+      style={{
+        width: `${Math.min(progress, 100)}%`,
+        background: "linear-gradient(90deg, #7C3AED, #A78BFA)",
+      }}
+    />
+
+    {/* BROKEN STREAK OVERLAY */}
+    {streakLost && (
+      <div
+        className="h-full absolute top-0"
+        style={{
+          left: `${Math.max(progress - 12, 0)}%`,
+          width: "12%",
+          background:
+            "linear-gradient(90deg, #F87171, rgba(248,113,113,0.2))",
+        }}
+      />
+    )}
+  </div>
+
+  <div className="text-[10px] text-white/40 mt-1 leading-relaxed">
+    {nextMilestone ? (
+      <>
+        <span className="text-white/60">
+          {daysRemaining}
+        </span>{" "}
+        days remaining
+      </>
+    ) : (
+      "All milestones reached"
+    )}
+  </div>
+</div>
 
     {/* REWARD BOX */}
     <div className="relative shrink-0 flex items-center justify-center -mt-2">
@@ -375,10 +390,10 @@ const isBrokenBeforeNextMilestone = useMemo(() => {
 
   {/* XP */}
   <div className="flex justify-between items-center">
-    <span className="text-[11px] text-white/60">
+    <span className="text-[10px] text-white/60">
       XP claimed this month
     </span>
-    <span className="text-white text-[13px] font-semibold">
+    <span className="text-white text-[12px] font-semibold">
       {new Intl.NumberFormat().format(xpThisMonth)}
     </span>
   </div>
@@ -387,10 +402,10 @@ const isBrokenBeforeNextMilestone = useMemo(() => {
 
   {/* Longest Streak */}
   <div className="flex justify-between items-center">
-    <span className="text-[11px] text-white/60">
+    <span className="text-[10px] text-white/60">
       Highest Streak
     </span>
-    <span className="text-white text-[13px] font-semibold">
+    <span className="text-white text-[12px] font-semibold">
       {longestStreak} days
     </span>
   </div>
@@ -399,10 +414,10 @@ const isBrokenBeforeNextMilestone = useMemo(() => {
 
   {/* Check-ins */}
   <div className="flex justify-between items-center">
-    <span className="text-[11px] text-white/60">
+    <span className="text-[10px] text-white/60">
       Total Check-Ins
     </span>
-    <span className="text-white text-[13px] font-semibold">
+    <span className="text-white text-[12px] font-semibold">
       {totalCheckIns}
     </span>
   </div>
@@ -410,14 +425,14 @@ const isBrokenBeforeNextMilestone = useMemo(() => {
 </div>
 
 {/* Milestone Title */}
-<div className="px-3 pt-1 -mt-3">
-  <div className="text-[10px] font-semibold text-[#8B5CF6B2] tracking-wider mb-2">
+<div className="px-3 pt-0.5 -mt-3">
+  <div className="text-[10px] font-semibold text-[#8B5CF6B2] tracking-wider mb-1">
     MILESTONE PROGRESSION
   </div>
 
   {/* Card */}
   <div
-    className="rounded-2xl p-2"
+    className="rounded-2xl p-1.5"
     style={{
       background:"linear-gradient(135deg, #8B5CF614, #581CDC0D)",
       border:"1px solid #8B5CF633",
@@ -486,7 +501,7 @@ const isBrokenBeforeNextMilestone = useMemo(() => {
 
             {/* XP pill */}
             <div
-              className="mt-1 px-2 py-0.5 rounded-full text-[10px] text-white"
+              className="mt-1 px-2 py-0.5 rounded-full text-[9px] text-white"
               style={{
                 background: isNextBroken
                   ? "#F8717133"
@@ -523,7 +538,7 @@ const isBrokenBeforeNextMilestone = useMemo(() => {
 {/* STREAK RESTORATION CARD */}
 {streakLost && (
   <div
-    className="mt-0.5 mx-4 rounded-2xl px-2 py-2 flex items-center justify-between gap-2"
+    className="-mt-2 mx-4 rounded-2xl px-3 py-2 flex items-center justify-between gap-2"
     style={{
       background: "linear-gradient(135deg, #1E0E3299, #0F081CB2)",
       border: "1px solid #8B5CF626",
@@ -535,7 +550,7 @@ const isBrokenBeforeNextMilestone = useMemo(() => {
         Streak Restoration
       </div>
 
-      <p className="text-[11px] leading-relaxed mt-1 text-[#A78BFA80]">
+      <p className="text-[10px] leading-relaxed mt-1 text-[#A78BFA80]">
         Use at least 5 TRUST to buy into a Nexura-built Intuition claim and
         restore your streak progression.
       </p>
@@ -544,7 +559,7 @@ const isBrokenBeforeNextMilestone = useMemo(() => {
     {/* RIGHT SIDE */}
     <div className="w-[30%] flex justify-end">
       <button
-        className="px-4 py-2 rounded-xl text-[11px] font-medium whitespace-nowrap"
+        className="px-4 py-2 rounded-xl text-[10px] font-medium whitespace-nowrap"
         style={{
           background: "transparent",
           border: "1px solid #8B5CF666",
@@ -562,7 +577,7 @@ const isBrokenBeforeNextMilestone = useMemo(() => {
           <button
             onClick={handleCheckIn}
             disabled={alreadyCheckedIn || isLoading || isFetching}
-            className={`w-full py-2.5 rounded-xl font-semibold text-sm transition-all duration-300 ${
+            className={`w-full py-2 rounded-2xl font-semibold text-xs transition-all duration-300 ${
               alreadyCheckedIn
                 ? "bg-white/5 border border-white/10 text-white/40 cursor-default"
                 : "bg-gradient-to-r from-purple-600 to-purple-800 text-white hover:opacity-90 hover:shadow-[0_0_20px_rgba(131,58,253,0.5)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99]"
