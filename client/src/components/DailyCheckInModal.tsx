@@ -34,6 +34,7 @@ export default function DailyCheckInModal({ open, onOpenChange, onCheckInSuccess
   const [viewMonth, setViewMonth] = useState(new Date().getMonth());
   const [viewYear, setViewYear] = useState(new Date().getFullYear());
   const { toast } = useToast();
+  const MOCK_TODAY = new Date("2026-05-25T00:00:00Z");
 
   useEffect(() => {
     if (open) {
@@ -56,9 +57,6 @@ export default function DailyCheckInModal({ open, onOpenChange, onCheckInSuccess
     try {
       const response = await apiRequest("GET", "/api/user/profile");
       const data = await response.json();
-
-      console.log("FULL PROFILE RESPONSE:", data);
-    console.log("CHECKIN DATES:", data.user?.checkInDates);
     
       const user = data.user;
       setStreak(user?.streak || 0);
@@ -75,31 +73,40 @@ export default function DailyCheckInModal({ open, onOpenChange, onCheckInSuccess
     }
   };
 
-//   const fetchHistory = async () => {
+// const fetchHistory = async () => {
 //   setIsFetching(true);
 
 //   try {
-//     // MOCK DATA INSTEAD OF BACKEND
+//     // HARD-CODED TEST DATA
 //     const data = {
-//   user: {
-//     streak: 2,
-//     longestStreak: 12,
-//     checkInDates: [
-//       "2026-05-20",
-//       "2026-05-21",
-//     ],
-//   },
-//   openDailySignIn: true,
-// };
+//       user: {
+//         streak: 3,
+//         longestStreak: 10,
+//         checkInDates: [
+//           "2026-05-20",
+//           "2026-05-21",
+//           "2026-05-22",
+//           "2026-05-23",
+//         ],
+//       },
+//       openDailySignIn: true,
+//     };
 
-//     const user = data.user;
+//     // FIXED "NOW" FOR STREAK TESTING
 //     const MOCK_TODAY = "2026-05-25";
 //     setServerDate(MOCK_TODAY);
 
+//     const user = data.user;
+
 //     setStreak(user.streak);
 //     setLongestStreak(user.longestStreak);
+
+//     // true = user has NOT signed in today
 //     setAlreadyCheckedIn(!data.openDailySignIn);
-//     setCheckInDates(user.checkInDates);
+
+//     setCheckInDates(user.checkInDates || []);
+//   } catch (err) {
+//     console.error("Mock fetch failed:", err);
 //   } finally {
 //     setIsFetching(false);
 //   }
@@ -128,44 +135,11 @@ export default function DailyCheckInModal({ open, onOpenChange, onCheckInSuccess
     }
   };
 
-  // const today = serverDate || new Date().toISOString().split("T")[0];
+  const today = serverDate || new Date().toISOString().split("T")[0];
   const checkInSet = useMemo(() => new Set(checkInDates), [checkInDates]);
 
-  // Calendar grid
-  const firstDay = new Date(viewYear, viewMonth, 1).getDay();
-  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
-  const calendarCells: (number | null)[] = [];
-  for (let i = 0; i < firstDay; i++) calendarCells.push(null);
-  for (let d = 1; d <= daysInMonth; d++) calendarCells.push(d);
-
-  const isCurrentMonth = viewMonth === new Date().getMonth() && viewYear === new Date().getFullYear();
-
-  const canGoNext = !isCurrentMonth;
-
-  const goToPrevMonth = () => {
-    if (viewMonth === 0) {
-      setViewMonth(11);
-      setViewYear(viewYear - 1);
-    } else {
-      setViewMonth(viewMonth - 1);
-    }
-  };
-
-  const goToNextMonth = () => {
-    if (canGoNext) {
-      if (viewMonth === 11) {
-        setViewMonth(0);
-        setViewYear(viewYear + 1);
-      } else {
-        setViewMonth(viewMonth + 1);
-      }
-    }
-  };
-
   /////////////// NEW MILESTONE PROGRESSION
-  
 
-  
   const MILESTONES = [
     { day: 7, xp: 500, label: "7" },
     { day: 15, xp: 1000, label: "15" },
@@ -180,7 +154,6 @@ export default function DailyCheckInModal({ open, onOpenChange, onCheckInSuccess
   
   const daysUntilNext = nextMilestone ? nextMilestone.day - streak : 0;
   const nextXP = nextMilestone?.xp || previousMilestone?.xp || 0;
-
 
 const currentMilestone = [...MILESTONES]
   .slice()
@@ -221,12 +194,13 @@ const lastCheckInDate = useMemo(() => {
 const streakLost = useMemo(() => {
   if (!lastCheckInDate) return false;
 
-  const now = new Date();
+  const now = new Date(serverDate)
+
   const diffInDays = Math.floor(
     (now.getTime() - lastCheckInDate.getTime()) / (1000 * 60 * 60 * 24)
   );
 
-  return diffInDays >= 2;
+  return diffInDays >= 1;
 }, [lastCheckInDate]);
 
 const nextMilestoneDay = nextMilestone?.day ?? Infinity;
@@ -283,13 +257,17 @@ const isBrokenBeforeNextMilestone = useMemo(() => {
   className="w-6 h-6 mb-1"
 />
 
-        <div className="text-2xl font-bold text-white">
-  {streakLost ? `${streak} DAYS LOST` : streak}
+<div className="text-sm font-bold text-white">
+  {streakLost
+    ? `${streak} DAY${streak === 1 ? "" : "S"}`
+    : streak}
 </div>
 
-        <div className="text-[9px] text-white/50 tracking-widest mt-0.5">
-          DAYS STREAK
-        </div>
+<div className="text-[9px] text-white/50 tracking-widest mt-0.5">
+  {streakLost
+    ? "STREAK BROKEN"
+    : `DAY${streak === 1 ? "" : "S"} STREAK`}
+</div>
       </div>
     </div>
   </div>
@@ -441,24 +419,22 @@ const isBrokenBeforeNextMilestone = useMemo(() => {
   <div
     className="rounded-2xl p-2"
     style={{
-  background: isBrokenBeforeNextMilestone
-    ? "#F8717133"
-    : "linear-gradient(135deg, #8B5CF614, #581CDC0D)",
-
-  border: isBrokenBeforeNextMilestone
-    ? "1px solid #EF4444"
-    : "1px solid #8B5CF633",
-}}
+      background:"linear-gradient(135deg, #8B5CF614, #581CDC0D)",
+      border:"1px solid #8B5CF633",
+    }}
   >
     {/* LINE TRACK */}
     <div className="relative flex items-center justify-between">
-
       {MILESTONES.map((m, i, arr) => {
         const isLast = i === arr.length - 1;
 
-        // ✅ REAL LOGIC
+        // CORE LOGIC
         const reached = streak >= m.day;
         const isCurrent = streak === m.day;
+        const isNext = m.day === nextMilestone?.day;
+
+        // ONLY NEXT MILESTONE CAN BE "BROKEN"
+        const isNextBroken = isNext && isBrokenBeforeNextMilestone;
 
         return (
           <div
@@ -477,59 +453,64 @@ const isBrokenBeforeNextMilestone = useMemo(() => {
 
             {/* Circle */}
             <div
-  className="w-7 h-7 rounded-full flex items-center justify-center relative z-10"
-  style={{
-    background: isBrokenBeforeNextMilestone
-      ? "#F87171"
-      : reached
-        ? "linear-gradient(135deg, #6D28D9, #7C3AED)"
-        : "transparent",
+              className="w-7 h-7 rounded-full flex items-center justify-center relative z-10"
+              style={{
+                background: isNextBroken
+                  ? "#F87171"
+                  : reached
+                    ? "linear-gradient(135deg, #6D28D9, #7C3AED)"
+                    : "transparent",
 
-    border: isBrokenBeforeNextMilestone
-      ? "1px solid #EF4444"
-      : "1px solid #8B5CF64D",
-  }}
->
-              {isBrokenBeforeNextMilestone ? (
-  <X className="w-4 h-4 text-white" />
-) : reached ? (
-  isCurrent ? (
-    <Check className="w-4 h-4 text-white" />
-  ) : (
-    <span className="text-white text-[11px] font-semibold">
-      {m.day}
-    </span>
-  )
-) : (
-  <img src="/padlock.png" className="w-4 h-4 opacity-80" />
-)}
+                border: isNextBroken
+                  ? "1px solid #EF4444"
+                  : "1px solid #8B5CF64D",
+              }}
+            >
+              {isNextBroken ? (
+                <X className="w-4 h-4 text-white" />
+              ) : reached ? (
+                isCurrent ? (
+                  <Check className="w-4 h-4 text-white" />
+                ) : (
+                  <span className="text-white text-[11px] font-semibold">
+                    {m.day}
+                  </span>
+                )
+              ) : (
+                <img
+                  src="/padlock.png"
+                  className="w-4 h-4 opacity-80"
+                />
+              )}
             </div>
 
             {/* XP pill */}
             <div
               className="mt-1 px-2 py-0.5 rounded-full text-[10px] text-white"
               style={{
-  background: isBrokenBeforeNextMilestone
-    ? "#F8717133"
-    : "#6D28D94D",
+                background: isNextBroken
+                  ? "#F8717133"
+                  : "#6D28D94D",
 
-  border: isBrokenBeforeNextMilestone
-    ? "1px solid #F8717166"
-    : "1px solid #8B5CF64D",
+                border: isNextBroken
+                  ? "1px solid #F8717166"
+                  : "1px solid #8B5CF64D",
 
-  color: isBrokenBeforeNextMilestone ? "#F87171" : "#fff",
-}}
+                color: isNextBroken ? "#F87171" : "#fff",
+              }}
             >
               {new Intl.NumberFormat().format(m.xp)} XP
             </div>
 
             {/* Days label */}
             <div
-  className="text-[10px] mt-1"
-  style={{
-    color: isBrokenBeforeNextMilestone ? "#F87171" : "#A78BFAB2",
-  }}
->
+              className="text-[10px] mt-1"
+              style={{
+                color: isNextBroken
+                  ? "#F87171"
+                  : "#A78BFAB2",
+              }}
+            >
               {m.label} Days
             </div>
           </div>
@@ -542,7 +523,7 @@ const isBrokenBeforeNextMilestone = useMemo(() => {
 {/* STREAK RESTORATION CARD */}
 {streakLost && (
   <div
-    className="mt-3 rounded-2xl px-4 py-4 flex items-center justify-between gap-4"
+    className="mt-0.5 mx-4 rounded-2xl px-2 py-2 flex items-center justify-between gap-2"
     style={{
       background: "linear-gradient(135deg, #1E0E3299, #0F081CB2)",
       border: "1px solid #8B5CF626",
