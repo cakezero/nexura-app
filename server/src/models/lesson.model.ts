@@ -72,10 +72,6 @@ const lessonSchema = new mongoose.Schema({
   section2Name: {
     type: String,
     default: "",
-  },
-  section2IntroBody: {
-    type: String,
-    default: "",
   }
 }, { timestamps: true });
 
