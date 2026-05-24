@@ -80,20 +80,22 @@ export default function DailyCheckInModal({ open, onOpenChange, onCheckInSuccess
 //     // HARD-CODED TEST DATA
 //     const data = {
 //       user: {
-//         streak: 3,
+//         streak: 14,
 //         longestStreak: 10,
 //         checkInDates: [
 //           "2026-05-20",
 //           "2026-05-21",
 //           "2026-05-22",
 //           "2026-05-23",
+//           "2026-05-24",
 //         ],
 //       },
-//       openDailySignIn: true,
+//       openDailySignIn: false,
 //     };
 
-//     // FIXED "NOW" FOR STREAK TESTING
-//     const MOCK_TODAY = "2026-05-25";
+//     // FIXED "NOW" FOR TESTING
+//     const MOCK_TODAY = "2026-05-24";
+
 //     setServerDate(MOCK_TODAY);
 
 //     const user = data.user;
@@ -101,7 +103,7 @@ export default function DailyCheckInModal({ open, onOpenChange, onCheckInSuccess
 //     setStreak(user.streak);
 //     setLongestStreak(user.longestStreak);
 
-//     // true = user has NOT signed in today
+//     // false means already checked in today
 //     setAlreadyCheckedIn(!data.openDailySignIn);
 
 //     setCheckInDates(user.checkInDates || []);
@@ -122,7 +124,7 @@ export default function DailyCheckInModal({ open, onOpenChange, onCheckInSuccess
       setStreak((s) => s + 1);
       const today = serverDate || new Date().toISOString().split("T")[0];
       setCheckInDates((prev) => [...prev, today]);
-      toast({ title: "Check-in complete!", description: "+20 XP earned" });
+      toast({ title: "Check-in complete!", description: "+50 XP earned" });
       onCheckInSuccess();
     } catch (error: any) {
       toast({
@@ -202,6 +204,19 @@ const streakLost = useMemo(() => {
 
   return diffInDays >= 1;
 }, [lastCheckInDate]);
+
+// const streakLost = useMemo(() => {
+//   if (!lastCheckInDate) return false;
+
+//   const now = new Date(serverDate);
+
+//   const diffInDays = Math.floor(
+//     (now.getTime() - lastCheckInDate.getTime()) /
+//       (1000 * 60 * 60 * 24)
+//   );
+
+//   return diffInDays >= 1;
+// }, [lastCheckInDate, serverDate]);
 
 const nextMilestoneDay = nextMilestone?.day ?? Infinity;
 
@@ -399,7 +414,7 @@ const isBrokenBeforeNextMilestone = useMemo(() => {
     <span className="text-[10px] text-[#A78BFA8C]">
       XP claimed this month
     </span>
-    <span className="text-white text-[12px]">
+    <span className="text-[##E9D5FF] text-[10px]">
       {new Intl.NumberFormat().format(xpThisMonth)}
     </span>
   </div>
@@ -409,9 +424,9 @@ const isBrokenBeforeNextMilestone = useMemo(() => {
   {/* Longest Streak */}
   <div className="flex justify-between items-center">
     <span className="text-[10px] text-[#A78BFA8C]">
-      Highest Streak
+      Longest Streak
     </span>
-    <span className="text-white text-[12px]">
+    <span className="text-[##E9D5FF] text-[10px]">
       {longestStreak} days
     </span>
   </div>
@@ -423,7 +438,7 @@ const isBrokenBeforeNextMilestone = useMemo(() => {
     <span className="text-[10px] text-[#A78BFA8C]">
       Total Check-Ins
     </span>
-    <span className="text-white text-[12px]">
+    <span className="text-[##E9D5FF] text-[10px]">
       {totalCheckIns}
     </span>
   </div>
@@ -436,107 +451,126 @@ const isBrokenBeforeNextMilestone = useMemo(() => {
     MILESTONE PROGRESSION
   </div>
 
-  {/* Card */}
-  <div
-    className="rounded-2xl p-3 w-full"
-    style={{
-      background: "linear-gradient(135deg, #8B5CF614, #581CDC0D)",
-      border: "1px solid #8B5CF633",
-    }}
-  >
+{/* Card */}
+<div
+  className="rounded-2xl p-3 w-full overflow-hidden"
+  style={{
+    background: "linear-gradient(135deg, #8B5CF614, #581CDC0D)",
+    border: "1px solid #8B5CF633",
+  }}
+>
+  {/* TRACK */}
+  <div className="relative flex items-start w-full">
 
-    {/* TRACK */}
-    <div className="relative flex w-full">
+    {MILESTONES.map((m, i, arr) => {
+      const isLast = i === arr.length - 1;
 
-      {MILESTONES.map((m, i, arr) => {
-        const isLast = i === arr.length - 1;
+const reached = streak > m.day;
+const isAtCheckpoint = streak === m.day;
+const isUpcoming = streak < m.day;
+      const isNext = m.day === nextMilestone?.day;
+      const isNextBroken = isNext && isBrokenBeforeNextMilestone;
 
-        const reached = streak >= m.day;
-        const isCurrent = streak === m.day;
-        const isNext = m.day === nextMilestone?.day;
-        const isNextBroken = isNext && isBrokenBeforeNextMilestone;
+      return (
+        <div
+          key={m.day}
+          className="relative flex-1 flex flex-col items-center min-w-0"
+        >
 
-        return (
+          {/* CONNECTOR LINE */}
+          {!isLast && (
+            <div
+              className="absolute top-[10px] left-1/2 h-[1.5px] z-0"
+              style={{
+                width: "100%",
+                background: reached
+                  ? "linear-gradient(90deg, #7C3AED, rgba(167,139,250,0.35))"
+                  : "rgba(255,255,255,0.12)",
+              }}
+            />
+          )}
+
+          {/* NODE */}
           <div
-            key={m.day}
-            className="relative flex-1 flex flex-col items-center px-[2px]"
+            className="relative w-5 h-5 rounded-full flex items-center justify-center shrink-0 z-10 backdrop-blur-sm"
+            style={{
+              background: isNextBroken
+                ? "#F87171"
+                : reached
+                  ? "linear-gradient(135deg, #6D28D9, #7C3AED)"
+                  : "rgba(255,255,255,0.03)",
+
+              border: isNextBroken
+                ? "1px solid #EF4444"
+                : reached
+                  ? "1px solid #8B5CF699"
+                  : "1px solid rgba(255,255,255,0.08)",
+
+              boxShadow: reached
+                ? "0 0 10px rgba(139,92,246,0.35)"
+                : "none",
+            }}
           >
-
-            {/* CONNECTOR LINE */}
-            {!isLast && (
-              <div
-                className="absolute top-[10px] left-1/2 w-full h-[1px] -z-10"
-                style={{
-                  background: "rgba(255,255,255,0.15)",
-                  transform: "translateX(50%)",
-                }}
-              />
-            )}
-
-            {/* NODE */}
-            <div
-              className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 z-10"
-              style={{
-                background: isNextBroken
-                  ? "#F87171"
-                  : reached
-                    ? "linear-gradient(135deg, #6D28D9, #7C3AED)"
-                    : "transparent",
-
-                border: isNextBroken
-                  ? "1px solid #EF4444"
-                  : "1px solid #8B5CF64D",
-              }}
-            >
-              {isNextBroken ? (
-                <X className="w-3 h-3 text-white" />
-              ) : reached ? (
-                isCurrent ? (
-                  <Check className="w-3 h-3 text-white" />
-                ) : (
-                  <span className="text-white text-[9px]">
-                    {m.day}
-                  </span>
-                )
-              ) : (
-                <img src="/padlock.png" className="w-3 h-3 opacity-80" />
-              )}
-            </div>
-
-            {/* XP */}
-            <div
-              className="mt-0.5 px-1.5 py-[1px] rounded-full text-[8px] whitespace-nowrap"
-              style={{
-                background: isNextBroken
-                  ? "#F8717133"
-                  : "#6D28D94D",
-
-                border: isNextBroken
-                  ? "1px solid #F8717166"
-                  : "1px solid #8B5CF64D",
-
-                color: isNextBroken ? "#F87171" : "#fff",
-              }}
-            >
-              {new Intl.NumberFormat().format(m.xp)} XP
-            </div>
-
-            {/* LABEL */}
-            <div
-              className="text-[8.5px] mt-0.5 text-center leading-tight"
-              style={{
-                color: isNextBroken ? "#F87171" : "#A78BFAB2",
-              }}
-            >
-              {m.label}
-            </div>
-
+            {isNextBroken ? (
+  <X className="w-3 h-3 text-white" />
+) : isAtCheckpoint ? (
+  // USER HAS HIT CHECKPOINT BUT NOT VERIFIED YET → show number
+<span
+  className="text-white text-[8px] font-semibold px-1 py-[3px] rounded-full"
+  style={{
+    background: "linear-gradient(135deg, #8B3EFE, #6D28D9)",
+    border: "1px solid #8B5CF64D",
+    boxShadow: "0 0 8px rgba(139,62,254,0.25)",
+  }}
+>
+  {m.day}
+</span>
+) : reached ? (
+  // USER HAS VERIFIED (past checkpoint) → show check
+  <Check className="w-3 h-3 text-white" />
+) : (
+  <img
+    src="/padlock.png"
+    className="w-2.5 h-2.5 opacity-20 blur-[0.3px]"
+  />
+)}
           </div>
-        );
-      })}
 
-    </div>
+          {/* XP */}
+          <div
+            className="mt-1 px-1.5 py-[1px] rounded-full text-[7px] whitespace-nowrap"
+            style={{
+              background: isNextBroken
+                ? "#F8717133"
+                : "#6D28D94D",
+
+              border: isNextBroken
+                ? "1px solid #F8717166"
+                : "1px solid #8B5CF64D",
+
+              color: isNextBroken ? "#F87171" : "#fff",
+            }}
+          >
+            {new Intl.NumberFormat().format(m.xp)} XP
+          </div>
+
+          {/* LABEL */}
+          <div
+            className="text-[8px] mt-0.5 text-center leading-tight"
+            style={{
+              color: isNextBroken
+                ? "#F87171"
+                : "#A78BFAB2",
+            }}
+          >
+            {m.label} Days
+          </div>
+
+        </div>
+      );
+    })}
   </div>
+</div>
 </div>
 
 {/* STREAK RESTORATION CARD */}
@@ -577,7 +611,7 @@ const isBrokenBeforeNextMilestone = useMemo(() => {
 )}
 
         {/* Check-in button */}
-        <div className="px-5 pb-2">
+        <div className="px-5 pb-4">
           <button
             onClick={handleCheckIn}
             disabled={alreadyCheckedIn || isLoading || isFetching}
@@ -593,7 +627,7 @@ const isBrokenBeforeNextMilestone = useMemo(() => {
                 ? "Checking in..."
                 : alreadyCheckedIn
                   ? "Checked In"
-                  : "Check In  (+20 XP)"}
+                  : "Check In  (+50 XP)"}
           </button>
         </div>
       </DialogContent>
