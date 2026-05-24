@@ -1488,7 +1488,7 @@ export const getAnalytics = async (req: GlobalRequest, res: GlobalResponse) => {
 export const fetchDailyXpDetails = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
     const today = new Date();
-    const month = today.toISOString().split("T")[0] as string;
+    const month = formatDate(today, "MMM, y");
 
     const dailyXpDetails = await dailySignIn.findOne({ user: req.id, month }).lean();
 
@@ -1600,7 +1600,7 @@ export const performDailySignIn = async (
       userExists.streak = 1;
     }
 
-    const dailyXpAmount = 20;
+    const dailyXpAmount = 50;
 
     const month = formatDate(new Date(), "MMM, y");
 
