@@ -294,30 +294,22 @@ export const rewardXpBatch = async (req: GlobalRequest, res: GlobalResponse) => 
 		}
 
 		const existing = await user.find({ address: { $in: normalized } }, { address: 1, username: 1 }).lean();
-    const matched: {address: string, username: string}[] = [];
-		const notFound: {address: string, username: string | undefined}[] = [];
+		const matched = normalized.filter((addr) => existing.some((u) => (u.address).toLowerCase() === addr)) as unknown as { address: string, username: string }[];
+		const notFound = normalized.filter((addr) => !existing.some((u) => (u.address).toLowerCase() === addr)) as unknown as { address: string, username: string }[];;
 
-    const logs: any[] = [];
-    const ids = [];
-    const adminObjId = req.id ? new mongoose.Types.ObjectId(req.id) : undefined;
+		const logs: any[] = [];
+		const adminObjId = req.id ? new mongoose.Types.ObjectId(req.id) : undefined;
 
-    for (const addr of normalized) {
-      const existingUser = existing.find((u) => u.address === addr);
-      if (existingUser) {
-        matched.push(existingUser);
-        ids.push(existingUser._id);
-        logs.push({
-          address: existingUser.address,
-  				username: existingUser.username,
-  				amount: xpAmount,
-  				status: "success",
-  				type: "batch",
-  				adminId: adminObjId
-  			});
-      } else {
-        notFound.push({ address: addr, username: undefined });
-      }
-    }
+		for (const match of matched) {
+			logs.push({
+        address: match.address,
+				username: match.username,
+				amount: xpAmount,
+				status: "success",
+				type: "batch",
+				adminId: adminObjId
+			});
+		}
 
 		for (const nf of notFound) {
 			logs.push({
@@ -336,7 +328,7 @@ export const rewardXpBatch = async (req: GlobalRequest, res: GlobalResponse) => 
 
 		if (matched.length > 0) {
 			await user.updateMany(
-				{ _id: { $in: ids } },
+				{ address: { $in: matched } },
 				{ $inc: { xp: xpAmount, eventsWon: 1 } },
 			);
 		}
@@ -1000,7 +992,7 @@ export const banCreator = async (req: GlobalRequest, res: GlobalResponse) => {
 		}
 
 		// Skip if already banned
-		const alreadyBanned = await bannedUser.findOne({ userId: ownerId }).lean();
+		const alreadyBanned = await bannedUser.findById(ownerId).lean();
 		if (alreadyBanned) {
 			res.status(BAD_REQUEST).json({ error: "creator is already banned" });
 			return;
@@ -1062,19 +1054,8 @@ export const unbanCreator = async (req: GlobalRequest, res: GlobalResponse) => {
 export const getBannedCreators = async (_req: GlobalRequest, res: GlobalResponse) => {
 	try {
 		const banned = await bannedUser.find({}).sort({ createdAt: -1 }).lean();
-		const adminIds = banned.map(b => b.userId);
-
-		// Resolve admin IDs to hub IDs for frontend comparison
-		const [userHubAdmins, projectHubAdmins] = await Promise.all([
-			userHubAdmin.find({ _id: { $in: adminIds } }).select("hub").lean(),
-			hubAdmin.find({ _id: { $in: adminIds } }).select("hub").lean(),
-		]);
-
-		const hubIds = new Set<string>();
-		for (const a of userHubAdmins) { if (a.hub) hubIds.add(String(a.hub)); }
-		for (const a of projectHubAdmins) { if (a.hub) hubIds.add(String(a.hub)); }
-
-		res.status(OK).json({ bannedCreatorIds: [...hubIds] });
+		const ids = banned.map(b => b.userId);
+		res.status(OK).json({ bannedCreatorIds: ids });
 	} catch (error) {
 		logger.error(error);
 		res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching banned creators" });
