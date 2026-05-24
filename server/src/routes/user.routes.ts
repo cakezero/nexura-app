@@ -9,7 +9,9 @@ import {
 	performDailySignIn,
 	setApproved,
 	updateClaims,
-	updateClaimsCreated
+	updateClaimsCreated,
+  claimStreakReward,
+  fetchDailyXpDetails
 } from "@/controllers/app.controller";
 import { logout } from "@/controllers/auth.controller";
 import { upload } from "@/config/multer";
@@ -24,6 +26,8 @@ router
   .post("/update-claims", updateClaims)
   .post("/update-claims-created", updateClaimsCreated)
   .post("/set-approved", setApproved)
+  .post("/claim-streak-reward", claimStreakReward)
+  .get("/daily-xp-details", fetchDailyXpDetails)
   .get("/referral-info", referralInfo)
   .post("/logout", logout)
   .post("/perform-daily-sign-in", performDailySignIn)

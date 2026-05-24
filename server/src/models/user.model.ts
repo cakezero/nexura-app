@@ -9,6 +9,10 @@ const userSchema = new Schema({
 	tier: {
 		type: Number,
 		default: 0,
+  },
+  totalCheckIns: {
+    type: Number,
+    default: 0
 	},
 	address: {
 		type: String,

@@ -49,6 +49,7 @@ import { dailySignIn } from "@/models/dailySignIn.model";
 import { startOfDayUTC, updateLevel, getAmountPaid } from "@/utils/utils";
 import { lesson, lessonCompleted } from "@/models/lesson.model";
 import { xpLog } from "@/models/xpLog.model";
+import { formatDate } from "date-fns";
 
 const client = new GraphQLClient(GRAPHQL_API_URL);
 
@@ -1486,6 +1487,78 @@ export const getAnalytics = async (req: GlobalRequest, res: GlobalResponse) => {
   }
 };
 
+export const fetchDailyXpDetails = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const today = new Date();
+    const month = today.toISOString().split("T")[0] as string;
+
+    const dailyXpDetails = await dailySignIn.findOne({ user: req.id, month }).lean();
+
+    if (!dailyXpDetails) {
+      res.status(NOT_FOUND).json({ error: "daily xp details not found" });
+      return;
+    }
+
+    res.status(OK).json({ message: "daily xp details fetched", dailyXpDetails });
+  } catch (error) {
+    logger.error(error);
+    res
+      .status(INTERNAL_SERVER_ERROR)
+      .json({ error: "error fetching daily xp details" });
+  }
+}
+
+export const claimStreakReward = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const userFromReq = req.user;
+
+    const month = formatDate(new Date(), "MMM, y");
+
+    let streakReward = 0;
+
+    const dailyXpReward = await dailySignIn.findOne({ user: req.id, month });
+
+    if (userFromReq.streak >= 7 && userFromReq.streak < 15 && dailyXpReward!.dayCount !== 7) {
+      streakReward = 500;
+      dailyXpReward!.dayCount = 7;
+    } else if (userFromReq.streak >= 15 && userFromReq.streak < 30 && dailyXpReward!.dayCount !== 15) {
+      streakReward = 1000;
+      dailyXpReward!.dayCount = 15;
+    } else if (userFromReq.streak >= 30 && userFromReq.streak < 45 && dailyXpReward!.dayCount !== 30) {
+      streakReward = 2500;
+      dailyXpReward!.dayCount = 30;
+    } else if (userFromReq.streak >= 45 && userFromReq.streak < 60 && dailyXpReward!.dayCount !== 45) {
+      streakReward = 5000;
+      dailyXpReward!.dayCount = 45;
+    } else if (userFromReq.streak >= 60 && userFromReq.streak < 90 && dailyXpReward!.dayCount !== 60) {
+      streakReward = 10000;
+      dailyXpReward!.dayCount = 60;
+    } else if (userFromReq.streak >= 90 && dailyXpReward!.dayCount !== 90) {
+      streakReward = 20000;
+      dailyXpReward!.dayCount = 90;
+    }
+
+    if (streakReward === 0) {
+      res.status(BAD_REQUEST).json({ error: "streak reward not available to claim" });
+      return;
+    }
+
+    dailyXpReward!.xpClaimedThisMonth += streakReward;
+    await dailyXpReward!.save();
+
+    await user.findByIdAndUpdate(req.id, { $inc: { xp: streakReward } });
+
+    await xpLog.create({ amount: streakReward, address: req.user.address, username: req.user.username, type: "daily-xp-streak-reward", status: "success" });
+
+    res.status(OK).json({ message: "streak reward claimed", streakReward });
+  } catch (error) {
+    logger.error(error);
+    res
+      .status(INTERNAL_SERVER_ERROR)
+      .json({ error: "error claiming streak reward" });
+  }
+}
+
 export const performDailySignIn = async (
   req: GlobalRequest,
   res: GlobalResponse,
@@ -1531,6 +1604,8 @@ export const performDailySignIn = async (
 
     const dailyXpAmount = 20;
 
+    const month = formatDate(new Date(), "MMM, y");
+
     userExists.xp += dailyXpAmount;
     userExists.lastSignInDate = onlyDate;
 
@@ -1543,7 +1618,9 @@ export const performDailySignIn = async (
       userExists.badges,
       userExists._id.toString(),
     );
+
     userExists.level = level;
+    userExists.totalCheckIns += 1;
 
     await xpLog.create({
       address: userExists.address,
@@ -1559,18 +1636,20 @@ export const performDailySignIn = async (
     // admin dashboards). Not authoritative — failures here don't affect the
     // user's response or streak.
     try {
-      await dailySignIn.findOneAndUpdate(
-        { user: req.id },
-        { $set: { date: onlyDate, user: req.id } },
-        { upsert: true, new: true },
-      );
+      const dailySignInRecord = await dailySignIn.findOne({ month, user: userId }).select("xpClaimedThisMonth");
+      if (!dailySignInRecord) {
+        await dailySignIn.create({ month, user: userId, xpClaimedThisMonth: dailyXpAmount });
+      } else {
+        dailySignInRecord.xpClaimedThisMonth += dailyXpAmount;
+        await dailySignInRecord.save();
+      }
     } catch (syncErr) {
       logger.warn(
         `dailySignIn sync failed for user ${userId} (non-fatal): ${syncErr}`,
       );
     }
 
-    res.json({ message: "Daily sign-in successful", done: true });
+    res.status(OK).json({ message: "Daily sign-in successful", done: true });
   } catch (error) {
     logger.error(error);
     res
