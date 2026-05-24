@@ -210,7 +210,7 @@ const isBrokenBeforeNextMilestone = useMemo(() => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[#100721] rounded-[48px] w-[93vw] max-w-sm p-0 overflow-hidden font-geist">
+      <DialogContent className="bg-[#100721] w-[93vw] max-w-sm p-0 overflow-hidden font-geist">
         {/* Header */}
 <div className="px-3 pt-2 pb-1 text-center">
   <DialogHeader>
@@ -362,7 +362,7 @@ const isBrokenBeforeNextMilestone = useMemo(() => {
 
       {/* XP PILL */}
       <div
-        className="absolute -top-1 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[9px] whitespace-nowrap"
+        className="absolute -top-3 left-1/2 -translate-x-1/2 px-1 py-0.5 rounded-full text-[8px] whitespace-nowrap"
         style={{
           background: "#200D4FEE",
           border: "1px solid #8B5CF64D",
@@ -407,7 +407,7 @@ const isBrokenBeforeNextMilestone = useMemo(() => {
     <span className="text-[10px] text-[#A78BFA8C]">
       Longest Streak
     </span>
-    <span className="text-[##E9D5FF] text-[10px]">
+    <span className="text-[#E9D5FF] text-[10px]">
       {longestStreak} days
     </span>
   </div>
