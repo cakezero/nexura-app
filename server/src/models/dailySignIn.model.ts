@@ -16,7 +16,7 @@ const dailySignInSchema = new mongoose.Schema({
   },
   dayCount: {
     type: Number,
-    default: 0
+    default: 1
   },
   xpClaimedThisMonth: {
     type: Number,

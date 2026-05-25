@@ -43,7 +43,7 @@ import {
 } from "@/models/questsCompleted.models";
 import { GRAPHQL_API_URL } from "@/utils/constants";
 import { GraphQLClient } from "graphql-request";
-import { checksumAddress } from "viem";
+import { checksumAddress, parseEther, type Address } from "viem";
 import { campaign, campaignCompleted } from "@/models/campaign.model";
 import { dailySignIn } from "@/models/dailySignIn.model";
 import { startOfDayUTC, updateLevel, getAmountPaid } from "@/utils/utils";
@@ -1649,6 +1649,45 @@ export const performDailySignIn = async (
       .json({ error: "error claiming daily quest" });
   }
 };
+
+export const restoreStreak = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const txHash = req.query.transactionHash as string;
+      
+    if (!txHash) {
+      res.status(BAD_REQUEST).json({ error: "transaction hash is required" });
+      return;
+    }
+
+    const { from, timestamp, value } = await getAmountPaid(txHash);
+
+    if (checksumAddress(from as Address) !== checksumAddress(req.user.address)) {
+      res.status(BAD_REQUEST).json({ error: "transaction must be from the user's address" });
+      return;
+    }
+
+    if (value !== "1") {
+      res.status(BAD_REQUEST).json({ error: "user must deposit 1 trust before streak can be restored" });
+      return;
+    }
+
+    const currentDate = new Date().toLocaleString({ timeZone: "Africa/Lagos" }).split(", ")[0] as string;
+
+    if (timestamp !== currentDate) {
+      res.status(BAD_REQUEST).json({ error: "transaction must be from the current day" });
+      return;
+    }
+
+    await user.findByIdAndUpdate(req.id, { $inc: { streak: 1, totalCheckIns: 1 } });
+
+    res.status(OK).json({ message: "streak restored" });
+  } catch (error) {
+    logger.error(error);
+    res
+      .status(INTERNAL_SERVER_ERROR)
+      .json({ error: "error restoring streak" });
+  }
+}
 
 export const claimsCreated = async (
   req: GlobalRequest,
