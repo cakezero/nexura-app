@@ -1488,33 +1488,31 @@ export const getAnalytics = async (req: GlobalRequest, res: GlobalResponse) => {
 
 export const fetchDailyXpDetails = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
-    const today = new Date();
-    const month = formatDate(today, "MMM, y");
+    const month = formatDate(new Date(), "MMM, y");
 
-    const dailyXpDetailsInDB = await dailySignIn.findOne({ user: req.id, month }).lean().select("xpClaimedThisMonth");
+    const dailyXpDetailsInDB = await dailySignIn.findOne({ user: req.id, month }).lean().select("xpClaimedThisMonth date");
 
     if (!dailyXpDetailsInDB) {
       res.status(OK).json({ error: "daily xp details not found" });
       return;
     }
 
-    const onlyDate = startOfDayUTC();
+    const today = startOfDayUTC();
 
-    const yesterday = new Date(onlyDate);
-    yesterday.setUTCDate(onlyDate.getUTCDate() - 1);
+    const yesterday = new Date(today);
+    yesterday.setUTCDate(today.getUTCDate() - 1);
 
     const yesterdayDate = yesterday.toISOString().split("T")[0] as string;
-
-    const lastSignIn = req.user.lastSignInDate;
+    console.log({ yesterdayDate });
 
     let streakLost = false;
 
-    if (lastSignIn !== yesterdayDate) {
+    if (dailyXpDetailsInDB.date !== yesterdayDate) {
       await user.findByIdAndUpdate(req.id, { streak: 0, streakToRestore: req.user.streak });
       streakLost = true;
     }
 
-    res.status(OK).json({ message: "daily xp details fetched", dailyXpDetails: { streakLost, xpClaimedthisMonth: dailyXpDetailsInDB.xpClaimedThisMonth } });
+    res.status(OK).json({ message: "daily xp details fetched", dailyXpDetails: { streakLost, xpClaimedThisMonth: dailyXpDetailsInDB.xpClaimedThisMonth } });
   } catch (error) {
     logger.error(error);
     res
@@ -1680,8 +1678,8 @@ export const restoreStreak = async (req: GlobalRequest, res: GlobalResponse) => 
       return;
     }
 
-    if (value !== "1") {
-      res.status(BAD_REQUEST).json({ error: "user must deposit 1 trust before streak can be restored" });
+    if (value !== "5") {
+      res.status(BAD_REQUEST).json({ error: "user must deposit 5 trust before streak can be restored" });
       return;
     }
 
