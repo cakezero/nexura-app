@@ -1500,7 +1500,7 @@ export const fetchDailyXpDetails = async (req: GlobalRequest, res: GlobalRespons
 
     const onlyDate = startOfDayUTC();
 
-    const yesterday = new Date();
+    const yesterday = new Date(onlyDate);
     yesterday.setUTCDate(onlyDate.getUTCDate() - 1);
 
     const yesterdayDate = yesterday.toISOString().split("T")[0] as string;
