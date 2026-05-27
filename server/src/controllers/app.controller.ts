@@ -1497,20 +1497,31 @@ export const fetchDailyXpDetails = async (req: GlobalRequest, res: GlobalRespons
       return;
     }
 
+    const lastSignInDate = dailyXpDetailsInDB.date;
+
     const today = startOfDayUTC();
 
     const yesterday = new Date(today);
     yesterday.setUTCDate(today.getUTCDate() - 1);
 
     const yesterdayDate = yesterday.toISOString().split("T")[0] as string;
-    console.log({ yesterdayDate });
+    const todayDate = today.toISOString().split("T")[0] as string;
 
     let streakLost = false;
 
-    if (dailyXpDetailsInDB.date !== yesterdayDate) {
-      await user.findByIdAndUpdate(req.id, { streak: 0, streakToRestore: req.user.streak });
-      streakLost = true;
+    if (todayDate === lastSignInDate) {
+      res.status(OK).json({ message: "daily xp details fetched", dailyXpDetails: { streakLost, xpClaimedThisMonth: dailyXpDetailsInDB.xpClaimedThisMonth } });
+      return;
     }
+
+    if (lastSignInDate === yesterdayDate) {
+      res.status(OK).json({ message: "daily xp details fetched", dailyXpDetails: { streakLost, xpClaimedThisMonth: dailyXpDetailsInDB.xpClaimedThisMonth } });
+      return;
+    }
+
+    await user.findByIdAndUpdate(req.id, { streak: 0, streakToRestore: req.user.streak });
+
+    streakLost = true;
 
     res.status(OK).json({ message: "daily xp details fetched", dailyXpDetails: { streakLost, xpClaimedThisMonth: dailyXpDetailsInDB.xpClaimedThisMonth } });
   } catch (error) {
