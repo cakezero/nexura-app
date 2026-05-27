@@ -686,15 +686,14 @@ export const saveCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
     const { id } = req.query as { id: string };
     if (!id) {
       // Fill in defaults for required model fields not yet provided in a draft
-      const [campaignCount, projectDoc] = await Promise.all([
+      const [campaignCount] = await Promise.all([
         campaign.countDocuments({ creator: req.id }),
-        hub.findById(req.admin.hub).lean(),
       ]);
       const reward = req.body.reward ?? {};
       const body = {
         ...req.body,
-        project_image: projectDoc?.logo ?? "pending",
-        project_name: projectDoc?.name ?? req.body.nameOfProject ?? "",
+        project_image: hubFound.logo ?? "pending",
+        project_name: hubFound.name ?? req.body.nameOfProject ?? "",
         sub_title: req.body.description ?? "",
         totalXpAvailable: reward.xp ?? 0,
         totalTrustAvailable: reward.pool ?? 0,

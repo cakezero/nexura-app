@@ -1490,14 +1490,28 @@ export const fetchDailyXpDetails = async (req: GlobalRequest, res: GlobalRespons
     const today = new Date();
     const month = formatDate(today, "MMM, y");
 
-    const dailyXpDetails = await dailySignIn.findOne({ user: req.id, month }).lean();
+    const dailyXpDetailsInDB = await dailySignIn.findOne({ user: req.id, month }).lean().select("xpClaimedThisMonth");
 
-    if (!dailyXpDetails) {
+    if (!dailyXpDetailsInDB) {
       res.status(NOT_FOUND).json({ error: "daily xp details not found" });
       return;
     }
 
-    res.status(OK).json({ message: "daily xp details fetched", dailyXpDetails });
+    const yesterday = new Date(today);
+    yesterday.setUTCDate(today.getUTCDate() - 1);
+
+    const yesterdayDate = yesterday.toISOString().split("T")[0] as string;
+
+    const lastSignIn = req.user.lastSignInDate;
+
+    let streakLost = false;
+
+    if (lastSignIn !== yesterdayDate) {
+      await user.findByIdAndUpdate(req.id, { streak: 0, streakToRestore: req.user.streak });
+      streakLost = true;
+    }
+
+    res.status(OK).json({ message: "daily xp details fetched", dailyXpDetails: { streakLost, xpClaimedthisMonth: dailyXpDetailsInDB.xpClaimedThisMonth } });
   } catch (error) {
     logger.error(error);
     res
@@ -1653,7 +1667,7 @@ export const performDailySignIn = async (
 export const restoreStreak = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
     const txHash = req.query.transactionHash as string;
-      
+
     if (!txHash) {
       res.status(BAD_REQUEST).json({ error: "transaction hash is required" });
       return;
@@ -1678,7 +1692,13 @@ export const restoreStreak = async (req: GlobalRequest, res: GlobalResponse) => 
       return;
     }
 
-    await user.findByIdAndUpdate(req.id, { $inc: { streak: 1, totalCheckIns: 1 } });
+    const today = startOfDayUTC();
+
+    const date = today.toISOString().split("T")[0] as string;
+
+    await user.findByIdAndUpdate(req.id, { $inc: { streak: req.user.streakToRestore, totalCheckIns: 1, xp: 50 } });
+
+    await dailySignIn.findOneAndUpdate({ user: req.id, month: formatDate(new Date(), "MMM, y") }, { $set: { date }, $inc: { xpClaimedThisMonth: 50 } });
 
     res.status(OK).json({ message: "streak restored" });
   } catch (error) {

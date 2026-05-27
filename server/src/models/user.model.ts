@@ -13,6 +13,10 @@ const userSchema = new Schema({
   totalCheckIns: {
     type: Number,
     default: 0
+  },
+  streakToRestore: {
+    type: Number,
+    default: 0
 	},
 	address: {
 		type: String,
