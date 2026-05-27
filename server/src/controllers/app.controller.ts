@@ -24,6 +24,7 @@ import {
   FORBIDDEN,
   NOT_FOUND,
   UNAUTHORIZED,
+  NO_CONTENT,
 } from "@/utils/status.utils";
 import {
   Client,
@@ -1493,12 +1494,14 @@ export const fetchDailyXpDetails = async (req: GlobalRequest, res: GlobalRespons
     const dailyXpDetailsInDB = await dailySignIn.findOne({ user: req.id, month }).lean().select("xpClaimedThisMonth");
 
     if (!dailyXpDetailsInDB) {
-      res.status(NOT_FOUND).json({ error: "daily xp details not found" });
+      res.status(NO_CONTENT).json({ error: "daily xp details not found" });
       return;
     }
 
-    const yesterday = new Date(today);
-    yesterday.setUTCDate(today.getUTCDate() - 1);
+    const onlyDate = startOfDayUTC();
+
+    const yesterday = new Date();
+    yesterday.setUTCDate(onlyDate.getUTCDate() - 1);
 
     const yesterdayDate = yesterday.toISOString().split("T")[0] as string;
 
@@ -1642,9 +1645,6 @@ export const performDailySignIn = async (
       type: "daily-xp",
     });
 
-    // Best-effort secondary record kept for any external readers (analytics,
-    // admin dashboards). Not authoritative — failures here don't affect the
-    // user's response or streak.
     const dailySignInRecord = await dailySignIn.findOne({ month, user: userId }).select("xpClaimedThisMonth");
     if (!dailySignInRecord) {
       await dailySignIn.create({ month, user: userId, xpClaimedThisMonth: dailyXpAmount, date: onlyDate });
