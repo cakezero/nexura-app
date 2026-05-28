@@ -1715,7 +1715,7 @@ export const restoreStreak = async (req: GlobalRequest, res: GlobalResponse) => 
 
     const date = today.toISOString().split("T")[0] as string;
 
-    await user.findByIdAndUpdate(req.id, { $inc: { streak: req.user.streakToRestore, totalCheckIns: 1, xp: 50, lastSignInDate: date } });
+    await user.findByIdAndUpdate(req.id, { $inc: { streak: req.user.streakToRestore, totalCheckIns: 1, xp: 50 }, $set: { lastSignInDate: date } });
 
     await dailySignIn.findOneAndUpdate({ user: req.id, month: formatDate(new Date(), "MMM, y") }, { $set: { date }, $inc: { xpClaimedThisMonth: 50 } });
 
