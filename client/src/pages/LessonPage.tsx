@@ -176,7 +176,7 @@ export default function LessonPage() {
     const outroBody = `You finished the quiz on ${lessonTitle}`;
 
     // Build steps for a single section from combined items
-    const buildSectionSteps = (items: AnyItem[], omitLastOutro = false): LessonStep[] => {
+    const buildSectionSteps = (items: AnyItem[]): LessonStep[] => {
       const sorted = [...items].sort((a, b) => {
         const pk = kindPriority(a.kind) - kindPriority(b.kind);
         if (pk !== 0) return pk;
@@ -196,10 +196,7 @@ export default function LessonPage() {
             steps.push({ kind: "question", key: `question-${qEntry._id}`, question: qEntry });
             i++;
           }
-          // Skip outro if this is the last group and we're omitting it (section 1 → section 2 bridge)
-          if (!omitLastOutro || i < sorted.length) {
-            steps.push({ kind: "outro", key: `outro-group-${sorted[i - 1].entry._id}`, header: outroHeader, body: outroBody, trophy: "silver" });
-          }
+          steps.push({ kind: "outro", key: `outro-group-${sorted[i - 1].entry._id}`, header: outroHeader, body: outroBody, trophy: "silver" });
         } else {
           if (item.kind === "mini") {
             steps.push({ kind: "mini", key: `mini-${item.entry._id}`, text: item.entry.text });
@@ -225,20 +222,20 @@ export default function LessonPage() {
       ];
 
       return [
-        ...buildSectionSteps(s1Items, true),
+        ...buildSectionSteps(s1Items),
         { kind: "section-header" as const, key: "section-2-header", label: section2IntroBody || `Excellent work!\nYou just completed section 1 of ${lessonTitle}. You can now proceed to section 2.` },
-        ...buildSectionSteps(s2Items, true),
+        ...buildSectionSteps(s2Items),
         { kind: "claim" as const, key: "claim" },
       ];
     }
 
-    // No section 2 — flat flow, also omit last outro
+    // No section 2 — flat flow (original behavior)
     const combined: AnyItem[] = [
       ...miniLessons.map((entry) => ({ kind: "mini" as const, entry })),
       ...questions.map((entry) => ({ kind: "question" as const, entry })),
       ...videoLessons.map((entry) => ({ kind: "video" as const, entry })),
     ];
-    return [...buildSectionSteps(combined, true), { kind: "claim" as const, key: "claim" }];
+    return [...buildSectionSteps(combined), { kind: "claim" as const, key: "claim" }];
   }, [miniLessons, questions, videoLessons, lesson?.title, hasSection2, section2Name, section2IntroBody]);
 
   const activeStep = lessonSteps[currentStep];
