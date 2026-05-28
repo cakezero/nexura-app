@@ -1,6 +1,6 @@
 import chain from "./chain";
 import { getWalletClient, getPublicClient } from "./viem";
-import { network, NEXONS, NEXONS_ABI, REWARD_ABI, REWARD_BYTECODE, LESSON_FEE_CONTRACT_USER, LESSON_FEE_CONTRACT_PROJECT, QUEST_FEE_CONTRACT } from "./constants";
+import { network, NEXONS, NEXONS_ABI, REWARD_ABI, REWARD_BYTECODE, LESSON_FEE_CONTRACT_USER, LESSON_FEE_CONTRACT_PROJECT, QUEST_FEE_CONTRACT, STREAK_RESTORE_ABI, STREAK_RESTORE_CA } from "./constants";
 import { ethers } from "ethers";
 import { createPublicClient, http, parseAbi, type Address, parseEther, formatEther } from "viem";
 import { getIntuitionNetworkParams } from "./utils";
@@ -93,6 +93,44 @@ const ensureSwitch = async (targetChainId: string) => {
   const params = getIntuitionNetworkParams(false, targetChainId);
   await (window as any).ethereum.request({ method: "wallet_addEthereumChain", params });
 };
+
+export const payRestoreStreakFee = async (): Promise<string> => {
+  try {
+    if (!window.ethereum) throw new Error("No wallet provider available. Connect a wallet with RainbowKit first.");
+
+    const config = await getStudioPaymentConfig();
+
+    const targetChainId = config.chainId;
+    const amount = config.amount;
+
+    await ensureSwitch(targetChainId);
+
+    const provider = new ethers.BrowserProvider((window as any).ethereum);
+    const signer = await provider.getSigner();
+
+    const contract = new ethers.Contract(
+      STREAK_RESTORE_CA,
+      STREAK_RESTORE_ABI,
+      signer
+    );
+
+    const tx = await contract.payFee({ value: parseEther(network === "mainnet" ? "5" : "0.01") });
+
+    await tx.wait();
+
+    return tx.hash as string;
+  } catch (error: any) {
+    if (error.data) {
+      const iface = new ethers.Interface(STREAK_RESTORE_ABI);
+      const decoded = iface.parseError(error.data);
+
+      throw toUserFriendlyError(decoded?.name ?? error, "Payment failed.");
+    }
+
+    console.error(error);
+    throw toUserFriendlyError(error, "Payment failed."); 
+  }
+}
 
 export const payStudioHubFee = async (testAmount?: number, contractAddress?: string): Promise<string> => {
   try {
