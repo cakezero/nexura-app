@@ -1689,8 +1689,10 @@ export const restoreStreak = async (req: GlobalRequest, res: GlobalResponse) => 
       return;
     }
 
-    if (value !== "5") {
-      res.status(BAD_REQUEST).json({ error: "user must deposit 5 trust before streak can be restored" });
+    const amount = network === "mainnet" ? "5" : "0.01";
+
+    if (value !== amount) {
+      res.status(BAD_REQUEST).json({ error: `user must deposit ${amount} trust before streak can be restored` });
       return;
     }
 
