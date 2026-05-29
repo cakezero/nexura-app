@@ -595,7 +595,7 @@ export default function CampaignEnvironment() {
                       <span className="text-sm sm:text-base font-medium">{quest.quest}</span>
                       {isPortalTask && !claimed &&
                         <p className="text-sm text-white/70">
-                          ⚠️ A minimum of 1 TRUST is required to either oppose or support a proposal before the task can be claimed.
+                          ⚠️ A minimum of 5 TRUST is required to either oppose or support a proposal before the task can be claimed.
                         </p>
                       }
                     </div>

@@ -923,7 +923,7 @@ export const validatePortalTask = async (
       return;
     }
 
-    // set shares to be from 0.01
+    // set shares to be from 4.5
     const query = `
       query GetTriple($id: String!, $address: String!) {
         triple(term_id: $id) {
@@ -932,7 +932,7 @@ export const validatePortalTask = async (
               _eq: $address
             }
             shares:  {
-              _gte: 10000000000000000
+              _gte: 4500000000000000000
             }
           }) {
             account_id
@@ -943,14 +943,14 @@ export const validatePortalTask = async (
               _eq: $address
             }
             shares:  {
-              _gte: 10000000000000000
+              _gte: 4500000000000000000
             }
           }) {
             account_id
           }
         }
       }
-    `; // user needs to atleast support or oppose with 0.5 - 1 trust;
+    `; // user needs to atleast support or oppose with 5 trust;
 
     const formattedAddress = checksumAddress(
       userToCheck.address as `0x${string}`,
@@ -1018,7 +1018,7 @@ export const validatePortalTask = async (
 
       res.status(BAD_REQUEST).json({
         error:
-          "User has not supported or opposed a claim or shares is less than 0.01",
+          "User has not supported or opposed a claim or shares is less than 5",
       });
       return;
     } else {
@@ -1068,7 +1068,7 @@ export const validatePortalTask = async (
 
       res.status(BAD_REQUEST).json({
         error:
-          "User has not supported or opposed a claim or shares is less than 0.01",
+          "User has not supported or opposed a claim or shares is less than 5",
       });
     }
   } catch (error) {

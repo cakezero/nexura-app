@@ -41,6 +41,7 @@ import {
   permanentlyDeleteStudioLesson,
   banCreator,
   unbanCreator,
+  deleteCampaignAdmin,
   getBannedCreators,
 } from "@/controllers/admin.controller";
 import { deleteQuest, saveQuest } from "@/controllers/quest.controller";
@@ -72,7 +73,7 @@ import { upload } from "@/config/multer";
 import { attachAdminCampaignHub, requireAdminSuperadmin } from "@/middlewares/auth.middleware";
 import { publishAdminCampaign } from "@/controllers/adminCampaign.controller";
 import { noPaymentRequired } from "@/controllers/adminPublish.controller";
-import { addCampaignAddress, closeCampaign, deleteCampaign, fetchHubCampaigns, recordCampaignRewardsWithdrawal, reopenCampaign } from "@/controllers/campaign.controller";
+import { addCampaignAddress, closeCampaign, fetchHubCampaigns, recordCampaignRewardsWithdrawal, reopenCampaign } from "@/controllers/campaign.controller";
 
 const router = Router();
 
@@ -107,7 +108,7 @@ router
   .patch("/publish-campaign", requireAdminSuperadmin, attachAdminCampaignHub, noPaymentRequired, publishAdminCampaign)
   .patch("/publish-quest", requireAdminSuperadmin, attachAdminCampaignHub, noPaymentRequired, publishAdminQuest)
   .patch("/save-quest", requireAdminSuperadmin, attachAdminCampaignHub, upload.single("coverImage"), saveQuest)
-  .delete("/delete-campaign", requireAdminSuperadmin, attachAdminCampaignHub, deleteCampaign)
+  .delete("/delete-campaign", requireAdminSuperadmin, attachAdminCampaignHub, deleteCampaignAdmin)
   .delete("/delete-quest", requireAdminSuperadmin, attachAdminCampaignHub, deleteQuest)
   .delete("/delete-fraud-quest", requireAdminSuperadmin, deleteQuestAdmin)
   .delete("/delete-fraud-lesson", requireAdminSuperadmin, deleteLessonAdmin)

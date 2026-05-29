@@ -2,11 +2,11 @@
 import bcrypt from "bcrypt";
 import mongoose from "mongoose";
 import logger from "@/config/logger";
-import { quest, miniQuest } from "@/models/quests.model";
+import { quest, miniQuest, campaignQuest } from "@/models/quests.model";
 import { lesson, lessonCompleted, miniLesson, question, questionCompleted, videoLesson } from "@/models/lesson.model";
 import { admin } from "@/models/admin.model";
 import { BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND, NO_CONTENT, OK, UNAUTHORIZED, FORBIDDEN } from "@/utils/status.utils";
-import { campaign as campaignModel, campaignCompleted } from "@/models/campaign.model";
+import { campaign as campaignModel, campaignCompleted, campaign } from "@/models/campaign.model";
 import { generateOTP, getRefreshToken, hashPassword, JWT, validateQuestData } from "@/utils/utils";
 import { sendAdminResetEmail, sendEmailToAdmin } from "@/utils/sendMail";
 import { campaignQuestCompleted, miniQuestCompleted, questCompleted } from "@/models/questsCompleted.models";
@@ -88,6 +88,34 @@ const buildAdminAuthPayload = (record: {
     admin: formatAdminRecord(record),
   };
 };
+
+export const deleteCampaignAdmin = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const { id: campaignId } = req.query as unknown as { id: string };
+    if (!campaignId) {
+      res.status(BAD_REQUEST).json({ error: "campaign id is required" });
+      return;
+    }
+
+    const campaignToBeDeleted = await campaign.exists({ _id: campaignId }).lean();
+    if (!campaignToBeDeleted) {
+      res.status(NOT_FOUND).json({ error: "campaign not found" });
+      return;
+    }
+
+    await Promise.all([
+      campaign.findByIdAndDelete(campaignId),
+      campaignCompleted.deleteMany({ campaign: campaignId }),
+      campaignQuestCompleted.deleteMany({ campaign: campaignId }),
+      campaignQuest.deleteMany({ campaign: campaignId }),
+    ]);
+
+    res.status(OK).json({ message: "campaign deleted successfully" });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error deleting campaign" });
+  }
+}
 
 export const deleteQuestAdmin = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
