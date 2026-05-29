@@ -114,7 +114,7 @@ export const payRestoreStreakFee = async (): Promise<string> => {
       signer
     );
 
-    const tx = await contract.payFee({ value: parseEther(network === "mainnet" ? "5" : "0.01") });
+    const tx = await contract.payFee({ value: parseEther(network === "mainnet" ? "1" : "0.01") });
 
     await tx.wait();
 
