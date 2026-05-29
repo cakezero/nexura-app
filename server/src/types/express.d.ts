@@ -8,6 +8,7 @@ declare global {
     role?: string;
     adminName?: string;
     admin?: any;
+    isPlatformAdmin?: boolean;
     token?: string;
     campaignCreator?: any;
     user?: any;

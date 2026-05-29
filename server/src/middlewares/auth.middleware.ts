@@ -301,6 +301,7 @@ export const authenticateAdmin = async (req: GlobalRequest, res: GlobalResponse,
     req.id = id;
     req.token = token;
     req.role = adminUser.role;
+    req.isPlatformAdmin = Boolean(isAdmin);
     req.adminName = adminName;
     req.admin = {
       ...adminUser,

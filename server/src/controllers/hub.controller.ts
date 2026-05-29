@@ -616,7 +616,7 @@ export const getCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
       res.status(NOT_FOUND).json({ error: "campaign not found" });
       return;
     }
-    if (req.admin?.hub && String(campaignFound.hub) !== String(req.admin.hub)) {
+    if (req.admin?.hub && !req.isPlatformAdmin && String(campaignFound.hub) !== String(req.admin.hub)) {
       res.status(FORBIDDEN).json({ error: "you are not allowed to access this campaign" });
       return;
     }
