@@ -1229,7 +1229,7 @@ export const markTask = async (req: GlobalRequest, res: GlobalResponse) => {
 	}
 }
 
-const getSystemHubIds = async () => {
+export const getSystemHubIds = async () => {
   const [sysHubs, sysUserHubs, platformAdmins] = await Promise.all([
     hub.find({ systemKey: ADMIN_CAMPAIGN_SYSTEM_KEY }).select("_id").lean(),
     userHub.find({ systemKey: ADMIN_CAMPAIGN_SYSTEM_KEY }).select("_id").lean(),

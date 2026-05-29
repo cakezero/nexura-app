@@ -20,6 +20,7 @@ import { validateCampaignData, updateLevel, checkPayment } from "@/utils/utils";
 import { campaignQuest } from "@/models/quests.model";
 import { ethers } from "ethers";
 import { xpLog } from "@/models/xpLog.model";
+import { getSystemHubIds } from "@/controllers/admin.controller";
 
 interface IReward {
 	xp: number;
@@ -913,7 +914,8 @@ export const fetchHubCampaigns = async (req: GlobalRequest, res: GlobalResponse)
 		};
 
 		if (isSystemHub) {
-			query.hub = { $ne: null };
+			const { systemHubIds, adminManagedHubIds } = await getSystemHubIds();
+			query.hub = { $in: [...systemHubIds, ...adminManagedHubIds] };
 		} else {
 			query.hub = hubId;
 		}
