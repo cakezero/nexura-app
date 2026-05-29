@@ -24,7 +24,7 @@ function normalizeBackendUrl(value: string | undefined) {
 const rawBackendUrl = ((import.meta as any).env?.VITE_BACKEND_URL as string | undefined)?.trim();
 export const BACKEND_URL = normalizeBackendUrl(rawBackendUrl);
 
-export const STREAK_RESTORE_CA = "0x564885ee83Aa8565Da47F38186079cD552Cf60De";
+export const STREAK_RESTORE_CA = network === "mainnet" ? "0xB287410c505Dd719051A7e8e13BdC1d4b53C9dD2" : "0x564885ee83Aa8565Da47F38186079cD552Cf60De";
 
 export const AUTHORIZED_ADDRESS = network === "testnet" ? "0x4167E3Afdc91c8b15A16041F813E2a19EAaEcAE0" : "0xF6499B880CcD28080E6aF32A04b9201adCb655a9";
 
