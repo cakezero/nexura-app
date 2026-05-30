@@ -44,6 +44,7 @@ export default function DailyCheckInModal({ open, onOpenChange, onCheckInSuccess
   const [streakLost, setStreakLost] = useState(false);
   const [chestOpen, setChestOpen] = useState(false);
   const [justHitMilestone, setJustHitMilestone] = useState(false);
+  const [claimed, setClaimed] = useState(false);
   
   useEffect(() => {
     if (open) {
@@ -231,12 +232,21 @@ const nextMilestone =
   MILESTONES.find(m => m.day > streak) || null;
 
 // progress
-const progress =
-  nextMilestone && currentMilestone
-    ? ((streak - currentMilestone.day) /
-        (nextMilestone.day - currentMilestone.day)) *
-      100
-    : 100;
+const progress = useMemo(() => {
+  if (!nextMilestone) return 100;
+
+  const start = currentMilestone?.day ?? 0;
+  const end = nextMilestone.day;
+
+  const range = end - start;
+  const value = streak - start;
+
+  if (range <= 0) return 100;
+
+  const raw = (value / range) * 100;
+
+  return Math.max(0, Math.min(raw, 100));
+}, [streak, currentMilestone, nextMilestone]);
 
 // completion flag (THIS is what your UI should use)
 const isMilestoneCompleted =
@@ -321,15 +331,30 @@ const handleRestoreStreak = async () => {
 
 const handleClaimReward = async () => {
   console.log("CLAIM REWARD CLICKED");
+  setClaimed(true);
 
-  const res = await apiRequest(
-    "POST",
-    "/api/user/claim-streak-reward"
-  );
+  try {
+    const res = await apiRequest(
+      "POST",
+      "/api/user/claim-streak-reward"
+    );
 
-  const data = await res.json();
+    const data = await res.json();
 
-  console.log("CLAIM RESPONSE:", data);
+    console.log("CLAIM RESPONSE SUCCESS:", data);
+    console.log("RAW RESPONSE STATUS:", res.status);
+
+  } catch (err: any) {
+    console.error("CLAIM ERROR:", err);
+
+    // 🔥 IMPORTANT: log structured backend error if available
+    if (err?.response) {
+      try {
+        const errorData = await err.response.json?.();
+        console.log("CLAIM ERROR RESPONSE:", errorData);
+      } catch {}
+    }
+  }
 };
 
   return (
@@ -413,12 +438,13 @@ const handleClaimReward = async () => {
 
 {/* LEFT CARD - NEXT MILESTONE */}
 <div
-  className="rounded-2xl px-4 py-0.5 flex flex-col justify-between"
+  className="rounded-2xl px-4 py-0.5 flex flex-col justify-between relative"
   style={{
     background: "linear-gradient(135deg, #8B5CF614, #581CDC0D)",
     border: "1px solid #8B5CF633",
   }}
 >
+
   {/* HEADER */}
   <div>
     <div className="text-[10px] text-[#8B5CF6B2] tracking-wider mb-0.5 pt-1">
@@ -431,13 +457,14 @@ const handleClaimReward = async () => {
   </div>
 
   {/* PROGRESS + REWARD */}
-  <div className="mt-1 flex items-center justify-between gap-2">
+  <div className="mt-1 flex items-center justify-between gap-2 w-full">
 
     {/* PROGRESS */}
-    <div className="flex-1">
+    <div className="flex-1 min-w-0">
+
       <div className="w-full h-0.5 rounded-full bg-[#FFFFFF14] overflow-hidden relative">
 
-        {/* NORMAL PURPLE PROGRESS */}
+        {/* NORMAL PROGRESS */}
         <div
           className="h-full rounded-full absolute left-0 top-0"
           style={{
@@ -447,6 +474,7 @@ const handleClaimReward = async () => {
         />
 
         {/* BROKEN STREAK OVERLAY */}
+        {streakLost && (
           <div
             className="h-full absolute top-0"
             style={{
@@ -456,62 +484,67 @@ const handleClaimReward = async () => {
                 "linear-gradient(90deg, #F87171, rgba(248,113,113,0.2))",
             }}
           />
+        )}
 
       </div>
 
       <div className="text-[10px] text-[#A78BFA8C] mt-1 leading-relaxed">
         {MILESTONES.some(m => streak >= m.day) ? (
-          <span className="text-[10px]">
-            100% complete — Reward Unlocked
+          <span className="text-[9px] tracking-wide flex items-center gap-1">
+            <span className="text-[#A78BFA]">100%</span>
+            <span>complete</span>
           </span>
         ) : (
           <>
-            <span className="text-[#A78BFA8C]">{daysRemaining}</span> days left
+            <span className="text-[#A78BFA8C]">{daysRemaining}</span>
+            <span className="ml-1">days left</span>
           </>
         )}
       </div>
+
     </div>
 
-    {/* REWARD BOX */}
-    <div className="relative shrink-0 flex items-center justify-center -mt-4">
-      <div className="relative">
+{/* REWARD BOX */}
+<div className="relative shrink-0 w-[64px] flex items-center justify-center -mt-8">
 
-        <img
-          src="/reward-box.png"
-          alt=""
-          className="w-16 h-16 object-contain"
-        />
+  <div className="relative w-[64px] h-[64px]">
 
-        {/* XP PILL */}
-        {nextMilestone && (
-          <div
-            className="absolute -top-3 left-1/2 -translate-x-1/2 px-1 py-0.5 rounded-full text-[8px]"
-            style={{
-              background: "#200D4FEE",
-              border: "1px solid #8B5CF64D",
-              color: "#fff",
-            }}
-          >
-            +{new Intl.NumberFormat().format(nextMilestone.xp)} XP
-          </div>
-        )}
+    <img
+      src="/reward-box.png"
+      alt=""
+      className="w-full h-full object-contain block"
+    />
 
+    {/* XP PILL (fades out, does NOT affect layout) */}
+    {!MILESTONES.some(m => streak >= m.day) && nextMilestone && (
+      <div
+        className="absolute -top-3 left-1/2 -translate-x-1/2 px-1 py-0.5 rounded-full text-[8px] whitespace-nowrap transition-opacity duration-300"
+        style={{
+          background: "#200D4FEE",
+          border: "1px solid #8B5CF64D",
+          color: "#fff",
+        }}
+      >
+        +{new Intl.NumberFormat().format(nextMilestone.xp)} XP
       </div>
-    </div>
+    )}
 
   </div>
+</div>
+  </div>
 
-  {/* CHEST BUTTON */}
-  {MILESTONES.some(m => streak >= m.day) && (
-    <div className="mt-2 flex justify-center">
-      <button
-        onClick={() => setChestOpen(true)}
-        className="text-[10px] px-3 py-1 rounded-full bg-[#8B3EFE] text-white hover:opacity-90 transition"
-      >
-        Open Chest
-      </button>
-    </div>
-  )}
+{/* CHEST BUTTON (ABSOLUTE OVERLAY, no layout shift) */}
+{MILESTONES.some(m => streak >= m.day) && (
+  <div className="absolute right-3 bottom-2 mt-2">
+    <button
+      onClick={() => setChestOpen(true)}
+      className="text-[9px] px-2 py-[2px] rounded-full bg-[#8B3EFE] text-white hover:opacity-90 transition mt-2"
+    >
+      Open Chest
+    </button>
+  </div>
+)}
+
 </div>
 
 {/* RIGHT CARD - YOUR STATS */}
@@ -717,7 +750,7 @@ const isUpcoming = streak < m.day;
   className="px-4 py-2 rounded-xl text-[10px] font-medium whitespace-nowrap"
   style={{
     background: "transparent",
-    border: "1px solid #8B5CF666",
+    border: "2px solid #8B5CF666",
     color: "#A78BFA",
   }}
 >
@@ -754,14 +787,19 @@ const isUpcoming = streak < m.day;
   createPortal(
     <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black">
 
-      {/* click outside */}
+      {/* OUTSIDE CLICK LAYER */}
       <div
         className="absolute inset-0"
         onClick={() => setChestOpen(false)}
+        style={{ pointerEvents: "auto" }}
       />
 
-      {/* modal */}
-      <div className="relative z-10 w-[85%] max-w-xs text-center">
+      {/* MODAL */}
+      <div
+        className="relative z-10 w-[85%] max-w-xs text-center"
+        style={{ pointerEvents: "auto" }}
+        onClick={(e) => e.stopPropagation()}
+      >
 
         {/* badge */}
         <div className="flex items-center justify-center gap-2 bg-purple-500/10 border border-purple-500/20 rounded-full px-2 py-1 mb-3">
@@ -783,28 +821,33 @@ const isUpcoming = streak < m.day;
 
         {/* video */}
         <div className="relative w-full mb-3 rounded-lg overflow-hidden">
-  <video
-    src="/reward-animation.mp4"
-    autoPlay
-    loop
-    muted
-    playsInline
-    className="w-full h-auto object-cover mix-blend-screen"
-  />
-</div>
+          <video
+            src="/reward-animation.mp4"
+            muted
+            playsInline
+            autoPlay
+            loop
+            className="w-full h-auto object-cover mix-blend-screen"
+          />
+        </div>
 
         {/* hint */}
         <p className="text-white/50 text-[9px] mb-3">
-          Tap the chest  to reveal your reward.
+          Tap the chest to reveal your reward.
         </p>
 
         {/* button */}
-        <button
-          onClick={handleClaimReward}
-          className="w-full py-1.5 rounded-2xl bg-[#8B3EFE] text-white text-xs font-medium hover:opacity-90 transition"
-        >
-          Claim Rewards
-        </button>
+<button
+  onClick={handleClaimReward}
+  disabled={claimed}
+  className={`w-full py-1.5 rounded-2xl text-white text-xs font-medium transition ${
+    claimed
+      ? "bg-white/10 text-white/40 cursor-not-allowed"
+      : "bg-[#8B3EFE] hover:opacity-90"
+  }`}
+>
+  {claimed ? "Claimed Rewards" : "Claim Rewards"}
+</button>
 
       </div>
     </div>,
