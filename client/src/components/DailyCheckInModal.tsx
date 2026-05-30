@@ -706,8 +706,7 @@ const isUpcoming = streak < m.day;
       </div>
 
       <p className="text-[10px] leading-relaxed mt-1 text-[#A78BFA80]">
-        Use at least 5 TRUST to buy into a Nexura-built Intuition claim and
-        restore your streak progression.
+        You can restore your streak for 1 trust
       </p>
     </div>
 
