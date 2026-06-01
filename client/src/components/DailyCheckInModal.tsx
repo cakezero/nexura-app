@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -12,6 +12,7 @@ import { useToast } from "../hooks/use-toast";
 import { Check, Flame, ChevronLeft, ChevronRight, Trophy, X } from "lucide-react";
 import { useAuth } from "../lib/auth";
 import { payRestoreStreakFee } from "../lib/performOnchainAction";
+import { createPortal } from "react-dom";
 
 interface DailyCheckInModalProps {
   open: boolean;
@@ -41,7 +42,10 @@ export default function DailyCheckInModal({ open, onOpenChange, onCheckInSuccess
   const MOCK_TODAY = new Date("2026-05-25T00:00:00Z");
   const [xpThisMonth, setXpThisMonth] = useState(0);
   const [streakLost, setStreakLost] = useState(false);
-
+  const [chestOpen, setChestOpen] = useState(false);
+  const [justHitMilestone, setJustHitMilestone] = useState(false);
+  const [claimed, setClaimed] = useState(false);
+  
   useEffect(() => {
     if (open) {
       fetchHistory();
@@ -51,7 +55,7 @@ export default function DailyCheckInModal({ open, onOpenChange, onCheckInSuccess
     }
   }, [open]);
 
-
+  
 
   useEffect(() => {
     if (justClaimed) {
@@ -60,50 +64,124 @@ export default function DailyCheckInModal({ open, onOpenChange, onCheckInSuccess
     }
   }, [justClaimed]);
 
-  const fetchHistory = async () => {
-    setIsFetching(true);
-    try {
-      const response = await apiRequest("GET", "/api/user/profile");
-      const data = await response.json();
-      console.log(data)
-    
-      const user = data.user;
-      setStreak(user?.streak || 0);
-      setLongestStreak(user?.longestStreak || 0);
-      // openDailySignIn is true when user has NOT signed in today
-      setAlreadyCheckedIn(!data.openDailySignIn);
-      const todayStr = new Date().toISOString().split("T")[0];
-      setServerDate(todayStr);
-      setCheckInDates(user?.checkInDates || []);
-    } catch {
-      // silently fail
-    } finally {
-      setIsFetching(false);
-    }
-  };
 
-  const handleCheckIn = async () => {
-    if (alreadyCheckedIn || isLoading) return;
-    setIsLoading(true);
-    try {
-      await apiRequest("POST", "/api/user/perform-daily-sign-in");
-      setAlreadyCheckedIn(true);
-      setJustClaimed(true);
-      setStreak((s) => s + 1);
-      const today = serverDate || new Date().toISOString().split("T")[0];
-      setCheckInDates((prev) => [...prev, today]);
-      toast({ title: "Check-in complete!", description: "+50 XP earned" });
-      onCheckInSuccess();
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to check in",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
+  ///////////// TEST
+  const USE_MOCK = false;
+
+const fetchHistory = async () => {
+  setIsFetching(true);
+
+  try {
+    if (USE_MOCK) {
+      const mockUser = {
+        streak: 7,
+        longestStreak: 45,
+        totalCheckIns: 40,
+        checkInDates: [
+          "2026-05-01",
+          "2026-05-02",
+          "2026-05-03",
+          "2026-05-04",
+          "2026-05-05",
+          "2026-05-06",
+          "2026-05-07",
+          "2026-05-08",
+          "2026-05-09",
+          "2026-05-10",
+          "2026-05-11",
+          "2026-05-12",
+          "2026-05-13",
+          "2026-05-14",
+          "2026-05-15",
+          "2026-05-16",
+          "2026-05-17",
+          "2026-05-18",
+          "2026-05-19",
+          "2026-05-20",
+          "2026-05-21",
+          "2026-05-22",
+          "2026-05-23",
+          "2026-05-24",
+          "2026-05-25",
+          "2026-05-26",
+          "2026-05-27",
+          "2026-05-28",
+          "2026-05-29",
+          "2026-05-30",
+          "2026-05-31"
+        ]
+      };
+
+      setStreak(mockUser.streak);
+      setLongestStreak(mockUser.longestStreak);
+      setAlreadyCheckedIn(false);
+      setServerDate(new Date().toISOString().split("T")[0]);
+      setCheckInDates(mockUser.checkInDates);
+
+      setIsFetching(false);
+      return;
     }
-  };
+
+    const response = await apiRequest("GET", "/api/user/profile");
+    const data = await response.json();
+
+    console.log(data)
+
+    const user = data.user;
+    setStreak(user?.streak || 0);
+    setLongestStreak(user?.longestStreak || 0);
+    setAlreadyCheckedIn(!data.openDailySignIn);
+
+    const todayStr = new Date().toISOString().split("T")[0];
+    setServerDate(todayStr);
+    setCheckInDates(user?.checkInDates || []);
+
+  } catch {
+    // silently fail
+  } finally {
+    setIsFetching(false);
+  }
+};
+
+const handleCheckIn = async () => {
+  if (isLoading) return;
+  setIsLoading(true);
+
+  try {
+    const response = await apiRequest(
+      "POST",
+      "/api/user/perform-daily-sign-in"
+    );
+
+    const data = await response.json?.();
+
+    console.log("CHECK-IN RESPONSE:", data);
+
+    // 🔥 IMPORTANT: re-sync from backend truth
+    await fetchHistory();
+
+    setJustClaimed(true);
+
+    toast({
+      title: "Check-in complete!",
+      description: "+50 XP earned",
+    });
+
+    onCheckInSuccess?.();
+
+  } catch (error: any) {
+    console.error(error);
+
+    toast({
+      title: "Error",
+      description: error.message || "Failed to check in",
+      variant: "destructive",
+    });
+
+  } finally {
+    setIsLoading(false);
+  }
+};
 
 const XPclaimed = async () => {
   try {
@@ -112,10 +190,10 @@ const XPclaimed = async () => {
       "/api/user/daily-xp-details"
     );
     console.log(response)
-
+    
     const xp = response?.dailyXpDetails?.xpClaimedThisMonth ?? 0;
     const lost = response?.dailyXpDetails?.streakLost ?? false;
-
+    
     setXpThisMonth(xp);
     setStreakLost(lost);
 
@@ -135,54 +213,79 @@ useEffect(() => {
   const checkInSet = useMemo(() => new Set(checkInDates), [checkInDates]);
 
   /////////////// NEW MILESTONE PROGRESSION
-
-  const MILESTONES = [
-    { day: 7, xp: 500, label: "7" },
-    { day: 15, xp: 1000, label: "15" },
-    { day: 30, xp: 2500, label: "30" },
-    { day: 45, xp: 5000, label: "45" },
-    { day: 60, xp: 10000, label: "60" },
-    { day: 90, xp: 20000, label: "90" },
-  ];
   
-  const nextMilestone = MILESTONES.find(m => m.day > streak);
-  const previousMilestone = [...MILESTONES].reverse().find(m => m.day <= streak);
-  
-  const daysUntilNext = nextMilestone ? nextMilestone.day - streak : 0;
-  const nextXP = nextMilestone?.xp || previousMilestone?.xp || 0;
+const MILESTONES = [
+  { day: 7, xp: 500 },
+  { day: 15, xp: 1000 },
+  { day: 30, xp: 2500 },
+  { day: 45, xp: 5000 },
+  { day: 60, xp: 10000 },
+  { day: 90, xp: 20000 },
+];
 
-const currentMilestone = [...MILESTONES]
-  .slice()
-  .reverse()
-  .find(m => m.day <= streak);
+// current milestone user just passed or is working toward
+const currentMilestone =
+  [...MILESTONES].reverse().find(m => streak >= m.day) || null;
 
-const progressStart = currentMilestone?.day || 0;
-const progressEnd = nextMilestone?.day || progressStart;
+// next milestone
+const nextMilestone =
+  MILESTONES.find(m => m.day > streak) || null;
 
-const progress =
-  nextMilestone
-    ? ((streak - progressStart) / (progressEnd - progressStart)) * 100
-    : 100;
+// progress
+const progress = useMemo(() => {
+  if (!nextMilestone) return 100;
+
+  const start = currentMilestone?.day ?? 0;
+  const end = nextMilestone.day;
+
+  const range = end - start;
+  const value = streak - start;
+
+  if (range <= 0) return 100;
+
+  const raw = (value / range) * 100;
+
+  return Math.max(0, Math.min(raw, 100));
+}, [streak, currentMilestone, nextMilestone]);
+
+// completion flag (THIS is what your UI should use)
+const isMilestoneCompleted =
+  MILESTONES.some(m => m.day === streak);
 
 const daysRemaining = nextMilestone ? nextMilestone.day - streak : 0;
+
+const prevStreakRef = useRef(streak);
+
+const [milestoneEvent, setMilestoneEvent] = useState(false);
+
+useEffect(() => {
+  const prev = prevStreakRef.current;
+
+  const hit = MILESTONES.some(
+    m => prev < m.day && streak >= m.day
+  );
+
+  if (hit) {
+    setMilestoneEvent(true);
+
+    // auto reset after animation window
+    setTimeout(() => setMilestoneEvent(false), 3000);
+  }
+
+  prevStreakRef.current = streak;
+}, [streak]);
+
+  const isAtCurrentMilestone = nextMilestone
+  ? streak >= nextMilestone.day
+  : true;
+  
+  const daysUntilNext = nextMilestone ? nextMilestone.day - streak : 0;
 
 // const totalCheckIns = checkInDates?.length || 0;
 const totalCheckIns = user?.totalCheckIns ?? 0;
 
-const currentMonth = new Date().getMonth();
-const currentYear = new Date().getFullYear();
-
-const checkInsThisMonth = checkInDates.filter((date) => {
-  const d = new Date(date);
-  return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-});
-
-const lastCheckInDate = useMemo(() => {
-  if (!checkInDates.length) return null;
-  return new Date(checkInDates[checkInDates.length - 1]);
-}, [checkInDates]);
-
 const nextMilestoneDay = nextMilestone?.day ?? Infinity;
+
 
 const isBrokenBeforeNextMilestone = useMemo(() => {
   if (!streakLost) return false;
@@ -226,7 +329,36 @@ const handleRestoreStreak = async () => {
   }
 };
 
+const handleClaimReward = async () => {
+  console.log("CLAIM REWARD CLICKED");
+  setClaimed(true);
+
+  try {
+    const res = await apiRequest(
+      "POST",
+      "/api/user/claim-streak-reward"
+    );
+
+    const data = await res.json();
+
+    console.log("CLAIM RESPONSE SUCCESS:", data);
+    console.log("RAW RESPONSE STATUS:", res.status);
+
+  } catch (err: any) {
+    console.error("CLAIM ERROR:", err);
+
+    // 🔥 IMPORTANT: log structured backend error if available
+    if (err?.response) {
+      try {
+        const errorData = await err.response.json?.();
+        console.log("CLAIM ERROR RESPONSE:", errorData);
+      } catch {}
+    }
+  }
+};
+
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-[#100721] w-[93vw] max-w-sm p-0 overflow-hidden font-geist">
         {/* Header */}
@@ -306,12 +438,13 @@ const handleRestoreStreak = async () => {
 
 {/* LEFT CARD - NEXT MILESTONE */}
 <div
-  className="rounded-2xl px-4 py-0.5 flex flex-col justify-between"
+  className="rounded-2xl px-4 py-0.5 flex flex-col justify-between relative"
   style={{
     background: "linear-gradient(135deg, #8B5CF614, #581CDC0D)",
     border: "1px solid #8B5CF633",
   }}
 >
+
   {/* HEADER */}
   <div>
     <div className="text-[10px] text-[#8B5CF6B2] tracking-wider mb-0.5 pt-1">
@@ -323,77 +456,95 @@ const handleRestoreStreak = async () => {
     </div>
   </div>
 
-{/* PROGRESS + REWARD */}
-<div className="mt-1 flex items-center justify-between gap-2">
+  {/* PROGRESS + REWARD */}
+  <div className="mt-1 flex items-center justify-between gap-2 w-full">
 
-  {/* PROGRESS */}
-  <div className="flex-1">
-    <div className="w-full h-0.5 rounded-full bg-[#FFFFFF14] overflow-hidden relative">
+    {/* PROGRESS */}
+    <div className="flex-1 min-w-0">
 
-      {/* NORMAL PURPLE PROGRESS */}
-      <div
-        className="h-full rounded-full absolute left-0 top-0"
-        style={{
-          width: `${Math.min(progress, 100)}%`,
-          background: "linear-gradient(90deg, #7C3AED, #A78BFA)",
-        }}
-      />
+      <div className="w-full h-0.5 rounded-full bg-[#FFFFFF14] overflow-hidden relative">
 
-      {/* BROKEN STREAK OVERLAY */}
-      {streakLost && (
+        {/* NORMAL PROGRESS */}
         <div
-          className="h-full absolute top-0"
+          className="h-full rounded-full absolute left-0 top-0"
           style={{
-            left: `${Math.max(progress - 12, 0)}%`,
-            width: "12%",
-            background:
-              "linear-gradient(90deg, #F87171, rgba(248,113,113,0.2))",
+            width: `${Math.min(progress, 100)}%`,
+            background: "linear-gradient(90deg, #7C3AED, #A78BFA)",
           }}
         />
-      )}
+
+        {/* BROKEN STREAK OVERLAY */}
+        {streakLost && (
+          <div
+            className="h-full absolute top-0"
+            style={{
+              left: `${Math.max(progress - 12, 0)}%`,
+              width: "12%",
+              background:
+                "linear-gradient(90deg, #F87171, rgba(248,113,113,0.2))",
+            }}
+          />
+        )}
+
+      </div>
+
+      <div className="text-[10px] text-[#A78BFA8C] mt-1 leading-relaxed">
+        {MILESTONES.some(m => streak >= m.day) ? (
+          <span className="text-[9px] tracking-wide flex items-center gap-1">
+            <span className="text-[#A78BFA]">100%</span>
+            <span>complete</span>
+          </span>
+        ) : (
+          <>
+            <span className="text-[#A78BFA8C]">{daysRemaining}</span>
+            <span className="ml-1">days left</span>
+          </>
+        )}
+      </div>
 
     </div>
 
-    <div className="text-[10px] text-[#A78BFA8C] mt-1 leading-relaxed">
-      {nextMilestone ? (
-        <>
-          <span className="text-[#A78BFA8C]">
-            {daysRemaining}
-          </span>{" "}
-          days left
-        </>
-      ) : (
-        "All milestones reached"
-      )}
-    </div>
-  </div>
+{/* REWARD BOX */}
+<div className="relative shrink-0 w-[64px] flex items-center justify-center -mt-8">
 
-  {/* REWARD BOX (FIXED ALIGNMENT TO END OF BAR) */}
-  <div className="relative shrink-0 flex items-center justify-center -mt-4">
-    <div className="relative">
-      
-      <img
-        src="/reward-box.png"
-        alt=""
-        className="w-16 h-16 object-contain"
-      />
+  <div className="relative w-[64px] h-[64px]">
 
-      {/* XP PILL */}
+    <img
+      src="/reward-box.png"
+      alt=""
+      className="w-full h-full object-contain block"
+    />
+
+    {/* XP PILL (fades out, does NOT affect layout) */}
+    {!MILESTONES.some(m => streak >= m.day) && nextMilestone && (
       <div
-        className="absolute -top-3 left-1/2 -translate-x-1/2 px-1 py-0.5 rounded-full text-[8px] whitespace-nowrap"
+        className="absolute -top-3 left-1/2 -translate-x-1/2 px-1 py-0.5 rounded-full text-[8px] whitespace-nowrap transition-opacity duration-300"
         style={{
           background: "#200D4FEE",
           border: "1px solid #8B5CF64D",
           color: "#fff",
         }}
       >
-        +{new Intl.NumberFormat().format(nextMilestone?.xp || 0)} XP
+        +{new Intl.NumberFormat().format(nextMilestone.xp)} XP
       </div>
+    )}
 
-    </div>
+  </div>
+</div>
   </div>
 
-</div>
+{/* CHEST BUTTON (ABSOLUTE OVERLAY, no layout shift) */}
+{MILESTONES.some(m => streak >= m.day) && (
+  <div className="absolute right-3 bottom-2 mt-2">
+    <button
+      onClick={() => setChestOpen(true)}
+      className="text-[9px] px-2 py-[2px] rounded-full bg-[#8B3EFE] text-white hover:opacity-90 transition mt-2"
+    >
+      Open Chest
+    </button>
+  </div>
+)}
+
 </div>
 
 {/* RIGHT CARD - YOUR STATS */}
@@ -562,7 +713,7 @@ const isUpcoming = streak < m.day;
                 : "#A78BFAB2",
             }}
           >
-            {m.label} Days
+            {m.day} Days
           </div>
 
         </div>
@@ -588,8 +739,7 @@ const isUpcoming = streak < m.day;
       </div>
 
       <p className="text-[10px] leading-relaxed mt-1 text-[#A78BFA80]">
-        Use at least 5 TRUST to buy into a Nexura-built Intuition claim and
-        restore your streak progression.
+        You can restore your streak for 1 trust
       </p>
     </div>
 
@@ -600,7 +750,7 @@ const isUpcoming = streak < m.day;
   className="px-4 py-2 rounded-xl text-[10px] font-medium whitespace-nowrap"
   style={{
     background: "transparent",
-    border: "1px solid #8B5CF666",
+    border: "2px solid #8B5CF666",
     color: "#A78BFA",
   }}
 >
@@ -632,5 +782,78 @@ const isUpcoming = streak < m.day;
         </div>
       </DialogContent>
     </Dialog>
+
+{chestOpen &&
+  createPortal(
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black">
+
+      {/* OUTSIDE CLICK LAYER */}
+      <div
+        className="absolute inset-0"
+        onClick={() => setChestOpen(false)}
+        style={{ pointerEvents: "auto" }}
+      />
+
+      {/* MODAL */}
+      <div
+        className="relative z-10 w-[85%] max-w-xs text-center"
+        style={{ pointerEvents: "auto" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+
+        {/* badge */}
+        <div className="flex items-center justify-center gap-2 bg-purple-500/10 border border-purple-500/20 rounded-full px-2 py-1 mb-3">
+          <div className="w-1 h-1 rounded-full bg-purple-400 animate-pulse" />
+          <span className="text-purple-300 text-[9px] font-medium uppercase tracking-widest">
+            Reward Chest
+          </span>
+        </div>
+
+        {/* title */}
+        <h2 className="text-white text-sm font-semibold mb-1">
+          Your Reward Awaits
+        </h2>
+
+        {/* description */}
+        <p className="text-white/60 text-[10px] mb-3 leading-relaxed">
+          A reward chest has been unlocked for your streak.
+        </p>
+
+        {/* video */}
+        <div className="relative w-full mb-3 rounded-lg overflow-hidden">
+          <video
+            src="/reward-animation.mp4"
+            muted
+            playsInline
+            autoPlay
+            loop
+            className="w-full h-auto object-cover mix-blend-screen"
+          />
+        </div>
+
+        {/* hint */}
+        <p className="text-white/50 text-[9px] mb-3">
+          Tap the chest to reveal your reward.
+        </p>
+
+        {/* button */}
+<button
+  onClick={handleClaimReward}
+  disabled={claimed}
+  className={`w-full py-1.5 rounded-2xl text-white text-xs font-medium transition ${
+    claimed
+      ? "bg-white/10 text-white/40 cursor-not-allowed"
+      : "bg-[#8B3EFE] hover:opacity-90"
+  }`}
+>
+  {claimed ? "Claimed Rewards" : "Claim Rewards"}
+</button>
+
+      </div>
+    </div>,
+    document.body
+  )
+}
+</>
   );
 }
