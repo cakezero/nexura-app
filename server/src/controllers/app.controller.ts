@@ -1614,11 +1614,8 @@ export const performDailySignIn = async (
       return;
     }
 
-    const previousStreak =
-      typeof userExists.streak === "number" ? userExists.streak : 0;
-
     if (lastSignIn === yesterdayDate) {
-      userExists.streak = previousStreak + 1;
+      userExists.streak += 1;
     } else {
       // First sign-in ever, OR a gap of 2+ days — reset to 1.
       userExists.streak = 1;
@@ -1631,7 +1628,7 @@ export const performDailySignIn = async (
     userExists.xp += dailyXpAmount;
     userExists.lastSignInDate = onlyDate;
 
-    if (userExists.streak > (userExists.longestStreak || 0)) {
+    if (userExists.streak > userExists.longestStreak) {
       userExists.longestStreak = userExists.streak;
     }
 
