@@ -178,10 +178,10 @@ export default function LessonPage() {
     // Build steps for a single section from combined items
     const buildSectionSteps = (items: AnyItem[], omitLastOutro = false): LessonStep[] => {
       const sorted = [...items].sort((a, b) => {
-        const pk = kindPriority(a.kind) - kindPriority(b.kind);
-        if (pk !== 0) return pk;
         const orderDiff = (a.entry.order ?? 0) - (b.entry.order ?? 0);
         if (orderDiff !== 0) return orderDiff;
+        const pk = kindPriority(a.kind) - kindPriority(b.kind);
+        if (pk !== 0) return pk;
         return (a.entry.createdAt ?? "").localeCompare(b.entry.createdAt ?? "");
       });
 
