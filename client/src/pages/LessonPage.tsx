@@ -178,10 +178,10 @@ export default function LessonPage() {
     // Build steps for a single section from combined items
     const buildSectionSteps = (items: AnyItem[], omitLastOutro = false): LessonStep[] => {
       const sorted = [...items].sort((a, b) => {
-        const pk = kindPriority(a.kind) - kindPriority(b.kind);
-        if (pk !== 0) return pk;
         const orderDiff = (a.entry.order ?? 0) - (b.entry.order ?? 0);
         if (orderDiff !== 0) return orderDiff;
+        const pk = kindPriority(a.kind) - kindPriority(b.kind);
+        if (pk !== 0) return pk;
         return (a.entry.createdAt ?? "").localeCompare(b.entry.createdAt ?? "");
       });
 
@@ -827,15 +827,47 @@ export default function LessonPage() {
                 /* Section header */
                 ) : activeStep?.kind === "section-header" ? (
                   <div className="flex flex-col items-center py-6 gap-3">
+                    <motion.div
+                      initial={{ scale: 0, opacity: 0, rotate: -30 }}
+                      animate={{ scale: [0, 1.15, 1], opacity: 1, rotate: 0 }}
+                      transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0, duration: 0.8 }}
+                      className="relative"
+                    >
+                      <motion.img
+                        src="/nexura-silver.png"
+                        alt="silver trophy"
+                        className="w-16 h-16 sm:w-20 sm:h-20 object-contain relative z-10"
+                        animate={{ y: [0, -3, 0] }}
+                        transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+                      />
+                      {/* Rotating sun rays — soft ethereal glow */}
+                      <div
+                        className="absolute inset-[-20%] z-0 rounded-full"
+                        style={{
+                          background: `conic-gradient(from 0deg, transparent 0deg, rgba(255,255,255,0.5) 5deg, transparent 15deg, transparent 45deg, rgba(255,255,255,0.4) 50deg, transparent 60deg, transparent 90deg, rgba(255,255,255,0.5) 95deg, transparent 105deg, transparent 135deg, rgba(255,255,255,0.4) 140deg, transparent 150deg, transparent 180deg, rgba(255,255,255,0.5) 185deg, transparent 195deg, transparent 225deg, rgba(255,255,255,0.4) 230deg, transparent 240deg, transparent 270deg, rgba(255,255,255,0.5) 275deg, transparent 285deg, transparent 315deg, rgba(255,255,255,0.4) 320deg, transparent 330deg)`,
+                          animation: "spin 8s linear infinite",
+                          filter: "blur(8px)",
+                          opacity: 0.6,
+                        }}
+                      />
+                      {/* Inner warm glow */}
+                      <div
+                        className="absolute inset-[-5%] z-0 rounded-full"
+                        style={{
+                          background: "radial-gradient(circle, rgba(255,255,255,0.2) 0%, rgba(139,62,254,0.1) 40%, transparent 70%)",
+                          animation: "pulse 3s ease-in-out infinite",
+                        }}
+                      />
+                    </motion.div>
                     <div className="flex items-center gap-3 w-full max-w-xs">
                       <div className="flex-1 h-px bg-purple-400/30" />
-                      <h2 className="text-lg sm:text-xl font-bold text-purple-300 uppercase tracking-wider">
-                        {section2Name || "Section 2"}
+                      <h2 className="text-lg sm:text-xl font-bold text-purple-300">
+                        Excellent work
                       </h2>
                       <div className="flex-1 h-px bg-purple-400/30" />
                     </div>
                     <p className="text-sm sm:text-base leading-relaxed text-white/70 text-center whitespace-pre-line">
-                      {activeStep.label}
+                      {activeStep.label.replace(/^excellent work!?\s*\n?/i, "").trim() || "You've completed Section 1. You can now proceed to Section 2."}
                     </p>
                   </div>
 
