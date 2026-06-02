@@ -675,7 +675,7 @@ export default function LessonPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col items-center gap-3 px-3 sm:px-4 pt-4 sm:pt-6 pb-10">
+    <div className="min-h-screen bg-black text-white flex flex-col items-center gap-2 sm:gap-3 px-3 sm:px-4 pt-3 sm:pt-6 pb-6 sm:pb-10">
       <Confetti
         width={windowSize.width}
         height={windowSize.height}
@@ -696,7 +696,7 @@ export default function LessonPage() {
       </div>
 
       {/* Lesson title */}
-      <h1 className="w-full max-w-4xl text-2xl sm:text-4xl font-extrabold leading-tight bg-gradient-to-r from-white via-purple-200 to-purple-400 bg-clip-text text-transparent">
+      <h1 className="w-full max-w-4xl text-xl sm:text-4xl font-extrabold leading-tight bg-gradient-to-r from-white via-purple-200 to-purple-400 bg-clip-text text-transparent">
         {lesson?.title || "Lesson"}
       </h1>
 
@@ -724,11 +724,11 @@ export default function LessonPage() {
 
         {/* Step card */}
         <div
-          className={`rounded-3xl flex flex-col overflow-hidden relative ${activeStep?.kind === "video" ? "min-h-0" : "h-[320px] sm:h-[300px]"}`}
+          className={`rounded-3xl flex flex-col overflow-hidden relative ${activeStep?.kind === "video" ? "min-h-0" : "h-[clamp(280px,calc(100vh_-_320px),360px)] sm:h-[360px]"}`}
           style={{ background: activeStep?.kind === "video" ? "#000" : "linear-gradient(145deg, #8B3EFE, #4A1B8A)" }}
         >
           {/* Content row: prev | content | next */}
-          <div className={`flex items-center justify-center gap-1 sm:gap-3 px-1 sm:px-2 pt-3 sm:pt-4 pb-1 ${activeStep?.kind === "video" ? "" : ""}`} style={activeStep?.kind === "video" ? {} : { height: "calc(100% - 70px)" }}>
+          <div className={`flex items-center justify-center gap-1 sm:gap-3 px-1 sm:px-2 pb-1 ${activeStep?.kind === "video" ? "" : "flex-1 min-h-0 overflow-y-auto py-2 sm:py-3"}`}>
 
             {/* Prev button */}
             <button
@@ -758,13 +758,13 @@ export default function LessonPage() {
                 {/* Intro / Outro */}
                 {(activeStep?.kind === "intro" || activeStep?.kind === "outro") ? (
                   (!activeStep.trophy && !activeStep.header?.trim() && !activeStep.body?.trim()) ? null : (
-                  <div className="flex flex-col items-center w-full pt-4 sm:pt-6">
+                  <div className="flex flex-col items-center justify-center w-full h-full py-1">
                     {activeStep.trophy && (
                       <motion.div
                         initial={{ scale: 0, opacity: 0, rotate: -30 }}
                         animate={{ scale: [0, 1.15, 1], opacity: 1, rotate: 0 }}
                         transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0, duration: 0.8 }}
-                        className="relative mt-3 sm:mt-4"
+                        className="relative shrink-0"
                       >
                         <motion.img
                           src={`/nexura-${activeStep.trophy}.png`}
@@ -775,7 +775,7 @@ export default function LessonPage() {
                         />
                         {/* Rotating sun rays — soft ethereal glow */}
                         <div
-                          className="absolute inset-[-20%] z-0 rounded-full"
+                          className="absolute inset-[-12%] z-0 rounded-full"
                           style={{
                             background: `conic-gradient(from 0deg, transparent 0deg, rgba(255,255,255,0.5) 5deg, transparent 15deg, transparent 45deg, rgba(255,255,255,0.4) 50deg, transparent 60deg, transparent 90deg, rgba(255,255,255,0.5) 95deg, transparent 105deg, transparent 135deg, rgba(255,255,255,0.4) 140deg, transparent 150deg, transparent 180deg, rgba(255,255,255,0.5) 185deg, transparent 195deg, transparent 225deg, rgba(255,255,255,0.4) 230deg, transparent 240deg, transparent 270deg, rgba(255,255,255,0.5) 275deg, transparent 285deg, transparent 315deg, rgba(255,255,255,0.4) 320deg, transparent 330deg)`,
                             animation: "spin 8s linear infinite",
@@ -793,13 +793,13 @@ export default function LessonPage() {
                         />
                       </motion.div>
                     )}
-                    <div className="mt-4 sm:mt-5 space-y-1.5">
+                    <div className="mt-3 sm:mt-4 space-y-1.5">
                       {activeStep.header && (
                         <motion.p
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: 0.5, duration: 0.4 }}
-                          className="text-base sm:text-lg font-bold leading-snug text-center"
+                          className="text-sm sm:text-lg font-bold leading-snug text-center"
                         >
                           {activeStep.header}
                         </motion.p>
@@ -826,12 +826,12 @@ export default function LessonPage() {
 
                 /* Section header */
                 ) : activeStep?.kind === "section-header" ? (
-                  <div className="flex flex-col items-center py-6 gap-3">
+                  <div className="flex flex-col items-center justify-center h-full py-1 gap-2.5">
                     <motion.div
                       initial={{ scale: 0, opacity: 0, rotate: -30 }}
                       animate={{ scale: [0, 1.15, 1], opacity: 1, rotate: 0 }}
                       transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0, duration: 0.8 }}
-                      className="relative"
+                      className="relative shrink-0"
                     >
                       <motion.img
                         src="/nexura-silver.png"
@@ -842,7 +842,7 @@ export default function LessonPage() {
                       />
                       {/* Rotating sun rays — soft ethereal glow */}
                       <div
-                        className="absolute inset-[-20%] z-0 rounded-full"
+                        className="absolute inset-[-12%] z-0 rounded-full"
                         style={{
                           background: `conic-gradient(from 0deg, transparent 0deg, rgba(255,255,255,0.5) 5deg, transparent 15deg, transparent 45deg, rgba(255,255,255,0.4) 50deg, transparent 60deg, transparent 90deg, rgba(255,255,255,0.5) 95deg, transparent 105deg, transparent 135deg, rgba(255,255,255,0.4) 140deg, transparent 150deg, transparent 180deg, rgba(255,255,255,0.5) 185deg, transparent 195deg, transparent 225deg, rgba(255,255,255,0.4) 230deg, transparent 240deg, transparent 270deg, rgba(255,255,255,0.5) 275deg, transparent 285deg, transparent 315deg, rgba(255,255,255,0.4) 320deg, transparent 330deg)`,
                           animation: "spin 8s linear infinite",
@@ -964,9 +964,9 @@ export default function LessonPage() {
 
                 /* Congratulations / Claim */
                 ) : (
-                  <div className="flex flex-col items-center justify-center w-full h-full gap-4 pt-8">
+                  <div className="flex flex-col items-center justify-center w-full h-full gap-3 py-2">
                     <motion.div
-                      className="relative"
+                      className="relative shrink-0"
                       initial={{ scale: 0, opacity: 0 }}
                       animate={{ scale: 1, opacity: 1 }}
                       transition={{ type: "spring", stiffness: 200, damping: 20 }}
