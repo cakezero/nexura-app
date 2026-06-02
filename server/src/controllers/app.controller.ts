@@ -1585,8 +1585,15 @@ export const performDailySignIn = async (
   req: GlobalRequest,
   res: GlobalResponse,
 ) => {
+  const userId = req.id;
+  
+  const userExists = await user.findById(userId);
+  if (!userExists) {
+    res.status(NOT_FOUND).json({ message: "User not found" });
+    return;
+  }
+
   try {
-    const userId = req.id;
 
     const today = startOfDayUTC();
     const yesterday = new Date(today);
@@ -1594,12 +1601,6 @@ export const performDailySignIn = async (
 
     const onlyDate = today.toISOString().split("T")[0] as string;
     const yesterdayDate = yesterday.toISOString().split("T")[0] as string;
-
-    const userExists = await user.findById(userId);
-    if (!userExists) {
-      res.status(NOT_FOUND).json({ message: "User not found" });
-      return;
-    }
 
     // Source of truth for streak: user.lastSignInDate.
     // The previous version read from dailySignIn.findOne(), but legacy data has
@@ -1641,14 +1642,6 @@ export const performDailySignIn = async (
     userExists.level = level;
     userExists.totalCheckIns += 1;
 
-    await xpLog.create({
-      address: userExists.address,
-      username: userExists.username,
-      amount: dailyXpAmount,
-      status: "success",
-      type: "daily-xp",
-    });
-
     const dailySignInRecord = await dailySignIn.findOne({ month, user: userId }).select("xpClaimedThisMonth date");
     if (!dailySignInRecord) {
       await dailySignIn.create({ month, user: userId, xpClaimedThisMonth: dailyXpAmount, date: onlyDate });
@@ -1660,8 +1653,23 @@ export const performDailySignIn = async (
 
     await userExists.save();
 
+    await xpLog.create({
+      address: userExists.address,
+      username: userExists.username,
+      amount: dailyXpAmount,
+      status: "success",
+      type: "daily-xp",
+    });
+
     res.status(OK).json({ message: "Daily sign-in successful", done: true });
   } catch (error) {
+    await xpLog.create({
+      address: userExists.address,
+      username: userExists.username,
+      amount: 50,
+      status: "failed",
+      type: "daily-xp",
+    });
     logger.error(error);
     res
       .status(INTERNAL_SERVER_ERROR)
@@ -1685,7 +1693,7 @@ export const restoreStreak = async (req: GlobalRequest, res: GlobalResponse) => 
       return;
     }
 
-    const amount = network === "mainnet" ? "5" : "0.01";
+    const amount = network === "mainnet" ? "1" : "0.01";
 
     if (value !== amount) {
       res.status(BAD_REQUEST).json({ error: `user must deposit ${amount} trust before streak can be restored` });
