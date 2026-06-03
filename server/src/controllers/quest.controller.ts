@@ -55,6 +55,7 @@ const PROOF_REQUIRED_CAMPAIGN_TAGS = new Set([
 	"repost-x",
 	"feedback",
 	"create-post",
+	"wallet-address",
 ]);
 
 // todo: add ecosystem completed to eco quests
