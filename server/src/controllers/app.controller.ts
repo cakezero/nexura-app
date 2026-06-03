@@ -924,7 +924,7 @@ export const validatePortalTask = async (
       return;
     }
 
-    // set shares to be from 4.5
+    // set shares to be from 1.3
     const query = `
       query GetTriple($id: String!, $address: String!) {
         triple(term_id: $id) {
@@ -933,7 +933,7 @@ export const validatePortalTask = async (
               _eq: $address
             }
             shares:  {
-              _gte: 4500000000000000000
+              _gte: 1300000000000000000
             }
           }) {
             account_id
@@ -944,7 +944,7 @@ export const validatePortalTask = async (
               _eq: $address
             }
             shares:  {
-              _gte: 4500000000000000000
+              _gte: 1300000000000000000
             }
           }) {
             account_id
