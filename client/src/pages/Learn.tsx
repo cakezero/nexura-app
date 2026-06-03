@@ -2,6 +2,7 @@
 "use client";
 
 import { useLocation } from "wouter";
+import { Users } from "lucide-react";
 import { Card, CardContent } from "../components/ui/card";
 import AnimatedBackground from "../components/AnimatedBackground";
 import learnIcon from "/learn-icon.png";
@@ -237,28 +238,6 @@ export default function Learn() {
 
                       <p className="line-clamp-3 text-xs leading-relaxed text-white/70">{lesson.description}</p>
 
-                      {(lesson.creatorName || typeof lesson.participantCount === "number") && (
-                        <div className="flex items-center justify-between gap-2 text-[10px] text-white/60">
-                          {lesson.creatorName ? (
-                            <span className="flex items-center gap-1.5 truncate">
-                              {lesson.profileImage && (
-                                <img
-                                  src={lesson.profileImage}
-                                  alt={lesson.creatorName}
-                                  className="h-4 w-4 rounded-full object-cover"
-                                />
-                              )}
-                              <span className="truncate">By {lesson.creatorName}</span>
-                            </span>
-                          ) : <span />}
-                          {typeof lesson.participantCount === "number" && (
-                            <span className="shrink-0">
-                              {lesson.participantCount.toLocaleString()} {lesson.participantCount === 1 ? "participant" : "participants"}
-                            </span>
-                          )}
-                        </div>
-                      )}
-
                       <div className="mt-auto">
                         <div className="flex justify-between text-[10px] text-white/60">
                           <span>PROGRESS</span>
@@ -277,6 +256,25 @@ export default function Learn() {
                           />
                         </div>
                       </div>
+
+                      {(lesson.creatorName || typeof lesson.participantCount === "number") && (
+                        <div className="flex items-center justify-between gap-2 text-[10px] text-white/60">
+                          {lesson.creatorName ? (
+                            <span className="flex items-center gap-1.5 truncate">
+                              {lesson.profileImage && (
+                                <img src={lesson.profileImage} alt={lesson.creatorName} className="h-4 w-4 rounded-full object-cover" />
+                              )}
+                              <span className="truncate">By {lesson.creatorName}</span>
+                            </span>
+                          ) : <span />}
+                          {typeof lesson.participantCount === "number" && (
+                            <span className="flex items-center gap-1 shrink-0">
+                              <Users className="w-3 h-3" />
+                              {lesson.participantCount.toLocaleString()} {lesson.participantCount === 1 ? "participant" : "participants"}
+                            </span>
+                          )}
+                        </div>
+                      )}
 
                       <div className="flex items-center justify-between">
                         {isCompleted ? (
