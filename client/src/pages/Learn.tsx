@@ -21,6 +21,8 @@ type LessonCard = {
   status?: "draft" | "published";
   coverImage?: string;
   profileImage?: string;
+  creatorName?: string;
+  participantCount?: number;
   createdAt?: string;
 };
 
@@ -234,6 +236,28 @@ export default function Learn() {
                       <h3 className="text-sm font-bold text-white">{lesson.title}</h3>
 
                       <p className="line-clamp-3 text-xs leading-relaxed text-white/70">{lesson.description}</p>
+
+                      {(lesson.creatorName || typeof lesson.participantCount === "number") && (
+                        <div className="flex items-center justify-between gap-2 text-[10px] text-white/60">
+                          {lesson.creatorName ? (
+                            <span className="flex items-center gap-1.5 truncate">
+                              {lesson.profileImage && (
+                                <img
+                                  src={lesson.profileImage}
+                                  alt={lesson.creatorName}
+                                  className="h-4 w-4 rounded-full object-cover"
+                                />
+                              )}
+                              <span className="truncate">By {lesson.creatorName}</span>
+                            </span>
+                          ) : <span />}
+                          {typeof lesson.participantCount === "number" && (
+                            <span className="shrink-0">
+                              {lesson.participantCount.toLocaleString()} {lesson.participantCount === 1 ? "participant" : "participants"}
+                            </span>
+                          )}
+                        </div>
+                      )}
 
                       <div className="mt-auto">
                         <div className="flex justify-between text-[10px] text-white/60">
