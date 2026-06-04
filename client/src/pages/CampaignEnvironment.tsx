@@ -252,7 +252,7 @@ export default function CampaignEnvironment() {
     }
 
     try {
-      if (environment === "production" && !user?.socialProfiles.x.connected) {
+      if (environment === "production" && quest.tag !== "wallet-address" && !user?.socialProfiles.x.connected) {
         throw new Error("X not connected yet, go to profile to connect.");
       }
 
@@ -568,8 +568,9 @@ export default function CampaignEnvironment() {
         <div className="space-y-4 sm:space-y-6">
           {quests.length > 0 ? (
             quests.map((quest) => {
-              const requiresProof = ["comment", "follow", "comment-x", "follow-x", "repost-x", "feedback", "create-post"].includes(quest.tag);
+              const requiresProof = ["comment", "follow", "comment-x", "follow-x", "repost-x", "feedback", "create-post", "wallet-address"].includes(quest.tag);
               const isFeedback = quest.tag === "feedback";
+              const isWalletAddress = quest.tag === "wallet-address";
               const isTns = quest.tag === "trust-name";
               const visited = visitedQuests.includes(quest._id);
               const claimed = quest.done || claimedQuests.includes(quest._id);
@@ -624,7 +625,7 @@ export default function CampaignEnvironment() {
                           onClick={() => setExpandedQuestId(isExpanded ? null : quest._id)}
                           className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-sm sm:text-base font-semibold bg-purple-700 hover:bg-purple-800"
                         >
-                          {isFeedback ? "Give Feedback" : "Submit Proof"}
+                          {isFeedback ? "Give Feedback" : isWalletAddress ? "Submit Address" : "Submit Proof"}
                         </button>
                       )}
 
@@ -676,6 +677,19 @@ export default function CampaignEnvironment() {
                             );
                           })()}
                         </>
+                      ) : isWalletAddress ? (
+                        <>
+                          <input
+                            type="text"
+                            placeholder="Enter your wallet address (0x...)"
+                            value={proofLinks[quest._id] || ""}
+                            onChange={(e) => setProofLinks({ ...proofLinks, [quest._id]: e.target.value })}
+                            className="w-full bg-black/40 border border-white/20 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-purple-500"
+                          />
+                          {(proofLinks[quest._id]?.length || 0) > 0 && !/^0x[a-fA-F0-9]{40}$/.test(proofLinks[quest._id] || "") && (
+                            <p className="text-xs text-red-400">Enter a valid wallet address (0x followed by 40 hex characters).</p>
+                          )}
+                        </>
                       ) : (
                         <input
                           type="url"
@@ -691,12 +705,15 @@ export default function CampaignEnvironment() {
                           if (isFeedback && (proofLinks[quest._id]?.length || 0) < minChars) {
                             return;
                           }
+                          if (isWalletAddress && !/^0x[a-fA-F0-9]{40}$/.test(proofLinks[quest._id] || "")) {
+                            return;
+                          }
                           retryQuests.includes(quest._id) ? retryQuest(quest) : submitCommentProof(quest);
                         }}
-                        disabled={isFeedback && (proofLinks[quest._id]?.length || 0) < (resolveFeedbackMinChars(quest))}
+                        disabled={(isFeedback && (proofLinks[quest._id]?.length || 0) < (resolveFeedbackMinChars(quest))) || (isWalletAddress && !/^0x[a-fA-F0-9]{40}$/.test(proofLinks[quest._id] || ""))}
                         className="w-full bg-gradient-to-r from-purple-700 via-purple-800 to-indigo-900 hover:from-purple-600 hover:via-purple-700 hover:to-indigo-800 text-white font-semibold py-2.5 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {isFeedback ? "Submit Feedback" : "Submit for Review"}
+                        {isFeedback ? "Submit Feedback" : isWalletAddress ? "Submit Address" : "Submit for Review"}
                       </button>
                     </div>
                   )}

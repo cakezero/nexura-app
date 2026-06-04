@@ -19,7 +19,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "../../../components/ui/dialog";
-import { Calendar, Shield, LayoutDashboard, Search, Bell, RefreshCw, Check, X, Eye, Clock, CheckCircle2, XCircle, ChevronDown, Users, FileText } from "lucide-react";
+import { Calendar, Shield, LayoutDashboard, Search, Bell, RefreshCw, Check, X, Eye, Clock, CheckCircle2, XCircle, ChevronDown, Users, FileText, Copy } from "lucide-react";
 import { StatsOverview } from "../../../components/admin/StatsOverview";
 import CampaignSubmissions from "../../../components/admin/CampaignSubmissions";
 import { TASKS } from "../../../types/admin";
@@ -29,7 +29,6 @@ import CreateNewCampaigns from "../../../components/admin/CreateNewCampaign";
 interface StudioDashboardProps {
   onLogout: () => void;
 }
-
 
 type BannedUser = {
   _id: string;
@@ -295,6 +294,23 @@ const fetchBannedUsers = async () => {
                     <p className="text-white text-sm whitespace-pre-wrap leading-relaxed">{selectedTask.submissionLink}</p>
                   </div>
                   <p className="text-xs text-white/40">{selectedTask.submissionLink.length} characters</p>
+                </div>
+              ) : selectedTask.taskType === "wallet-address" ? (
+                <div className="grid gap-2">
+                  <Label className="text-white/70">Wallet Address</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      value={selectedTask.submissionLink}
+                      readOnly
+                      className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus-visible:ring-[#8a3ffc] flex-1 font-mono"
+                    />
+                    <Button
+                      onClick={() => navigator.clipboard.writeText(selectedTask.submissionLink)}
+                      className="bg-[#8B3EFE] hover:bg-[#7b35e6] text-white px-4"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
               ) : selectedTask.taskType && ["follow", "like"].includes(selectedTask.taskType.toLowerCase()) ? (
                 <div className="grid gap-2">

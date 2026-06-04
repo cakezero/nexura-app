@@ -904,6 +904,14 @@ export const updateBadge = async (req: GlobalRequest, res: GlobalResponse) => {
   }
 };
 
+export const de = (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    
+  } catch (error) {
+    logger.error(error);
+  }
+}
+
 export const validatePortalTask = async (
   req: GlobalRequest,
   res: GlobalResponse,
@@ -1505,7 +1513,7 @@ export const fetchDailyXpDetails = async (req: GlobalRequest, res: GlobalRespons
 
     const { streakLost } = evaluateDailyStreak(
       userStreakToUpdate.lastSignInDate,
-      userStreakToUpdate.streak,
+      userStreakToUpdate.streak
     );
 
     if (!streakLost) {
@@ -1516,10 +1524,6 @@ export const fetchDailyXpDetails = async (req: GlobalRequest, res: GlobalRespons
     if (userStreakToUpdate.streakToRestore === 0) {
       userStreakToUpdate.streakToRestore = userStreakToUpdate.streak;
     }
-
-    userStreakToUpdate.streak = 0;
-
-    await userStreakToUpdate.save();
 
     res.status(OK).json({ message: "daily xp details fetched", dailyXpDetails: { streakLost, xpClaimedThisMonth } });
   } catch (error) {
@@ -1711,7 +1715,9 @@ export const restoreStreak = async (req: GlobalRequest, res: GlobalResponse) => 
 
     const date = today.toISOString().split("T")[0] as string;
 
-    await user.findByIdAndUpdate(req.id, { $inc: { streak: req.user.streakToRestore, totalCheckIns: 1, xp: 50 }, $set: { lastSignInDate: date, streakToRestore: 0 } });
+    const streak = req.user.streakToRestore += 1;
+
+    await user.findByIdAndUpdate(req.id, { $inc: { totalCheckIns: 1, xp: 50 }, $set: { streak, lastSignInDate: date, streakToRestore: 0 } });
 
     await dailySignIn.findOneAndUpdate({ user: req.id, month: formatDate(new Date(), "MMM, y") }, { $set: { date }, $inc: { xpClaimedThisMonth: 50 } });
 
