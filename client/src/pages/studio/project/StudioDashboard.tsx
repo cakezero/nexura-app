@@ -30,7 +30,6 @@ interface StudioDashboardProps {
   onLogout: () => void;
 }
 
-
 type BannedUser = {
   _id: string;
   walletAddress: string;

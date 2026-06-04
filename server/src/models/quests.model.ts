@@ -63,7 +63,7 @@ const campaignQuestSchema = new Schema({
 	},
 	tag: {
 		type: String,
-		enum: ["like", "follow", "follow-x", "trust-name", "repost", "repost-x", "join", "join-discord", "portal", "message", "message-discord", "acquire-role-discord", "send-message-discord", "comment", "comment-x", "feedback", "create-post", "wallet-address", "other"],
+		enum: ["like", "follow", "follow-x", "trust-name", "repost", "repost-x", "join", "join-discord", "portal", "message", "message-discord", "acquire-role-discord", "send-message-discord", "comment", "comment-x", "feedback", "create-post", "wallet-address", "visit-website", "other"],
 		required: true
 	},
 	followers: {
@@ -200,7 +200,7 @@ const miniQuestSchema = new Schema({
 	},
 	tag: {
 		type: String,
-		enum: ["like", "follow", "follow-x", "message", "message-discord", "other", "portal", "comment", "comment-x", "repost", "repost-x", "join", "join-discord", "acquire-role-discord", "send-message-discord", "feedback", "trust-name", "create-post", "wallet-address"]
+		enum: ["like", "follow", "follow-x", "message", "visit-website", "message-discord", "other", "portal", "comment", "comment-x", "repost", "repost-x", "join", "join-discord", "acquire-role-discord", "send-message-discord", "feedback", "trust-name", "create-post", "wallet-address"]
 	},
 	link: {
 		type: String
