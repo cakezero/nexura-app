@@ -1543,26 +1543,28 @@ export const claimStreakReward = async (req: GlobalRequest, res: GlobalResponse)
 
     let streakReward = 0;
 
+    let dayCount = userFromReq.dayCount || 0;
+
     const dailyXpReward = await dailySignIn.findOne({ user: req.id, month });
 
-    if (userFromReq.streak >= 7 && userFromReq.streak < 15 && dailyXpReward!.dayCount !== 7) {
+    if (userFromReq.streak >= 7 && userFromReq.streak < 15 && dayCount === 0) {
       streakReward = 500;
-      dailyXpReward!.dayCount = 7;
-    } else if (userFromReq.streak >= 15 && userFromReq.streak < 30 && dailyXpReward!.dayCount !== 15) {
+      dayCount = 7;
+    } else if (userFromReq.streak >= 15 && userFromReq.streak < 30 && dayCount === 7) {
       streakReward = 1000;
-      dailyXpReward!.dayCount = 15;
-    } else if (userFromReq.streak >= 30 && userFromReq.streak < 45 && dailyXpReward!.dayCount !== 30) {
+      dayCount = 15;
+    } else if (userFromReq.streak >= 30 && userFromReq.streak < 45 && dayCount === 15) {
       streakReward = 2500;
-      dailyXpReward!.dayCount = 30;
-    } else if (userFromReq.streak >= 45 && userFromReq.streak < 60 && dailyXpReward!.dayCount !== 45) {
+      dayCount = 30;
+    } else if (userFromReq.streak >= 45 && userFromReq.streak < 60 && dayCount === 30) {
       streakReward = 5000;
-      dailyXpReward!.dayCount = 45;
-    } else if (userFromReq.streak >= 60 && userFromReq.streak < 90 && dailyXpReward!.dayCount !== 60) {
+      dayCount = 45;
+    } else if (userFromReq.streak >= 60 && userFromReq.streak < 90 && dayCount === 45) {
       streakReward = 10000;
-      dailyXpReward!.dayCount = 60;
-    } else if (userFromReq.streak >= 90 && dailyXpReward!.dayCount !== 90) {
+      dayCount = 60;
+    } else if (userFromReq.streak >= 90 && dayCount === 60) {
       streakReward = 20000;
-      dailyXpReward!.dayCount = 90;
+      dayCount = 90;
     }
 
     if (streakReward === 0) {
@@ -1573,7 +1575,7 @@ export const claimStreakReward = async (req: GlobalRequest, res: GlobalResponse)
     dailyXpReward!.xpClaimedThisMonth += streakReward;
     await dailyXpReward!.save();
 
-    await user.findByIdAndUpdate(req.id, { $inc: { xp: streakReward } });
+    await user.findByIdAndUpdate(req.id, { $inc: { xp: streakReward }, $set: { dayCount } });
 
     await xpLog.create({ amount: streakReward, address: req.user.address, username: req.user.username, type: "daily-xp-streak-reward", status: "success" });
 
@@ -1720,7 +1722,15 @@ export const restoreStreak = async (req: GlobalRequest, res: GlobalResponse) => 
 
     await user.findByIdAndUpdate(req.id, { $inc: { totalCheckIns: 1, xp: 50 }, $set: { streak, lastSignInDate: date, streakToRestore: 0 } });
 
-    await dailySignIn.findOneAndUpdate({ user: req.id, month: formatDate(new Date(), "MMM, y") }, { $set: { date }, $inc: { xpClaimedThisMonth: 50 } });
+    const month = formatDate(new Date(), "MMM, y");
+
+    const dailySignInExists = await dailySignIn.findOne({ user: req.id, month }).select("xpClaimedThisMonth");
+    if (!dailySignInExists) {
+      await dailySignIn.create({ user: req.id, date, month, xpClaimedThisMonth: 50 });
+    } else {
+      dailySignInExists.xpClaimedThisMonth += 50; 
+      await dailySignInExists.save();
+    }
 
     res.status(OK).json({ message: "streak restored" });
   } catch (error) {
@@ -3023,7 +3033,6 @@ export const checkDiscordTask = async (
               user_id: discordId,
               guild_id: resolvedGuildId,
             });
-          fallbackQueries.push({ user_id: discordId });
 
           for (const query of fallbackQueries) {
             const sentMessage = await firstMessage.findOne(query).lean();

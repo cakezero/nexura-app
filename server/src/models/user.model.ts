@@ -17,6 +17,10 @@ const userSchema = new Schema({
   streakToRestore: {
     type: Number,
     default: 0
+  },
+  dayCount: {
+    type: Number,
+    default: 0
 	},
 	address: {
 		type: String,

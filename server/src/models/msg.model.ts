@@ -4,7 +4,6 @@ const firstMessageSchema = new mongoose.Schema({
   user_id: {
     type: String,
     required: true,
-    unique: true
   },
   guild_id: {
     type: String,
