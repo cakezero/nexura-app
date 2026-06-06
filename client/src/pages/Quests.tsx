@@ -35,304 +35,258 @@ interface Quest {
   maxParticipants?: number;
 }
 
+const QUESTS = [
+  {
+    id: 1,
+    title: "Complete 3 Tasks",
+    description: "Finish any 3 tasks today to earn XP.",
+    xp: 100,
+    type: "daily",
+  },
+  {
+    id: 2,
+    title: "Login Streak",
+    description: "Log in for 2 consecutive days.",
+    xp: 150,
+    type: "daily",
+  },
+  {
+    id: 3,
+    title: "Daily Challenge Run",
+    description: "Complete one challenge run.",
+    xp: 120,
+    type: "daily",
+  },
+
+  {
+    id: 4,
+    title: "Winter Event Quest",
+    description: "Complete seasonal winter missions.",
+    xp: 500,
+    type: "seasonal",
+  },
+  {
+    id: 5,
+    title: "Festival Participation",
+    description: "Join the ongoing festival event.",
+    xp: 600,
+    type: "seasonal",
+  },
+  {
+    id: 6,
+    title: "Limited Time Hunt",
+    description: "Find hidden items in the event map.",
+    xp: 700,
+    type: "seasonal",
+  },
+
+  {
+    id: 7,
+    title: "Featured Boss Battle",
+    description: "Defeat the featured boss for big rewards.",
+    xp: 1000,
+    type: "featured",
+  },
+  {
+    id: 8,
+    title: "Elite Mission",
+    description: "Complete the elite featured mission chain.",
+    xp: 900,
+    type: "featured",
+  },
+  {
+    id: 9,
+    title: "Legendary Drop",
+    description: "Secure a rare legendary drop.",
+    xp: 1200,
+    type: "featured",
+  },
+  {
+    id: 10,
+    title: "Community Goal",
+    description: "Contribute to the global quest objective.",
+    xp: 800,
+    type: "featured",
+  },
+];
+
 export default function Quests() {
+  const { toast } = useToast();
   const [, setLocation] = useLocation();
   const { user } = useAuth();
 
-  const userId = user?._id || "";
-
-  const [serverOffset, setServerOffset] = useState(0);
-  const [countdowns, setCountdowns] = useState<Record<string, string>>({});
-
-  const { toast } = useToast();
-
-  const now = Date.now() + serverOffset;
-
-  const isEndedQuest = (quest: Quest) =>
-    quest.status === "Ended" || (!!quest.ends_at && new Date(quest.ends_at).getTime() <= now);
-  const isScheduledQuest = (quest: Quest) =>
-    !isEndedQuest(quest) && !!quest.starts_at && new Date(quest.starts_at).getTime() > now;
-  const isActiveQuest = (quest: Quest) =>
-    !isScheduledQuest(quest) && !isEndedQuest(quest) && quest.status !== "Save";
-
-  // SERVER TIME SYNC
-  useEffect(() => {
-    const getServerTime = async () => {
-      try {
-        const res = await apiRequestV2("GET", "/api/server-time");
-        setServerOffset(res.serverTime - Date.now());
-      } catch {
-        // fallback
-      }
-    };
-    getServerTime();
-  }, []);
-
-  const { data, isLoading, refetch } = useQuery<{
-    oneTimeQuests: Quest[];
-    quests: Quest[];
-    featuredQuests: Quest[];
-  }>({
-    queryKey: ["/api/quests"],
-    queryFn: async () => {
-      const res = await apiRequestV2("GET", "/api/quests");
-      return res;
-    },
-    refetchInterval: 300000,
-    refetchIntervalInBackground: true,
-  });
-
-  const allQuests: Quest[] = data?.quests ?? [];
-
-  const activeQuests = allQuests.filter(isActiveQuest);
-  const upcomingQuests = allQuests.filter(isScheduledQuest);
-  const endedQuests = allQuests.filter(isEndedQuest);
-
-  // COUNTDOWN TIMER
-  useEffect(() => {
-    if (upcomingQuests.length === 0) return;
-
-    const tick = () => {
-      const n = Date.now() + serverOffset;
-      const newCountdowns: Record<string, string> = {};
-      let anyExpired = false;
-
-      for (const q of upcomingQuests) {
-        const diff = new Date(q.starts_at!).getTime() - n;
-
-        if (diff <= 0) {
-          anyExpired = true;
-          newCountdowns[q._id] = "Starting...";
-        } else {
-          const d = Math.floor(diff / 86400000);
-          const h = Math.floor((diff % 86400000) / 3600000);
-          const m = Math.floor((diff % 3600000) / 60000);
-          const s = Math.floor((diff % 60000) / 1000);
-
-          newCountdowns[q._id] = d > 0 ? `${d}d ${h}h ${m}m ${s}s` : h > 0 ? `${h}h ${m}m ${s}s` : `${m}m ${s}s`;
-        }
-      }
-
-      setCountdowns(newCountdowns);
-      if (anyExpired) refetch();
-    };
-
-    tick();
-    const interval = setInterval(tick, 1000);
-    return () => clearInterval(interval);
-  }, [upcomingQuests, serverOffset, refetch]);
-
-  const [isStartingQuest, setIsStartingQuest] = useState<string | null>(null);
-
-  const startQuest = async (quest: Quest) => {
-    if (isEndedQuest(quest)) return;
-    if (isStartingQuest === quest._id) return;
-
-    if (!quest.joined) {
-      setIsStartingQuest(quest._id);
-      try {
-        await apiRequestV2("POST", "/api/quest/start-quest", {
-          questId: quest._id,
-        });
-
-        // Refetch to update joined status
-        await refetch();
-
-      } catch (error: any) {
-        // If the error is "quest already started", we can ignore it and just proceed
-        const errorData = error.info || {};
-        if (errorData.error !== "quest already started") {
-          toast({
-            title: "Error",
-            description: errorData.error || "Failed to start the quest. Please try again.",
-            variant: "destructive",
-          });
-          setIsStartingQuest(null);
-          return;
-        }
-      } finally {
-        setIsStartingQuest(null);
-      }
-    }
-
-    setLocation(`/quest/${quest._id}`);
+  const QUEST_FILTERS = {
+    DAILY: "daily",
+    SEASONAL: "seasonal",
+    FEATURED: "featured",
   };
 
-  const renderQuestCard = (
-    quest: Quest,
-    state: "active" | "upcoming" | "ended",
-    index: number = 0
-  ) => {
-    const isActive = state === "active";
-    const isUpcoming = state === "upcoming";
+  const [questFilter, setQuestFilter] = useState(QUEST_FILTERS.DAILY);
 
-    const formatDate = (dateStr?: string) => {
-      if (!dateStr) return "N/A";
-      return new Date(dateStr).toLocaleDateString("en-GB", {
-        day: "numeric",
-        month: "long",
-      });
-    };
+const QUESTS = [
+  {
+    id: 0,
+    title: "Relic Checker",
+    description: "Verify relic ownership and earn XP.",
+    xp: 500,
+    type: "featured",
+    isRelicQuest: true,
+    buttonText: "Check Relic",
+  },
 
-    const starts_atFormatted = quest.starts_at ? formatDate(quest.starts_at) : "";
-    const ends_atFormatted = quest.ends_at ? formatDate(quest.ends_at) : "TBA";
+  {
+    id: 1,
+    title: "Follow Us on Twitter",
+    description: "Follow our official account and submit proof.",
+    xp: 200,
+    type: "daily",
+    taskType: "twitter",
+    buttonText: "Start Quest",
+  },
 
-    const participantCount = quest.participants || 0;
+  {
+    id: 2,
+    title: "Complete 3 Tasks",
+    description: "Finish any 3 tasks today to earn XP.",
+    xp: 100,
+    type: "daily",
+    buttonText: "Start Quest",
+  },
 
-    return (
-      <motion.div
-        key={quest._id}
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{
-          duration: 0.45,
-          delay: index * 0.08,
-          ease: "easeOut",
-        }}
-      >
-        <Card className="bg-[#170f1f] h-full border border-white/5 rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition flex flex-col">
-          {/* Quest Banner */}
-          <div className="relative h-36 bg-black w-full">
-            {quest.projectCoverImage && (
-              <img
-                src={quest.projectCoverImage}
-                alt={quest.title}
-                className="w-full h-full object-cover rounded-t-2xl"
-              />
-            )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+  {
+    id: 3,
+    title: "Login Streak",
+    description: "Log in for 2 consecutive days.",
+    xp: 150,
+    type: "daily",
+    buttonText: "Start Quest",
+  },
 
-            {/* Status Badge / Countdown */}
-            <div className="absolute top-2 right-2">
-              {isActive ? (
-                <Badge className="bg-green-500/20 text-green-400 border border-green-500/30 text-[0.65rem] sm:text-xs">
-                  Active
-                </Badge>
-              ) : isUpcoming ? (
-                <div className="bg-black/60 backdrop-blur-sm border border-purple-500/30 rounded-lg px-2 py-1 flex items-center gap-1.5">
-                  <Clock className="w-3 h-3 text-purple-400 animate-pulse" />
-                  <span className="text-purple-300 text-[0.6rem] sm:text-xs font-mono font-semibold">
-                    {countdowns[quest._id] || "Loading..."}
-                  </span>
-                </div>
-              ) : (
-                <Badge className="bg-gray-500/20 text-gray-200 border border-gray-500/30 text-[0.65rem] sm:text-xs">
-                  Ended
-                </Badge>
-              )}
-            </div>
+  {
+    id: 4,
+    title: "Daily Challenge Run",
+    description: "Complete one challenge run.",
+    xp: 120,
+    type: "daily",
+    buttonText: "Start Quest",
+  },
 
-            {/* PROJECT LOGO OVERLAY */}
-            <div className="absolute bottom-3 left-3">
-              <div className="w-12 h-12 rounded-xl overflow-hidden border border-white/10 bg-[#1D1526] backdrop-blur-md shadow-lg">
-                <img
-                  src={(quest as any).project_image || "/quest-1.png"}
-                  alt={quest.project_name || "Project"}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            </div>
+  {
+    id: 5,
+    title: "Winter Event Quest",
+    description: "Complete seasonal winter missions.",
+    xp: 500,
+    type: "seasonal",
+    buttonText: "Start Quest",
+  },
 
-            {/* Category */}
-            {quest.category && (
-              <div className="absolute top-2 left-2 text-[0.65rem] sm:text-xs text-white/80 font-medium">
-                {quest.category}
-              </div>
-            )}
-          </div>
+  {
+    id: 6,
+    title: "Festival Participation",
+    description: "Join the ongoing festival event.",
+    xp: 600,
+    type: "seasonal",
+    buttonText: "Start Quest",
+  },
 
-          {/* Quest Details */}
-          <div className="p-3 sm:p-4 flex flex-1 flex-col space-y-1.5">
-            <h2
-              className="text-sm font-semibold text-white leading-snug line-clamp-2 min-h-[2.25rem] break-words"
-              title={quest.title}
-            >
-              {quest.title}
-            </h2>
+  {
+    id: 7,
+    title: "Limited Time Hunt",
+    description: "Find hidden items in the event map.",
+    xp: 700,
+    type: "seasonal",
+    buttonText: "Start Quest",
+  },
 
-            <div className="flex flex-row justify-between text-xs gap-1 items-center">
-              <span className="text-gray-500">Creator:</span>
-              <span className="text-white line-clamp-1 break-all max-w-[65%] text-right">
-                {quest.project_name || "Nexura Ecosystem"}
-              </span>
-            </div>
+  {
+    id: 8,
+    title: "Featured Boss Battle",
+    description: "Defeat the featured boss for big rewards.",
+    xp: 1000,
+    type: "featured",
+    buttonText: "Start Quest",
+  },
 
-            <div className="flex flex-row justify-between text-xs gap-1 items-center">
-              <span className="text-gray-500">Participants:</span>
-              <span className="text-white flex items-center gap-1">
-                <Users className="w-3 h-3" />
-                {participantCount.toLocaleString()}
-              </span>
-            </div>
+  {
+    id: 9,
+    title: "Elite Mission",
+    description: "Complete the elite featured mission chain.",
+    xp: 900,
+    type: "featured",
+    buttonText: "Start Quest",
+  },
 
-            <div className="flex flex-row justify-between text-xs items-center">
-              <span className="text-gray-500">Reward:</span>
-              <span className="text-white flex items-center gap-1 text-right">
-                {quest.reward} XP
-              </span>
-            </div>
+  {
+    id: 10,
+    title: "Legendary Drop",
+    description: "Secure a rare legendary drop.",
+    xp: 1200,
+    type: "featured",
+    buttonText: "Start Quest",
+  },
 
-            {quest.starts_at && (
-              <div className="flex flex-row justify-between text-xs items-center">
-                <span className="text-gray-500">Duration:</span>
-                <span className="text-white flex items-center gap-1">
-                  <Clock className="w-3 h-3" />
-                  {starts_atFormatted} – {ends_atFormatted}
-                </span>
-              </div>
-            )}
+  {
+    id: 11,
+    title: "Community Goal",
+    description: "Contribute to the global quest objective.",
+    xp: 800,
+    type: "featured",
+    buttonText: "Start Quest",
+  },
+];
 
-            <Button
-              className={`w-full mt-auto pt-2 py-2 text-xs font-medium rounded-2xl ${
-                isActive
-                  ? "bg-[#8b3efe] hover:bg-[#B65FC8] text-white"
-                  : "bg-gray-600 cursor-not-allowed text-gray-300"
-              }`}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (isActive) startQuest(quest);
-              }}
-              disabled={!isActive || isStartingQuest === quest._id}
-            >
-              {isActive ? (
-                <>
-                  {isStartingQuest === quest._id ? (
-                    <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 animate-spin" />
-                  ) : (
-                    <ExternalLink className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                  )}
-                  {isStartingQuest === quest._id ? "Joining..." : (quest.joined ? "Continue Quest" : "Start Quest")}
-                </>
-              ) : isUpcoming ? (
-                <>
-                  <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                  Starts in {countdowns[quest._id] || "..."}
-                </>
-              ) : (
-                <>
-                  <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                  Quest Ended
-                </>
-              )}
-            </Button>
-          </div>
-        </Card>
-      </motion.div>
-    );
+const [showRelicModal, setShowRelicModal] = useState(false);
+
+const [scanStep, setScanStep] = useState(0);
+// 0 = scanning
+// 1 = relics found
+// 2 = preparing rewards
+// 3 = complete
+
+useEffect(() => {
+  if (!showRelicModal) return;
+
+  setScanStep(0);
+
+  const t1 = setTimeout(() => setScanStep(1), 2000);
+  const t2 = setTimeout(() => setScanStep(2), 4000);
+  const t3 = setTimeout(() => setScanStep(3), 6000);
+
+  return () => {
+    clearTimeout(t1);
+    clearTimeout(t2);
+    clearTimeout(t3);
   };
+}, [showRelicModal]);
+
+const [activeQuestId, setActiveQuestId] = useState(null);
+const [proofInput, setProofInput] = useState("");
+
+  const filteredQuests = QUESTS.filter(
+    (quest) => quest.type === questFilter
+  );
 
   return (
     <div className="min-h-screen bg-black text-white overflow-auto p-6 relative">
       <AnimatedBackground />
 
-      <div className="max-w-4xl sm:max-w-6xl mx-auto space-y-6 sm:space-y-8 relative z-10">
+      <div className="max-w-4xl sm:max-w-6xl mx-auto space-y-6 relative z-10">
+
         {/* HEADER */}
         <div className="space-y-1">
           <div className="flex items-center gap-2 mb-3">
             <div className="w-1.5 h-1.5 rounded-full bg-[#8B3EFE] animate-pulse" />
-            <span className="text-[#8B3EFE] text-[11px] font-semibold uppercase tracking-widest">
+
+            <div
+              className="text-[11px] font-semibold uppercase tracking-widest"
+              style={{
+                background: "linear-gradient(135deg, #B184C4, #FF8CD9)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+              }}
+            >
               Quests
-            </span>
+            </div>
           </div>
 
           <h1 className="text-3xl sm:text-4xl font-extrabold bg-gradient-to-r from-white via-purple-200 to-purple-400 bg-clip-text text-transparent mb-2">
@@ -344,54 +298,219 @@ export default function Quests() {
           </p>
         </div>
 
-        {/* ACTIVE QUESTS */}
-        <div className="space-y-4 sm:space-y-6">
-          <h2 className="text-lg sm:text-2xl font-semibold text-white">Active Quests</h2>
-          {isLoading ? (
-            <div className="text-center py-6 sm:py-12 text-muted-foreground">Loading quests...</div>
-          ) : activeQuests.length === 0 ? (
-            <Card className="glass glass-hover rounded-3xl p-6 sm:p-8 text-center">
-              <p className="text-white/60">No active quests at the moment. Check back soon.</p>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-              {activeQuests.map((quest, i) => renderQuestCard(quest, "active", i))}
-            </div>
-          )}
+        {/* FILTERS */}
+        <div className="flex gap-2">
+          {Object.values(QUEST_FILTERS).map((filter) => {
+            const isActive = questFilter === filter;
+
+            return (
+              <button
+                key={filter}
+                onClick={() => setQuestFilter(filter)}
+                className="px-3 py-1 text-xs capitalize border rounded-2xl transition"
+                style={{
+                  backgroundColor: isActive ? "#8B3EFE" : "transparent",
+                  borderColor: "#8B3EFE",
+                  color: "#fff",
+                }}
+              >
+                {filter}
+              </button>
+            );
+          })}
         </div>
 
-        {/* UPCOMING QUESTS */}
-        <div className="space-y-4 sm:space-y-6 mt-8 sm:mt-12">
-          <h2 className="text-lg sm:text-2xl font-semibold text-white">Upcoming Quests</h2>
-          {isLoading ? (
-            <div className="text-center py-6 sm:py-12 text-muted-foreground">Loading quests...</div>
-          ) : upcomingQuests.length === 0 ? (
-            <Card className="glass glass-hover rounded-3xl p-6 sm:p-8 text-center">
-              <p className="text-white/60">No upcoming quests.</p>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-              {upcomingQuests.map((quest, i) => renderQuestCard(quest, "upcoming", i))}
-            </div>
-          )}
+
+        {/* FILTERED HEADINGS */}
+        <h2 className="text-lg font-semibold text-white mt-4">
+  {questFilter === "daily" && "Daily Quests"}
+  {questFilter === "seasonal" && "Seasonal Quests"}
+  {questFilter === "featured" && "Featured Quests"}
+</h2>
+
+        {/* QUEST CARDS */}
+<div className="grid grid-cols-1 gap-3 mt-4">
+  {filteredQuests.map((quest) => (
+<div
+  key={quest.id}
+  className="grid grid-cols-[1fr_120px_auto] items-center gap-4 p-3 rounded-xl bg-[#0A0E13B2] border border-[#8B3EFE33] hover:border-[#8B3EFE] transition"
+>
+  {/* LEFT */}
+  <div className="flex items-center gap-3 min-w-0">
+    <div className="w-8 h-8 rounded-lg bg-[#8B3EFE22] flex items-center justify-center text-[#8B3EFE] text-[10px] font-bold shrink-0">
+      Q
+    </div>
+
+    <div className="min-w-0">
+      <h3 className="text-sm font-semibold truncate">
+        {quest.title}
+      </h3>
+
+      <p className="text-[11px] text-gray-400 truncate">
+        {quest.description}
+      </p>
+    </div>
+  </div>
+
+  {/* REWARD */}
+  <div className="flex flex-col items-center justify-center">
+    <p className="text-[8px] uppercase tracking-[0.35em] text-gray-500">
+      Reward
+    </p>
+
+    <p className="text-lg font-semibold text-white tracking-[2px] leading-none">
+      {quest.xp} XP
+    </p>
+  </div>
+
+  {/* BUTTON */}
+  <button
+    onClick={() => {
+      if (quest.taskType === "twitter") {
+        setActiveQuestId(quest.id);
+      } else if (quest.isRelicQuest) {
+        setShowRelicModal(true);
+        setScanStep(0);
+      }
+    }}
+    className="px-3 py-1 text-[12px] rounded-full bg-[#8B3EFE] text-white whitespace-nowrap hover:opacity-90 transition"
+  >
+    {quest.taskType === "twitter" && activeQuestId === quest.id
+      ? "Submit Proof"
+      : quest.buttonText}
+  </button>
+
+  {/* TWITTER EXPANDED CARD (FULL WIDTH) */}
+  {quest.taskType === "twitter" && activeQuestId === quest.id && (
+    <div className="col-span-3 mt-3">
+      <div className="bg-[#0A0A0A] border border-[#8B3EFE33] rounded-xl p-3 space-y-3">
+
+        {/* WARNING HEADER */}
+        <div className="flex items-start gap-2 text-yellow-400 text-[11px]">
+          <span>⚠️</span>
+          <p>
+            It may take 10 minutes to 10 hours to validate your submission.
+          </p>
         </div>
 
-        {/* ENDED QUESTS */}
-        <div className="space-y-4 sm:space-y-6 mt-8 sm:mt-12">
-          <h2 className="text-lg sm:text-2xl font-semibold text-white">Ended Quests</h2>
-          {isLoading ? (
-            <div className="text-center py-6 sm:py-12 text-muted-foreground">Loading quests...</div>
-          ) : endedQuests.length === 0 ? (
-            <Card className="glass glass-hover rounded-3xl p-6 sm:p-8 text-center">
-              <p className="text-white/60">No ended quests yet.</p>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-              {endedQuests.map((quest, i) => renderQuestCard(quest, "ended", i))}
-            </div>
-          )}
-        </div>
+        {/* INPUT */}
+        <input
+          value={proofInput}
+          onChange={(e) => setProofInput(e.target.value)}
+          placeholder="Paste your comment link or twitter username here..."
+          className="w-full px-3 py-2 text-xs rounded-lg bg-[#060210] border border-[#8B3EFE33] text-white outline-none"
+        />
+
+        {/* SUBMIT BUTTON */}
+        <button
+          onClick={() => {
+            setActiveQuestId(null);
+            setProofInput("");
+          }}
+          className="w-full py-2 text-xs rounded-lg bg-[#8B3EFE] text-white hover:opacity-90 transition"
+        >
+          Submit Proof
+        </button>
       </div>
+    </div>
+  )}
+</div>
+  ))}
+</div>
+
+      </div>
+
+{showRelicModal && (
+  <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+    <div
+      className="relative w-full max-w-sm rounded-3xl border border-[#8B3EFE33] p-5"
+      style={{
+        background: "linear-gradient(180deg, #0F0C1E 0%, #16102A 100%)",
+      }}
+    >
+      {/* CLOSE */}
+      <button
+        onClick={() => setShowRelicModal(false)}
+        className="absolute top-3 right-3 text-[#7C7399] hover:text-white transition text-sm"
+      >
+        ✕
+      </button>
+
+      {/* HEADER (LEFT ALIGNED) */}
+      <h2 className="text-lg font-bold text-white text-left">
+        Scanning Wallet
+      </h2>
+
+      <p className="text-xs text-[#A5A0B8] text-left mt-1">
+        Discovering your Relics...
+      </p>
+
+      {/* SPINNING RELIC */}
+      <div className="flex justify-center mt-4">
+        <img
+          src="/relicc.png"
+          alt="Relic"
+          className="w-20 h-20 animate-spin"
+          style={{
+            animationDuration: "4s",
+          }}
+        />
+      </div>
+
+      {/* STATUS */}
+      <p className="text-center text-xs text-white mt-3">
+        Scanning for Relics...
+      </p>
+
+      {/* STEPS */}
+      <div className="space-y-3 mt-5">
+        {[
+          "Verifying Wallet Connection",
+          "Scanning for Relics",
+          "Preparing XP Rewards",
+        ].map((label, index) => {
+          const completed = scanStep > index;
+
+          return (
+            <div key={label} className="flex items-center gap-3">
+              <div
+                className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold border"
+                style={{
+                  color: completed ? "#00E1A2" : "#7C7399",
+                  borderColor: completed ? "#00E1A2" : "#7C7399",
+                }}
+              >
+                {index + 1}
+              </div>
+
+              <span
+                style={{
+                  color: completed ? "#00E1A2" : "#7C7399",
+                }}
+                className="text-xs"
+              >
+                {label}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* CLAIM BUTTON */}
+      <button
+        disabled={scanStep < 3}
+        className={`w-full mt-6 py-2.5 rounded-2xl text-sm font-medium transition ${
+          scanStep >= 3
+            ? "bg-[#8B3EFE] text-white"
+            : "bg-[#8B3EFE] text-white opacity-50 cursor-not-allowed"
+        }`}
+      >
+        Claim 500 XP
+      </button>
+    </div>
+  </div>
+)}
+
     </div>
   );
 }
