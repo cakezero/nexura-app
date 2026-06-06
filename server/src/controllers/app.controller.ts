@@ -1588,6 +1588,17 @@ export const claimStreakReward = async (req: GlobalRequest, res: GlobalResponse)
   }
 }
 
+export const getUserXpHistory = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const userXpHistory = await xpLog.find({ address: req.user.address });
+
+    res.status(OK).json({ userXpHistory });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching user xp history" });
+  }
+}
+
 export const performDailySignIn = async (
   req: GlobalRequest,
   res: GlobalResponse,

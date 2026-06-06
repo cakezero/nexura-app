@@ -229,7 +229,12 @@ export const createQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 
 export const rewardXp = async (req: GlobalRequest, res: GlobalResponse) => {
 	try {
-		const { address, xp }: { address: string, xp: string } = req.body;
+    const { address, xp, type }: { address: string, xp: string, type: string } = req.body;
+
+    if (!type || !["wotw", "spotlight", "contest"].includes(type.toLowerCase())) {
+      res.status(BAD_REQUEST).json({ error: "type should be either wotw, contest or spotlight" });
+      return;
+    }
 
 		if (!address || !xp) {
 			res.status(BAD_REQUEST).json({ error: "address and xp are required" });
@@ -247,7 +252,7 @@ export const rewardXp = async (req: GlobalRequest, res: GlobalResponse) => {
 				address: lowerAddress,
 				amount: xpAmount,
 				status: "success",
-        type: "single",
+        type,
 				username: userExists.username,
 				adminId: req.id ? new mongoose.Types.ObjectId(req.id) : undefined
 			});
@@ -256,7 +261,7 @@ export const rewardXp = async (req: GlobalRequest, res: GlobalResponse) => {
 				address: lowerAddress,
         amount: xpAmount,
 				status: "failed",
-				type: "single",
+				type,
 				adminId: req.id ? new mongoose.Types.ObjectId(req.id) : undefined
 			});
 			res.status(NOT_FOUND).json({ error: "user not found" });
@@ -275,12 +280,17 @@ const MAX_BATCH_WALLETS = 500;
 
 export const rewardXpBatch = async (req: GlobalRequest, res: GlobalResponse) => {
 	try {
-		const { addresses, xp }: { addresses: unknown; xp: unknown } = req.body;
+		const { addresses, xp, type }: { addresses: unknown; xp: unknown, type: string } = req.body;
 
 		if (!Array.isArray(addresses) || addresses.length === 0) {
 			res.status(BAD_REQUEST).json({ error: "addresses must be a non-empty array" });
 			return;
-		}
+    }
+
+    if (!type || !["wotw", "spotlight", "contest"].includes(type.toLowerCase())) {
+      res.status(BAD_REQUEST).json({ error: "type should be either wotw, contest or spotlight" });
+      return;
+    }
 
 		if (addresses.length > MAX_BATCH_WALLETS) {
 			res.status(BAD_REQUEST).json({ error: `max ${MAX_BATCH_WALLETS} wallets per batch` });
@@ -339,7 +349,7 @@ export const rewardXpBatch = async (req: GlobalRequest, res: GlobalResponse) => 
   				username: existingUser.username,
   				amount: xpAmount,
   				status: "success",
-  				type: "batch",
+  				type,
   				adminId: adminObjId
   			});
       } else {
@@ -353,7 +363,7 @@ export const rewardXpBatch = async (req: GlobalRequest, res: GlobalResponse) => 
 				username: nf.username,
 				amount: xpAmount,
 				status: "failed",
-				type: "batch",
+				type,
 				adminId: adminObjId
 			});
 		}

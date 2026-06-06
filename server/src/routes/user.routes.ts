@@ -12,7 +12,8 @@ import {
 	updateClaimsCreated,
   claimStreakReward,
   fetchDailyXpDetails,
-  restoreStreak
+  restoreStreak,
+  getUserXpHistory
 } from "@/controllers/app.controller";
 import { logout } from "@/controllers/auth.controller";
 import { upload } from "@/config/multer";
@@ -28,6 +29,7 @@ router
   .post("/update-claims-created", updateClaimsCreated)
   .post("/set-approved", setApproved)
   .post("/claim-streak-reward", claimStreakReward)
+  .get("/xp-history", getUserXpHistory)
   .get("/daily-xp-details", fetchDailyXpDetails)
   .post("/restore-streak", restoreStreak)
   .get("/referral-info", referralInfo)
