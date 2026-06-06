@@ -459,8 +459,11 @@ const [proofInput, setProofInput] = useState("");
 
       {/* STATUS */}
       <p className="text-center text-xs text-white mt-3">
-        Scanning for Relics...
-      </p>
+  {scanStep === 0 && "Verifying Wallet Connection..."}
+  {scanStep === 1 && "Scanning for Relics..."}
+  {scanStep === 2 && "Preparing XP Rewards..."}
+  {scanStep >= 3 && "52 Relics Ready"}
+</p>
 
       {/* STEPS */}
       <div className="space-y-3 mt-5">
