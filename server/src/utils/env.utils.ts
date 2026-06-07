@@ -4,6 +4,7 @@ import { z } from "zod";
 dotenv.config({ quiet: true });
 
 export const port = process.env.PORT || "5600";
+export const ALCHEMY_API_KEY = process.env.ALCHEMY_API_KEY as string;
 export const DB_URI = process.env.DB_URI as string;
 export const environment = process.env.ENVIRONMENT as "development" | "production";
 const normalizedNetwork = process.env.NETWORK?.trim().toLowerCase();

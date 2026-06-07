@@ -7,6 +7,7 @@ import { campaignQuest, miniQuest, quest } from "@/models/quests.model";
 import { user } from "@/models/user.model";
 import { hub } from "@/models/hub.model";
 import { TNSProvider } from "@samoris/tns-sdk";
+import { tokenModel } from "@/models/tokenModel";
 import {
   performIntuitionOnchainAction,
   serverWalletAddress,
@@ -42,12 +43,13 @@ import {
   miniQuestCompleted,
   questCompleted,
 } from "@/models/questsCompleted.models";
-import { GRAPHQL_API_URL } from "@/utils/constants";
+import { GRAPHQL_API_URL, RELIC_CONTRACT } from "@/utils/constants";
 import { GraphQLClient } from "graphql-request";
-import { checksumAddress, parseEther, type Address } from "viem";
+import { checksumAddress, parseAbi, parseEther, type Address } from "viem";
 import { campaign, campaignCompleted } from "@/models/campaign.model";
 import { dailySignIn } from "@/models/dailySignIn.model";
-import { startOfDayUTC, updateLevel, getAmountPaid } from "@/utils/utils";
+import { startOfDayUTC, updateLevel, getNFT, getAmountPaid } from "@/utils/utils";
+import chain from "@/utils/chain.utils";
 import { evaluateDailyStreak } from "@/utils/streak.utils";
 import { lesson, lessonCompleted } from "@/models/lesson.model";
 import { xpLog } from "@/models/xpLog.model";
@@ -904,11 +906,28 @@ export const updateBadge = async (req: GlobalRequest, res: GlobalResponse) => {
   }
 };
 
-export const de = (req: GlobalRequest, res: GlobalResponse) => {
+export const checkRelics = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
-    
+    const nft = await getNFT(req.user.address as string);
+
+    if (!nft) {
+      res.status(BAD_REQUEST).json({ error: "user does not have relic on connected wallet" });
+      return;
+    }
+
+    const tokenIdExists = await tokenModel.findOne({ tokenId: nft.tokenId, user: req.id, nft: "relic" });
+    if (tokenIdExists) {
+      res.status(BAD_REQUEST).json({ error: "relic has already been used to claim reward" });
+      return;
+    }
+
+    await user.findByIdAndUpdate(req.id, { $inc: { xp: 6000 } });
+    await tokenModel.create({ tokenId: nft.tokenId, user: req.id, nft: "relic" });
+
+    res.status(OK).json({ message: "relics verified" })
   } catch (error) {
     logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error checking user address forrelics contract" })
   }
 }
 
@@ -1353,17 +1372,17 @@ export const getAnalytics = async (req: GlobalRequest, res: GlobalResponse) => {
 
     const activeUsersWeekly = usersFound.filter(
       (u: { updatedAt: Date; status: string }) => {
-        const last7Days = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        const last7Days = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
-        return u.status === "Active" && u.updatedAt >= last7Days;
+        return u.status === "Active" && new Date(u.updatedAt) >= last7Days;
       },
     ).length;
 
     const activeUsersMonthly = usersFound.filter(
       (u: { updatedAt: Date; status: string }) => {
-        const last30Days = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        const last30Days = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
-        return u.status === "Active" && u.updatedAt >= last30Days;
+        return u.status === "Active" && new Date(u.updatedAt) >= last30Days;
       },
     ).length;
 
@@ -1585,6 +1604,67 @@ export const claimStreakReward = async (req: GlobalRequest, res: GlobalResponse)
     res
       .status(INTERNAL_SERVER_ERROR)
       .json({ error: "error claiming streak reward" });
+  }
+}
+
+export const referralLeaderboard = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const referrals = await referredUsers.aggregate([
+      {
+        $group: {
+          _id: "$user",
+          totalReferrals: { $sum: 1 },
+          activeReferrals: {
+            $sum: {
+              $cond: [
+                { $eq: ["$status", "Active"] },
+                1,
+                0
+              ]
+            }
+          }
+        }
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "_id",
+          foreignField: "_id",
+          as: "user"
+        }
+      },
+      {
+        $unwind: "$user"
+      },
+      {
+        $project: {
+          username: "$user.username",
+          tier: "$user.tier",
+          totalReferrals: 1,
+          activeReferrals: 1
+        }
+      }
+    ]);
+
+    const referralLeaderboardInfo = [];
+
+    for (const referral of referrals) {
+      const active = referral.activeReferrals;
+
+      let xpEarned = 0;
+      if (referral.tier !== 0) {
+        xpEarned = active === 10 ? 2000 : active === 20 ? 5000 : 10000;
+      }
+
+      delete referral.tier;
+
+      referralLeaderboardInfo.push({ ...referral, xpEarned });
+    }
+
+    res.status(OK).json({ message: "referral leaderboard info fetched" });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching referral leaderboard info" });
   }
 }
 

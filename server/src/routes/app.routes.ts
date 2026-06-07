@@ -13,7 +13,9 @@ import {
 	getClaims,
   getTriple,
   allowNexonsMint,
-  searchTriple
+  referralLeaderboard,
+  searchTriple,
+  checkRelics
 } from "@/controllers/app.controller";
 import {
   discordCallback,
@@ -35,6 +37,8 @@ router
   .post("/check-x", authenticateUser, checkXTask)
   .post("/check-discord", authenticateUser, checkDiscordTask)
   .get("/save-cv", authenticateUser, saveCv)
+  .post("/verify-relic", authenticateUser, checkRelics)
+  .get("/referral-leaderboard", referralLeaderboard)
   .get("/auth/discord/callback", discordCallback)
   .get("/auth/x/callback", xCallback)
   .get("/auth/x/logout", authenticateUser, disconnectX)

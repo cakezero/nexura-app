@@ -1,5 +1,8 @@
 import { API_URL_PROD, API_URL_DEV } from "@0xintuition/graphql"
 import { network } from "./env.utils";
+import { checksumAddress } from "viem";
+
+export const RELIC_CONTRACT = checksumAddress("0x7ab2f10cac6e27971fa93a5d5470bb84126bb734");
 
 export const GRAPHQL_API_URL = network === "testnet" ? API_URL_DEV : API_URL_PROD;
 

@@ -1,8 +1,8 @@
 import jwt from "jsonwebtoken";
 import { z } from "zod";
-import { JWT_SECRET, network, REFRESH_SECRET, STUDIO_FEE_CONTRACT } from "./env.utils";
+import { JWT_SECRET, network, REFRESH_SECRET, ALCHEMY_API_KEY, STUDIO_FEE_CONTRACT } from "./env.utils";
 import { getPublicClient } from "./account";
-import { NexonsAddress, STUDIO_ABI } from "./constants";
+import { NexonsAddress, STUDIO_ABI, RELIC_CONTRACT } from "./constants";
 import { ethers } from "ethers";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
@@ -449,3 +449,10 @@ export const validateCreateQuestion = (reqData: any) => {
 	return parseData;
 }
 
+export const getNFT = async (walletAddress: string) => {
+  const res = await fetch(`https://eth-mainnet.g.alchemy.com/nft/v3/${ALCHEMY_API_KEY}/getNFTsForOwner?owner=${walletAddress}&contractAddresses%5B%5D=${RELIC_CONTRACT}`);
+
+  const data = await res.json();
+
+  return data.ownedNfts[0] as Record<string, any> | null | undefined;
+}
