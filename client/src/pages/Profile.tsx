@@ -255,7 +255,13 @@ export default function Profile() {
 
       toast({ title: "Nexon Minted", description: `Level ${levelIndex} Nexon minted successfully` });
     } catch (error: any) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      if (error.message === "NexonAlreadyMinted") {
+        await apiRequestV2("PATCH", "/api/user/update-badge", { level: levelIndex });
+        setMintedLevels([...mintedLevels, levelIndex]);
+        toast({ title: "Nexon Minted", description: `Level ${levelIndex} Nexon minted successfully` });
+      } else {
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+      }
     }
   };
 
