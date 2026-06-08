@@ -1385,10 +1385,10 @@ export const getAnalytics = async (req: GlobalRequest, res: GlobalResponse) => {
     }).length;
 
     const activeUsersWeekly = usersFound.filter(
-      (u: { updatedAt: Date; status: string }) => {
+      (u: { updatedAt: NativeDate; status: string }) => {
         const last7Days = now.getTime() - 7 * 24 * 60 * 60 * 1000;
 
-        return u.status === "Active" && u.updatedAt.getTime() >= last7Days;
+        return u.updatedAt.getTime() >= last7Days;
       },
     ).length;
 
@@ -1396,7 +1396,7 @@ export const getAnalytics = async (req: GlobalRequest, res: GlobalResponse) => {
       (u: { updatedAt: Date; status: string }) => {
         const last30Days = now.getTime() - 30 * 24 * 60 * 60 * 1000;
 
-        return u.status === "Active" && u.updatedAt.getTime() >= last30Days;
+        return u.updatedAt.getTime() >= last30Days;
       },
     ).length;
 
@@ -1459,7 +1459,6 @@ export const getAnalytics = async (req: GlobalRequest, res: GlobalResponse) => {
     const prevActiveWeekly = usersFound.filter(
       (u: { updatedAt: Date; status: string }) => {
         return (
-          u.status === "Active" &&
           u.updatedAt >= prev7dStart &&
           u.updatedAt < prev7dEnd
         );
@@ -1468,7 +1467,6 @@ export const getAnalytics = async (req: GlobalRequest, res: GlobalResponse) => {
     const prevActiveMonthly = usersFound.filter(
       (u: { updatedAt: Date; status: string }) => {
         return (
-          u.status === "Active" &&
           u.updatedAt >= prev30dStart &&
           u.updatedAt < prev30dEnd
         );
@@ -1636,7 +1634,13 @@ export const referralLeaderboard = async (req: GlobalRequest, res: GlobalRespons
                 0
               ]
             }
-          }
+          },
+        }
+      },
+      {
+        $sort: {
+          activeReferrals: -1,
+          totalReferrals: -1
         }
       },
       {
@@ -1663,11 +1667,11 @@ export const referralLeaderboard = async (req: GlobalRequest, res: GlobalRespons
     const referralLeaderboardInfo = [];
 
     for (const referral of referrals) {
-      const active = referral.activeReferrals;
+      const tier = referral.tier;
 
       let xpEarned = 0;
-      if (referral.tier !== 0) {
-        xpEarned = active === 10 ? 2000 : active === 20 ? 5000 : 10000;
+      if (tier !== 0) {
+        xpEarned = tier === 1 ? 2000 : tier === 2 ? 5000 : 10000;
       }
 
       delete referral.tier;

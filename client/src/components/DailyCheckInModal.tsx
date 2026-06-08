@@ -248,6 +248,9 @@ const MILESTONES = [
 const currentMilestone =
   [...MILESTONES].reverse().find(m => streak >= m.day) || null;
 
+  const claimedMilestone = user?.dayCount || 0;
+  
+
 // next milestone
 const nextMilestone =
   MILESTONES.find(m => m.day > streak) || null;
@@ -312,7 +315,9 @@ const totalCheckIns = user?.totalCheckIns ?? 0;
 
 const nextMilestoneDay = nextMilestone?.day ?? Infinity;
 
-const canOpenChest = completedMilestone && !claimed;
+const canOpenChest =
+  completedMilestone &&
+  claimedMilestone < completedMilestone.day;
 
 
 const isBrokenBeforeNextMilestone = useMemo(() => {
@@ -374,10 +379,11 @@ const handleClaimReward = async () => {
       throw new Error(data?.message || "Claim failed");
     }
 
-    // ONLY set after backend confirms
     setClaimed(true);
 
-    // optional but recommended: sync real state
+    await fetchHistory();
+    await XPclaimed();
+
     if (data?.claimed !== undefined) {
       setClaimed(data.claimed);
     }
@@ -534,17 +540,22 @@ const handleClaimReward = async () => {
 
     </div>
 
-  {/* REWARD BOX (FIXED ALIGNMENT TO END OF BAR) */}
-  <div className="relative shrink-0 flex items-center justify-center -mt-4">
-    <div className="relative">
-      
-      <img
-        src="/reward-box.png"
-        alt=""
-        className="w-16 h-16 object-contain"
-      />
+{/* REWARD BOX */}
+<div
+  className={`relative shrink-0 flex flex-col items-center justify-center ${
+    canOpenChest ? "-mt-8" : "-mt-4"
+  }`}
+>
+  <div className="relative">
 
-      {/* XP PILL */}
+    <img
+      src="/reward-box.png"
+      alt=""
+      className="w-16 h-16 object-contain"
+    />
+
+    {/* XP PILL */}
+    {!canOpenChest && (
       <div
         className="absolute -top-3 left-1/2 -translate-x-1/2 px-1 py-0.5 rounded-full text-[8px] whitespace-nowrap"
         style={{
@@ -555,9 +566,19 @@ const handleClaimReward = async () => {
       >
         +{new Intl.NumberFormat().format(nextMilestone?.xp || 0)} XP
       </div>
-
-    </div>
+    )}
   </div>
+
+  {/* OPEN CHEST */}
+  {canOpenChest && (
+    <button
+      onClick={() => setChestOpen(true)}
+      className="px-2 py-[2px] rounded-full bg-[#8B3EFE] text-white text-[8px] leading-none hover:opacity-90 transition"
+    >
+      Open Chest
+    </button>
+  )}
+</div>
 
   </div>
 </div>
@@ -630,8 +651,15 @@ const handleClaimReward = async () => {
     {MILESTONES.map((m, i, arr) => {
       const isLast = i === arr.length - 1;
 
-const reached = streak > m.day;
-const isAtCheckpoint = streak === m.day;
+const claimedMilestone = user?.dayCount || 0;
+
+// user has already redeemed this milestone
+const reached = claimedMilestone >= m.day;
+
+// user is exactly at milestone but NOT claimed yet
+const isAtCheckpoint = streak >= m.day && claimedMilestone < m.day;
+
+// future milestone
 const isUpcoming = streak < m.day;
       const isNext = m.day === nextMilestone?.day;
       const isNextBroken = isNext && isBrokenBeforeNextMilestone;
@@ -676,24 +704,28 @@ const isUpcoming = streak < m.day;
                 : "none",
             }}
           >
-            {isNextBroken ? (
+{isNextBroken ? (
   <X className="w-3 h-3 text-white" />
-) : isAtCheckpoint ? (
-  // USER HAS HIT CHECKPOINT BUT NOT VERIFIED YET → show number
-<span
-  className="text-white text-[8px] font-semibold px-1 py-[3px] rounded-full"
-  style={{
-    background: "linear-gradient(135deg, #8B3EFE, #6D28D9)",
-    border: "1px solid #8B5CF64D",
-    boxShadow: "0 0 8px rgba(139,62,254,0.25)",
-  }}
->
-  {m.day}
-</span>
+
 ) : reached ? (
-  // USER HAS VERIFIED (past checkpoint) → show check
+  // CLAIMED → check
   <Check className="w-3 h-3 text-white" />
+
+) : isAtCheckpoint ? (
+  // EARNED BUT NOT CLAIMED → purple badge
+  <span
+    className="text-white text-[8px] font-semibold px-1 py-[3px] rounded-full"
+    style={{
+      background: "linear-gradient(135deg, #8B3EFE, #6D28D9)",
+      border: "1px solid #8B5CF64D",
+      boxShadow: "0 0 8px rgba(139,62,254,0.25)",
+    }}
+  >
+    {m.day}
+  </span>
+
 ) : (
+  // FUTURE → locked
   <img
     src="/padlock.png"
     className="w-2.5 h-2.5 opacity-20 blur-[0.3px]"
