@@ -116,9 +116,9 @@ export default function Quests() {
   const { user } = useAuth();
 
   const QUEST_FILTERS = {
-    DAILY: "daily quest",
-    SEASONAL: "seasonal quest",
-    FEATURED: "featured quest",
+    DAILY: "daily",
+    SEASONAL: "seasonal",
+    FEATURED: "featured",
   };
 
   const [questFilter, setQuestFilter] = useState(QUEST_FILTERS.DAILY);
@@ -314,7 +314,7 @@ const [proofInput, setProofInput] = useState("");
                   color: "#fff",
                 }}
               >
-                {filter}
+                {filter} Quests
               </button>
             );
           })}
@@ -358,7 +358,7 @@ const [proofInput, setProofInput] = useState("");
       Reward
     </p>
 
-    <p className="text-lg font-semibold text-white tracking-[2px] leading-none">
+    <p className="text-[13px] text-white/90 tracking-[2px] leading-none">
       {quest.xp} XP
     </p>
   </div>
