@@ -1222,13 +1222,18 @@ export const getAnalytics = async (req: GlobalRequest, res: GlobalResponse) => {
     const totalCampaigns = await campaign.countDocuments({
       $or: [
         { status: { $eq: "Ended" } },
-        {
-          status: { $eq: "Active" },
-        },
+        { status: { $eq: "Active" } },
+        { status: { $eq: "Scheduled" } },
       ],
     });
 
-    const totalQuests = await quest.countDocuments({ category: "weekly" });
+    const totalQuests = await quest.countDocuments({
+      $or: [
+        { status: { $eq: "Ended" } },
+        { status: { $eq: "Active" } },
+        { status: { $eq: "Scheduled" } },
+      ],
+    });
 
     const totalQuestsJoined = await questCompleted.countDocuments();
 
@@ -1381,17 +1386,17 @@ export const getAnalytics = async (req: GlobalRequest, res: GlobalResponse) => {
 
     const activeUsersWeekly = usersFound.filter(
       (u: { updatedAt: Date; status: string }) => {
-        const last7Days = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        const last7Days = now.getTime() - 7 * 24 * 60 * 60 * 1000;
 
-        return u.status === "Active" && u.updatedAt >= last7Days;
+        return u.status === "Active" && u.updatedAt.getTime() >= last7Days;
       },
     ).length;
 
     const activeUsersMonthly = usersFound.filter(
       (u: { updatedAt: Date; status: string }) => {
-        const last30Days = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        const last30Days = now.getTime() - 30 * 24 * 60 * 60 * 1000;
 
-        return u.status === "Active" && u.updatedAt >= last30Days;
+        return u.status === "Active" && u.updatedAt.getTime() >= last30Days;
       },
     ).length;
 
@@ -1670,7 +1675,7 @@ export const referralLeaderboard = async (req: GlobalRequest, res: GlobalRespons
       referralLeaderboardInfo.push({ ...referral, xpEarned });
     }
 
-    res.status(OK).json({ message: "referral leaderboard info fetched" });
+    res.status(OK).json({ message: "referral leaderboard info fetched", referralLeaderboardInfo });
   } catch (error) {
     logger.error(error);
     res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching referral leaderboard info" });
