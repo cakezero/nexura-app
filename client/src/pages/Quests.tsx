@@ -116,9 +116,9 @@ export default function Quests() {
   const { user } = useAuth();
 
   const QUEST_FILTERS = {
-    DAILY: "daily",
-    SEASONAL: "seasonal",
-    FEATURED: "featured",
+    DAILY: "daily quest",
+    SEASONAL: "seasonal quest",
+    FEATURED: "featured quest",
   };
 
   const [questFilter, setQuestFilter] = useState(QUEST_FILTERS.DAILY);
