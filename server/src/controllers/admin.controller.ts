@@ -231,7 +231,7 @@ export const rewardXp = async (req: GlobalRequest, res: GlobalResponse) => {
 	try {
     const { address, xp, type }: { address: string, xp: string, type: string } = req.body;
 
-    const TYPES = ["single", "batch", "quest-creation", "wotw", "contest", "spotlight", "daily-xp-streak-reward", "campaign", "referral", "ecosystem-quest", "quest", "daily-xp", "lesson"];
+    const TYPES = ["wotw", "contest", "spotlight", "campaign", "quest"];
 
     if (!type || !TYPES.includes(type.toLowerCase())) {
       res.status(BAD_REQUEST).json({ error: `type should be either ${TYPES.join(", ")}` });
@@ -289,8 +289,10 @@ export const rewardXpBatch = async (req: GlobalRequest, res: GlobalResponse) => 
 			return;
     }
 
-    if (!type || !["wotw", "spotlight", "contest"].includes(type.toLowerCase())) {
-      res.status(BAD_REQUEST).json({ error: "type should be either wotw, contest or spotlight" });
+    const TYPES = ["wotw", "contest", "spotlight", "campaign", "quest"];
+
+    if (!type || !TYPES.includes(type.toLowerCase())) {
+      res.status(BAD_REQUEST).json({ error: `type should be either ${TYPES.join(", ")}` });
       return;
     }
 

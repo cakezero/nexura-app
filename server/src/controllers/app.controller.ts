@@ -1384,6 +1384,14 @@ export const getAnalytics = async (req: GlobalRequest, res: GlobalResponse) => {
       return u.createdAt >= last30Days;
     }).length;
 
+    const activeUsersDaily = usersFound.filter(
+      (u: { updatedAt: NativeDate; status: string }) => {
+        const last24Hours = now.getTime() - 24 * 60 * 60 * 1000;
+
+        return u.updatedAt.getTime() >= last24Hours;
+      },
+    ).length;
+
     const activeUsersWeekly = usersFound.filter(
       (u: { updatedAt: NativeDate; status: string }) => {
         const last7Days = now.getTime() - 7 * 24 * 60 * 60 * 1000;
@@ -1488,6 +1496,7 @@ export const getAnalytics = async (req: GlobalRequest, res: GlobalResponse) => {
         totalCampaigns,
         user: {
           totalUsers,
+          activeUsersDaily,
           activeUsersWeekly,
           activeUsersMonthly,
           users24h,

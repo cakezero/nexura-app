@@ -132,6 +132,11 @@ const questSchema = new Schema({
   ends_at: {
     type: String,
     required: true
+  },
+  category: {
+    type: String,
+    enum: ["seasonal", "featured", "daily"],
+    default: "seasonal"
 	},
 	description: {
 		type: String,
