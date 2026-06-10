@@ -1,4 +1,6 @@
-import { useLocation } from "wouter";
+"use client";
+
+import { useRouter } from "next/navigation";
 
 type LessonCardProps = {
   lesson: {
@@ -24,10 +26,10 @@ export default function LessonCard({
   description,
   heroImage
 }: LessonCardProps) {
-  const [, setLocation] = useLocation();
+  const router = useRouter();
 
   const handleClick = () => {
-    setLocation(`/learn/${lesson._id}`);
+    router.push(`/learn/${lesson._id}`);
   };
 
   const displayTitle = title || lesson.title;

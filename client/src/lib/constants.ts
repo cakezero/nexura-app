@@ -1,10 +1,10 @@
 
-const normalizedNetwork = ((import.meta as any).env?.VITE_NETWORK as string | undefined)?.trim().toLowerCase();
+const normalizedNetwork = (process.env.NEXT_PUBLIC_NETWORK as string | undefined)?.trim().toLowerCase();
 export const network: "testnet" | "mainnet" = normalizedNetwork === "mainnet" ? "mainnet" : "testnet";
 
 const DEFAULT_BACKEND_URL = "https://api-nexura.intuition.box";
 
-export const environment = (import.meta as any).env.VITE_ENV as "development" | "production";
+export const environment = process.env.NEXT_PUBLIC_ENV as "development" | "production";
 
 function normalizeBackendUrl(value: string | undefined) {
 	const trimmed = value?.trim();
@@ -21,7 +21,7 @@ function normalizeBackendUrl(value: string | undefined) {
 	return `https://${candidate}`.replace(/\/+$/g, "");
 }
 
-const rawBackendUrl = ((import.meta as any).env?.VITE_BACKEND_URL as string | undefined)?.trim();
+const rawBackendUrl = (process.env.NEXT_PUBLIC_BACKEND_URL as string | undefined)?.trim();
 export const BACKEND_URL = normalizeBackendUrl(rawBackendUrl);
 
 export const STREAK_RESTORE_CA = network === "mainnet" ? "0x48f4462FcbB1E6cc49D23Ff8Da58a38Adc0998a1" : "0x564885ee83Aa8565Da47F38186079cD552Cf60De";
@@ -36,19 +36,19 @@ export const QUEST_FEE_CONTRACT = network === "testnet" ? "0x3F68e0b7f2601d4146d
 
 export const MULTIVAULT_ADDRESS = network === "testnet" ? "0x2Ece8D4dEdcB9918A398528f3fa4688b1d2CAB91" : "0x6E35cF57A41fA15eA0EaE9C33e751b01A784Fe7e";
 
-export const url = (import.meta as any).env?.VITE_CLIENT_URL || "https://nexura-app.vercel.app";
+export const url = process.env.NEXT_PUBLIC_CLIENT_URL || "https://nexura-app.vercel.app";
 
-export const projectId = (import.meta as any).env?.VITE_REOWN_PROJECT_ID;
+export const projectId = process.env.NEXT_PUBLIC_REOWN_PROJECT_ID;
 
-const VITE_DISCORD_CLIENT_ID = (import.meta as any).env?.VITE_DISCORD_CLIENT_ID;
+const VITE_DISCORD_CLIENT_ID = process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID;
 
-export const PROXY_FEE_CONTRACT = (import.meta as any).env?.VITE_PROXY_FEE_CONTRACT;
+export const PROXY_FEE_CONTRACT = process.env.NEXT_PUBLIC_PROXY_FEE_CONTRACT as `0x${string}`;
 
 export const discordAuthUrl = "https://discord.com/oauth2/authorize" + "?client_id=" + VITE_DISCORD_CLIENT_ID + "&redirect_uri=" + encodeURIComponent(BACKEND_URL + "/api/auth/discord/callback") + "&response_type=code" + "&scope=identify";
 
 export const discordHubAuthUrl = "https://discord.com/oauth2/authorize" + "?client_id=" + VITE_DISCORD_CLIENT_ID + "&redirect_uri=" + encodeURIComponent(BACKEND_URL + "/api/hub/discord/callback") + "&response_type=code" + "&scope=identify+guilds+bot+applications.commands";
 
-export const VITE_X_CLIENT_ID = (import.meta as any).env?.VITE_X_CLIENT_ID;
+export const VITE_X_CLIENT_ID = process.env.NEXT_PUBLIC_X_CLIENT_ID;
 
 export const NEXONS: Record<number, { address: `0x${string}`, metadata: string }> = {
 	1: {

@@ -1,3 +1,5 @@
+"use client";
+
 type AnalyticsCardProps = {
   title: string;
   value: number | string;

@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Link, useLocation } from "wouter";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { RefreshCw, XCircle, Trash2, Loader2, Clock } from "lucide-react";
 import { Card } from "../ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "../ui/dialog";
@@ -46,7 +47,7 @@ export default function QuestsTab() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [closingId, setClosingId] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
-  const [, setLocation] = useLocation();
+  const router = useRouter();
   const { toast } = useToast();
 
   const session = getStoredUserSession();
@@ -218,7 +219,7 @@ export default function QuestsTab() {
       return date.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
     };
 
-    const createUrl = isUser ? "/user-dashboard/create-new-quest" : "/studio-dashboard/create-new-quest";
+    const createUrl = "/user-dashboard/create-new-quest";
 
     return (
       <Card key={quest._id} className="w-full h-full bg-gray-900 text-white rounded-xl overflow-hidden shadow-lg flex flex-col">
@@ -245,7 +246,7 @@ export default function QuestsTab() {
             <div className="flex gap-1.5 flex-wrap">
               <button
                 className="flex-1 px-2 py-1.5 text-xs bg-[#8B3EFE] rounded-lg hover:bg-[#7b35e6] transition"
-                onClick={() => setLocation(`${createUrl}?edit=${quest._id}`)}
+                onClick={() => router.push(`${createUrl}?edit=${quest._id}`)}
               >
                 View Details
               </button>
@@ -287,7 +288,7 @@ export default function QuestsTab() {
     );
   };
 
-  const createUrl = isUser ? "/user-dashboard/create-new-quest" : "/studio-dashboard/create-new-quest";
+  const createUrl = "/user-dashboard/create-new-quest";
 
   return (
     <>
