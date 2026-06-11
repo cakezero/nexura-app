@@ -350,7 +350,7 @@ export const claimDepositXp = async (
     res.status(OK).json({ message: "xp claim successful", success: true });
   } catch (error) {
     logger.error(error);
-    res.status(OK).json({ error: "error adding claim xp" });
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error adding claim xp" });
   }
 };
 

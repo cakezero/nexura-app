@@ -7,6 +7,7 @@ import { createProofOfAction } from "../services/web3";
 import { useToast } from "../hooks/use-toast";
 import { toUserFriendlyErrorMessage } from "../lib/errorMessages";
 import { getPublicClient } from "../lib/viem";
+import { formatUnits } from "viem";
 import { useWallet } from "../hooks/use-wallet";
 import _subjectAvatarImg from "../assets/proof-modal/subject-avatar.png";
 const subjectAvatarImg = _subjectAvatarImg.src;
@@ -330,7 +331,7 @@ export default function ProofOfActionModal({
                       </span>
                       <span className="flex items-center gap-1 bg-[#110A2B] border border-[#393B60] rounded-[999px] px-2 py-0.5 text-[11px] text-white font-semibold">
                         <img src="/wallet.png" alt="Wallet Icon" className="w-3.5 h-3.5" />
-                        {(Number(walletBalance) / 10 ** 18).toFixed(2)} TRUST
+                        {Number(formatUnits(walletBalance, 18)).toFixed(2)} TRUST
                       </span>
                     </div>
                     <div className={`bg-[rgba(6,2,16,0.6)] border rounded-xl h-[32px] px-[12px] flex items-center justify-between transition-colors ${stakeValid ? "border-[rgba(131,58,253,0.5)]" : "border-[rgba(239,68,68,0.6)]"}`}>
