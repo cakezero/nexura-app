@@ -1,3 +1,5 @@
+"use client";
+
 const NexonSystem = ({ onNext, onPrev }: any) => {
   return (
     <div id="nexon-system docs-top" className="max-w-[59rem]">

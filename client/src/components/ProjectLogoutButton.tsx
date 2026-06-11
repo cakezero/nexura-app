@@ -1,11 +1,13 @@
+"use client";
+
 import { useAuth } from "../lib/auth";
-import { useLocation } from "wouter";
+import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { Button } from "./ui/button";
 
 export default function ProjectLogoutButton() {
   const auth = useAuth();
-  const [, setLocation] = useLocation();
+  const router = useRouter();
 
   const handleLogout = () => {
     try {
@@ -14,7 +16,7 @@ export default function ProjectLogoutButton() {
       // logout endpoint doesn't rely on cookies; call without credentials
       fetch('/auth/logout', { method: 'POST' }).catch(() => { });
     }
-    setLocation('/profile');
+    router.push('/profile');
   };
 
   return (

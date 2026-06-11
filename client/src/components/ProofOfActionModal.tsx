@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, useState } from "react";
 import { X, Loader2, Check, ArrowRight } from "lucide-react";
 import { Dialog, DialogContent } from "./ui/dialog";
@@ -6,15 +8,24 @@ import { useToast } from "../hooks/use-toast";
 import { toUserFriendlyErrorMessage } from "../lib/errorMessages";
 import { getPublicClient } from "../lib/viem";
 import { useWallet } from "../hooks/use-wallet";
-import subjectAvatarImg from "../assets/proof-modal/subject-avatar.png";
-import predicateCheckImg from "../assets/proof-modal/predicate-check.png";
-import learnIconImg from "../assets/proof-modal/learn-icon.png";
-import questIconImg from "../assets/proof-modal/quest-icon.png";
-import campaignIconImg from "../assets/proof-modal/campaign-icon.png";
-import ecosystemIconImg from "../assets/proof-modal/ecosystem-icon.png";
-import infoSubjectImg from "../assets/proof-modal/info-subject.svg";
-import infoPredicateImg from "../assets/proof-modal/info-predicate.svg";
-import infoObjectImg from "../assets/proof-modal/info-object.svg";
+import _subjectAvatarImg from "../assets/proof-modal/subject-avatar.png";
+const subjectAvatarImg = _subjectAvatarImg.src;
+import _predicateCheckImg from "../assets/proof-modal/predicate-check.png";
+const predicateCheckImg = _predicateCheckImg.src;
+import _learnIconImg from "../assets/proof-modal/learn-icon.png";
+const learnIconImg = _learnIconImg.src;
+import _questIconImg from "../assets/proof-modal/quest-icon.png";
+const questIconImg = _questIconImg.src;
+import _campaignIconImg from "../assets/proof-modal/campaign-icon.png";
+const campaignIconImg = _campaignIconImg.src;
+import _ecosystemIconImg from "../assets/proof-modal/ecosystem-icon.png";
+const ecosystemIconImg = _ecosystemIconImg.src;
+import _infoSubjectImg from "../assets/proof-modal/info-subject.svg";
+const infoSubjectImg = _infoSubjectImg.src;
+import _infoPredicateImg from "../assets/proof-modal/info-predicate.svg";
+const infoPredicateImg = _infoPredicateImg.src;
+import _infoObjectImg from "../assets/proof-modal/info-object.svg";
+const infoObjectImg = _infoObjectImg.src;
 
 interface ProofOfActionModalProps {
   open: boolean;

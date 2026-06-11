@@ -1,10 +1,12 @@
+"use client";
+
 import React, { useState } from "react";
-import { useLocation } from "wouter";
+import { useRouter } from "next/navigation";
 import { Button } from "./ui/button";
 import { apiRequest } from "../lib/queryClient";
 
 export default function OrgSignInButton() {
-  const [, setLocation] = useLocation();
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -17,11 +19,11 @@ export default function OrgSignInButton() {
     //   const json = await meRes.json().catch(() => ({}));
 
     //   if (json?.hasProject && json?.projectId) {
-    //     setLocation(`/project/${json.projectId}/dashboard`);
+    //     router.push(`/project/${json.projectId}/dashboard`);
     //   } else if (json?.hasProfile) {
-    //     setLocation("/studio");
+    //     router.push("/studio");
     //   } else {
-    //     setLocation("/studio/register");
+    //     router.push("/studio/register");
     //   }
     // } catch (e: any) {
     //   setError(e?.message ?? String(e));

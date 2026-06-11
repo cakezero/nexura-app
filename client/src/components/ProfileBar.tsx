@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
@@ -9,7 +11,8 @@ import {
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 import { User, Trophy, LogOut } from "lucide-react";
-import { Link, useLocation } from "wouter";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { useToast } from "../hooks/use-toast";
 import { useAuth } from "../lib/auth";
 import { useWallet } from "../hooks/use-wallet";
@@ -130,7 +133,8 @@ export default function ProfileBar() {
     ? getLevelByXp(user.xp ?? 0)
     : { ...LEVELS[0], index: 1 };
 
-  const [location, setLocation] = useLocation();
+  const pathname = usePathname();
+  const router = useRouter();
   const { toast } = useToast();
   const [showXpPopup, setShowXpPopup] = useState(false);
   const [flipped, setFlipped] = useState(false);
@@ -150,7 +154,7 @@ useEffect(() => {
       keys.forEach(k => localStorage.removeItem(k));
     } catch { }
     try { disconnect?.(); } catch { }
-    setLocation("/discover");
+    router.push("/discover");
     toast({ title: "Signed out", description: "Your session was cleared." });
   };
 
@@ -176,7 +180,7 @@ useEffect(() => {
         <>
 <div className="flex items-center gap-4">
   {/* XP Reward button - in flow with other buttons */}
-  {hasServerProfile && location === "/portal-claims" && (
+  {hasServerProfile && pathname === "/portal-claims" && (
   <button
     onClick={() => setShowXpPopup(true)}
     className="bg-purple-600 text-white px-3 py-1.5 rounded-full shadow-lg hover:bg-purple-700 transition font-bold text-xs sm:text-sm"

@@ -1,3 +1,5 @@
+"use client";
+
 const ArchitecturalLayer = ({onNext, onPrev}: any) => {
   return (
     <div id="architectural-layer docs-top" className="max-w-[59rem]">
