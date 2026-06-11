@@ -4,6 +4,7 @@ COPY package.json bun.lock ./
 RUN npm install -g bun && bun install && bun add sharp
 COPY . .
 RUN NODE_OPTIONS="--max-old-space-size=4096" bun run build
+RUN ls -la /app/.next/
 
 FROM node:22-alpine AS runner
 WORKDIR /app
