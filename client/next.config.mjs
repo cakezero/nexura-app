@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  output: 'export',
+  output: 'standalone',
   distDir: 'dist',
   env: {
     NEXT_PUBLIC_BACKEND_URL: "https://api.nexura.intuition.box",
