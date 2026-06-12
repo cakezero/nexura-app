@@ -216,7 +216,7 @@ const handleSubmitQuest = async (questId: string, proof: string) => {
 
         {/* QUEST CARDS */}
 <div className="grid grid-cols-1 gap-3 mt-4">
-  {filteredQuests.map((quest) => (
+  {filteredQuests.map((quest: any) => (
 <div
   key={quest.id}
   className="grid grid-cols-[1fr_120px_auto] items-center gap-4 p-3 rounded-xl bg-[#0A0E13B2] border border-[#8B3EFE33] hover:border-[#8B3EFE] transition"
