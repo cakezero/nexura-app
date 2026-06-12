@@ -90,7 +90,7 @@ export default function QuestEnvironment() {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!questId) return; // alias route /quests/tasks-card has no id — skip fetch instead of throwing
+    if (!questId) return;
     (async () => {
       const {
         miniQuests: quests,

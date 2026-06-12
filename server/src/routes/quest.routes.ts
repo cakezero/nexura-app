@@ -18,7 +18,7 @@ router
 	.post("/set-timer", setTimer)
 	.post("/create-mini-quest", createMiniQuest)
 	.post("/start-quest", startQuest)
-  .post("/check-portal-task", validatePortalTask)
+    .post("/check-portal-task", validatePortalTask)
 	.post("/check-trust-name", validateTrustNameTask)
 	.post("/claim-mini-quest", claimMiniQuest)
 	.post("/update-submission", updateSubmission)
