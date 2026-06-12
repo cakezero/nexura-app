@@ -37,138 +37,43 @@ interface Quest {
 
 export default function Quests() {
   const { toast } = useToast();
-  // const [, setLocation] = useLocation();
-  const router = useRouter();
-  router.push("/quests");
+  const router = useRouter()
   const { user } = useAuth();
+  const [loading, setLoading] = useState(true);
+
+const { data, isLoading, error, refetch } = useQuery({
+  queryKey: ["quests"],
+  queryFn: async () => {
+    console.log("➡️ FETCHING QUESTS FROM NEXT API ROUTE");
+
+    const res = await fetch("/api/quests");
+
+    console.log("📡 RESPONSE STATUS:", res.status);
+
+    const json = await res.json();
+
+    console.log("📦 QUEST RESPONSE:", json);
+
+    return json;
+  },
+  refetchInterval: 300000,
+  refetchIntervalInBackground: true,
+});
+
+
+const quests = data?.quests ?? [];
 
   const QUEST_FILTERS = {
-    DAILY: "daily",
-    SEASONAL: "seasonal",
     FEATURED: "featured",
+    SEASONAL: "seasonal",
+    DAILY: "daily",
   };
 
-  const [questFilter, setQuestFilter] = useState(QUEST_FILTERS.DAILY);
-
-const QUESTS = [
-  {
-    id: 0,
-    title: "Relic Checker",
-    description: "Verify relic ownership and earn XP.",
-    xp: 500,
-    type: "featured",
-    isRelicQuest: true,
-    buttonText: "Check Relic",
-  },
-
-  {
-    id: 1,
-    title: "Follow Us on Twitter",
-    description: "Follow our official account and submit proof.",
-    xp: 200,
-    type: "daily",
-    taskType: "twitter",
-    buttonText: "Start Quest",
-  },
-
-  {
-    id: 2,
-    title: "Complete 3 Tasks",
-    description: "Finish any 3 tasks today to earn XP.",
-    xp: 100,
-    type: "daily",
-    buttonText: "Start Quest",
-  },
-
-  {
-    id: 3,
-    title: "Login Streak",
-    description: "Log in for 2 consecutive days.",
-    xp: 150,
-    type: "daily",
-    buttonText: "Start Quest",
-  },
-
-  {
-    id: 4,
-    title: "Daily Challenge Run",
-    description: "Complete one challenge run.",
-    xp: 120,
-    type: "daily",
-    buttonText: "Start Quest",
-  },
-
-  {
-    id: 5,
-    title: "Winter Event Quest",
-    description: "Complete seasonal winter missions.",
-    xp: 500,
-    type: "seasonal",
-    buttonText: "Start Quest",
-  },
-
-  {
-    id: 6,
-    title: "Festival Participation",
-    description: "Join the ongoing festival event.",
-    xp: 600,
-    type: "seasonal",
-    buttonText: "Start Quest",
-  },
-
-  {
-    id: 7,
-    title: "Limited Time Hunt",
-    description: "Find hidden items in the event map.",
-    xp: 700,
-    type: "seasonal",
-    buttonText: "Start Quest",
-  },
-
-  {
-    id: 8,
-    title: "Featured Boss Battle",
-    description: "Defeat the featured boss for big rewards.",
-    xp: 1000,
-    type: "featured",
-    buttonText: "Start Quest",
-  },
-
-  {
-    id: 9,
-    title: "Elite Mission",
-    description: "Complete the elite featured mission chain.",
-    xp: 900,
-    type: "featured",
-    buttonText: "Start Quest",
-  },
-
-  {
-    id: 10,
-    title: "Legendary Drop",
-    description: "Secure a rare legendary drop.",
-    xp: 1200,
-    type: "featured",
-    buttonText: "Start Quest",
-  },
-
-  {
-    id: 11,
-    title: "Community Goal",
-    description: "Contribute to the global quest objective.",
-    xp: 800,
-    type: "featured",
-    buttonText: "Start Quest",
-  },
-];
+  const [questFilter, setQuestFilter] = useState(QUEST_FILTERS.FEATURED);
 
 const [showRelicModal, setShowRelicModal] = useState(false);
 
 const [scanStep, setScanStep] = useState(0);
-// 0 = scanning
-// 1 = relics found
-// 2 = preparing rewards
-// 3 = complete
 
 useEffect(() => {
   if (!showRelicModal) return;
@@ -189,9 +94,63 @@ useEffect(() => {
 const [activeQuestId, setActiveQuestId] = useState(null);
 const [proofInput, setProofInput] = useState("");
 
-  const filteredQuests = QUESTS.filter(
-    (quest) => quest.type === questFilter
+  const filteredQuests = quests.filter(
+    (quest: any) => quest.category === questFilter
   );
+
+  const handleStartQuest = async (questId: string) => {
+  try {
+    const res = await fetch("/api/start-quest", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ questId }),
+    });
+
+    const data = await res.json();
+
+    console.log("🚀 START QUEST RESPONSE:", data);
+
+    toast({
+      title: "Quest Started",
+      description: data?.message || "Quest started successfully",
+    });
+
+    refetch?.();
+  } catch (err) {
+    console.error("❌ Start quest failed:", err);
+  }
+};
+
+const handleSubmitQuest = async (questId: string, proof: string) => {
+  try {
+    const res = await fetch("/api/submit-quest", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        questId,
+        proof,
+      }),
+    });
+
+    const data = await res.json();
+
+    console.log("📨 SUBMIT QUEST RESPONSE:", data);
+
+    toast({
+      title: "Submitted",
+      description: data?.message || "Proof submitted",
+    });
+
+    setActiveQuestId(null);
+    setProofInput("");
+  } catch (err) {
+    console.error("❌ Submit quest failed:", err);
+  }
+};
 
   return (
     <div className="min-h-screen bg-black text-white overflow-auto p-6 relative">
@@ -250,9 +209,9 @@ const [proofInput, setProofInput] = useState("");
 
         {/* FILTERED HEADINGS */}
         <h2 className="text-lg font-semibold text-white mt-4">
-  {questFilter === "daily" && "Daily Quests"}
-  {questFilter === "seasonal" && "Seasonal Quests"}
   {questFilter === "featured" && "Featured Quests"}
+  {questFilter === "seasonal" && "Seasonal Quests"}
+  {questFilter === "daily" && "Daily Quests"}
 </h2>
 
         {/* QUEST CARDS */}
@@ -264,9 +223,11 @@ const [proofInput, setProofInput] = useState("");
 >
   {/* LEFT */}
   <div className="flex items-center gap-3 min-w-0">
-    <div className="w-8 h-8 rounded-lg bg-[#8B3EFE22] flex items-center justify-center text-[#8B3EFE] text-[10px] font-bold shrink-0">
-      Q
-    </div>
+    <img
+  src={quest.project_image || "/fallback.png"}
+  alt={quest.title}
+  className="w-8 h-8 rounded-lg object-cover shrink-0 border border-[#8B3EFE33]"
+/>
 
     <div className="min-w-0">
       <h3 className="text-sm font-semibold truncate">
@@ -286,26 +247,28 @@ const [proofInput, setProofInput] = useState("");
     </p>
 
     <p className="text-[13px] text-white/90 tracking-[2px] leading-none">
-      {quest.xp} XP
+      {quest.reward} XP
     </p>
   </div>
 
-  {/* BUTTON */}
-  <button
-    onClick={() => {
-      if (quest.taskType === "twitter") {
-        setActiveQuestId(quest.id);
-      } else if (quest.isRelicQuest) {
-        setShowRelicModal(true);
-        setScanStep(0);
-      }
-    }}
-    className="px-3 py-1 text-[12px] rounded-full bg-[#8B3EFE] text-white whitespace-nowrap hover:opacity-90 transition"
-  >
-    {quest.taskType === "twitter" && activeQuestId === quest.id
-      ? "Submit Proof"
-      : quest.buttonText}
-  </button>
+<button
+  onClick={() => {
+    if (quest.taskType === "twitter") {
+      setActiveQuestId(quest.id);
+      handleStartQuest(quest._id);
+    } else if (quest.isRelicQuest) {
+      setShowRelicModal(true);
+      setScanStep(0);
+    } else {
+      handleStartQuest(quest._id);
+    }
+  }}
+  className="px-3 py-1 text-[12px] rounded-full bg-[#8B3EFE] text-white whitespace-nowrap hover:opacity-90 transition"
+>
+  {quest.taskType === "twitter" && activeQuestId === quest.id
+    ? "Submit Proof"
+    : "Start Quest"}
+</button>
 
   {/* TWITTER EXPANDED CARD (FULL WIDTH) */}
   {quest.taskType === "twitter" && activeQuestId === quest.id && (
