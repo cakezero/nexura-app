@@ -197,6 +197,7 @@ export default function CampaignEnvironment() {
 
   // Open quest links
   const markQuestAsVisited = (quest: Quest) => {
+    console.log("[ACTION] markQuestAsVisited", { questId: quest._id, tag: quest.tag, link: quest.link });
     let url = quest.link?.trim() || "#";
     if (quest.tag === "create-post") {
       url = "https://x.com/compose/post";
@@ -212,6 +213,7 @@ export default function CampaignEnvironment() {
   };
 
   const retryQuest = async (quest: Quest) => {
+    console.log("[ACTION] retryQuest", { questId: quest._id });
     try {
       const link = proofLinks[quest._id];
       if (!link) {
@@ -233,6 +235,7 @@ export default function CampaignEnvironment() {
         description: "Your proof has been submitted for review.",
       });
     } catch (error: any) {
+      console.error("[ACTION] retryQuest ✗", error);
       toast({
         title: "Error",
         description: error.message,
@@ -242,6 +245,7 @@ export default function CampaignEnvironment() {
   };
 
   const submitCommentProof = async (quest: Quest) => {
+    console.log("[ACTION] submitCommentProof", { questId: quest._id, campaignId, tag: quest.tag });
     const link = proofLinks[quest._id];
     if (!link) {
       toast({
@@ -275,6 +279,7 @@ export default function CampaignEnvironment() {
       // mark quest as pending
       setPendingQuests([...pendingQuests, quest._id]);
     } catch (err: any) {
+      console.error("[ACTION] submitCommentProof ✗", err);
       toast({
         title: "Error",
         description: err.message,
@@ -289,6 +294,7 @@ export default function CampaignEnvironment() {
   };
 
   const claimQuest = async (quest: Quest) => {
+    console.log("[ACTION] claimQuest", { questId: quest._id, campaignId, tag: quest.tag });
     try {
       if (!joinedCampaign) {
         throw new Error("Join this campaign before completing quests.");
@@ -339,6 +345,7 @@ export default function CampaignEnvironment() {
           }
         // }
       } catch (error: any) {
+        console.error("[ACTION] claimQuest ✗", error);
         console.error(error);
         throw new Error(error.message);
       }
@@ -359,6 +366,7 @@ export default function CampaignEnvironment() {
         prev.map((q) => (q._id === quest._id ? { ...q, done: true } : q))
       );
     } catch (error: any) {
+      console.error("[ACTION] claimQuest ✗", error);
       console.error(error);
       toast({ title: "Error", description: error.message, variant: "destructive" });
 
@@ -371,6 +379,7 @@ export default function CampaignEnvironment() {
 
   // Claim campaign reward
   const claimCampaignReward = async () => {
+    console.log("[ACTION] claimCampaignReward", { campaignId });
     try {
       if (!joinedCampaign) {
         throw new Error("Join this campaign before claiming rewards.");
@@ -382,12 +391,14 @@ export default function CampaignEnvironment() {
 
       setShowProofModal(true);
     } catch (error: any) {
+      console.error("[ACTION] claimCampaignReward ✗", error);
       console.error(error);
       toast({ title: "Error", description: error.message, variant: "destructive" });
     }
   };
 
   const finalizeCampaignReward = async (txHash: string) => {
+    console.log("[ACTION] finalizeCampaignReward", { txHash, campaignId, campaignAddress });
     try {
       if (campaignAddress && trustClaimed < totalTrustAvailable) {
         await claimCampaignOnchainReward({ campaignAddress, userId });
@@ -399,6 +410,7 @@ export default function CampaignEnvironment() {
 
       setCampaignCompleted(true);
     } catch (error: any) {
+      console.error("[ACTION] finalizeCampaignReward ✗", error);
       console.error(error);
       toast({ title: "Error", description: error.message, variant: "destructive" });
       throw error;
@@ -406,6 +418,7 @@ export default function CampaignEnvironment() {
   };
 
   const handleJoinCampaign = async () => {
+    console.log("[ACTION] handleJoinCampaign", { campaignId });
     try {
       if (!user) {
         throw new Error("Please sign in and connect your wallet to join this campaign.");
@@ -416,6 +429,7 @@ export default function CampaignEnvironment() {
       setJoinedCampaign(true);
       setCampaignRefreshToken((prev) => prev + 1);
     } catch (error: any) {
+      console.error("[ACTION] handleJoinCampaign ✗", error);
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
       setJoiningCampaign(false);

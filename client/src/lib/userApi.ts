@@ -84,29 +84,36 @@ export const userApiRequest = async <T = unknown>({
     url += `?${new URLSearchParams(params).toString()}`;
   }
 
-  const res = await fetch(url, {
-    method,
-    headers,
-    body: formData ?? (data !== undefined ? JSON.stringify(data) : undefined),
-  });
+  console.log(`[API:user] → ${method} ${endpoint}`);
+  try {
+    const res = await fetch(url, {
+      method,
+      headers,
+      body: formData ?? (data !== undefined ? JSON.stringify(data) : undefined),
+    });
 
-  await throwIfNotOk(res);
+    await throwIfNotOk(res);
 
-  const json = await res.json().catch(() => ({}));
+    const json = await res.json().catch(() => ({}));
 
-  const rawHeader =
-    res.headers.get("authorization") ??
-    res.headers.get("x-access-token") ??
-    res.headers.get("token");
-  const headerToken = rawHeader?.startsWith("Bearer ")
-    ? rawHeader.slice(7)
-    : (rawHeader ?? null);
+    const rawHeader =
+      res.headers.get("authorization") ??
+      res.headers.get("x-access-token") ??
+      res.headers.get("token");
+    const headerToken = rawHeader?.startsWith("Bearer ")
+      ? rawHeader.slice(7)
+      : (rawHeader ?? null);
 
-  return {
-    ...(typeof json === "object" && json !== null ? (json as Record<string, unknown>) : {}),
-    token:
-      (json as Record<string, unknown>)?.accessToken ??
-      headerToken ??
-      undefined,
-  } as T;
+    console.log(`[API:user] ✓ ${method} ${endpoint}`);
+    return {
+      ...(typeof json === "object" && json !== null ? (json as Record<string, unknown>) : {}),
+      token:
+        (json as Record<string, unknown>)?.accessToken ??
+        headerToken ??
+        undefined,
+    } as T;
+  } catch (err) {
+    console.error(`[API:user] ✗ ${method} ${endpoint}`, err);
+    throw err;
+  }
 };

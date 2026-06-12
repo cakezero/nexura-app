@@ -142,6 +142,7 @@ const [dapps, setDapps] = useState<any[]>([]);
 useEffect(() => {
   (async () => {
     try {
+      console.log("[ACTION] fetchEcosystemDapps");
       const { ecosystemQuests } = await apiRequestV2(
         "GET",
         "/api/ecosystem-quests"
@@ -149,6 +150,7 @@ useEffect(() => {
 
       setDapps(ecosystemQuests || []);
     } catch (err) {
+      console.error("[ACTION] fetchEcosystemDapps ✗", err);
       console.error("Failed to fetch ecosystem dapps", err);
     }
   })();
@@ -261,7 +263,7 @@ const quests = questsRaw.filter(isActiveQuest);
   const DiscoverCard = ({ card }: any) => {
   return (
     <div
-      onClick={() => router.push(card.route)}
+      onClick={() => { console.log("[ACTION] navigateDiscoverCard", { route: card.route }); router.push(card.route); }}
       className="group cursor-pointer overflow-hidden rounded-2xl border border-white/10 bg-[#080808] transition-all duration-300 hover:border-white/20 hover:bg-[#0d0d0d]"
     >
       {/* Image */}
@@ -404,7 +406,7 @@ const quests = questsRaw.filter(isActiveQuest);
       <Button
         variant="ghost"
         size="sm"
-        onClick={() => router.push("/ecosystem-dapps")}
+        onClick={() => { console.log("[ACTION] navigateViewAllProtocols"); router.push("/ecosystem-dapps"); }}
         className="flex items-center gap-2 text-xs h-7 px-3 border border-[#00E1A299] text-white/80 hover:text-white hover:bg-[#00E1A24D] transition"
       >
         <span>View all protocols</span>
@@ -489,7 +491,7 @@ const quests = questsRaw.filter(isActiveQuest);
       <Button
         variant="ghost"
         size="sm"
-        onClick={() => router.push("/campaigns")}
+        onClick={() => { console.log("[ACTION] navigateViewAllCampaigns"); router.push("/campaigns"); }}
         className="flex items-center justify-center gap-2 text-xs h-8 px-3 border border-[#00E1A299] text-white/80 hover:text-white hover:bg-[#00E1A24D] transition shrink-0"
       >
         <span>View all campaigns</span>
@@ -556,7 +558,7 @@ const quests = questsRaw.filter(isActiveQuest);
   <Button
     variant="ghost"
     size="sm"
-    onClick={() => router.push("/learn")}
+    onClick={() => { console.log("[ACTION] navigateViewAllLessons"); router.push("/learn"); }}
     className="flex items-center justify-center gap-2 text-xs h-8 px-3 border border-[#00E1A299] text-white/80 hover:text-white hover:bg-[#00E1A24D] transition shrink-0"
   >
     <span>View all lessons</span>
@@ -818,7 +820,7 @@ const quests = questsRaw.filter(isActiveQuest);
   <div className="mt-3 text-[11px] sm:text-xs text-white/50 leading-relaxed">
     Track deeper engagement insights.{" "}
     <span
-      onClick={() => router.push("/analytics")}
+      onClick={() => { console.log("[ACTION] navigateDetailedAnalytics"); router.push("/analytics"); }}
       className="inline-flex items-center gap-1 text-[#00E1A2] cursor-pointer hover:opacity-80 transition"
     >
       View detailed Analytics
@@ -848,7 +850,7 @@ const quests = questsRaw.filter(isActiveQuest);
   <Button
     variant="ghost"
     size="sm"
-    onClick={() => router.push("/quests")}
+    onClick={() => { console.log("[ACTION] navigateViewAllQuests"); router.push("/quests"); }}
     className="flex items-center justify-center gap-2 text-xs h-8 px-3 border border-[#00E1A299] text-white/80 hover:text-white hover:bg-[#00E1A24D] transition shrink-0"
   >
     <span>View all quests</span>

@@ -99,6 +99,7 @@ const [proofInput, setProofInput] = useState("");
   );
 
   const handleStartQuest = async (questId: string) => {
+  console.log("[ACTION] handleStartQuest", { questId });
   try {
     const res = await fetch("/api/start-quest", {
       method: "POST",
@@ -119,11 +120,13 @@ const [proofInput, setProofInput] = useState("");
 
     refetch?.();
   } catch (err) {
+    console.error("[ACTION] handleStartQuest ✗", err);
     console.error("❌ Start quest failed:", err);
   }
 };
 
 const handleSubmitQuest = async (questId: string, proof: string) => {
+  console.log("[ACTION] handleSubmitQuest", { questId, proof });
   try {
     const res = await fetch("/api/submit-quest", {
       method: "POST",
@@ -148,6 +151,7 @@ const handleSubmitQuest = async (questId: string, proof: string) => {
     setActiveQuestId(null);
     setProofInput("");
   } catch (err) {
+    console.error("[ACTION] handleSubmitQuest ✗", err);
     console.error("❌ Submit quest failed:", err);
   }
 };
@@ -253,6 +257,7 @@ const handleSubmitQuest = async (questId: string, proof: string) => {
 
 <button
   onClick={() => {
+    console.log("[ACTION] startQuest", { questId: quest._id, taskType: quest.taskType });
     if (quest.taskType === "twitter") {
       setActiveQuestId(quest.id);
       handleStartQuest(quest._id);

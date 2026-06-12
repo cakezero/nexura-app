@@ -179,6 +179,7 @@ export default function ClaimDetails() {
   };
 
   async function fetchClaim() {
+    console.log("[ACTION] fetchClaim", { id });
     const fetched = await apiRequestV2("GET", "/api/get-triple?termId=" + id);
     setClaim(fetched);
 
@@ -348,6 +349,7 @@ export default function ClaimDetails() {
   }
 
   const getUserShares = async () => {
+    console.log("[ACTION] getUserShares");
     if (!user) return;
 
     const walletClient = await getWalletClient();
@@ -378,6 +380,7 @@ export default function ClaimDetails() {
   };
 
   const refreshUserData = async () => {
+    console.log("[ACTION] refreshUserData");
     if (!user) return;
 
     const updatedBalance = await getBalance();
@@ -387,6 +390,7 @@ export default function ClaimDetails() {
   };
 
   const handleClaimAction = async () => {
+    console.log("[ACTION] handleClaimAction", { isBuy, mainTab, growthType, buyAmount, sellAmount });
     if (!user) return await handleConnectWallet();
 
     if (isBuy && hasOppositePosition) {
@@ -455,6 +459,7 @@ export default function ClaimDetails() {
         ),
       });
     } catch (err: any) {
+      console.error("[ACTION] handleClaimAction ✗", err);
       console.error(err);
       toast({
         title: "Error",
@@ -468,6 +473,7 @@ export default function ClaimDetails() {
   };
 
   const handleConnectWallet = async () => {
+    console.log("[ACTION] handleConnectWallet");
     await connectWallet();
   }
 
@@ -554,6 +560,7 @@ export default function ClaimDetails() {
   }, [term]);
 
   const handleGenerateImage = async () => {
+    console.log("[ACTION] handleGenerateImage");
     if (!cardRef.current) return;
     setGeneratingImage(true);
 
@@ -562,6 +569,7 @@ export default function ClaimDetails() {
       const imgData = canvas.toDataURL("image/png");
       setImageData(imgData);
     } catch (err) {
+      console.error("[ACTION] handleGenerateImage ✗", err);
       console.error(err);
       alert("Failed to generate image.");
     } finally {
@@ -570,6 +578,7 @@ export default function ClaimDetails() {
   };
 
   const handleDownload = async () => {
+    console.log("[ACTION] handleDownload");
     if (!cardRef.current) {
       alert("Card not ready for download.");
       return;
@@ -594,18 +603,21 @@ export default function ClaimDetails() {
       link.click();
       document.body.removeChild(link);
     } catch (err) {
+      console.error("[ACTION] handleDownload ✗", err);
       console.error(err);
       alert("Failed to download image.");
     }
   };
 
   const handleCopyLink = () => {
+    console.log("[ACTION] handleCopyLink", { currentUrl });
     navigator.clipboard.writeText(currentUrl)
       .then(() => alert("Link copied to clipboard!"))
       .catch(() => alert("Failed to copy link."));
   };
 
   const handleShareX = () => {
+    console.log("[ACTION] handleShareX", { currentUrl });
     const text = `Check out this claim: ${currentUrl}`;
     const xUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
     window.open(xUrl, "_blank");

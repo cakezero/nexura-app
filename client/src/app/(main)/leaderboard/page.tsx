@@ -38,11 +38,13 @@ export default function Leaderboard() {
 
   useEffect(() => {
     const timer = setTimeout(async () => {
+      console.log("[ACTION] fetchLeaderboard");
       try {
         const { leaderboardInfo, rank } = await apiRequestV2("GET", "/api/leaderboard");
         setList(leaderboardInfo || []);
         setRank(rank || 1);
       } catch (err: any) {
+        console.error("[ACTION] fetchLeaderboard ✗", err);
         setError(err.message || "Failed to load leaderboard");
       } finally {
         setLoading(false);

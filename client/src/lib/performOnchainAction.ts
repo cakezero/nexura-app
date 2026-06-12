@@ -72,6 +72,7 @@ const getStudioPaymentConfig = async (): Promise<StudioPaymentConfig> => {
 };
 
 export const getServerAuthorizedAddress = async (): Promise<string> => {
+  console.log("[ONCHAIN] getServerAuthorizedAddress");
   const config = await getStudioPaymentConfig();
   return requireContractAddress(config.authorizedAddress, "Server authorized address", config.network ?? "the server");
 };
@@ -95,6 +96,7 @@ const ensureSwitch = async (targetChainId: string) => {
 };
 
 export const payRestoreStreakFee = async (): Promise<string> => {
+  console.log("[ONCHAIN] payRestoreStreakFee");
   try {
     if (!window.ethereum) throw new Error("No wallet provider available. Connect a wallet with RainbowKit first.");
 
@@ -118,8 +120,10 @@ export const payRestoreStreakFee = async (): Promise<string> => {
 
     await tx.wait();
 
+    console.log("[ONCHAIN] payRestoreStreakFee ✓", tx.hash);
     return tx.hash as string;
   } catch (error: any) {
+    console.error("[ONCHAIN] payRestoreStreakFee ✗", error);
     if (error.data) {
       const iface = new ethers.Interface(STREAK_RESTORE_ABI);
       const decoded = iface.parseError(error.data);
@@ -128,14 +132,15 @@ export const payRestoreStreakFee = async (): Promise<string> => {
     }
 
     console.error(error);
-    throw toUserFriendlyError(error, "Payment failed."); 
+    throw toUserFriendlyError(error, "Payment failed.");
   }
 }
 
 export const payStudioHubFee = async (testAmount?: number, contractAddress?: string): Promise<string> => {
+  console.log("[ONCHAIN] payStudioHubFee", { testAmount, contractAddress });
   try {
     if (!window.ethereum) throw new Error("No wallet provider available. Connect a wallet with RainbowKit first.");
-    
+
     const config = await getStudioPaymentConfig();
     const finalContractAddress = requireContractAddress(
       contractAddress || config.contractAddress,
@@ -160,8 +165,10 @@ export const payStudioHubFee = async (testAmount?: number, contractAddress?: str
 
     await tx.wait();
 
+    console.log("[ONCHAIN] payStudioHubFee ✓", tx.hash);
     return tx.hash as string;
   } catch (error: any) {
+    console.error("[ONCHAIN] payStudioHubFee ✗", error);
     if (error.data) {
       const iface = new ethers.Interface(STUDIO_FEE_ABI);
       const decoded = iface.parseError(error.data);
@@ -197,6 +204,7 @@ const toWeiAmount = (amount: number | string, fieldName: string): bigint => {
 };
 
 export const createRewardsContract = async ({ nameOfCampaign, totalRewards, rewardToken, startDate }: IrewardContract) => {
+  console.log("[ONCHAIN] createRewardsContract", { nameOfCampaign, totalRewards, rewardToken, startDate });
   try {
     const walletClient = await getWalletClient();
     const publicClient = getPublicClient();
@@ -253,6 +261,14 @@ export const createRewardsContract = async ({ nameOfCampaign, totalRewards, rewa
       ? (onchainTotalReward / onchainRewardToken).toString()
       : "0";
 
+    console.log("[ONCHAIN] createRewardsContract ✓", {
+      txHash: receipt.transactionHash,
+      contractAddress: receipt.contractAddress,
+      authorizedAddress,
+      fundedAmount: formatEther(tx.value),
+      rewardPerParticipant: formatEther(rewardTokenWei),
+      maxClaimableParticipants,
+    });
     return {
       txHash: receipt.transactionHash,
       contractAddress: receipt.contractAddress,
@@ -262,6 +278,7 @@ export const createRewardsContract = async ({ nameOfCampaign, totalRewards, rewa
       maxClaimableParticipants,
     };
   } catch (error: any) {
+    console.error("[ONCHAIN] createRewardsContract ✗", error);
     if (error.data) {
       const iface = new ethers.Interface(REWARD_ABI);
       const decoded = iface.parseError(error.data);
@@ -275,6 +292,7 @@ export const createRewardsContract = async ({ nameOfCampaign, totalRewards, rewa
 }
 
 export const addReward = async (contractAddress: string, rewardsToAdd: number | string): Promise<string> => {
+  console.log("[ONCHAIN] addReward", { contractAddress, rewardsToAdd });
   try {
     const walletClient = await getWalletClient();
     const publicClient = getPublicClient();
@@ -298,8 +316,10 @@ export const addReward = async (contractAddress: string, rewardsToAdd: number | 
 
     const hash = await walletClient.writeContract(request);
     await publicClient.waitForTransactionReceipt({ hash });
+    console.log("[ONCHAIN] addReward ✓", hash);
     return hash;
   } catch (error: any) {
+    console.error("[ONCHAIN] addReward ✗", error);
     if (error.data) {
       const iface = new ethers.Interface(REWARD_ABI);
       const decoded = iface.parseError(error.data);
@@ -313,6 +333,7 @@ export const addReward = async (contractAddress: string, rewardsToAdd: number | 
 }
 
 export const getRewardContractBalance = async (contractAddress: string): Promise<bigint> => {
+  console.log("[ONCHAIN] getRewardContractBalance", { contractAddress });
   const validatedCampaignAddress = requireContractAddress(contractAddress, "Campaign contract");
   const publicClient = getReadonlyPublicClient();
 
@@ -320,6 +341,7 @@ export const getRewardContractBalance = async (contractAddress: string): Promise
 };
 
 export const getRewardContractStartDate = async (contractAddress: string): Promise<number> => {
+  console.log("[ONCHAIN] getRewardContractStartDate", { contractAddress });
   const validatedCampaignAddress = requireContractAddress(contractAddress, "Campaign contract");
   const publicClient = getReadonlyPublicClient();
 
@@ -333,6 +355,7 @@ export const getRewardContractStartDate = async (contractAddress: string): Promi
 };
 
 export const getRewardCampaignCreator = async (contractAddress: string): Promise<string> => {
+  console.log("[ONCHAIN] getRewardCampaignCreator", { contractAddress });
   const validatedCampaignAddress = requireContractAddress(contractAddress, "Campaign contract");
   const publicClient = getReadonlyPublicClient();
 
@@ -346,6 +369,7 @@ export const getRewardCampaignCreator = async (contractAddress: string): Promise
 };
 
 export const updateRewardStartTime = async (contractAddress: string, newDate: number): Promise<string> => {
+  console.log("[ONCHAIN] updateRewardStartTime", { contractAddress, newDate });
   try {
     const walletClient = await getWalletClient();
     const publicClient = getPublicClient();
@@ -368,8 +392,10 @@ export const updateRewardStartTime = async (contractAddress: string, newDate: nu
 
     const hash = await walletClient.writeContract(request);
     await publicClient.waitForTransactionReceipt({ hash });
+    console.log("[ONCHAIN] updateRewardStartTime ✓", hash);
     return hash;
   } catch (error: any) {
+    console.error("[ONCHAIN] updateRewardStartTime ✗", error);
     if (error.code === 4902) {
       throw new Error("Please switch to the required network and try again.");
     }
@@ -387,10 +413,17 @@ export const updateRewardStartTime = async (contractAddress: string, newDate: nu
 }
 
 export const syncRewardContractStartDate = async (contractAddress: string, newDate: number) => {
+  console.log("[ONCHAIN] syncRewardContractStartDate", { contractAddress, newDate });
   const normalizedDate = normalizeUnixTimestamp(newDate, "Campaign start date");
   const currentStartDate = await getRewardContractStartDate(contractAddress);
 
   if (normalizedDate <= currentStartDate) {
+    console.log("[ONCHAIN] syncRewardContractStartDate ✓", {
+      updated: false,
+      currentStartDate,
+      nextStartDate: normalizedDate,
+      txHash: null,
+    });
     return {
       updated: false,
       currentStartDate,
@@ -401,6 +434,12 @@ export const syncRewardContractStartDate = async (contractAddress: string, newDa
 
   const txHash = await updateRewardStartTime(contractAddress, normalizedDate);
 
+  console.log("[ONCHAIN] syncRewardContractStartDate ✓", {
+    updated: true,
+    currentStartDate,
+    nextStartDate: normalizedDate,
+    txHash,
+  });
   return {
     updated: true,
     currentStartDate,
@@ -410,6 +449,7 @@ export const syncRewardContractStartDate = async (contractAddress: string, newDa
 };
 
 export const closeRewardCampaign = async (contractAddress: string): Promise<string> => {
+  console.log("[ONCHAIN] closeRewardCampaign", { contractAddress });
   try {
     const walletClient = await getWalletClient();
     const publicClient = getReadonlyPublicClient();
@@ -430,8 +470,10 @@ export const closeRewardCampaign = async (contractAddress: string): Promise<stri
 
     const hash = await walletClient.writeContract(request);
     await publicClient.waitForTransactionReceipt({ hash });
+    console.log("[ONCHAIN] closeRewardCampaign ✓", hash);
     return hash;
   } catch (error: any) {
+    console.error("[ONCHAIN] closeRewardCampaign ✗", error);
     if (error.code === 4902) {
       throw new Error("Please switch to the required network and try again.");
     }
@@ -449,6 +491,7 @@ export const closeRewardCampaign = async (contractAddress: string): Promise<stri
 };
 
 export const claimCampaignOnchainReward = async ({ campaignAddress, userId }: { campaignAddress: string, userId: string }) => {
+  console.log("[ONCHAIN] claimCampaignOnchainReward", { campaignAddress, userId });
   try {
     const walletClient = await getWalletClient();
     if (!walletClient) throw new Error("No wallet provider available. Connect a wallet with RainbowKit first.");
@@ -473,8 +516,10 @@ export const claimCampaignOnchainReward = async ({ campaignAddress, userId }: { 
 
     await tx.wait();
 
+    console.log("[ONCHAIN] claimCampaignOnchainReward ✓", tx.hash);
     return tx.hash;
   } catch (error: any) {
+    console.error("[ONCHAIN] claimCampaignOnchainReward ✗", error);
     if (error.code === 4902) {
       throw new Error("Please switch to the required network and try again.")
     }
@@ -492,6 +537,7 @@ export const claimCampaignOnchainReward = async ({ campaignAddress, userId }: { 
 }
 
 export const claimReferralReward = async (userId: string) => {
+  console.log("[ONCHAIN] claimReferralReward", { userId });
   try {
     const walletClient = await getWalletClient();
     if (!walletClient) throw new Error("No wallet provider available. Connect a wallet with RainbowKit first.");
@@ -510,13 +556,17 @@ export const claimReferralReward = async (userId: string) => {
       account: account[0],
       chain: getChain()
     });
+
+    console.log("[ONCHAIN] claimReferralReward ✓", { userId });
   } catch (error: any) {
+    console.error("[ONCHAIN] claimReferralReward ✗", error);
     console.error(error);
     throw toUserFriendlyError(error, "Unable to claim referral reward.");
   }
 }
 
 export const mintNexon = async (level: number, userId: string) => {
+  console.log("[ONCHAIN] mintNexon", { level, userId });
   try {
     const walletClient = await getWalletClient();
     if (!walletClient) throw new Error("No wallet provider available. Connect a wallet with RainbowKit first.");
@@ -548,8 +598,10 @@ export const mintNexon = async (level: number, userId: string) => {
 
     await tx.wait();
 
+    console.log("[ONCHAIN] mintNexon ✓", tx.hash);
     return tx.hash;
   } catch (error: any) {
+    console.error("[ONCHAIN] mintNexon ✗", error);
     if (error.code === 4902) {
       throw new Error("Please switch to the required network and try again.")
     }

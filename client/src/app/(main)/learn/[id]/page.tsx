@@ -284,6 +284,7 @@ function LessonPageInner() {
 
   const loadLesson = async () => {
     if (!lessonId) return;
+    console.log("[ACTION] loadLesson", { lessonId });
 
     setLoading(true);
     setPageError("");
@@ -319,6 +320,7 @@ function LessonPageInner() {
       }
       syncLocalProgress(lessonMatch, nextQuestions, !didInitStep);
     } catch (error) {
+      console.error("[ACTION] loadLesson ✗", error);
       setPageError(normalizeApiMessage(error, "Failed to load lesson"));
     } finally {
       setLoading(false);
@@ -439,6 +441,7 @@ function LessonPageInner() {
 
   const startLesson = async () => {
     if (!lessonId) return false;
+    console.log("[ACTION] startLesson", { lessonId });
 
     const canContinue = await ensureReadyForProtectedAction();
     if (!canContinue) return false;
@@ -450,6 +453,7 @@ function LessonPageInner() {
       await apiRequestV2("POST", `/api/lesson/start-lesson?lessonId=${lessonId}`);
       return true;
     } catch (error) {
+      console.error("[ACTION] startLesson ✗", error);
       const message = normalizeApiMessage(error, "Unable to start lesson");
       if (!message.toLowerCase().includes("already started") && !message.toLowerCase().includes("already completed")) {
         setActionMessage(message);
@@ -463,6 +467,7 @@ function LessonPageInner() {
 
   const submitAnswer = async () => {
     if (!currentQuestion || !lessonId) return;
+    console.log("[ACTION] submitAnswer", { lessonId, questionId: currentQuestion._id, answer: currentSelection });
     const answer = currentSelection;
     if (!answer) return;
     const answerIsCorrect = isCorrectAnswer(currentQuestion, answer);
@@ -497,6 +502,7 @@ function LessonPageInner() {
         return true;
       }
     } catch (error) {
+      console.error("[ACTION] submitAnswer ✗", error);
       const message = normalizeApiMessage(error, "Unable to submit answer");
       setActionMessage(message);
     } finally {
@@ -508,6 +514,7 @@ function LessonPageInner() {
 
   const claimXp = async () => {
     if (!lessonId) return;
+    console.log("[ACTION] claimXp", { lessonId });
 
     const canContinue = await ensureReadyForProtectedAction();
     if (!canContinue) return;
@@ -517,6 +524,7 @@ function LessonPageInner() {
 
   const finalizeLessonXpClaim = async (txHash: string) => {
     if (!lessonId) return;
+    console.log("[ACTION] finalizeLessonXpClaim", { lessonId, txHash });
 
     setClaiming(true);
     setActionMessage("");
@@ -556,6 +564,7 @@ function LessonPageInner() {
       } catch {}
       setPendingLessonCompleted(true);
     } catch (error) {
+      console.error("[ACTION] finalizeLessonXpClaim ✗", error);
       const message = normalizeApiMessage(error, "Unable to claim XP");
       setActionMessage(message);
       if (message.toLowerCase().includes("already")) {
@@ -578,6 +587,7 @@ function LessonPageInner() {
 
   const goNext = async () => {
     if (!activeStep) return;
+    console.log("[ACTION] goNext", { currentStep, stepKind: activeStep.kind });
 
     if (activeStep.kind === "question") {
       if (!activeStep.question.done || isRedoing.current) {
@@ -642,6 +652,7 @@ function LessonPageInner() {
   };
 
   const resetLessonView = () => {
+    console.log("[ACTION] resetLessonView", { lessonId });
     setShowXPModal(false);
     confettiFired.current = false;
     autoModalFired.current = false;
@@ -665,7 +676,7 @@ function LessonPageInner() {
     return (
       <div className="min-h-screen bg-black p-4 sm:p-6 text-white">
         <div className="mx-auto max-w-3xl space-y-4">
-          <button onClick={() => router.push("/learn")} className="text-sm text-purple-300 hover:text-white">
+          <button onClick={() => { console.log("[ACTION] navigateBackToLessons"); router.push("/learn"); }} className="text-sm text-purple-300 hover:text-white">
             ← Back to lessons
           </button>
           <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4 sm:p-6">
@@ -688,7 +699,7 @@ function LessonPageInner() {
 
       {/* Back link + breadcrumb */}
       <div className="w-full max-w-4xl space-y-1">
-        <button onClick={() => router.push("/learn")} className="text-sm text-purple-300 hover:text-white">
+        <button onClick={() => { console.log("[ACTION] navigateBackToLessons"); router.push("/learn"); }} className="text-sm text-purple-300 hover:text-white">
           ← Back to lessons
         </button>
         <div className="flex items-center gap-1.5">
@@ -1215,7 +1226,7 @@ function LessonPageInner() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => router.push("/learn")}
+                  onClick={() => { console.log("[ACTION] navigateReturnToLessons"); router.push("/learn"); }}
                   className="flex-1 h-9 rounded-[12px] bg-[#8b3efe] flex items-center justify-center transition hover:bg-[#7a2fe0] active:scale-[0.98] shadow-[0_0_20px_rgba(138,63,252,0.4)]"
                 >
                   <span className="text-[10px] sm:text-[12px] font-bold uppercase tracking-[1.4px] text-white" style={{ fontFamily: "'Geist', 'Inter', sans-serif" }}>

@@ -13,6 +13,7 @@ const XP_PER_LEVEL = 100;
 const MAX_LEVEL = 12;
 
 async function fetchMintedStatuses(userId: string, maxLevel: number) {
+  console.log("[ACTION] fetchMintedStatuses", { userId, maxLevel });
   const out: Record<number, any> = {};
   const promises = [] as Promise<void>[];
   for (let level = 1; level <= maxLevel; level++) {
@@ -47,6 +48,7 @@ export default function Levels() {
   });
 
   async function handleMint(level: number) {
+    console.log("[ACTION] handleMint", { userId, level });
     if (!userId) return;
     try {
       const res = await apiRequest("POST", "/api/tiers/mint", { userId, level });
@@ -55,6 +57,7 @@ export default function Levels() {
       // refetch minted statuses
       try { await refetchMinted(); } catch { /* ignore */ }
     } catch (e: any) {
+      console.error("[ACTION] handleMint ✗", e);
       toast({ title: "Mint failed", description: String(e?.message || e) });
     }
   }

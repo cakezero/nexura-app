@@ -9,6 +9,7 @@ import { allowToDeposit } from "../lib/utils";
 
 // --- Deposit / Support or Oppose function ---
 export const buyShares = async ({ buyAmount, termId, curveId, isApproved }: { buyAmount: string; termId: Address; isApproved: boolean; curveId: bigint }) => {
+  console.log("[WEB3] buyShares", { buyAmount, termId, curveId, isApproved });
   const walletClient = await getWalletClient();
   const publicClient = getPublicClient();
 
@@ -37,14 +38,16 @@ export const buyShares = async ({ buyAmount, termId, curveId, isApproved }: { bu
 
   const transactionHash = await walletClient.writeContract(request);
 
+  console.log("[WEB3] buyShares ✓", transactionHash);
   return transactionHash;
 };
 
 // --- Sell / Redeem ---
 export const sellShares = async (sharesAmount: string, termId: Address, curveId: bigint) => {
+  console.log("[WEB3] sellShares", { sharesAmount, termId, curveId });
   const walletClient = await getWalletClient();
   const publicClient = getPublicClient();
-  
+
   await walletClient.switchChain({ id: getChain().id });
 
   const address = getMultiVaultAddressFromChainId(walletClient.chain?.id!);
@@ -60,6 +63,7 @@ export const sellShares = async (sharesAmount: string, termId: Address, curveId:
     ]
   );
 
+  console.log("[WEB3] sellShares ✓", transactionHash);
   return transactionHash;
 };
 
@@ -74,6 +78,7 @@ export const createProofOfAction = async ({
   objectString: string;
   stakeTrust?: string;
 }) => {
+  console.log("[WEB3] createProofOfAction", { subjectString, predicateString, objectString, stakeTrust });
   const walletClient = await getWalletClient();
   const publicClient = getPublicClient();
 
@@ -155,6 +160,7 @@ export const createProofOfAction = async ({
       value: stakeAmount,
     });
     const transactionHash = await walletClient.writeContract(request);
+    console.log("[WEB3] createProofOfAction ✓", transactionHash);
     return transactionHash;
   }
 
@@ -171,5 +177,6 @@ export const createProofOfAction = async ({
     }
   );
 
+  console.log("[WEB3] createProofOfAction ✓", transactionHash);
   return transactionHash;
 }

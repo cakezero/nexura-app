@@ -56,14 +56,21 @@ export async function apiRequest(
 
   const headers = buildAuthHeaders(data ? { "Content-Type": "application/json" } : {});
 
-  const res = await fetch(fullUrl, {
-    method,
-    headers,
-    body: data ? JSON.stringify(data) : undefined,
-  });
+  console.log(`[API] → ${method} ${url}`);
+  try {
+    const res = await fetch(fullUrl, {
+      method,
+      headers,
+      body: data ? JSON.stringify(data) : undefined,
+    });
 
-  await throwIfResNotOk(res);
-  return res;
+    await throwIfResNotOk(res);
+    console.log(`[API] ✓ ${method} ${url}`, res.status);
+    return res;
+  } catch (err) {
+    console.error(`[API] ✗ ${method} ${url}`, err);
+    throw err;
+  }
 }
 
 export async function apiRequestV2(
@@ -76,14 +83,22 @@ export async function apiRequestV2(
     isFormData ? {} : { "Content-Type": "application/json" }
   );
 
-  const res = await fetch(`${BACKEND_URL || ""}${endpoint}`, {
-    method,
-    headers,
-    body: isFormData ? data : data ? JSON.stringify(data) : undefined,
-  });
+  console.log(`[API] → ${method} ${endpoint}`);
+  try {
+    const res = await fetch(`${BACKEND_URL || ""}${endpoint}`, {
+      method,
+      headers,
+      body: isFormData ? data : data ? JSON.stringify(data) : undefined,
+    });
 
-  await throwIfResNotOk(res);
-  return res.json();
+    await throwIfResNotOk(res);
+    const json = await res.json();
+    console.log(`[API] ✓ ${method} ${endpoint}`);
+    return json;
+  } catch (err) {
+    console.error(`[API] ✗ ${method} ${endpoint}`, err);
+    throw err;
+  }
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";

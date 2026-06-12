@@ -149,10 +149,12 @@ export default function QuestEnvironment() {
   const miniQuestsCompleted = miniQuests.filter((m) => m.done === true).length === miniQuests.length;
 
   const claimQuestReward = async () => {
+    console.log("[ACTION] claimQuestReward", { questId });
     setShowProofModal(true);
   };
 
   const finalizeQuestReward = async (txHash: string) => {
+    console.log("[ACTION] finalizeQuestReward", { questId, txHash });
     try {
       await apiRequestV2("POST", "/api/user/update-claims-created", { txHash });
 
@@ -160,6 +162,7 @@ export default function QuestEnvironment() {
 
       setCompleted(true);
     } catch (error: any) {
+      console.error("[ACTION] finalizeQuestReward ✗", error);
       console.error(error);
       toast({ title: "Error", description: error.message, variant: "destructive" });
       throw error;
@@ -174,6 +177,7 @@ export default function QuestEnvironment() {
   const MANUAL_PROOF_TAGS = ["comment", "comment-x", "follow", "follow-x", "feedback", "create-post"];
 
   const claimReward = async (miniQuest: Quest) => {
+    console.log("[ACTION] claimReward", { questId, id: miniQuest._id, tag: miniQuest.tag });
     try {
 
       if (!getStoredAccessToken()) {
@@ -229,6 +233,7 @@ export default function QuestEnvironment() {
           await apiRequestV2("POST", "/api/quest/check-trust-name", { id: miniQuest._id, questId });
         }
       } catch (error: any) {
+        console.error("[ACTION] claimReward ✗", error);
         console.error(error);
         throw new Error(error.message);
       }
@@ -248,6 +253,7 @@ export default function QuestEnvironment() {
       );
 
     } catch (error: any) {
+      console.error("[ACTION] claimReward ✗", error);
       console.error(error);
       setMiniQuests(prev => prev.map(q => q._id === miniQuest._id ? { ...q, status: "retry" } : q));
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -255,6 +261,7 @@ export default function QuestEnvironment() {
   };
 
   const retryQuest = async (quest: Quest) => {
+    console.log("[ACTION] retryQuest", { questId, id: quest._id });
     try {
       const link = proofLinks[quest._id];
       if (!link) {
@@ -276,6 +283,7 @@ export default function QuestEnvironment() {
         description: "Your proof has been submitted for review.",
       });
     } catch (error: any) {
+      console.error("[ACTION] retryQuest ✗", error);
       toast({
         title: "Error",
         description: error.message,
@@ -285,6 +293,7 @@ export default function QuestEnvironment() {
   };
 
   const visitQuest = (quest: Quest) => {
+    console.log("[ACTION] visitQuest", { id: quest._id, link: quest.link });
     if (!visitedQuests.includes(quest._id)) setVisitedQuests([...visitedQuests, quest._id]);
     if (quest.link) {
       let url = quest.link.trim();
@@ -299,6 +308,7 @@ export default function QuestEnvironment() {
   };
 
   const submitCommentProof = async (quest: Quest) => {
+    console.log("[ACTION] submitCommentProof", { questId, id: quest._id, tag: quest.tag });
     const link = proofLinks[quest._id];
 
     if (!link) {
@@ -328,6 +338,7 @@ export default function QuestEnvironment() {
       setExpandedQuestId(null);
       setPendingQuests([...pendingQuests, quest._id]);
     } catch (err: any) {
+      console.error("[ACTION] submitCommentProof ✗", err);
       toast({
         title: "Error",
         description: err.message,

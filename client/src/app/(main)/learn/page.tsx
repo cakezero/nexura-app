@@ -95,6 +95,7 @@ export default function Learn() {
 
   useEffect(() => {
     const loadLessons = async () => {
+      console.log("[ACTION] loadLessons");
       setLoadingLessons(true);
       setPageError("");
 
@@ -105,6 +106,7 @@ export default function Learn() {
         );
         setLessons(normalizedLessons);
       } catch (error) {
+        console.error("[ACTION] loadLessons ✗", error);
         setPageError(error?.message || "Failed to load lessons.");
         setLessons([]);
       } finally {
@@ -205,7 +207,7 @@ export default function Learn() {
                 return (
                   <div
                     key={lesson._id}
-                    onClick={() => router.push(`/learn/${lesson._id}${isCompleted ? "?review=1" : ""}`)}
+                    onClick={() => { console.log("[ACTION] navigateLesson", { lessonId: lesson._id, isCompleted }); router.push(`/learn/${lesson._id}${isCompleted ? "?review=1" : ""}`); }}
                     className="cursor-pointer overflow-hidden rounded-2xl border border-white/10 bg-[#1C0E3480] transition hover:scale-[1.02] flex flex-col"
                   >
                     <div className="relative">
@@ -289,6 +291,7 @@ export default function Learn() {
 
                         <button
                           onClick={async (event) => {
+                            console.log("[ACTION] startLessonButton", { lessonId: lesson._id, isCompleted });
                             event.stopPropagation();
 
                             if (!isConnected) {
