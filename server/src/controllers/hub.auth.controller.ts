@@ -373,6 +373,7 @@ export const forgotPassword = async (req: GlobalRequest, res: GlobalResponse) =>
 		await OTP.create({
 			email: strippedEmail,
 			code,
+			page: "project",
 			expiresAt: new Date(Date.now() + 5 * 60 * 1000),
 		});
 
@@ -396,7 +397,7 @@ export const resetPassword = async (req: GlobalRequest, res: GlobalResponse) => 
 			return;
 		}
 
-		const otp = await OTP.findOne({ email: email.trim().toLowerCase(), code }).lean();
+		const otp = await OTP.findOne({ email: email.trim().toLowerCase(), code, page: "project" }).lean();
 		if (!otp) {
 			res.status(BAD_REQUEST).json({ error: "invalid or expired code" });
 			return;
@@ -697,6 +698,7 @@ export const userHubForgotPassword = async (req: GlobalRequest, res: GlobalRespo
 				email: hubAdminExists.email,
 				code,
 				hubId,
+				page: "user",
 				expiresAt: new Date(Date.now() + 5 * 60 * 1000),
 			},
 			{ upsert: true, new: true, setDefaultsOnInsert: true }
@@ -722,7 +724,7 @@ export const userHubResetPassword = async (req: GlobalRequest, res: GlobalRespon
 			return;
 		}
 
-		const otp = await OTP.findOne({ email: email.trim().toLowerCase(), code }).lean();
+		const otp = await OTP.findOne({ email: email.trim().toLowerCase(), code, page: "user" }).lean();
 		if (!otp) {
 			res.status(BAD_REQUEST).json({ error: "invalid or expired code" });
 			return;

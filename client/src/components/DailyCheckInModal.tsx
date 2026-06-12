@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useEffect, useMemo, useRef } from "react";
 import {
   Dialog,
@@ -45,27 +47,6 @@ export default function DailyCheckInModal({ open, onOpenChange, onCheckInSuccess
   const [chestOpen, setChestOpen] = useState(false);
   const [justHitMilestone, setJustHitMilestone] = useState(false);
   const [claimed, setClaimed] = useState(false);
-  const [showXp, setShowXp] = useState(true);
-  const [displayXp, setDisplayXp] = useState(0);
-  const animateXp = (target) => {
-  const duration = 2000;
-  const start = 0;
-  const startTime = performance.now();
-
-  const update = (currentTime) => {
-    const elapsed = currentTime - startTime;
-    const progress = Math.min(elapsed / duration, 1);
-
-    const value = Math.floor(progress * target);
-    setDisplayXp(value);
-
-    if (progress < 1) {
-      requestAnimationFrame(update);
-    }
-  };
-
-  requestAnimationFrame(update);
-};
   
   useEffect(() => {
     if (open) {
@@ -248,9 +229,6 @@ const MILESTONES = [
 const currentMilestone =
   [...MILESTONES].reverse().find(m => streak >= m.day) || null;
 
-  const claimedMilestone = user?.dayCount || 0;
-  
-
 // next milestone
 const nextMilestone =
   MILESTONES.find(m => m.day > streak) || null;
@@ -275,11 +253,6 @@ const progress = useMemo(() => {
 // completion flag (THIS is what your UI should use)
 const isMilestoneCompleted =
   MILESTONES.some(m => m.day === streak);
-
-  const completedMilestone =
-  [...MILESTONES]
-    .reverse()
-    .find(m => streak >= m.day) || null;
 
 const daysRemaining = nextMilestone ? nextMilestone.day - streak : 0;
 
@@ -314,10 +287,6 @@ useEffect(() => {
 const totalCheckIns = user?.totalCheckIns ?? 0;
 
 const nextMilestoneDay = nextMilestone?.day ?? Infinity;
-
-const canOpenChest =
-  completedMilestone &&
-  claimedMilestone < completedMilestone.day;
 
 
 const isBrokenBeforeNextMilestone = useMemo(() => {
@@ -364,6 +333,7 @@ const handleRestoreStreak = async () => {
 
 const handleClaimReward = async () => {
   console.log("CLAIM REWARD CLICKED");
+  setClaimed(true);
 
   try {
     const res = await apiRequest(
@@ -374,22 +344,18 @@ const handleClaimReward = async () => {
     const data = await res.json();
 
     console.log("CLAIM RESPONSE SUCCESS:", data);
+    console.log("RAW RESPONSE STATUS:", res.status);
 
-    if (!res.ok) {
-      throw new Error(data?.message || "Claim failed");
-    }
-
-    setClaimed(true);
-
-    await fetchHistory();
-    await XPclaimed();
-
-    if (data?.claimed !== undefined) {
-      setClaimed(data.claimed);
-    }
-
-  } catch (err) {
+  } catch (err: any) {
     console.error("CLAIM ERROR:", err);
+
+    // 🔥 IMPORTANT: log structured backend error if available
+    if (err?.response) {
+      try {
+        const errorData = await err.response.json?.();
+        console.log("CLAIM ERROR RESPONSE:", errorData);
+      } catch {}
+    }
   }
 };
 
@@ -541,46 +507,46 @@ const handleClaimReward = async () => {
     </div>
 
 {/* REWARD BOX */}
-<div
-  className={`relative shrink-0 flex flex-col items-center justify-center ${
-    canOpenChest ? "-mt-8" : "-mt-4"
-  }`}
->
-  <div className="relative">
+<div className="relative shrink-0 w-[64px] flex items-center justify-center -mt-8">
+
+  <div className="relative w-[64px] h-[64px]">
 
     <img
       src="/reward-box.png"
       alt=""
-      className="w-16 h-16 object-contain"
+      className="w-full h-full object-contain block"
     />
 
-    {/* XP PILL */}
-    {!canOpenChest && (
+    {/* XP PILL (fades out, does NOT affect layout) */}
+    {!MILESTONES.some(m => streak >= m.day) && nextMilestone && (
       <div
-        className="absolute -top-3 left-1/2 -translate-x-1/2 px-1 py-0.5 rounded-full text-[8px] whitespace-nowrap"
+        className="absolute -top-3 left-1/2 -translate-x-1/2 px-1 py-0.5 rounded-full text-[8px] whitespace-nowrap transition-opacity duration-300"
         style={{
           background: "#200D4FEE",
           border: "1px solid #8B5CF64D",
           color: "#fff",
         }}
       >
-        +{new Intl.NumberFormat().format(nextMilestone?.xp || 0)} XP
+        +{new Intl.NumberFormat().format(nextMilestone.xp)} XP
       </div>
     )}
+
+  </div>
+</div>
   </div>
 
-  {/* OPEN CHEST */}
-  {canOpenChest && (
+{/* CHEST BUTTON (ABSOLUTE OVERLAY, no layout shift) */}
+{MILESTONES.some(m => streak >= m.day) && (
+  <div className="absolute right-3 bottom-2 mt-2">
     <button
       onClick={() => setChestOpen(true)}
-      className="px-2 py-[2px] rounded-full bg-[#8B3EFE] text-white text-[8px] leading-none hover:opacity-90 transition"
+      className="text-[9px] px-2 py-[2px] rounded-full bg-[#8B3EFE] text-white hover:opacity-90 transition mt-2"
     >
       Open Chest
     </button>
-  )}
-</div>
-
   </div>
+)}
+
 </div>
 
 {/* RIGHT CARD - YOUR STATS */}
@@ -651,15 +617,8 @@ const handleClaimReward = async () => {
     {MILESTONES.map((m, i, arr) => {
       const isLast = i === arr.length - 1;
 
-const claimedMilestone = user?.dayCount || 0;
-
-// user has already redeemed this milestone
-const reached = claimedMilestone >= m.day;
-
-// user is exactly at milestone but NOT claimed yet
-const isAtCheckpoint = streak >= m.day && claimedMilestone < m.day;
-
-// future milestone
+const reached = streak > m.day;
+const isAtCheckpoint = streak === m.day;
 const isUpcoming = streak < m.day;
       const isNext = m.day === nextMilestone?.day;
       const isNextBroken = isNext && isBrokenBeforeNextMilestone;
@@ -704,28 +663,24 @@ const isUpcoming = streak < m.day;
                 : "none",
             }}
           >
-{isNextBroken ? (
+            {isNextBroken ? (
   <X className="w-3 h-3 text-white" />
-
-) : reached ? (
-  // CLAIMED → check
-  <Check className="w-3 h-3 text-white" />
-
 ) : isAtCheckpoint ? (
-  // EARNED BUT NOT CLAIMED → purple badge
-  <span
-    className="text-white text-[8px] font-semibold px-1 py-[3px] rounded-full"
-    style={{
-      background: "linear-gradient(135deg, #8B3EFE, #6D28D9)",
-      border: "1px solid #8B5CF64D",
-      boxShadow: "0 0 8px rgba(139,62,254,0.25)",
-    }}
-  >
-    {m.day}
-  </span>
-
+  // USER HAS HIT CHECKPOINT BUT NOT VERIFIED YET → show number
+<span
+  className="text-white text-[8px] font-semibold px-1 py-[3px] rounded-full"
+  style={{
+    background: "linear-gradient(135deg, #8B3EFE, #6D28D9)",
+    border: "1px solid #8B5CF64D",
+    boxShadow: "0 0 8px rgba(139,62,254,0.25)",
+  }}
+>
+  {m.day}
+</span>
+) : reached ? (
+  // USER HAS VERIFIED (past checkpoint) → show check
+  <Check className="w-3 h-3 text-white" />
 ) : (
-  // FUTURE → locked
   <img
     src="/padlock.png"
     className="w-2.5 h-2.5 opacity-20 blur-[0.3px]"
@@ -858,86 +813,43 @@ const isUpcoming = streak < m.day;
 
         {/* title */}
         <h2 className="text-white text-sm font-semibold mb-1">
-          {claimed ? "Rewards Claimed" : "Your Reward Awaits"}
+          Your Reward Awaits
         </h2>
 
         {/* description */}
         <p className="text-white/60 text-[10px] mb-3 leading-relaxed">
-          {claimed
-            ? "Your Streak Progression has been updated."
-            : "A reward chest has been unlocked for your streak."}
+          A reward chest has been unlocked for your streak.
         </p>
 
-        {/* MEDIA SECTION */}
-        <div className="relative w-full mb-2 rounded-lg overflow-hidden">
-
-          {/* BEFORE CLAIM → SHOW IMAGE */}
-          {!claimed && (
-            <img
-              src="/chest-.png"
-              alt="chest"
-              className="w-full h-auto object-cover"
-            />
-          )}
-
-          {/* AFTER CLAIM → PLAY VIDEO */}
-          {claimed && (
-            <video
-              src="/reward-animation.mp4"
-              muted
-              playsInline
-              autoPlay
-              className="w-full h-auto object-cover mix-blend-screen"
-              onEnded={() => {
-  setShowXp(true);
-  animateXp(completedMilestone?.xp ?? 0);
-}}
-            />
-          )}
+        {/* video */}
+        <div className="relative w-full mb-3 rounded-lg overflow-hidden">
+          <video
+            src="/reward-animation.mp4"
+            muted
+            playsInline
+            autoPlay
+            loop
+            className="w-full h-auto object-cover mix-blend-screen"
+          />
         </div>
 
-        {/* XP BELOW MEDIA (NOT INSIDE) */}
-        {claimed && showXp && (
-          <div className="mb-3">
-            <div className="text-[#E990F7] text-3xl font-bold">
-              +{displayXp} XP
-            </div>
-          </div>
-        )}
-
         {/* hint */}
-{!claimed ? (
-  <p className="text-white/50 text-[9px] mb-3">
-    Tap the chest to reveal your reward.
-  </p>
-) : (
-  <div className="mb-3">
-    <h2 className="text-white text-xl mb-2">
-      Rewards Claimed!
-    </h2>
+        <p className="text-white/50 text-[9px] mb-3">
+          Tap the chest to reveal your reward.
+        </p>
 
-    <p className="text-white/60 text-[9px] mb-2">
-      Your Streak Progression has been updated.
-    </p>
-  </div>
-)}
-
-  {/* BUTTON */}
-  {!claimed ? (
-  <button
-    onClick={handleClaimReward}
-    className="w-full py-1.5 rounded-2xl bg-[#8B3EFE] text-white text-xs font-medium transition hover:opacity-90"
-  >
-    Claim Rewards
-  </button>
-) : (
-  <button
-    onClick={() => setChestOpen(false)}
-    className="w-full py-1.5 rounded-2xl bg-[#8B3EFE] text-white text-xs font-medium transition hover:opacity-90"
-  >
-    View Progression
-  </button>
-)}
+        {/* button */}
+<button
+  onClick={handleClaimReward}
+  disabled={claimed}
+  className={`w-full py-1.5 rounded-2xl text-white text-xs font-medium transition ${
+    claimed
+      ? "bg-white/10 text-white/40 cursor-not-allowed"
+      : "bg-[#8B3EFE] hover:opacity-90"
+  }`}
+>
+  {claimed ? "Claimed Rewards" : "Claim Rewards"}
+</button>
 
       </div>
     </div>,

@@ -1,3 +1,5 @@
+"use client";
+
 const COLORS = {
   primary: "rgba(131, 58, 253, 0.20)",
   secondary: "rgba(50, 0, 90, 0.18)",

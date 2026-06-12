@@ -1,6 +1,9 @@
+"use client";
+
 import { Button } from "./ui/button";
-import { Link } from "wouter";
-import siteLogo from "@assets/generated_images/logo.png";
+import Link from "next/link";
+import _siteLogo from "@/assets/attached_assets/logo.png";
+const siteLogo = _siteLogo.src;
 
 export default function Header() {
   const navItems = [

@@ -1,4 +1,6 @@
-import { useLocation } from "wouter";
+"use client";
+
+import { useRouter } from "next/navigation";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
 import { Card } from "../components/ui/card";
@@ -45,7 +47,7 @@ export default function QuestCard({
   participants = 0,
   onClick,
 }: QuestCardProps) {
-  const [, setLocation] = useLocation();
+  const router = useRouter();
 
 const formatDuration = (
   startDate: string,
@@ -97,7 +99,7 @@ const duration =
 
   const handleClick = () => {
     if (onClick) return onClick(questId);
-    setLocation(`/quest/${questId}`);
+    router.push(`/quest/${questId}`);
   };
 
   return (

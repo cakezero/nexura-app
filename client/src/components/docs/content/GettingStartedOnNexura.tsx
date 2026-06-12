@@ -1,3 +1,5 @@
+"use client";
+
 const GettingStarted = ({ onNext, onPrev }: any) => {
   return (
     <div id="getting-started docs-top" className="max-w-[59rem]">

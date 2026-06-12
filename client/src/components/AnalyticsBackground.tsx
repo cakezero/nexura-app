@@ -1,3 +1,5 @@
+"use client";
+
 export default function AnimatedBackground({ className }: { className?: string }) {
   return (
     <div

@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useLocation } from "wouter";
+import { usePathname, useRouter } from "next/navigation";
 // StudioSidebar is provided by StudioLayout wrapper
 import { Card } from "../ui/card";
 
 export default function MyCampaign() {
-  const [location, setLocation] = useLocation();
+  const pathname = usePathname();
+  const router = useRouter();
   const [campaign, setCampaign] = useState<any>(null);
   const [tasks, setTasks] = useState<any[]>([]);
 
@@ -62,7 +63,7 @@ export default function MyCampaign() {
   <div className="flex items-center gap-4">
     {/* Back Button */}
     <button
-      onClick={() => setLocation("/studio-dashboard/campaigns-tab")}
+      onClick={() => router.push("/studio-dashboard/campaigns-tab")}
       className=""
     >
       <img src="/back-button.png" alt="Back" className="w-12 h-12 object-contain" />
@@ -96,7 +97,7 @@ export default function MyCampaign() {
     </button>
 
     <button
-      onClick={() => setLocation(`/studio-dashboard/create-new-campaign?edit=${campaign._id}`)}
+      onClick={() => router.push(`/studio-dashboard/create-new-campaign?edit=${campaign._id}`)}
     >
       <img src="/edit-campaign.png" alt="Edit Campaign" className="w-18 h-8 object-contain" />
     </button>
@@ -187,7 +188,7 @@ export default function MyCampaign() {
           <div className="flex items-center justify-between mt-8">
             <button
               className="px-4 py-2 bg-gray-600 text-white rounded-lg text-sm hover:bg-gray-500 transition"
-              onClick={() => setLocation("/studio-dashboard")}
+              onClick={() => router.push("/studio-dashboard")}
             >
               Back
             </button>

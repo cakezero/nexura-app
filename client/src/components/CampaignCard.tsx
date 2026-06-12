@@ -1,7 +1,9 @@
+"use client";
+
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Clock, ExternalLink, Users } from "lucide-react";
-import { useLocation } from "wouter";
+import { useRouter } from "next/navigation";
 import { dummyCampaigns } from "../types/dummyCampaign";
 
 interface CampaignCardProps {
@@ -41,7 +43,7 @@ export default function CampaignCard({
   _id,
   from,
 }: CampaignCardProps) {
-  const [, setLocation] = useLocation();
+  const router = useRouter();
 
   const handleClick = () => {
     if (_id && isLive) {
@@ -49,7 +51,7 @@ export default function CampaignCard({
         ? `/campaign/${_id}?from=${from}`
         : `/campaign/${_id}`;
 
-      setLocation(url);
+      router.push(url);
     }
   };
 

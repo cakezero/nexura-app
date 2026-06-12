@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { useLocation } from "wouter";
+import { useRouter } from "next/navigation";
 import React from "react"
 import { Card, CardTitle, CardDescription, CardFooter } from "../../components/ui/card";
 import { Input } from "../../components/ui/input";
@@ -100,7 +100,7 @@ const isDiscordFixedTaskType = (type: string) =>
 
 
 export default function CreateNewCampaigns() {
-  const [, setLocation] = useLocation();
+  const router = useRouter();
   const projectSessionInfo = getStoredProjectInfo();
   const initialDiscordSessionId = String(
     (projectSessionInfo?.discordSessionId as string | undefined) ??
@@ -112,6 +112,7 @@ export default function CreateNewCampaigns() {
   const [saveLoading, setSaveLoading] = useState(false);
   const [campaignId, setCampaignId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState(() => {
+    if (typeof window === "undefined") return "details";
     return localStorage.getItem("campaignBuilderActiveTab") || "details";
   });
 
@@ -155,6 +156,7 @@ const [imagePreview, setImagePreview] = useState<string | null>(null);
 
 const [coverImage, setCoverImage] = useState<File | null>(null); // raw file
 const [coverImagePreview, setCoverImagePreview] = useState<string | null>(null); // for <img>
+const [coverError, setCoverError] = useState("");
 
 
 const [rewardPool, setRewardPool] = useState("");
@@ -740,6 +742,12 @@ const handleSaveDraft = async (
     return null;
   }
 
+  if (!coverImage && !coverImagePreview) {
+    setCoverError("Add a cover image to continue.");
+    toast({ title: "Cover image required", description: "Add a cover image to continue.", variant: "destructive" });
+    return null;
+  }
+
   setSaveLoading(true);
   try {
     const fd = buildCampaignFormData(true);
@@ -876,6 +884,7 @@ const handleCoverImage = (e: React.ChangeEvent<HTMLInputElement>) => {
   if (!file) return;
 
   setCoverImage(file); // keep the file
+  setCoverError("");
 
   const reader = new FileReader();
   reader.onload = () => setCoverImagePreview(reader.result as string); // preview
@@ -1431,7 +1440,7 @@ const handleUpdateCampaign = async () => {
 
     setCampaignId(persistedCampaignId);
     toast({ title: "Campaign updated!", description: "Your campaign changes have been saved." });
-    setLocation("/studio-dashboard/campaigns-tab");
+    router.push("/studio-dashboard/campaigns-tab");
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Failed to update campaign.";
     toast({ title: "Update failed", description: msg, variant: "destructive" });
@@ -1673,6 +1682,11 @@ const isActive =
     </div>
   )}
 </label>
+{coverError && (
+  <p className="text-[11px] text-red-400 mt-2 flex items-center gap-1">
+    <XCircle className="w-3.5 h-3.5" /> {coverError}
+  </p>
+)}
 
                     </div>
 
@@ -1810,7 +1824,7 @@ const isActive =
                         variant="ghost"
                         className="text-white/60 hover:text-white"
                         disabled={isEnded}
-                        onClick={() => setLocation("/studio-dashboard")}
+                        onClick={() => router.push("/studio-dashboard")}
                       >
                         ← Back
                       </Button>
@@ -2844,7 +2858,7 @@ const isActive =
 <Button
   onClick={() => {
     setShowSuccessModal(false);
-    setLocation("/studio-dashboard/campaigns-tab");
+    router.push("/studio-dashboard/campaigns-tab");
   }}
   className="mt-6 w-full flex items-center justify-center gap-3 px-4 py-2.5 rounded-xl bg-[#8B3EFE] text-white text-sm font-semibold hover:opacity-90 hover:shadow-[0_0_20px_rgba(131,58,253,0.5)] hover:-translate-y-0.5 active:translate-y-0 transition-all"
 >

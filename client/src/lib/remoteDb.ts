@@ -4,8 +4,8 @@ import { UserSchema, type User } from "../schemas/user.schema";
 import { buildUrl } from "./queryClient";
 
 // Prefer configured remote backends, otherwise use the local server endpoints.
-const WALLETS_BASE = (import.meta as any).env?.VITE_WALLETS_API_URL || "";
-const PROJECTS_BASE = (import.meta as any).env?.VITE_PROJECTS_API_URL || "";
+const WALLETS_BASE = process.env.NEXT_PUBLIC_WALLETS_API_URL || "";
+const PROJECTS_BASE = process.env.NEXT_PUBLIC_PROJECTS_API_URL || "";
 
 
 async function safeFetch(url: string, opts: any) {
