@@ -92,7 +92,7 @@ export default function UserSignIn() {
       await userApiRequest({
         method: "POST",
         endpoint: "/user-hub/forgot-password",
-        data: { email: resetEmail },
+        data: { email: resetEmail, page: "user" },
       });
 
       toast({

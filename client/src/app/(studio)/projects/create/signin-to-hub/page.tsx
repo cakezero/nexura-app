@@ -67,7 +67,7 @@ export default function SignInToHub() {
       await projectApiRequest({
         method: "POST",
         endpoint: "/hub/forgot-password",
-        data: { email: resetEmail, role: "project" },
+        data: { email: resetEmail, page: "project" },
       });
       toast({ title: "Email sent!", description: `Password reset code sent to ${resetEmail}.` });
       const target = `/studio/reset-password?email=${encodeURIComponent(resetEmail)}`;

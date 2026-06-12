@@ -397,7 +397,7 @@ export const resetPassword = async (req: GlobalRequest, res: GlobalResponse) => 
 			return;
 		}
 
-		const otp = await OTP.findOne({ email: email.trim().toLowerCase(), code }).lean();
+		const otp = await OTP.findOne({ email: email.trim().toLowerCase(), code, page: "project" }).lean();
 		if (!otp) {
 			res.status(BAD_REQUEST).json({ error: "invalid or expired code" });
 			return;
@@ -724,7 +724,7 @@ export const userHubResetPassword = async (req: GlobalRequest, res: GlobalRespon
 			return;
 		}
 
-		const otp = await OTP.findOne({ email: email.trim().toLowerCase(), code }).lean();
+		const otp = await OTP.findOne({ email: email.trim().toLowerCase(), code, page: "user" }).lean();
 		if (!otp) {
 			res.status(BAD_REQUEST).json({ error: "invalid or expired code" });
 			return;
