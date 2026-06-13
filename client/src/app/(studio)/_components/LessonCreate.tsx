@@ -495,6 +495,7 @@ export default function CreateLesson({
           };
 
           const handleDetailsNext = async () => {
+          console.log("[ACTION] LessonCreate.handleDetailsNext — details → content step");
           const id = await saveOrUpdateLesson();
           if (!id) return;
           await refreshLessonContent(id);

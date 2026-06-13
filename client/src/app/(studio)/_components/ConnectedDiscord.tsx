@@ -135,6 +135,7 @@ export default function ConnectedDiscord() {
   }
 
   const handleBack = () => {
+    console.log("[ACTION] ConnectedDiscord.handleBack");
     clearStudioDiscordReturnPath();
     router.push(returnPath);
   };
