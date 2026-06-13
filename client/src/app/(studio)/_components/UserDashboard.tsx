@@ -64,6 +64,7 @@ export default function userDashboard() {
   }, [apiPrefix]);
 
   const handleView = (id: string) => {
+    console.log("[ACTION] UserDashboard.handleView", id);
     const task = questTasks.find((t) => t._id === id);
     if (!task) return;
     setSelectedTask(task);
@@ -72,6 +73,7 @@ export default function userDashboard() {
   };
 
   const handleAction = async (id: string, action: "accept" | "reject") => {
+    console.log("[ACTION] UserDashboard.handleAction", action, id);
     try {
       if (!session?.hub) {
         toast({ title: "Error", description: "Please create your hub first.", variant: "destructive" });

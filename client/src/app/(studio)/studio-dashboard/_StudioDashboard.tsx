@@ -117,6 +117,7 @@ const [campaignTasks, setCampaignTasks] = useState<TASKS[]>([]);
   };
 
   const handleView = (id: string, _taskType: string, _link: string) => {
+    console.log("[ACTION] StudioDashboard.handleView", id);
     try {
       // Always show modal instead of opening links directly
       const allTasks = [...campaignTasks];
@@ -132,6 +133,7 @@ const [campaignTasks, setCampaignTasks] = useState<TASKS[]>([]);
   };
 
   const handleAction = async (id: string, action: "accept" | "reject") => {
+    console.log("[ACTION] StudioDashboard.handleAction", action, id);
     try {
       setLoading(true);
       await projectApiRequest<{ message?: string }>({

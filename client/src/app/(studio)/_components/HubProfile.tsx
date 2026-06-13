@@ -83,6 +83,7 @@ export default function HubProfile() {
   const descTooShort = description.length > 0 && description.length < 150;
 
   const handleSave = async () => {
+    console.log("[ACTION] HubProfile.handleSave — save hub profile");
     if (!name.trim()) {
       toast({ title: "Missing name", description: "Project name is required.", variant: "destructive" });
       return;
@@ -155,6 +156,7 @@ export default function HubProfile() {
   };
 
   const handleDiscordButtonClick = async () => {
+    console.log("[ACTION] HubProfile.handleDiscordButtonClick — connect/manage Discord");
     if (!discordConnected) {
       beginStudioDiscordConnect("/studio-dashboard/hub-profile");
       return;
