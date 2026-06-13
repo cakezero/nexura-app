@@ -98,37 +98,60 @@ const [proofInput, setProofInput] = useState("");
     (quest: any) => quest.category === questFilter
   );
 
-  const handleStartQuest = async (questId: string) => {
-  console.log("[ACTION] handleStartQuest", { questId });
+  const seasonalQuests = quests.filter(
+  (quest: Quest) => quest.category === "seasonal"
+);
+
+const normalQuests = filteredQuests.filter(
+  (quest: any) => quest.category !== "seasonal"
+);
+
+const [isStartingQuest, setIsStartingQuest] = useState<string | null>(null);
+
+const handleStartQuest = async (quest: Quest) => {
+  if (isStartingQuest === quest._id) return;
+
+  setIsStartingQuest(quest._id);
+
   try {
-    const res = await fetch("/api/start-quest", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ questId }),
-    });
-
-    const data = await res.json();
-
-    console.log("🚀 START QUEST RESPONSE:", data);
+    const data = await apiRequestV2(
+      "POST",
+      "/api/quest/start-quest",
+      { questId: quest._id }
+    );
 
     toast({
       title: "Quest Started",
       description: data?.message || "Quest started successfully",
     });
 
-    refetch?.();
-  } catch (err) {
-    console.error("[ACTION] handleStartQuest ✗", err);
-    console.error("❌ Start quest failed:", err);
+    await refetch?.();
+
+    router.push(`/quest/${quest._id}`);
+  } catch (error: any) {
+    const errorData = error?.info || {};
+
+    if (errorData.error === "quest already started") {
+      router.push(`/quest/${quest._id}`);
+      return;
+    }
+
+    toast({
+      title: "Error",
+      description:
+        errorData.error || "Failed to start the quest. Please try again.",
+      variant: "destructive",
+    });
+  } finally {
+    setIsStartingQuest(null);
   }
 };
 
 const handleSubmitQuest = async (questId: string, proof: string) => {
   console.log("[ACTION] handleSubmitQuest", { questId, proof });
+
   try {
-    const res = await fetch("/api/submit-quest", {
+    const res = await fetch("/api/quest/submit-quest", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -141,7 +164,12 @@ const handleSubmitQuest = async (questId: string, proof: string) => {
 
     const data = await res.json();
 
-    console.log("📨 SUBMIT QUEST RESPONSE:", data);
+    console.log("STATUS:", res.status);
+    console.log("DATA:", data);
+
+    if (!res.ok) {
+      throw new Error(data?.error || "Failed to submit quest");
+    }
 
     toast({
       title: "Submitted",
@@ -150,10 +178,236 @@ const handleSubmitQuest = async (questId: string, proof: string) => {
 
     setActiveQuestId(null);
     setProofInput("");
+
+    await refetch?.();
   } catch (err) {
     console.error("[ACTION] handleSubmitQuest ✗", err);
     console.error("❌ Submit quest failed:", err);
+
+    toast({
+      title: "Error",
+      description: "Failed to submit quest",
+      variant: "destructive",
+    });
   }
+};
+
+const renderDefaultQuestCard = (quest: any, index: number = 0) => {
+  return (
+        <div
+          // key={quest._id}
+          className="grid grid-cols-[1fr_120px_auto] items-center gap-4 p-3 rounded-xl bg-[#0A0E13B2] border border-[#8B3EFE33] hover:border-[#8B3EFE] transition"
+        >
+          {/* LEFT */}
+          <div className="flex items-center gap-3 min-w-0">
+            <img
+              src={quest.project_image || "/fallback.png"}
+              alt={quest.title}
+              className="w-8 h-8 rounded-lg object-cover shrink-0 border border-[#8B3EFE33]"
+            />
+
+            <div className="min-w-0">
+              <h3 className="text-sm font-semibold truncate">
+                {quest.title}
+              </h3>
+
+              <p className="text-[11px] text-gray-400 truncate">
+                {quest.description}
+              </p>
+            </div>
+          </div>
+
+          {/* REWARD */}
+          <div className="flex flex-col items-center justify-center">
+            <p className="text-[8px] uppercase tracking-[0.35em] text-gray-500">
+              Reward
+            </p>
+
+            <p className="text-[13px] text-white/90 tracking-[2px] leading-none">
+              {quest.reward} XP
+            </p>
+          </div>
+
+<button
+  disabled={isStartingQuest === quest._id}
+  onClick={() => {
+    if (quest.taskType === "twitter") {
+      setActiveQuestId(quest._id);
+      handleStartQuest(quest);
+    } else if (quest.isRelicQuest) {
+      setShowRelicModal(true);
+      setScanStep(0);
+    } else {
+      handleStartQuest(quest);
+    }
+  }}
+  className={`px-3 py-1 text-[12px] rounded-full text-white whitespace-nowrap transition ${
+    isStartingQuest === quest._id
+      ? "bg-gray-500 cursor-not-allowed"
+      : "bg-[#8B3EFE] hover:opacity-90"
+  }`}
+>
+  {quest.taskType === "twitter" && activeQuestId === quest._id
+    ? "Submit Proof"
+    : "Start Quest"}
+</button>
+
+                    {/* TWITTER EXPANDED CARD */}
+          {quest.taskType === "twitter" &&
+            activeQuestId === quest._id && (
+              <div className="col-span-3 mt-3">
+                <div className="bg-[#0A0A0A] border border-[#8B3EFE33] rounded-xl p-3 space-y-3">
+
+                  <div className="flex items-start gap-2 text-yellow-400 text-[11px]">
+                    <span>⚠️</span>
+                    <p>
+                      It may take 10 minutes to 10 hours to validate your submission.
+                    </p>
+                  </div>
+
+                  <input
+                    value={proofInput}
+                    onChange={(e) => setProofInput(e.target.value)}
+                    placeholder="Paste your comment link or twitter username here..."
+                    className="w-full px-3 py-2 text-xs rounded-lg bg-[#060210] border border-[#8B3EFE33] text-white outline-none"
+                  />
+
+                  <button
+                    onClick={() => {
+                      setActiveQuestId(null);
+                      setProofInput("");
+                    }}
+                    className="w-full py-2 text-xs rounded-lg bg-[#8B3EFE] text-white hover:opacity-90 transition"
+                  >
+                    Submit Proof
+                  </button>
+                </div>
+              </div>
+            )}
+        </div>
+      )
+}          
+
+const renderSeasonalQuestCard = (quest: Quest, index: number = 0) => {
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return "N/A";
+    return new Date(dateStr).toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "long",
+    });
+  };
+
+  const starts_atFormatted = quest.starts_at
+    ? formatDate(quest.starts_at)
+    : "";
+  const ends_atFormatted = quest.ends_at ? formatDate(quest.ends_at) : "TBA";
+
+  const participantCount = quest.participants || 0;
+
+  return (
+<motion.div
+  initial={{ opacity: 0, y: 30 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{
+    duration: 0.45,
+    delay: index * 0.08,
+    ease: "easeOut",
+  }}
+  className="h-[360px] w-full"
+>
+  <Card className="h-full w-full bg-[#170f1f] border border-white/5 rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition flex flex-col">
+
+    {/* QUEST BANNER */}
+    <div className="relative h-[140px] w-full shrink-0 bg-black">
+      {quest.projectCoverImage && (
+        <img
+          src={quest.projectCoverImage}
+          alt={quest.title}
+          className="w-full h-full object-cover"
+        />
+      )}
+
+      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+
+      {quest.category && (
+        <div className="absolute top-2 left-2 text-[0.65rem] sm:text-xs text-white/80 font-medium">
+          {quest.category}
+        </div>
+      )}
+
+      <div className="absolute bottom-3 left-3">
+        <div className="w-10 h-10 rounded-lg overflow-hidden border border-white/10 bg-[#1D1526] backdrop-blur-md shadow-lg">
+          <img
+            src={(quest as any).project_image || "/quest-1.png"}
+            alt={quest.project_name || "Project"}
+            className="w-full h-full object-cover"
+          />
+        </div>
+      </div>
+    </div>
+
+    {/* DETAILS */}
+    <div className="flex flex-col flex-1 p-4">
+
+      {/* FIXED CONTENT AREA */}
+      <div className="flex-1">
+
+        {/* FIXED TITLE HEIGHT */}
+        <h2
+          className="text-sm font-semibold text-white leading-snug line-clamp-2 h-[40px]"
+          title={quest.title}
+        >
+          {quest.title}
+        </h2>
+
+        <div className="mt-3 space-y-2">
+
+          <div className="flex justify-between text-xs">
+            <span className="text-gray-500">Creator:</span>
+            <span className="text-white truncate max-w-[60%] text-right">
+              {quest.project_name || "Nexura Ecosystem"}
+            </span>
+          </div>
+
+          <div className="flex justify-between text-xs">
+            <span className="text-gray-500">Participants:</span>
+            <span className="text-white flex items-center gap-1">
+              <Users className="w-3 h-3" />
+              {participantCount.toLocaleString()}
+            </span>
+          </div>
+
+          <div className="flex justify-between text-xs">
+            <span className="text-gray-500">Reward:</span>
+            <span className="text-white">
+              {quest.reward} XP
+            </span>
+          </div>
+
+          <div className="flex justify-between text-xs min-h-[32px]">
+            <span className="text-gray-500">Duration:</span>
+
+            <span className="text-white flex items-center gap-1 text-right">
+              <Clock className="w-3 h-3 shrink-0" />
+              {starts_atFormatted} – {ends_atFormatted}
+            </span>
+          </div>
+
+        </div>
+      </div>
+
+      {/* BUTTON ALWAYS STICKS TO BOTTOM */}
+      <button
+        onClick={() => handleStartQuest(quest)}
+        className="w-full py-2 mb-2 mt-4 text-xs font-medium rounded-xl bg-[#8b3efe] hover:bg-[#B65FC8] text-white transition -translate-y-2"
+      >
+        Start Quest
+      </button>
+
+    </div>
+  </Card>
+</motion.div>
+  );
 };
 
   return (
@@ -218,99 +472,27 @@ const handleSubmitQuest = async (questId: string, proof: string) => {
   {questFilter === "daily" && "Daily Quests"}
 </h2>
 
-        {/* QUEST CARDS */}
-<div className="grid grid-cols-1 gap-3 mt-4">
-  {filteredQuests.map((quest: any) => (
-<div
-  key={quest._id}
-  className="grid grid-cols-[1fr_120px_auto] items-center gap-4 p-3 rounded-xl bg-[#0A0E13B2] border border-[#8B3EFE33] hover:border-[#8B3EFE] transition"
->
-  {/* LEFT */}
-  <div className="flex items-center gap-3 min-w-0">
-    <img
-  src={quest.project_image || "/fallback.png"}
-  alt={quest.title}
-  className="w-8 h-8 rounded-lg object-cover shrink-0 border border-[#8B3EFE33]"
-/>
-
-    <div className="min-w-0">
-      <h3 className="text-sm font-semibold truncate">
-        {quest.title}
-      </h3>
-
-      <p className="text-[11px] text-gray-400 truncate">
-        {quest.description}
-      </p>
-    </div>
-  </div>
-
-  {/* REWARD */}
-  <div className="flex flex-col items-center justify-center">
-    <p className="text-[8px] uppercase tracking-[0.35em] text-gray-500">
-      Reward
-    </p>
-
-    <p className="text-[13px] text-white/90 tracking-[2px] leading-none">
-      {quest.reward} XP
-    </p>
-  </div>
-
-<button
-  onClick={() => {
-    console.log("[ACTION] startQuest", { questId: quest._id, taskType: quest.taskType });
-    if (quest.taskType === "twitter") {
-      setActiveQuestId(quest._id);
-      handleStartQuest(quest._id);
-    } else if (quest.isRelicQuest) {
-      setShowRelicModal(true);
-      setScanStep(0);
-    } else {
-      handleStartQuest(quest._id);
+{/* QUEST CARDS */}
+<div className="mt-4 px-2 sm:px-2 lg:px-5">
+  <div
+    className={
+      questFilter === "seasonal"
+        ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+        : "grid grid-cols-1 gap-3"
     }
-  }}
-  className="px-3 py-1 text-[12px] rounded-full bg-[#8B3EFE] text-white whitespace-nowrap hover:opacity-90 transition"
->
-  {quest.taskType === "twitter" && activeQuestId === quest._id
-    ? "Submit Proof"
-    : "Start Quest"}
-</button>
-
-  {/* TWITTER EXPANDED CARD (FULL WIDTH) */}
-  {quest.taskType === "twitter" && activeQuestId === quest._id && (
-    <div className="col-span-3 mt-3">
-      <div className="bg-[#0A0A0A] border border-[#8B3EFE33] rounded-xl p-3 space-y-3">
-
-        {/* WARNING HEADER */}
-        <div className="flex items-start gap-2 text-yellow-400 text-[11px]">
-          <span>⚠️</span>
-          <p>
-            It may take 10 minutes to 10 hours to validate your submission.
-          </p>
-        </div>
-
-        {/* INPUT */}
-        <input
-          value={proofInput}
-          onChange={(e) => setProofInput(e.target.value)}
-          placeholder="Paste your comment link or twitter username here..."
-          className="w-full px-3 py-2 text-xs rounded-lg bg-[#060210] border border-[#8B3EFE33] text-white outline-none"
-        />
-
-        {/* SUBMIT BUTTON */}
-        <button
-          onClick={() => {
-            setActiveQuestId(null);
-            setProofInput("");
-          }}
-          className="w-full py-2 text-xs rounded-lg bg-[#8B3EFE] text-white hover:opacity-90 transition"
-        >
-          Submit Proof
-        </button>
-      </div>
+  >
+    {filteredQuests.map((quest: Quest, i: number) =>
+  quest.category === "seasonal" ? (
+    <div key={quest._id}>
+      {renderSeasonalQuestCard(quest, i)}
     </div>
-  )}
-</div>
-  ))}
+  ) : (
+    <div key={quest._id}>
+      {renderDefaultQuestCard(quest, i)}
+    </div>
+  )
+)}
+  </div>
 </div>
 
       </div>
