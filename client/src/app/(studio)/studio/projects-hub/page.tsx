@@ -31,6 +31,7 @@ export default function ProjectsHub() {
   };
 
   const handleSubmit = async () => {
+    console.log("[ACTION] ProjectsHub.handleSubmit — create/save project");
     if (!hubName.trim()) {
       toast({ title: "Missing fields", description: "Please enter a project name.", variant: "destructive" });
       return;

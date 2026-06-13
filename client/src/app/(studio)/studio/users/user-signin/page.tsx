@@ -23,6 +23,7 @@ export default function UserSignIn() {
   const [resetLoading, setResetLoading] = useState(false);
 
   async function handleSignIn() {
+    console.log("[ACTION] UserSignIn.handleSignIn — sign in");
     if (!email || !password) {
       toast({
         title: "Missing credentials",

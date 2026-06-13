@@ -9,6 +9,7 @@ export default function SelectRole() {
   const router = useRouter();
 
   const handleContinue = () => {
+    console.log("[ACTION] SelectRole.handleContinue —", activeRole);
     if (!activeRole) return;
     if (activeRole === "project") {
       router.push("/studio/projects/create");

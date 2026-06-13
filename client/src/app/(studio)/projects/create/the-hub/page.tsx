@@ -38,6 +38,7 @@ export default function TheHub() {
 
 
   const handleSubmit = async () => {
+    console.log("[ACTION] CreateHub.handleSubmit — create project hub");
     if (!hubName.trim()) {
       toast({ title: "Missing Project Name", description: "Please enter a project name.", variant: "destructive" });
       return;
