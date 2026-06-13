@@ -3,7 +3,7 @@ export async function POST(req: Request) {
 
   const body = await req.json();
 
-  const res = await fetch(`${baseUrl}/start-quest`, {
+  const res = await fetch(`${baseUrl}/api/quests/start-quest`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

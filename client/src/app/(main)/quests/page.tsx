@@ -222,7 +222,7 @@ const handleSubmitQuest = async (questId: string, proof: string) => {
 <div className="grid grid-cols-1 gap-3 mt-4">
   {filteredQuests.map((quest: any) => (
 <div
-  key={quest.id}
+  key={quest._id}
   className="grid grid-cols-[1fr_120px_auto] items-center gap-4 p-3 rounded-xl bg-[#0A0E13B2] border border-[#8B3EFE33] hover:border-[#8B3EFE] transition"
 >
   {/* LEFT */}
@@ -259,7 +259,7 @@ const handleSubmitQuest = async (questId: string, proof: string) => {
   onClick={() => {
     console.log("[ACTION] startQuest", { questId: quest._id, taskType: quest.taskType });
     if (quest.taskType === "twitter") {
-      setActiveQuestId(quest.id);
+      setActiveQuestId(quest._id);
       handleStartQuest(quest._id);
     } else if (quest.isRelicQuest) {
       setShowRelicModal(true);
@@ -270,13 +270,13 @@ const handleSubmitQuest = async (questId: string, proof: string) => {
   }}
   className="px-3 py-1 text-[12px] rounded-full bg-[#8B3EFE] text-white whitespace-nowrap hover:opacity-90 transition"
 >
-  {quest.taskType === "twitter" && activeQuestId === quest.id
+  {quest.taskType === "twitter" && activeQuestId === quest._id
     ? "Submit Proof"
     : "Start Quest"}
 </button>
 
   {/* TWITTER EXPANDED CARD (FULL WIDTH) */}
-  {quest.taskType === "twitter" && activeQuestId === quest.id && (
+  {quest.taskType === "twitter" && activeQuestId === quest._id && (
     <div className="col-span-3 mt-3">
       <div className="bg-[#0A0A0A] border border-[#8B3EFE33] rounded-xl p-3 space-y-3">
 
