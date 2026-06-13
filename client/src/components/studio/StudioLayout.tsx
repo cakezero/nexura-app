@@ -49,6 +49,7 @@ export default function StudioLayout({ children, title = "Nexura Studio", onLogo
   }, []);
 
   const handleLogout = () => {
+    console.log("[ACTION] StudioLayout.handleLogout — project/hub sign-out");
     if (getStoredProjectToken()) {
       projectApiRequest({ method: "POST", endpoint: "/hub/logout" }).catch(() => {});
     }

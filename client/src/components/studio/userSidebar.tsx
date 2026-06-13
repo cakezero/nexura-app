@@ -49,6 +49,7 @@ export default function UserSidebar({ activeTab, setActiveTab, onLogout }: UserS
   };
 
   const navigate = (id: TabType) => {
+    console.log(`[ACTION] UserSidebar.navigate → ${id} (${routeByTab[id]})`);
     setActiveTab(id);
     router.push(routeByTab[id]);
   };

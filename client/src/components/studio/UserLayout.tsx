@@ -84,6 +84,7 @@ export default function UserLayout({
   }, [user?.token]);
 
   const handleLogout = () => {
+    console.log("[ACTION] UserLayout.handleLogout — user sign-out");
     onLogout?.();
   };
 
