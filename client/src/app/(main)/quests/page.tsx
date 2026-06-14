@@ -41,12 +41,47 @@ export default function Quests() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
 
+  const getNextResetTime = () => {
+  const now = new Date();
+
+  const next = new Date();
+  next.setUTCHours(24, 0, 0, 0);
+
+  return next.getTime();
+};
+
+  const [timeLeft, setTimeLeft] = useState("");
+
+useEffect(() => {
+  const target = getNextResetTime(); // you define this
+
+  const interval = setInterval(() => {
+    const now = new Date().getTime();
+    const diff = target - now;
+
+    if (diff <= 0) {
+      setTimeLeft("00:00:00");
+      return;
+    }
+
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+    setTimeLeft(
+      `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`
+    );
+  }, 1000);
+
+  return () => clearInterval(interval);
+}, []);
+
 const { data, isLoading, error, refetch } = useQuery({
   queryKey: ["quests"],
   queryFn: async () => {
     console.log("➡️ FETCHING QUESTS FROM NEXT API ROUTE");
 
-    const res = await fetch("/api/quests");
+    const res = await fetch("/api/quest");
 
     console.log("📡 RESPONSE STATUS:", res.status);
 
@@ -60,8 +95,155 @@ const { data, isLoading, error, refetch } = useQuery({
   refetchIntervalInBackground: true,
 });
 
+const mockQuests = [
+  // DAILY (simple + twitter)
+  {
+    _id: "q1",
+    title: "Like Today's Announcement",
+    description: "Engage with the latest update post",
+    reward: 25,
+    category: "daily",
+    taskType: "twitter",
+    project_image: "/quest-1.png",
+    projectCoverImage: "/quest-1.png",
+    project_name: "Nexura",
+    participants: 120,
+    isRelicQuest: false,
+  },
+  {
+    _id: "q2",
+    title: "Follow Nexura on X",
+    description: "Stay updated with official news",
+    reward: 20,
+    category: "daily",
+    taskType: "twitter",
+    project_image: "/quest-1.png",
+    projectCoverImage: "/quest-1.png",
+    project_name: "Nexura",
+    participants: 210,
+    isRelicQuest: false,
+  },
+  {
+    _id: "q3",
+    title: "Daily Check-in",
+    description: "Open app and confirm activity",
+    reward: 15,
+    category: "daily",
+    taskType: "social",
+    project_image: "/quest-1.png",
+    projectCoverImage: "/quest-1.png",
+    project_name: "Nexura",
+    participants: 980,
+    isRelicQuest: false,
+  },
+  
+  // FEATURED (normal + ONE relic)
+  // 🔥 ONLY RELIC QUEST (STRICTLY ONE)
+  {
+    _id: "q7",
+    title: "Relic: Genesis Key Hunt",
+    description: "Find the hidden seasonal artifact",
+    reward: 500,
+    category: "featured",
+    taskType: "relic",
+    project_image: "/quest-1.png",
+    projectCoverImage: "/quest-1.png",
+    project_name: "Nexura",
+    participants: 430,
+    isRelicQuest: true,
+  },
+  
+  {
+    _id: "q4",
+    title: "Retweet Campaign Boost",
+    description: "Amplify official campaign post",
+    reward: 60,
+    category: "featured",
+    taskType: "twitter",
+    project_image: "/quest-1.png",
+    projectCoverImage: "/quest-1.png",
+    project_name: "Nexura",
+    participants: 760,
+    isRelicQuest: false,
+  },
+  {
+    _id: "q5",
+    title: "Invite Friends Challenge",
+    description: "Bring 3 active users into the ecosystem",
+    reward: 150,
+    category: "featured",
+    taskType: "social",
+    project_image: "/quest-1.png",
+    projectCoverImage: "/quest-1.png",
+    project_name: "Nexura",
+    participants: 340,
+    isRelicQuest: false,
+  },
+  {
+    _id: "q6",
+    title: "Discord Power User",
+    description: "Engage actively in community channels",
+    reward: 90,
+    category: "featured",
+    taskType: "social",
+    project_image: "/quest-1.png",
+    projectCoverImage: "/quest-1.png",
+    project_name: "Nexura",
+    participants: 540,
+    isRelicQuest: false,
+  },
 
-const quests = data?.quests ?? [];
+
+  // SEASONAL (NO RELIC LOGIC HERE)
+  {
+    _id: "q8",
+    title: "Season One Launch Quest",
+    description: "Complete onboarding journey",
+    reward: 300,
+    category: "seasonal",
+    taskType: "social",
+    project_image: "/quest-1.png",
+    projectCoverImage: "/quest-1.png",
+    project_name: "Nexura",
+    participants: 890,
+    starts_at: "2026-06-01",
+    ends_at: "2026-06-30",
+    isRelicQuest: false,
+  },
+  {
+    _id: "q9",
+    title: "Season Engagement Run",
+    description: "Participate across ecosystem tasks",
+    reward: 420,
+    category: "seasonal",
+    taskType: "twitter",
+    project_image: "/quest-1.png",
+    projectCoverImage: "/quest-1.png",
+    project_name: "Nexura",
+    participants: 1500,
+    starts_at: "2026-06-10",
+    ends_at: "2026-07-10",
+    isRelicQuest: false,
+  },
+  {
+    _id: "q10",
+    title: "Season Finale Completion",
+    description: "Finish all seasonal objectives",
+    reward: 800,
+    category: "seasonal",
+    taskType: "social",
+    project_image: "/quest-1.png",
+    projectCoverImage: "/quest-1.png",
+    project_name: "Nexura",
+    participants: 2000,
+    starts_at: "2026-06-20",
+    ends_at: "2026-07-20",
+    isRelicQuest: false,
+  },
+];
+
+// const quests = data?.quests ?? [];
+const quests = data?.quests?.length ? data.quests : mockQuests;
 
   const QUEST_FILTERS = {
     FEATURED: "featured",
@@ -465,12 +647,29 @@ const renderSeasonalQuestCard = (quest: Quest, index: number = 0) => {
         </div>
 
 
-        {/* FILTERED HEADINGS */}
-        <h2 className="text-lg font-semibold text-white mt-4">
-  {questFilter === "featured" && "Featured Quests"}
-  {questFilter === "seasonal" && "Seasonal Quests"}
-  {questFilter === "daily" && "Daily Quests"}
-</h2>
+<div className="flex items-center justify-between mt-4">
+  <h2 className="text-lg font-semibold text-white">
+    {questFilter === "featured" && "Featured Quests"}
+    {questFilter === "seasonal" && "Seasonal Quests"}
+    {questFilter === "daily" && "Daily Quests"}
+  </h2>
+
+  {questFilter === "daily" && (
+    <div className="flex items-center gap-2 bg-[#8B3EFE1A] px-3 py-2 rounded-xl">
+      <Clock className="w-4 h-4 text-[#8B3EFE] shrink-0" />
+
+      <div className="flex flex-col items-start leading-tight">
+        <span className="text-[9px] uppercase tracking-wider text-gray-400">
+          Daily Reset
+        </span>
+
+        <span className="text-xs font-medium text-white">
+          {timeLeft || "00:00:00"} remaining
+        </span>
+      </div>
+    </div>
+  )}
+</div>
 
 {/* QUEST CARDS */}
 <div className="mt-4 px-2 sm:px-2 lg:px-5">
