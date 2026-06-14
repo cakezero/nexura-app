@@ -96,7 +96,7 @@ const { data, isLoading, error, refetch } = useQuery({
 });
 
 const mockQuests = [
-  // DAILY (simple + twitter)
+  // DAILY
   {
     _id: "q1",
     title: "Like Today's Announcement",
@@ -104,8 +104,8 @@ const mockQuests = [
     reward: 25,
     category: "daily",
     taskType: "twitter",
-    project_image: "/quest-1.png",
-    projectCoverImage: "/quest-1.png",
+    project_image: "/x-icon.png",
+    projectCoverImage: "/x-icon.png",
     project_name: "Nexura",
     participants: 120,
     isRelicQuest: false,
@@ -117,8 +117,8 @@ const mockQuests = [
     reward: 20,
     category: "daily",
     taskType: "twitter",
-    project_image: "/quest-1.png",
-    projectCoverImage: "/quest-1.png",
+    project_image: "/x-icon.png",
+    projectCoverImage: "/x-icon.png",
     project_name: "Nexura",
     participants: 210,
     isRelicQuest: false,
@@ -129,16 +129,17 @@ const mockQuests = [
     description: "Open app and confirm activity",
     reward: 15,
     category: "daily",
-    taskType: "social",
-    project_image: "/quest-1.png",
-    projectCoverImage: "/quest-1.png",
+    taskType: "discord",
+    project_image: "/discordd.png",
+    projectCoverImage: "/discordd.png",
     project_name: "Nexura",
     participants: 980,
     isRelicQuest: false,
   },
-  
-  // FEATURED (normal + ONE relic)
-  // 🔥 ONLY RELIC QUEST (STRICTLY ONE)
+
+  // FEATURED
+
+  // RELIC
   {
     _id: "q7",
     title: "Relic: Genesis Key Hunt",
@@ -146,13 +147,13 @@ const mockQuests = [
     reward: 500,
     category: "featured",
     taskType: "relic",
-    project_image: "/quest-1.png",
-    projectCoverImage: "/quest-1.png",
+    project_image: "/relic.png",
+    projectCoverImage: "/relic.png",
     project_name: "Nexura",
     participants: 430,
     isRelicQuest: true,
   },
-  
+
   {
     _id: "q4",
     title: "Retweet Campaign Boost",
@@ -160,41 +161,42 @@ const mockQuests = [
     reward: 60,
     category: "featured",
     taskType: "twitter",
-    project_image: "/quest-1.png",
-    projectCoverImage: "/quest-1.png",
+    project_image: "/x-icon.png",
+    projectCoverImage: "/x-icon.png",
     project_name: "Nexura",
     participants: 760,
     isRelicQuest: false,
   },
+
   {
     _id: "q5",
     title: "Invite Friends Challenge",
     description: "Bring 3 active users into the ecosystem",
     reward: 150,
     category: "featured",
-    taskType: "social",
-    project_image: "/quest-1.png",
-    projectCoverImage: "/quest-1.png",
+    taskType: "discord",
+    project_image: "/discordd.png",
+    projectCoverImage: "/discordd.png",
     project_name: "Nexura",
     participants: 340,
     isRelicQuest: false,
   },
+
   {
     _id: "q6",
     title: "Discord Power User",
     description: "Engage actively in community channels",
     reward: 90,
     category: "featured",
-    taskType: "social",
-    project_image: "/quest-1.png",
-    projectCoverImage: "/quest-1.png",
+    taskType: "discord",
+    project_image: "/discordd.png",
+    projectCoverImage: "/discordd.png",
     project_name: "Nexura",
     participants: 540,
     isRelicQuest: false,
   },
 
-
-  // SEASONAL (NO RELIC LOGIC HERE)
+  // SEASONAL
   {
     _id: "q8",
     title: "Season One Launch Quest",
@@ -210,6 +212,7 @@ const mockQuests = [
     ends_at: "2026-06-30",
     isRelicQuest: false,
   },
+
   {
     _id: "q9",
     title: "Season Engagement Run",
@@ -225,6 +228,7 @@ const mockQuests = [
     ends_at: "2026-07-10",
     isRelicQuest: false,
   },
+
   {
     _id: "q10",
     title: "Season Finale Completion",
@@ -378,22 +382,22 @@ const renderDefaultQuestCard = (quest: any, index: number = 0) => {
   return (
         <div
           // key={quest._id}
-          className="grid grid-cols-[1fr_120px_auto] items-center gap-4 p-3 rounded-xl bg-[#0A0E13B2] border border-[#8B3EFE33] hover:border-[#8B3EFE] transition"
+          className="grid grid-cols-[1fr_140px_auto] items-center gap-5 p-5 rounded-xl bg-[#0A0E13B2] border border-[#8B3EFE33] hover:border-[#8B3EFE] transition"
         >
           {/* LEFT */}
           <div className="flex items-center gap-3 min-w-0">
             <img
               src={quest.project_image || "/fallback.png"}
               alt={quest.title}
-              className="w-8 h-8 rounded-lg object-cover shrink-0 border border-[#8B3EFE33]"
+              className="w-12 h-12 rounded-lg object-cover shrink-0 border border-[#8B3EFE33]"
             />
 
             <div className="min-w-0">
-              <h3 className="text-sm font-semibold truncate">
+              <h3 className="text-base font-semibold truncate">
                 {quest.title}
               </h3>
 
-              <p className="text-[11px] text-gray-400 truncate">
+              <p className="text-sm text-gray-400 truncate">
                 {quest.description}
               </p>
             </div>
@@ -401,11 +405,11 @@ const renderDefaultQuestCard = (quest: any, index: number = 0) => {
 
           {/* REWARD */}
           <div className="flex flex-col items-center justify-center">
-            <p className="text-[8px] uppercase tracking-[0.35em] text-gray-500">
+            <p className="text-[10px] uppercase tracking-[0.25em] text-gray-500">
               Reward
             </p>
 
-            <p className="text-[13px] text-white/90 tracking-[2px] leading-none">
+            <p className="text-[16px] font-semibold text-white/90 tracking-[1px] leading-none">
               {quest.reward} XP
             </p>
           </div>
@@ -423,15 +427,17 @@ const renderDefaultQuestCard = (quest: any, index: number = 0) => {
       handleStartQuest(quest);
     }
   }}
-  className={`px-3 py-1 text-[12px] rounded-full text-white whitespace-nowrap transition ${
+  className={`px-4 py-2 text-sm rounded-full text-white whitespace-nowrap transition ${
     isStartingQuest === quest._id
       ? "bg-gray-500 cursor-not-allowed"
       : "bg-[#8B3EFE] hover:opacity-90"
   }`}
 >
-  {quest.taskType === "twitter" && activeQuestId === quest._id
+  {quest.isRelicQuest
+    ? "Check Relic"
+    : quest.taskType === "twitter" && activeQuestId === quest._id
     ? "Submit Proof"
-    : "Start Quest"}
+    : "Start Task"}
 </button>
 
                     {/* TWITTER EXPANDED CARD */}
@@ -583,7 +589,7 @@ const renderSeasonalQuestCard = (quest: Quest, index: number = 0) => {
         onClick={() => handleStartQuest(quest)}
         className="w-full py-2 mb-2 mt-4 text-xs font-medium rounded-xl bg-[#8b3efe] hover:bg-[#B65FC8] text-white transition -translate-y-2"
       >
-        Start Quest
+        Start Task
       </button>
 
     </div>
