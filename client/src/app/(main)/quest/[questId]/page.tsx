@@ -229,6 +229,8 @@ export default function QuestEnvironment() {
 
         } else if (miniQuest.tag === "portal") {
           await apiRequestV2("POST", "/api/quest/check-portal-task", { termId: id, id: miniQuest._id, questId, page: "quest" });
+        } else if (["i-trust", "i-collaborated", "i-interact", "i-follow"].includes(miniQuest.tag)) {
+          await apiRequestV2("POST", "/api/quest/check-atlas-task", { tag: miniQuest.tag, id: miniQuest._id, questId, page: "quest" });
         } else if (miniQuest.tag === "trust-name") {
           await apiRequestV2("POST", "/api/quest/check-trust-name", { id: miniQuest._id, questId });
         }
@@ -238,7 +240,7 @@ export default function QuestEnvironment() {
         throw new Error(error.message);
       }
 
-      if (miniQuest.tag !== "portal" && miniQuest.tag !== "trust-name") {
+      if (miniQuest.tag !== "portal" && miniQuest.tag !== "trust-name" && !["i-trust", "i-collaborated", "i-interact", "i-follow"].includes(miniQuest.tag)) {
         const res = await apiRequest("POST", `/api/quest/claim-mini-quest`, { id: miniQuest._id, questId });
 
         if (!res.ok) return;

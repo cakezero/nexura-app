@@ -205,7 +205,7 @@ const miniQuestSchema = new Schema({
 	},
 	tag: {
 		type: String,
-		enum: ["like", "follow", "follow-x", "message", "visit-website", "message-discord", "other", "portal", "comment", "comment-x", "repost", "repost-x", "join", "join-discord", "acquire-role-discord", "send-message-discord", "feedback", "trust-name", "create-post", "wallet-address"]
+		enum: ["like", "follow", "follow-x", "message", "visit-website", "message-discord", "other", "portal", "i-follow", "i-collaborated", "i-trust", "i-interact", "comment", "comment-x", "repost", "repost-x", "join", "join-discord", "acquire-role-discord", "send-message-discord", "feedback", "trust-name", "create-post", "wallet-address"]
 	},
 	link: {
 		type: String

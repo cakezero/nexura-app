@@ -981,15 +981,21 @@ export const claimRelicReward = async (req: GlobalRequest, res: GlobalResponse) 
 
 export const validateAtlasTask = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
-    const { campaignQuestId, tag, campaignId } = req.body;
-    if (!campaignId || !campaignQuestId || !tag) {
-      res.status(BAD_REQUEST).json({ error: "campaignId, campaignQuestId and tag is required" });
+    const { id, questId, tag, page } = req.body;
+    if (!questId || !id || !tag) {
+      res.status(BAD_REQUEST).json({ error: "questId, id and tag is required" });
       return;
     }
 
     const allowedTags = ["i-follow", "i-collaborated", "i-trust", "i-interact"];
     if (!allowedTags.includes(tag)) {
       res.status(BAD_REQUEST).json({ error: "invalid tag" });
+      return;
+    }
+
+    const userToCheck = await user.findById(req.id);
+    if (!userToCheck) {
+      res.status(BAD_REQUEST).json({ error: "id associated with user is invalid" });
       return;
     }
 
@@ -1013,7 +1019,7 @@ export const validateAtlasTask = async (req: GlobalRequest, res: GlobalResponse)
     const atomId = atomIds[tag as string];
 
     const formattedAddress = checksumAddress(
-      req.user.address as `0x${string}`,
+      userToCheck.address as `0x${string}`,
     );
 
     const response = await client.request(query, {
@@ -1021,7 +1027,7 @@ export const validateAtlasTask = async (req: GlobalRequest, res: GlobalResponse)
       address: formattedAddress,
     });
 
-    const { data: { atom } } = response;
+    const { atom } = response;
 
     if (!atom) {
       res.status(NOT_FOUND).json({ error: "atom id is invaid" });
@@ -1030,28 +1036,75 @@ export const validateAtlasTask = async (req: GlobalRequest, res: GlobalResponse)
 
     const positionExists = atom.term.positions.length;
 
+    if (page !== "campaign") {
+      const miniQuestExists = await miniQuestCompleted.findOne({
+        miniQuest: id,
+        quest: questId,
+        user: userToCheck._id,
+      });
+
+      if (!miniQuestExists) {
+        if (!positionExists) {
+          await miniQuestCompleted.create({
+            miniQuest: id,
+            quest: questId,
+            done: false,
+            status: "retry",
+            user: userToCheck._id,
+          });
+        } else {
+          await miniQuestCompleted.create({
+            miniQuest: id,
+            quest: questId,
+            done: true,
+            status: "done",
+            user: userToCheck._id,
+          });
+
+          res.status(OK).json({ message: "task completed" });
+          return;
+        }
+      } else {
+        if (positionExists) {
+          miniQuestExists!.done = true;
+          miniQuestExists!.status = "done";
+
+          await miniQuestExists.save();
+
+          res.status(OK).json({ message: "task completed" });
+          return;
+        }
+      }
+
+      res.status(BAD_REQUEST).json({
+        error:
+          "User has not supported or opposed a claim or shares is less than 5",
+      });
+      return;
+    }
+
     const campaignQuestExists = await campaignQuestCompleted.findOne({
-      campaignQuest: campaignQuestId,
-      quest: campaignId,
-      user: req.id,
+      campaignQuest: id,
+      campaign: questId,
+      user: userToCheck._id,
     });
 
     if (!campaignQuestExists) {
       if (!positionExists) {
         await campaignQuestCompleted.create({
-          campaignQuest: campaignQuestId,
-          quest: campaignId,
+          campaignQuest: id,
+          campaign: questId,
           done: false,
           status: "retry",
-          user: req.id,
+          user: userToCheck._id,
         });
       } else {
         await campaignQuestCompleted.create({
-          campaignQuest: campaignQuestId,
-          quest: campaignId,
+          campaignQuest: id,
+          campaign: questId,
           done: true,
           status: "done",
-          user: req.id,
+          user: userToCheck._id,
         });
 
         res.status(OK).json({ message: "task completed" });
