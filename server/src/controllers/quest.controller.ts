@@ -143,11 +143,25 @@ export const fetchQuests = async (req: GlobalRequest, res: GlobalResponse) => {
 					updateOne: { filter: { _id }, update: { $set: { status } } },
 				}))
 			);
-		}
+    }
+
+    const featuredQuests = [];
+    const seasonalQuests = [];
+    const dailyQuests = [];
+
+    for (const q of quests) {
+      if (q.category === "featured") {
+        featuredQuests.push(q);
+      } else if (q.category === "seasonal") {
+        seasonalQuests.push(q);
+      } else if (q.category === "daily") {
+        dailyQuests.push(q);
+      }
+    }
 
 		res
 			.status(OK)
-			.json({ message: "quests fetched!", quests });
+			.json({ message: "quests fetched!", quests: { featuredQuests, dailyQuests, seasonalQuests } });
 	} catch (error) {
 		logger.error(error);
 		res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching quests" });

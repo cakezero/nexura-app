@@ -6,6 +6,13 @@ export const RELIC_CONTRACT = checksumAddress("0x7ab2f10cac6e27971fa93a5d5470bb8
 
 export const GRAPHQL_API_URL = network === "testnet" ? API_URL_DEV : API_URL_PROD;
 
+export const atomIds: Record<string, `0x${string}`> = {
+  "i-trust": "0x3a73f3b1613d166eea141a25a2adc70db9304ab3c4e90daecad05f86487c3ee9",
+  "i-collaborated": "0x314e6d36910ee516b9fc5f20470b0bca0e36137f5dbcb38e30356fc5396cccdc",
+  "i-follow": "0xffd07650dc7ab341184362461ebf52144bf8bcac5a19ef714571de15f1319260",
+  "i-interacted": "0x6e4659631eae2d115a8d2a557a1705dead1b0d8e8987b5f7a0f567d8cc676b8a"
+}
+
 export const NexonsAddress: Record<string, `0x${string}`> = {
   "1": "0x28D5405dA0E2e2476e8EddA08775c61b3B4FeB7d",
   "2": "0xcB5cF742a846AcABba0BE1a85676358C7D4b23De",

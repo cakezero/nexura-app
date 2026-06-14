@@ -1867,5 +1867,3 @@ export const publishAdminQuest = async (req: GlobalRequest, res: GlobalResponse)
     res.status(INTERNAL_SERVER_ERROR).json({ error: error?.message || "Error publishing quest" });
   }
 };
-
-// export const getXpHistory
