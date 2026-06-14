@@ -3,7 +3,7 @@ const nextConfig = {
   reactStrictMode: true,
   output: 'standalone',
   env: {
-    NEXT_PUBLIC_BACKEND_URL: "https://api.nexura.intuition.box",
+    NEXT_PUBLIC_BACKEND_URL: process.env.NEXT_PUBLIC_BACKEND_URL || "https://api.nexura.intuition.box",
     NEXT_PUBLIC_NETWORK: "testnet",
     NEXT_PUBLIC_ENV: "production",
   },
