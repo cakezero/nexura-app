@@ -1546,6 +1546,11 @@ export const saveSingleQuest = async (req: GlobalRequest, res: GlobalResponse) =
       return;
     }
 
+    if (category === "daily" && firstTask.tag === "relic") {
+      res.status(BAD_REQUEST).json({ error: "relic checker tasks are only allowed on featured quests" });
+      return;
+    }
+
     const firstTaskText = String(firstTask?.quest || firstTask?.text || "").trim();
     const fallbackTitle = category === "daily" ? "Daily Quest" : "Featured Quest";
     const title = String(req.body.title ?? "").trim() || firstTaskText || fallbackTitle;
