@@ -1584,6 +1584,7 @@ export const saveSingleQuest = async (req: GlobalRequest, res: GlobalResponse) =
         starts_at,
         ends_at,
         creator: req.admin.hub,
+        hub: req.admin.hub,
         creatorModel: page === "user" ? "user" : "admin",
         status: "Save",
       };
@@ -1640,7 +1641,7 @@ export const publishSingleQuest = async (req: GlobalRequest, res: GlobalResponse
       return;
     }
 
-    const { status } = req.body;
+    const { status } = req.body || {};
     if (status === "Ended") {
       questDoc.status = "Ended";
       await questDoc.save();
@@ -1755,7 +1756,7 @@ export const publishQuest = async (req: GlobalRequest, res: GlobalResponse) => {
       return;
     }
 
-    const { status } = req.body;
+    const { status } = req.body || {};
     if (status === "Ended") {
       questDoc.status = "Ended";
       await questDoc.save();
