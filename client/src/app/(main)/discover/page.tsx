@@ -237,11 +237,16 @@ const { data: questsData, isLoading, error } = useQuery({
 },
 });
 
-const questsRaw =
-  questsData?.quests ||
-  questsData?.weeklyQuests ||
-  questsData?.data ||
-  [];
+const questsGroup = questsData?.quests;
+const questsRaw = Array.isArray(questsGroup)
+  ? questsGroup
+  : questsGroup
+    ? [
+        ...(questsGroup.featuredQuests ?? []),
+        ...(questsGroup.seasonalQuests ?? []),
+        ...(questsGroup.dailyQuests ?? []),
+      ]
+    : questsData?.weeklyQuests || questsData?.data || [];
 
 const isActiveQuest = (quest: any) => {
   const start = quest.starts_at ? new Date(quest.starts_at).getTime() : null;
