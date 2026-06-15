@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import Image from "next/image";
 import { Loader2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useToast } from "../../hooks/use-toast";
@@ -37,6 +38,7 @@ interface OTPModalProps {
 
 export default function OTPModal({ isOpen, onClose, email, page }: OTPModalProps) {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [resendTimer, setResendTimer] = useState(60);
@@ -103,11 +105,11 @@ export default function OTPModal({ isOpen, onClose, email, page }: OTPModalProps
       }>({
         method: "POST",
         endpoint: "/hub/sign-up",
-        data: { 
-          name: pending.name, 
-          email: pending.email, 
+        data: {
+          name: pending.name,
+          email: pending.email,
           password: pending.password,
-          authToken 
+          authToken
         },
       });
 
@@ -245,97 +247,103 @@ export default function OTPModal({ isOpen, onClose, email, page }: OTPModalProps
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[480px] bg-[#27134e] border-none p-0 overflow-hidden rounded-[20px] shadow-[-12px_-10px_18px_5px_rgba(0,0,0,0.25),12px_10px_18px_5px_rgba(0,0,0,0.25)] flex flex-col items-center">
+      <DialogContent
+        hideClose
+        className="max-w-[480px] bg-[#27134e] border-none p-0 overflow-hidden rounded-[20px] shadow-[-12px_-10px_18px_5px_rgba(0,0,0,0.25),12px_10px_18px_5px_rgba(0,0,0,0.25)] flex flex-col items-center font-[family-name:var(--font-geist-sans)]"
+      >
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute right-4 top-4 text-white/50 hover:text-white transition-colors"
+          className="absolute right-4 top-4 z-10 text-white/50 hover:text-white transition-colors"
         >
           <X className="w-5 h-5" />
         </button>
 
         <DialogTitle className="sr-only">Check your email</DialogTitle>
-        
-        {/* Top Icon */}
-        <div className="mt-[32px] bg-[rgba(139,62,254,0.1)] rounded-full w-[90px] h-[90px] flex items-center justify-center shadow-[0px_6px_67px_-10px_#7f3ae8]">
-          {/* Target Icon - Using a custom SVG to match design */}
-          <div className="w-[60px] h-[60px] flex items-center justify-center">
-            <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
-              <circle cx="40" cy="40" r="38" stroke="white" strokeWidth="2" strokeDasharray="6 6" />
-              <circle cx="40" cy="40" r="28" stroke="white" strokeWidth="2" />
-              <circle cx="40" cy="40" r="18" stroke="white" strokeWidth="2" />
-              <path d="M40 30V25M40 55V50M25 40H30M50 40H55" stroke="white" strokeWidth="2" strokeLinecap="round" />
-              <path d="M48.2435 47.925C47.2882 46.1264 45.4851 45.0298 43.5042 45H36.4958C34.5149 45.0298 32.7118 46.1264 31.7565 47.925" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M45.5 56.5C45.5 59.5376 43.0376 62 40 62C36.9624 62 34.5 59.5376 34.5 56.5V45.5H45.5V56.5Z" fill="white" />
-            </svg>
-          </div>
+
+        {/* Top Icon Badge */}
+        <div className="mt-[40px] flex items-center justify-center size-[120px] rounded-[100px] bg-[rgba(139,62,254,0.1)] shadow-[0px_6px_67px_-10px_#7f3ae8]">
+          <Image
+            src="/activate-studio.png"
+            alt=""
+            width={120}
+            height={120}
+            className="size-[120px] object-contain"
+            priority
+          />
         </div>
 
-        {/* Text Content */}
-        <h2 className="mt-3 text-[20px] font-bold text-white font-['Geist',sans-serif]">
+        {/* Heading */}
+        <h2 className="mt-[16px] text-[24px] font-bold text-white text-center">
           Check your email
         </h2>
-        <div className="mt-2 flex flex-col items-center px-6">
-          <p className="text-[14px] text-white font-light font-['Geist',sans-serif]">
-            Enter the OTP we sent to your email
-          </p>
-          <p className="text-[14px] text-white font-semibold font-['Geist',sans-serif]">
-            {email}
-          </p>
-        </div>
+
+        {/* Subtitle */}
+        <p className="mt-[10px] max-w-[429px] px-6 text-[16px] font-light text-white text-center">
+          Enter the OTP we sent to your email to continue resetting your password.
+        </p>
 
         {/* OTP Inputs */}
-        <div className="mt-6 flex gap-1.5 justify-center w-full px-[30px]">
-          {otp.map((digit, i) => (
-            <input
-              key={i}
-              ref={(el) => { inputsRef.current[i] = el; }}
-              type="text"
-              inputMode="numeric"
-              maxLength={1}
-              value={digit}
-              onChange={(e) => handleChange(i, e.target.value)}
-              onKeyDown={(e) => handleKeyDown(i, e)}
-              onPaste={i === 0 ? handlePaste : undefined}
-              className={`w-[48px] h-[48px] text-center text-[24px] font-semibold font-['Geist',sans-serif] bg-transparent border rounded-[8px] text-white focus:outline-none transition-all ${
-                digit ? "border-[#b65fc8] border-2" : "border-[rgba(255,255,255,0.5)]"
-              } ${error ? "border-red-500/50" : ""}`}
-              placeholder="."
-            />
-          ))}
+        <div className="mt-[28px] flex gap-[12px] justify-center w-full px-[24px]">
+          {otp.map((digit, i) => {
+            const isFocused = focusedIndex === i;
+            return (
+              <div key={i} className="relative">
+                <input
+                  ref={(el) => { inputsRef.current[i] = el; }}
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={1}
+                  value={digit}
+                  onChange={(e) => handleChange(i, e.target.value)}
+                  onKeyDown={(e) => handleKeyDown(i, e)}
+                  onFocus={() => setFocusedIndex(i)}
+                  onBlur={() => setFocusedIndex((cur) => (cur === i ? null : cur))}
+                  onPaste={i === 0 ? handlePaste : undefined}
+                  className={`size-[65px] text-center text-[30px] font-semibold bg-transparent rounded-[8px] text-white caret-transparent focus:outline-none transition-all ${
+                    isFocused
+                      ? "border-2 border-[#b65fc8]"
+                      : error
+                        ? "border border-red-500/50"
+                        : "border border-[rgba(255,255,255,0.5)]"
+                  }`}
+                />
+                {!digit && (
+                  <span className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 size-[3px] rounded-[12px] bg-[rgba(255,255,255,0.5)]" />
+                )}
+              </div>
+            );
+          })}
         </div>
 
         {error && <p className="text-red-400 text-xs mt-2 text-center px-4">{error}</p>}
         {resentMessage && <p className="text-green-400 text-xs mt-2 text-center px-4">{resentMessage}</p>}
 
         {/* Resend Action */}
-        <div className="mt-6 flex items-center gap-[12px]">
-          <p className="text-[14px] text-[rgba(255,255,255,0.5)] font-light font-['Geist',sans-serif]">
-            Didn't get a code?
+        <div className="mt-[24px] flex items-center justify-center gap-[18px]">
+          <p className="text-[16px] text-[rgba(255,255,255,0.5)] font-light">
+            Didn&apos;t get a code?
           </p>
-          <div className="flex flex-col">
-            <button
-              onClick={resendOtp}
-              disabled={!canResend || loading}
-              className={`text-[14px] font-medium font-['Geist',sans-serif] ${
-                canResend
-                  ? "text-[#8b3efe] hover:text-[#9b51ff] cursor-pointer"
-                  : "text-[#8b3efe]/50 cursor-not-allowed"
-              }`}
-            >
-              {loading ? "Sending..." : canResend ? "Resend" : `Resend (${resendTimer}s)`}
-            </button>
-            <div className="h-[1px] w-full bg-[#8b3efe] mt-[1px]" />
-          </div>
+          <button
+            onClick={resendOtp}
+            disabled={!canResend || loading}
+            className={`text-[16px] font-medium underline underline-offset-4 ${
+              canResend
+                ? "text-[#8b3efe] hover:text-[#9b51ff] cursor-pointer"
+                : "text-[#8b3efe]/50 cursor-not-allowed"
+            }`}
+          >
+            {loading ? "Sending..." : canResend ? "Resend" : `Resend (${resendTimer}s)`}
+          </button>
         </div>
 
-        {/* Verify Button */}
+        {/* Reset Password Button */}
         <button
           onClick={verifyOtp}
-          disabled={loading || !otp.every(d => d !== "")}
-          className="mt-[20px] mb-[32px] w-[280px] h-[40px] bg-[#8b3efe] hover:bg-[#9b51ff] disabled:bg-[#8b3efe]/50 disabled:cursor-not-allowed text-white text-[14px] font-semibold font-['Geist',sans-serif] rounded-[20px] flex items-center justify-center transition-colors"
+          disabled={loading || !otp.every((d) => d !== "")}
+          className="mt-[28px] mb-[40px] w-[340px] h-[45px] bg-[#8b3efe] hover:bg-[#9b51ff] disabled:bg-[#8b3efe]/50 disabled:cursor-not-allowed text-white text-[16px] font-semibold rounded-[30px] flex items-center justify-center transition-colors"
         >
-          {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Verify email"}
+          {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Reset Password"}
         </button>
       </DialogContent>
     </Dialog>

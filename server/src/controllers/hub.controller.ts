@@ -10,6 +10,7 @@ import { submission } from '@/models/submission.model';
 import { miniQuestCompleted, campaignQuestCompleted } from '@/models/questsCompleted.models';
 import { campaign } from '@/models/campaign.model';
 import { campaignQuest } from '@/models/quests.model';
+import { withSubmissionCategory } from '@/controllers/quest.controller';
 import { uploadImg } from "@/utils/img.utils";
 import { uploadFile } from "@/utils/file.utils";
 import { normalizeCampaignDateInput, normalizeCampaignDatesForResponse, parseDate } from "@/utils/dates";
@@ -595,7 +596,8 @@ export const validateCampaignSubmissions = async (req: GlobalRequest, res: Globa
 export const getCampaignSubmissions = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
     // Return all submissions tied to this hub (studio campaigns only)
-    const pendingTasks = await submission.find({ hub: req.admin.hub }).lean().sort({ createdAt: 1 });
+    const rawTasks = await submission.find({ hub: req.admin.hub }).lean().sort({ createdAt: 1 });
+    const pendingTasks = await withSubmissionCategory(rawTasks);
     res.status(OK).json({ message: "submissions fetched", pendingTasks });
   } catch (error) {
     logger.error(error);

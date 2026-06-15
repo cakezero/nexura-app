@@ -3,14 +3,14 @@ import {
   getWalletClient as coreGetWalletClient,
   getPublicClient as coreGetPublicClient,
 } from "@wagmi/core";
-import { wagmiConfig } from "./wagmiConfig";
-import chain from "./chain";
+import { getActiveWagmiConfig } from "./wagmiConfig";
+import { getChain } from "./chain";
 
 const NO_WALLET_MSG =
   "No wallet provider available. Connect a wallet with RainbowKit first.";
 
 export const getPublicClient = (): PublicClient => {
-  const client = coreGetPublicClient(wagmiConfig, { chainId: chain.id });
+  const client = coreGetPublicClient(getActiveWagmiConfig(), { chainId: getChain().id });
   if (!client) {
     throw new Error(NO_WALLET_MSG);
   }
@@ -19,7 +19,7 @@ export const getPublicClient = (): PublicClient => {
 
 export const getWalletClient = async (): Promise<WalletClient> => {
   try {
-    const client = await coreGetWalletClient(wagmiConfig, { chainId: chain.id });
+    const client = await coreGetWalletClient(getActiveWagmiConfig(), { chainId: getChain().id });
     if (!client) {
       throw new Error(NO_WALLET_MSG);
     }

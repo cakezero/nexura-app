@@ -58,12 +58,14 @@ export default function ReferralsPage() {
   const canClaimCurrent = !allTiersClaimed && activeUsers >= milestone.target;
 
   const handleCopy = async () => {
+    console.log("[ACTION] handleCopy", { referralLink });
     await navigator.clipboard.writeText(referralLink);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   const handleShareX = () => {
+    console.log("[ACTION] handleShareX", { referralLink });
     const text = encodeURIComponent(
       `Entering a new ecosystem comes with little clarity on where to begin or how to participate meaningfully.\n\n@NexuraXYZ changes that. It helps users discover, understand, and contribute meaningfully on @0xIntuition while learning about Web3.\n\nJoin here 👇\n${referralLink}`
     );
@@ -72,12 +74,14 @@ export default function ReferralsPage() {
 
   const handleClaim = async () => {
     const nextTier = claimedTier + 1;
+    console.log("[ACTION] handleClaim", { tier: nextTier });
     try {
       // await claimReferralReward(user?._id || "");
       await apiRequestV2("POST", "/api/user/claim-referral-reward", { tier: nextTier });
       setClaimedTier(nextTier);
       toast({ title: "Success", description: `Milestone ${nextTier} reward claimed! +${MILESTONES[claimedTier].reward.toLocaleString()} XP` });
     } catch (error: unknown) {
+      console.error("[ACTION] handleClaim ✗", error);
       const message = error instanceof Error ? error.message : "Something went wrong";
       toast({ title: "Error", description: message, variant: "destructive" });
     }

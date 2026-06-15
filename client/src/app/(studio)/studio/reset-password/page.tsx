@@ -1,12 +1,10 @@
 "use client";
 
 import { Suspense, useState } from "react";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowRight, Check, Eye, EyeOff, KeyRound, X } from "lucide-react";
+import { Check, Eye, EyeOff, Loader2 } from "lucide-react";
 import AnimatedBackground from "@/components/AnimatedBackground";
-import { Card, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { projectApiRequest, storeProjectSession } from "@/lib/projectApi";
 import { userApiRequest } from "@/lib/userApi";
 import { storeUserSession } from "@/lib/userSession";
@@ -28,13 +26,23 @@ function ResetHubPasswordForm() {
   const [loading, setLoading] = useState(false);
   const [pageError, setPageError] = useState("");
 
+  const hasEmail = (queryParams.get("email") ?? "").length > 0;
+  const hasCode = (queryParams.get("code") ?? "").length > 0;
+
   const pwdChecks = {
     length: password.length >= 8,
     number: /\d/.test(password),
+    case: /[a-z]/.test(password) && /[A-Z]/.test(password),
     special: /[^a-zA-Z0-9]/.test(password),
-    upper: /[A-Z]/.test(password),
   };
   const allPwdValid = Object.values(pwdChecks).every(Boolean);
+
+  const requirements: [boolean, string][] = [
+    [pwdChecks.length, "Least 8 characters"],
+    [pwdChecks.number, "Least one number (0-9)"],
+    [pwdChecks.case, "Lowercase (a-z) and uppercase (A-Z)"],
+    [pwdChecks.special, "Least one special character ($, &, @)"],
+  ];
 
   const handleResetPassword = async () => {
     if (!email || !code) {
@@ -146,137 +154,141 @@ function ResetHubPasswordForm() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white overflow-auto p-4 sm:p-6 relative">
+    <div className="min-h-screen bg-black text-white overflow-auto p-4 sm:p-6 relative flex items-center justify-center font-[family-name:var(--font-geist-sans)]">
       <AnimatedBackground />
 
-      <div className="max-w-md mx-auto relative z-10 space-y-6 py-6">
-        <div className="text-center py-4 sm:py-6 px-2 sm:px-0">
-          <h1 className="text-xl sm:text-2xl font-bold text-white mb-2">
-            Reset Your {isUserHub ? "User" : "Studio"} Password
-          </h1>
-          <p className="text-sm sm:text-base text-white/60 leading-relaxed">
-            Enter the code we emailed you and create a new password to regain access to your Nexura
-            {isUserHub ? " user hub." : " Studio dashboard."}
-          </p>
-        </div>
-
-        <Card className="border-2 border-purple-500 rounded-3xl p-6 space-y-6 bg-gray-900">
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-purple-500/15 border border-purple-500/20">
-              <KeyRound className="h-5 w-5 text-purple-300" />
-            </div>
-            <div>
-              <CardTitle className="text-white text-lg sm:text-xl">New Password</CardTitle>
-              <p className="text-sm text-white/50">Use a strong password you have not used before.</p>
-            </div>
+      <div className="relative z-10 w-full max-w-[600px] mx-auto py-6">
+        <div className="bg-[#27134e] rounded-[20px] shadow-[-12px_-10px_18px_5px_rgba(0,0,0,0.25),12px_10px_18px_5px_rgba(0,0,0,0.25)] px-6 sm:px-[36px] py-[40px] flex flex-col items-center">
+          {/* Top Icon Badge */}
+          <div className="flex items-center justify-center size-[120px] rounded-[100px] bg-[rgba(139,62,254,0.1)] shadow-[0px_6px_67px_-10px_#7f3ae8]">
+            <Image
+              src="/activate-studio.png"
+              alt=""
+              width={120}
+              height={120}
+              className="size-[120px] object-contain"
+              priority
+            />
           </div>
 
+          {/* Heading */}
+          <h1 className="mt-[16px] text-[24px] font-bold text-white text-center">
+            OTP Confirmed
+          </h1>
+
+          {/* Subtitle */}
+          <p className="mt-[10px] max-w-[404px] text-[16px] font-light text-white text-center leading-snug">
+            Your verification code was confirmed successfully.
+            <br />
+            Create a new password for your account.
+          </p>
+
           {pageError ? (
-            <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+            <div className="mt-4 w-full rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
               {pageError}
             </div>
           ) : null}
 
-          <div className="space-y-4">
-            <div>
-              <label className="block text-xs text-white/50 mb-1 ml-1">Email</label>
-              <Input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter your email"
-                className="w-full bg-gray-800 text-white border-purple-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs text-white/50 mb-1 ml-1">Reset Code</label>
-              <Input
-                type="text"
-                inputMode="numeric"
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                placeholder="Enter the code from your email"
-                className="w-full bg-gray-800 text-white border-purple-500 tracking-widest"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs text-white/50 mb-1 ml-1">New Password</label>
-              <div className="relative">
-                <Input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Create a new password"
-                  className="w-full bg-gray-800 text-white border-purple-500 pr-10"
+          {/* Fallback email / code capture — only when missing from the reset link */}
+          {(!hasEmail || !hasCode) && (
+            <div className="mt-5 w-full flex flex-col gap-3">
+              {!hasEmail && (
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Enter your email..."
+                  className="w-full h-[44px] px-4 bg-[rgba(6,2,16,0.5)] border border-[#8a3efe] rounded-[16px] text-white text-[16px] placeholder:text-[rgba(255,255,255,0.4)] focus:outline-none"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((current) => !current)}
-                  className="absolute right-2 top-2 text-gray-400 hover:text-white"
-                >
-                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs text-white/50 mb-1 ml-1">Confirm Password</label>
-              <div className="relative">
-                <Input
-                  type={showConfirmPassword ? "text" : "password"}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Confirm your new password"
-                  className="w-full bg-gray-800 text-white border-purple-500 pr-10"
+              )}
+              {!hasCode && (
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  placeholder="Enter the reset code..."
+                  className="w-full h-[44px] px-4 bg-[rgba(6,2,16,0.5)] border border-[#8a3efe] rounded-[16px] text-white text-[16px] tracking-widest placeholder:text-[rgba(255,255,255,0.4)] focus:outline-none"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword((current) => !current)}
-                  className="absolute right-2 top-2 text-gray-400 hover:text-white"
-                >
-                  {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                </button>
-              </div>
+              )}
             </div>
+          )}
 
-            {password.length > 0 ? (
-              <ul className="space-y-1 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                {([
-                  [pwdChecks.length, "At least 8 characters"],
-                  [pwdChecks.upper, "At least one uppercase letter"],
-                  [pwdChecks.number, "At least one number"],
-                  [pwdChecks.special, "At least one special character"],
-                ] as [boolean, string][]).map(([ok, label]) => (
-                  <li key={label} className={`flex items-center gap-2 text-xs ${ok ? "text-emerald-400" : "text-white/40"}`}>
-                    {ok ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
-                    {label}
-                  </li>
-                ))}
-              </ul>
-            ) : null}
+          {/* New Password */}
+          <div className="mt-[28px] w-full">
+            <label className="block text-[18px] font-bold text-white mb-[12px]">New Password</label>
+            <div className="relative w-full">
+              <input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your new password..."
+                className="w-full h-[44px] pl-4 pr-[48px] bg-[rgba(6,2,16,0.5)] border border-[#8a3efe] rounded-[16px] text-white text-[16px] font-bold placeholder:text-[rgba(255,255,255,0.4)] placeholder:font-bold focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((current) => !current)}
+                className="absolute right-[18px] top-1/2 -translate-y-1/2 text-[rgba(255,255,255,0.6)] hover:text-white transition-colors"
+              >
+                {showPassword ? <EyeOff className="size-[18px]" /> : <Eye className="size-[18px]" />}
+              </button>
+            </div>
           </div>
 
-          <div className="flex flex-col gap-3 pt-2">
-            <Button
-              onClick={handleResetPassword}
-              className="w-full bg-[#8B3EFE] border-0 text-white hover:bg-[#8B3EFE] hover:shadow-[0_0_28px_rgba(131,58,253,0.7)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2"
-              disabled={loading}
-            >
-              {loading ? "Resetting..." : "Update Password"}
-              <ArrowRight className="h-5 w-5" />
-            </Button>
-
-            <button
-              type="button"
-              onClick={() => router.push(isUserHub ? "/studio/users/user-signin" : "/projects/create/signin-to-hub")}
-              className="text-sm text-purple-300 hover:text-white transition-colors"
-            >
-              Back to {isUserHub ? "user" : "studio"} sign in
-            </button>
+          {/* Password requirements checklist */}
+          <div className="mt-[14px] w-full flex flex-col gap-[7px]">
+            {requirements.map(([ok, label]) => (
+              <div key={label} className="flex items-center gap-[8px] text-[13px] font-bold">
+                {ok ? (
+                  <Check className="size-[20px] text-[#00e1a2]" strokeWidth={2.5} />
+                ) : (
+                  <span className="flex size-[20px] items-center justify-center text-[rgba(255,255,255,0.6)]">
+                    <span className="size-[4px] rounded-full bg-current" />
+                  </span>
+                )}
+                <span className={ok ? "text-[#00e1a2]" : "text-[rgba(255,255,255,0.6)]"}>{label}</span>
+              </div>
+            ))}
           </div>
-        </Card>
+
+          {/* Confirm New Password */}
+          <div className="mt-[24px] w-full">
+            <label className="block text-[18px] font-bold text-white mb-[12px]">Confirm New Password</label>
+            <div className="relative w-full">
+              <input
+                type={showConfirmPassword ? "text" : "password"}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm your new password..."
+                className="w-full h-[44px] pl-4 pr-[48px] bg-[rgba(6,2,16,0.5)] border border-[#8a3efe] rounded-[16px] text-white text-[16px] font-bold placeholder:text-[rgba(255,255,255,0.4)] placeholder:font-bold focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword((current) => !current)}
+                className="absolute right-[18px] top-1/2 -translate-y-1/2 text-[rgba(255,255,255,0.6)] hover:text-white transition-colors"
+              >
+                {showConfirmPassword ? <EyeOff className="size-[18px]" /> : <Eye className="size-[18px]" />}
+              </button>
+            </div>
+          </div>
+
+          {/* Reset Password Button */}
+          <button
+            onClick={handleResetPassword}
+            disabled={loading}
+            className="mt-[32px] w-[340px] max-w-full h-[45px] bg-[#8b3efe] hover:bg-[#9b51ff] disabled:bg-[#8b3efe]/50 disabled:cursor-not-allowed text-white text-[16px] font-semibold rounded-[30px] flex items-center justify-center transition-colors"
+          >
+            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Reset Password"}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => router.push(isUserHub ? "/studio/users/user-signin" : "/projects/create/signin-to-hub")}
+            className="mt-[16px] text-[14px] text-[rgba(255,255,255,0.6)] hover:text-white transition-colors"
+          >
+            Back to {isUserHub ? "user" : "studio"} sign in
+          </button>
+        </div>
       </div>
     </div>
   );

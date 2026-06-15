@@ -2,7 +2,7 @@ import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { getPublicClient } from "./viem";
 import { WalletClient } from "viem";
-import { MULTIVAULT_ADDRESS, PROXY_FEE_CONTRACT, MULTIVAULT_ABI } from "./constants";
+import { getMultivaultAddress, PROXY_FEE_CONTRACT, MULTIVAULT_ABI } from "./constants";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -47,7 +47,7 @@ export const allowToDeposit = async (walletClient: WalletClient, account: "0x") 
 
     const { request } = await publicClient.simulateContract({
       abi: MULTIVAULT_ABI,
-      address: MULTIVAULT_ADDRESS,
+      address: getMultivaultAddress(),
       args: [PROXY_FEE_CONTRACT, 1],
       functionName: "approve",
       account

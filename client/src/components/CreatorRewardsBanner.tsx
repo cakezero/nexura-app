@@ -2,8 +2,8 @@
 
 import React from "react";
 
-const imgRewardIcon72X1 = "https://www.figma.com/api/mcp/asset/0b92dd9f-906c-4d2c-a9b4-198e135b9cdb";
-const imgXpIconFill72X3 = "https://www.figma.com/api/mcp/asset/6a2cd542-6b08-4486-80df-8fbc27e845c4";
+const imgRewardIcon72X1 = "/reward.png";
+const imgXpIconFill72X3 = "/xp-icon.png";
 
 export default function CreatorRewardsBanner() {
   return (

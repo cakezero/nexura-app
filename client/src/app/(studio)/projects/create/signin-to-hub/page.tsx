@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { projectApiRequest, storeProjectSession } from "@/lib/projectApi";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, ArrowRight, ArrowLeft } from "lucide-react";
+import ResetPasswordModal from "@/components/studio/ResetPasswordModal";
 
 export default function SignInToHub() {
   const [email, setEmail] = useState("");
@@ -16,6 +17,7 @@ export default function SignInToHub() {
   const { toast } = useToast();
 
   const [showResetModal, setShowResetModal] = useState(false);
+  const [showResetFlow, setShowResetFlow] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
   const [resetLoading, setResetLoading] = useState(false);
 
@@ -70,10 +72,8 @@ export default function SignInToHub() {
         data: { email: resetEmail, page: "project" },
       });
       toast({ title: "Email sent!", description: `Password reset code sent to ${resetEmail}.` });
-      const target = `/studio/reset-password?email=${encodeURIComponent(resetEmail)}`;
       setShowResetModal(false);
-      setResetEmail("");
-      router.push(target);
+      setShowResetFlow(true);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to send reset email.";
       toast({ title: "Error", description: msg, variant: "destructive" });
@@ -174,10 +174,10 @@ export default function SignInToHub() {
       {/* Reset Password Modal */}
       {showResetModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-[#0d0d14] border border-[#8a3efe] rounded-[32px] p-8 w-full max-w-[500px] space-y-6 shadow-[0_0_60px_rgba(131,58,253,0.2)]">
+          <div className="bg-[#0d0d14] border border-[#8a3efe] rounded-[24px] p-6 w-full max-w-[440px] space-y-5 shadow-[0_0_60px_rgba(131,58,253,0.2)]">
             <div className="space-y-2 text-center">
-              <h2 className="text-[24px] font-bold text-white">Reset Password</h2>
-              <p className="text-white/50 text-[15px]">
+              <h2 className="text-[22px] font-bold text-white">Reset Password</h2>
+              <p className="text-white/50 text-[14px]">
                 Enter your email address and we'll send you instructions to reset your password.
               </p>
             </div>
@@ -215,6 +215,20 @@ export default function SignInToHub() {
           </div>
         </div>
       )}
+
+      <ResetPasswordModal
+        isOpen={showResetFlow}
+        onClose={() => setShowResetFlow(false)}
+        email={resetEmail}
+        type="project"
+        onResend={async () => {
+          await projectApiRequest({
+            method: "POST",
+            endpoint: "/hub/forgot-password",
+            data: { email: resetEmail, page: "project" },
+          });
+        }}
+      />
     </div>
   );
 }

@@ -63,6 +63,7 @@ export default function UserSignup() {
   const displayUsername = profileLoading ? "Loading..." : mainAppUsername || generatedUsername;
 
   const handleSubmit = async () => {
+    console.log("[ACTION] UserSignup.handleSubmit — sign up");
     if (!email || !password || !confirmPassword) {
       toast({
         title: "Missing fields",

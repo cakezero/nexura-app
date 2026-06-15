@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { ExternalLink, Clock, Users } from "lucide-react";
+import { ExternalLink, Clock, Users, AlertTriangle } from "lucide-react";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import { apiRequestV2 } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -12,6 +12,7 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import RelicScanModal from "./RelicScanModal";
 
 interface Quest {
   _id: string;
@@ -36,362 +37,543 @@ interface Quest {
 }
 
 export default function Quests() {
-  const router = useRouter();
+  const { toast } = useToast();
+  const router = useRouter()
   const { user } = useAuth();
+  const [loading, setLoading] = useState(true);
 
-  const userId = user?._id || "";
+const { data, isLoading, error, refetch } = useQuery({
+  queryKey: ["quests"],
+  queryFn: async () => apiRequestV2("GET", "/api/quests"),
+  refetchInterval: 300000,
+  refetchIntervalInBackground: true,
+});
 
   const [serverOffset, setServerOffset] = useState(0);
-  const [countdowns, setCountdowns] = useState<Record<string, string>>({});
+  const [timeLeft, setTimeLeft] = useState("");
 
-  const { toast } = useToast();
-
-  const now = Date.now() + serverOffset;
-
-  const isEndedQuest = (quest: Quest) =>
-    quest.status === "Ended" || (!!quest.ends_at && new Date(quest.ends_at).getTime() <= now);
-  const isScheduledQuest = (quest: Quest) =>
-    !isEndedQuest(quest) && !!quest.starts_at && new Date(quest.starts_at).getTime() > now;
-  const isActiveQuest = (quest: Quest) =>
-    !isScheduledQuest(quest) && !isEndedQuest(quest) && quest.status !== "Save";
-
-  // SERVER TIME SYNC
   useEffect(() => {
-    const getServerTime = async () => {
-      try {
-        const res = await apiRequestV2("GET", "/api/server-time");
-        setServerOffset(res.serverTime - Date.now());
-      } catch {
-        // fallback
-      }
-    };
-    getServerTime();
+    apiRequestV2("GET", "/api/server-time")
+      .then((res: any) => setServerOffset(res.serverTime - Date.now()))
+      .catch(() => {});
   }, []);
 
-  const { data, isLoading, refetch } = useQuery<{
-    oneTimeQuests: Quest[];
-    quests: Quest[];
-    featuredQuests: Quest[];
-  }>({
-    queryKey: ["/api/quests"],
-    queryFn: async () => {
-      const res = await apiRequestV2("GET", "/api/quests");
-      return res;
-    },
-    refetchInterval: 300000,
-    refetchIntervalInBackground: true,
-  });
+  // next daily boundary = next UTC midnight, measured against server-corrected time
+  const getNextResetTime = (serverNow: number) => {
+    const next = new Date(serverNow);
+    next.setUTCHours(24, 0, 0, 0);
+    return next.getTime();
+  };
 
-  const allQuests: Quest[] = data?.quests ?? [];
+  const utcDayRef = useRef<number | null>(null);
 
-  const activeQuests = allQuests.filter(isActiveQuest);
-  const upcomingQuests = allQuests.filter(isScheduledQuest);
-  const endedQuests = allQuests.filter(isEndedQuest);
-
-  // COUNTDOWN TIMER
   useEffect(() => {
-    if (upcomingQuests.length === 0) return;
-
     const tick = () => {
-      const n = Date.now() + serverOffset;
-      const newCountdowns: Record<string, string> = {};
-      let anyExpired = false;
+      const serverNow = Date.now() + serverOffset;
 
-      for (const q of upcomingQuests) {
-        const diff = new Date(q.starts_at!).getTime() - n;
-
-        if (diff <= 0) {
-          anyExpired = true;
-          newCountdowns[q._id] = "Starting...";
-        } else {
-          const d = Math.floor(diff / 86400000);
-          const h = Math.floor((diff % 86400000) / 3600000);
-          const m = Math.floor((diff % 3600000) / 60000);
-          const s = Math.floor((diff % 60000) / 1000);
-
-          newCountdowns[q._id] = d > 0 ? `${d}d ${h}h ${m}m ${s}s` : h > 0 ? `${h}h ${m}m ${s}s` : `${m}m ${s}s`;
-        }
+      // when the UTC day rolls over, daily completions reset server-side — refetch
+      const utcDay = Math.floor(serverNow / 86400000);
+      if (utcDayRef.current === null) {
+        utcDayRef.current = utcDay;
+      } else if (utcDay !== utcDayRef.current) {
+        utcDayRef.current = utcDay;
+        refetch?.();
       }
 
-      setCountdowns(newCountdowns);
-      if (anyExpired) refetch();
+      const diff = Math.max(0, getNextResetTime(serverNow) - serverNow);
+
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+      setTimeLeft(`${hours}h ${minutes}m ${seconds}s`);
     };
 
     tick();
     const interval = setInterval(tick, 1000);
     return () => clearInterval(interval);
-  }, [upcomingQuests, serverOffset, refetch]);
+  }, [serverOffset, refetch]);
 
-  const [isStartingQuest, setIsStartingQuest] = useState<string | null>(null);
+  const QUEST_FILTERS = {
+    SEASONAL: "seasonal",
+    FEATURED: "featured",
+    DAILY: "daily",
+  };
 
-  const startQuest = async (quest: Quest) => {
-    if (isEndedQuest(quest)) return;
-    if (isStartingQuest === quest._id) return;
+  const [questFilter, setQuestFilter] = useState(QUEST_FILTERS.FEATURED);
 
-    if (!quest.joined) {
-      setIsStartingQuest(quest._id);
-      try {
-        await apiRequestV2("POST", "/api/quest/start-quest", {
-          questId: quest._id,
-        });
+const [relicQuest, setRelicQuest] = useState<{ id: string; reward: number } | null>(null);
 
-        // Refetch to update joined status
-        await refetch();
+const [activeQuestId, setActiveQuestId] = useState(null);
+const [proofInput, setProofInput] = useState("");
 
-      } catch (error: any) {
-        // If the error is "quest already started", we can ignore it and just proceed
-        const errorData = error.info || {};
-        if (errorData.error !== "quest already started") {
-          toast({
-            title: "Error",
-            description: errorData.error || "Failed to start the quest. Please try again.",
-            variant: "destructive",
-          });
-          setIsStartingQuest(null);
-          return;
-        }
-      } finally {
-        setIsStartingQuest(null);
-      }
-    }
+const featuredQuests: Quest[] = data?.quests?.featuredQuests ?? [];
+const dailyQuests: Quest[] = data?.quests?.dailyQuests ?? [];
+const seasonalQuests: Quest[] = data?.quests?.seasonalQuests ?? [];
+
+const filteredQuests =
+  questFilter === "seasonal"
+    ? seasonalQuests
+    : questFilter === "daily"
+    ? dailyQuests
+    : featuredQuests;
+
+const [isStartingQuest, setIsStartingQuest] = useState<string | null>(null);
+
+const handleStartQuest = async (quest: Quest) => {
+  if (isStartingQuest === quest._id) return;
+
+  setIsStartingQuest(quest._id);
+
+  try {
+    const data = await apiRequestV2(
+      "POST",
+      "/api/quest/start-quest",
+      { questId: quest._id }
+    );
+
+    toast({
+      title: "Quest Started",
+      description: data?.message || "Quest started successfully",
+    });
+
+    await refetch?.();
 
     router.push(`/quest/${quest._id}`);
+  } catch (error: any) {
+    const errorData = error?.info || {};
+
+    if (errorData.error === "quest already started") {
+      router.push(`/quest/${quest._id}`);
+      return;
+    }
+
+    toast({
+      title: "Error",
+      description:
+        errorData.error || "Failed to start the quest. Please try again.",
+      variant: "destructive",
+    });
+  } finally {
+    setIsStartingQuest(null);
+  }
+};
+
+const handleSubmitQuest = async (questId: string, proof: string) => {
+  console.log("[ACTION] handleSubmitQuest", { questId, proof });
+
+  try {
+    const res = await fetch("/api/quest/submit-quest", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        questId,
+        proof,
+      }),
+    });
+
+    const data = await res.json();
+
+    console.log("STATUS:", res.status);
+    console.log("DATA:", data);
+
+    if (!res.ok) {
+      throw new Error(data?.error || "Failed to submit quest");
+    }
+
+    toast({
+      title: "Submitted",
+      description: data?.message || "Proof submitted",
+    });
+
+    setActiveQuestId(null);
+    setProofInput("");
+
+    await refetch?.();
+  } catch (err) {
+    console.error("[ACTION] handleSubmitQuest ✗", err);
+    console.error("❌ Submit quest failed:", err);
+
+    toast({
+      title: "Error",
+      description: "Failed to submit quest",
+      variant: "destructive",
+    });
+  }
+};
+
+const getTaskIcon = (quest: any) => {
+  if (quest.isRelicQuest || quest.taskType === "relic") return "/relic.png";
+  if (quest.taskType === "discord") return "/discordd.png";
+  if (quest.taskType === "twitter") return "/x-icon.png";
+  if (quest.taskType === "social") return "/explore-icon.png";
+  return quest.project_image || "/x-icon.png";
+};
+
+const HaloButton = ({
+  label,
+  onClick,
+  disabled,
+  fullWidth,
+}: {
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  fullWidth?: boolean;
+}) => (
+  <div className={`relative ${fullWidth ? "w-full" : "inline-flex"}`}>
+    <div className="absolute inset-0 rounded-full bg-[#d4bbff] blur-[10px] opacity-60" />
+    <button
+      disabled={disabled}
+      onClick={onClick}
+      className={`relative ${
+        fullWidth ? "w-full" : ""
+      } px-8 py-2.5 rounded-full bg-[#8b3efe] text-white text-[16px] font-semibold tracking-[0.8px] whitespace-nowrap transition hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed`}
+      style={{
+        boxShadow:
+          "0px 8px 15px -3px rgba(212,187,255,0.2), 0px 4px 6px -4px rgba(212,187,255,0.2)",
+      }}
+    >
+      {label}
+    </button>
+  </div>
+);
+
+const renderDefaultQuestCard = (quest: any, index: number = 0) => {
+  const isExpanded =
+    quest.taskType === "twitter" && activeQuestId === quest._id;
+
+  const buttonLabel = quest.isRelicQuest
+    ? "Check Relic"
+    : quest.taskType === "twitter"
+    ? "Submit Proof"
+    : "Start Task";
+
+  const handleAction = () => {
+    if (quest.isRelicQuest) {
+      setRelicQuest({ id: quest._id, reward: Number(quest.reward) || 0 });
+    } else if (quest.taskType === "twitter") {
+      setActiveQuestId(isExpanded ? null : quest._id);
+    } else {
+      handleStartQuest(quest);
+    }
   };
 
-  const renderQuestCard = (
-    quest: Quest,
-    state: "active" | "upcoming" | "ended",
-    index: number = 0
-  ) => {
-    const isActive = state === "active";
-    const isUpcoming = state === "upcoming";
-
-    const formatDate = (dateStr?: string) => {
-      if (!dateStr) return "N/A";
-      return new Date(dateStr).toLocaleDateString("en-GB", {
-        day: "numeric",
-        month: "long",
-      });
-    };
-
-    const starts_atFormatted = quest.starts_at ? formatDate(quest.starts_at) : "";
-    const ends_atFormatted = quest.ends_at ? formatDate(quest.ends_at) : "TBA";
-
-    const participantCount = quest.participants || 0;
-
-    return (
-      <motion.div
-        key={quest._id}
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{
-          duration: 0.45,
-          delay: index * 0.08,
-          ease: "easeOut",
-        }}
-      >
-        <Card className="bg-[#170f1f] h-full border border-white/5 rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition flex flex-col">
-          {/* Quest Banner */}
-          <div className="relative h-36 bg-black w-full">
-            {quest.projectCoverImage && (
-              <img
-                src={quest.projectCoverImage}
-                alt={quest.title}
-                className="w-full h-full object-cover rounded-t-2xl"
-              />
-            )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-
-            {/* Status Badge / Countdown */}
-            <div className="absolute top-2 right-2">
-              {isActive ? (
-                <Badge className="bg-green-500/20 text-green-400 border border-green-500/30 text-[0.65rem] sm:text-xs">
-                  Active
-                </Badge>
-              ) : isUpcoming ? (
-                <div className="bg-black/60 backdrop-blur-sm border border-purple-500/30 rounded-lg px-2 py-1 flex items-center gap-1.5">
-                  <Clock className="w-3 h-3 text-purple-400 animate-pulse" />
-                  <span className="text-purple-300 text-[0.6rem] sm:text-xs font-mono font-semibold">
-                    {countdowns[quest._id] || "Loading..."}
-                  </span>
-                </div>
-              ) : (
-                <Badge className="bg-gray-500/20 text-gray-200 border border-gray-500/30 text-[0.65rem] sm:text-xs">
-                  Ended
-                </Badge>
-              )}
-            </div>
-
-            {/* PROJECT LOGO OVERLAY */}
-            <div className="absolute bottom-3 left-3">
-              <div className="w-12 h-12 rounded-xl overflow-hidden border border-white/10 bg-[#1D1526] backdrop-blur-md shadow-lg">
-                <img
-                  src={(quest as any).project_image || "/quest-1.png"}
-                  alt={quest.project_name || "Project"}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            </div>
-
-            {/* Category */}
-            {quest.category && (
-              <div className="absolute top-2 left-2 text-[0.65rem] sm:text-xs text-white/80 font-medium">
-                {quest.category}
-              </div>
-            )}
+  return (
+    <div
+      className="w-full rounded-[12px] border border-white/10 bg-[rgba(10,14,19,0.7)] backdrop-blur-[6px] transition hover:border-[#8b3efe]/60"
+      style={{ minHeight: 104 }}
+    >
+      {/* COLLAPSED ROW */}
+      <div className="flex items-center py-5">
+        {/* LEFT */}
+        <div className="flex items-center gap-6 pl-6 min-w-0">
+          <div
+            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[12px]"
+            style={{
+              background:
+                "linear-gradient(135deg, rgba(120,93,200,0.4) 0%, rgba(138,63,252,0.4) 100%)",
+            }}
+          >
+            <img
+              src={getTaskIcon(quest)}
+              alt={quest.taskType || quest.title}
+              className="h-7 w-7 object-contain"
+            />
           </div>
 
-          {/* Quest Details */}
-          <div className="p-3 sm:p-4 flex flex-1 flex-col space-y-1.5">
-            <h2
-              className="text-sm font-semibold text-white leading-snug line-clamp-2 min-h-[2.25rem] break-words"
-              title={quest.title}
-            >
+          <div className="min-w-0">
+            <h3 className="text-[20px] font-semibold text-[#e0e2ea] leading-tight">
               {quest.title}
-            </h2>
-
-            <div className="flex flex-row justify-between text-xs gap-1 items-center">
-              <span className="text-gray-500">Creator:</span>
-              <span className="text-white line-clamp-1 break-all max-w-[65%] text-right">
-                {quest.project_name || "Nexura Ecosystem"}
-              </span>
-            </div>
-
-            <div className="flex flex-row justify-between text-xs gap-1 items-center">
-              <span className="text-gray-500">Participants:</span>
-              <span className="text-white flex items-center gap-1">
-                <Users className="w-3 h-3" />
-                {participantCount.toLocaleString()}
-              </span>
-            </div>
-
-            <div className="flex flex-row justify-between text-xs items-center">
-              <span className="text-gray-500">Reward:</span>
-              <span className="text-white flex items-center gap-1 text-right">
-                {quest.reward} XP
-              </span>
-            </div>
-
-            {quest.starts_at && (
-              <div className="flex flex-row justify-between text-xs items-center">
-                <span className="text-gray-500">Duration:</span>
-                <span className="text-white flex items-center gap-1">
-                  <Clock className="w-3 h-3" />
-                  {starts_atFormatted} – {ends_atFormatted}
-                </span>
-              </div>
-            )}
-
-            <Button
-              className={`w-full mt-auto pt-2 py-2 text-xs font-medium rounded-2xl ${
-                isActive
-                  ? "bg-[#8b3efe] hover:bg-[#B65FC8] text-white"
-                  : "bg-gray-600 cursor-not-allowed text-gray-300"
-              }`}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (isActive) startQuest(quest);
-              }}
-              disabled={!isActive || isStartingQuest === quest._id}
-            >
-              {isActive ? (
-                <>
-                  {isStartingQuest === quest._id ? (
-                    <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 animate-spin" />
-                  ) : (
-                    <ExternalLink className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                  )}
-                  {isStartingQuest === quest._id ? "Joining..." : (quest.joined ? "Continue Quest" : "Start Quest")}
-                </>
-              ) : isUpcoming ? (
-                <>
-                  <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                  Starts in {countdowns[quest._id] || "..."}
-                </>
-              ) : (
-                <>
-                  <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                  Quest Ended
-                </>
-              )}
-            </Button>
+            </h3>
+            <p className="text-[14px] font-normal text-[#cdc2d8] mt-0.5">
+              {quest.description}
+            </p>
           </div>
-        </Card>
-      </motion.div>
-    );
+        </div>
+
+        {/* RIGHT */}
+        <div className="ml-auto flex items-center gap-6 pr-6">
+          <div className="flex flex-col items-start">
+            <span className="text-[12px] font-medium uppercase tracking-[0.6px] text-[rgba(205,194,216,0.5)]">
+              Reward
+            </span>
+            <span className="text-[16px] font-semibold text-white">
+              {Number(quest.reward).toLocaleString()} XP
+            </span>
+          </div>
+
+          <HaloButton
+            label={buttonLabel}
+            disabled={isStartingQuest === quest._id}
+            onClick={handleAction}
+          />
+        </div>
+      </div>
+
+      {/* EXPANDED PROOF PANEL */}
+      {isExpanded && (
+        <div className="mx-[23px] mb-5">
+          <div className="rounded-[16px] border border-[rgba(139,62,254,0.3)] bg-[#0a0a0a] p-5 space-y-4">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 shrink-0 text-amber-400" />
+              <p className="text-[14px] font-bold text-[rgba(255,255,255,0.8)]">
+                It may take 10 minutes to 10 hours to validate your submission.
+              </p>
+            </div>
+
+            <input
+              value={proofInput}
+              onChange={(e) => setProofInput(e.target.value)}
+              placeholder="Paste your comment link or twitter username here"
+              className="h-[46px] w-full rounded-[16px] border border-[rgba(138,62,254,0.3)] bg-[#060210] px-4 text-[14px] font-bold text-white outline-none placeholder:text-[14px] placeholder:font-bold placeholder:text-[rgba(255,255,255,0.4)]"
+            />
+
+            <HaloButton
+              fullWidth
+              label="Submit For Review"
+              onClick={() => handleSubmitQuest(quest._id, proofInput)}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+
+const renderSeasonalQuestCard = (quest: Quest, index: number = 0) => {
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return "N/A";
+    return new Date(dateStr).toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "long",
+    });
   };
+
+  const starts_atFormatted = quest.starts_at
+    ? formatDate(quest.starts_at)
+    : "";
+  const ends_atFormatted = quest.ends_at ? formatDate(quest.ends_at) : "TBA";
+
+  const participantCount = quest.participants || 0;
+
+  return (
+<motion.div
+  initial={{ opacity: 0, y: 30 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{
+    duration: 0.45,
+    delay: index * 0.08,
+    ease: "easeOut",
+  }}
+  className="h-[360px] w-full"
+>
+  <Card className="h-full w-full bg-[#170f1f] border border-white/5 rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition flex flex-col">
+
+    {/* QUEST BANNER */}
+    <div className="relative h-[140px] w-full shrink-0 bg-black">
+      {quest.projectCoverImage && (
+        <img
+          src={quest.projectCoverImage}
+          alt={quest.title}
+          className="w-full h-full object-cover"
+        />
+      )}
+
+      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+
+      {quest.category && (
+        <div className="absolute top-2 left-2 text-[0.65rem] sm:text-xs text-white/80 font-medium">
+          {quest.category}
+        </div>
+      )}
+
+      <div className="absolute bottom-3 left-3">
+        <div className="w-10 h-10 rounded-lg overflow-hidden border border-white/10 bg-[#1D1526] backdrop-blur-md shadow-lg">
+          <img
+            src={(quest as any).project_image || "/quest-1.png"}
+            alt={quest.project_name || "Project"}
+            className="w-full h-full object-cover"
+          />
+        </div>
+      </div>
+    </div>
+
+    {/* DETAILS */}
+    <div className="flex flex-col flex-1 p-4">
+
+      {/* FIXED CONTENT AREA */}
+      <div className="flex-1">
+
+        {/* FIXED TITLE HEIGHT */}
+        <h2
+          className="text-sm font-semibold text-white leading-snug line-clamp-2 h-[40px]"
+          title={quest.title}
+        >
+          {quest.title}
+        </h2>
+
+        <div className="mt-3 space-y-2">
+
+          <div className="flex justify-between text-xs">
+            <span className="text-gray-500">Creator:</span>
+            <span className="text-white truncate max-w-[60%] text-right">
+              {quest.project_name || "Nexura Ecosystem"}
+            </span>
+          </div>
+
+          <div className="flex justify-between text-xs">
+            <span className="text-gray-500">Participants:</span>
+            <span className="text-white flex items-center gap-1">
+              <Users className="w-3 h-3" />
+              {participantCount.toLocaleString()}
+            </span>
+          </div>
+
+          <div className="flex justify-between text-xs">
+            <span className="text-gray-500">Reward:</span>
+            <span className="text-white">
+              {quest.reward} XP
+            </span>
+          </div>
+
+          <div className="flex justify-between text-xs min-h-[32px]">
+            <span className="text-gray-500">Duration:</span>
+
+            <span className="text-white flex items-center gap-1 text-right">
+              <Clock className="w-3 h-3 shrink-0" />
+              {starts_atFormatted} – {ends_atFormatted}
+            </span>
+          </div>
+
+        </div>
+      </div>
+
+      {/* BUTTON ALWAYS STICKS TO BOTTOM */}
+      <button
+        onClick={() => handleStartQuest(quest)}
+        className="w-full py-2 mb-2 mt-4 text-xs font-medium rounded-xl bg-[#8b3efe] hover:bg-[#B65FC8] text-white transition -translate-y-2"
+      >
+        Start Task
+      </button>
+
+    </div>
+  </Card>
+</motion.div>
+  );
+};
 
   return (
     <div className="min-h-screen bg-black text-white overflow-auto p-6 relative">
       <AnimatedBackground />
 
-      <div className="max-w-4xl sm:max-w-6xl mx-auto space-y-6 sm:space-y-8 relative z-10">
+      <div className="max-w-4xl sm:max-w-6xl mx-auto space-y-6 relative z-10">
+
         {/* HEADER */}
-        <div className="space-y-1">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-1.5 h-1.5 rounded-full bg-[#8B3EFE] animate-pulse" />
-            <span className="text-[#8B3EFE] text-[11px] font-semibold uppercase tracking-widest">
-              Quests
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <div
+              className="h-[5px] w-[5px] rounded-full"
+              style={{ background: "linear-gradient(90deg, #b184c4, #ff8cd9)" }}
+            />
+            <span className="text-[16px] font-semibold bg-gradient-to-r from-[#b184c4] to-[#ff8cd9] bg-clip-text text-transparent">
+              QUESTS
             </span>
           </div>
 
-          <h1 className="text-3xl sm:text-4xl font-extrabold bg-gradient-to-r from-white via-purple-200 to-purple-400 bg-clip-text text-transparent mb-2">
+          <h1 className="text-[30px] font-bold text-white leading-none">
             Quests
           </h1>
 
-          <p className="text-xs sm:text-sm text-muted-foreground">
-            Complete these quests to earn rewards
+          <p className="text-[14px] font-semibold text-[rgba(255,255,255,0.7)]">
+            Complete these quests to earn rewards.
           </p>
         </div>
 
-        {/* ACTIVE QUESTS */}
-        <div className="space-y-4 sm:space-y-6">
-          <h2 className="text-lg sm:text-2xl font-semibold text-white">Active Quests</h2>
-          {isLoading ? (
-            <div className="text-center py-6 sm:py-12 text-muted-foreground">Loading quests...</div>
-          ) : activeQuests.length === 0 ? (
-            <Card className="glass glass-hover rounded-3xl p-6 sm:p-8 text-center">
-              <p className="text-white/60">No active quests at the moment. Check back soon.</p>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-              {activeQuests.map((quest, i) => renderQuestCard(quest, "active", i))}
+        {/* FILTERS */}
+        <div className="flex flex-wrap" style={{ gap: 17 }}>
+          {Object.values(QUEST_FILTERS).map((filter) => {
+            const isActive = questFilter === filter;
+
+            return (
+              <button
+                key={filter}
+                onClick={() => setQuestFilter(filter)}
+                className={`rounded-[20px] border border-[#8b3efe] px-4 py-3 text-[14px] capitalize text-white transition ${
+                  isActive ? "bg-[#8b3efe] font-semibold" : "bg-transparent font-medium"
+                }`}
+              >
+                {filter} Quests
+              </button>
+            );
+          })}
+        </div>
+
+        {/* SECTION HEADING + DAILY RESET */}
+        <div className="flex items-center justify-between gap-4">
+          <h2 className="text-[24px] font-semibold text-white">
+            {questFilter === "featured" && "Featured Quests"}
+            {questFilter === "seasonal" && "Seasonal Quests"}
+            {questFilter === "daily" && "Daily Quest"}
+          </h2>
+
+          {questFilter === "daily" && (
+            <div className="flex items-center gap-4 rounded-[12px] bg-[rgba(139,62,254,0.1)] px-6 py-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[rgba(255,255,255,0.1)]">
+                <Clock className="h-[18px] w-[18px] text-white" />
+              </div>
+              <div className="flex flex-col leading-tight">
+                <span className="text-[10px] uppercase tracking-[1px] text-[rgba(255,255,255,0.6)]">
+                  Daily Reset
+                </span>
+                <span className="text-[16px] text-[#e0e2ea]">
+                  {timeLeft || "0h 0m 0s"}{" "}
+                  <span className="text-[rgba(255,255,255,0.6)]">remaining</span>
+                </span>
+              </div>
             </div>
           )}
         </div>
 
-        {/* UPCOMING QUESTS */}
-        <div className="space-y-4 sm:space-y-6 mt-8 sm:mt-12">
-          <h2 className="text-lg sm:text-2xl font-semibold text-white">Upcoming Quests</h2>
-          {isLoading ? (
-            <div className="text-center py-6 sm:py-12 text-muted-foreground">Loading quests...</div>
-          ) : upcomingQuests.length === 0 ? (
-            <Card className="glass glass-hover rounded-3xl p-6 sm:p-8 text-center">
-              <p className="text-white/60">No upcoming quests.</p>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-              {upcomingQuests.map((quest, i) => renderQuestCard(quest, "upcoming", i))}
-            </div>
-          )}
-        </div>
+        {/* QUEST CARDS */}
+        {filteredQuests.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-white/50">
+            <p className="text-[14px]">No {questFilter} quests yet.</p>
+          </div>
+        ) : questFilter === "seasonal" ? (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {filteredQuests.map((quest: Quest, i: number) => (
+              <div key={quest._id}>{renderSeasonalQuestCard(quest, i)}</div>
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-col gap-4">
+            {filteredQuests.map((quest: any, i: number) => (
+              <div key={quest._id}>{renderDefaultQuestCard(quest, i)}</div>
+            ))}
+          </div>
+        )}
 
-        {/* ENDED QUESTS */}
-        <div className="space-y-4 sm:space-y-6 mt-8 sm:mt-12">
-          <h2 className="text-lg sm:text-2xl font-semibold text-white">Ended Quests</h2>
-          {isLoading ? (
-            <div className="text-center py-6 sm:py-12 text-muted-foreground">Loading quests...</div>
-          ) : endedQuests.length === 0 ? (
-            <Card className="glass glass-hover rounded-3xl p-6 sm:p-8 text-center">
-              <p className="text-white/60">No ended quests yet.</p>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-              {endedQuests.map((quest, i) => renderQuestCard(quest, "ended", i))}
-            </div>
-          )}
-        </div>
       </div>
+
+{relicQuest && (
+  <RelicScanModal
+    questId={relicQuest.id}
+    reward={relicQuest.reward}
+    onClose={() => setRelicQuest(null)}
+    onClaimed={() => {
+      toast({
+        title: "Reward Claimed",
+        description: "Relic XP reward claimed successfully",
+      });
+      refetch?.();
+    }}
+  />
+)}
+
     </div>
   );
 }

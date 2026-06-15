@@ -1,13 +1,13 @@
 import jwt from "jsonwebtoken";
 import { z } from "zod";
 import { JWT_SECRET, network, REFRESH_SECRET, ALCHEMY_API_KEY, STUDIO_FEE_CONTRACT } from "./env.utils";
-import { getPublicClient } from "./account";
+import { getPublicClient, getEthMainnetClient } from "./account";
 import { NexonsAddress, STUDIO_ABI, RELIC_CONTRACT } from "./constants";
 import { ethers } from "ethers";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
 import chain from "./chain.utils";
-import { formatEther } from "viem";
+import { formatEther, parseAbi, type Address } from "viem";
 
 export const padNumber = (numberToBePadded: number) => {
 	return numberToBePadded.toString().padStart(3, "0");
@@ -450,9 +450,14 @@ export const validateCreateQuestion = (reqData: any) => {
 }
 
 export const getNFT = async (walletAddress: string) => {
-  const res = await fetch(`https://eth-mainnet.g.alchemy.com/nft/v3/${ALCHEMY_API_KEY}/getNFTsForOwner?owner=${walletAddress}&contractAddresses%5B%5D=${RELIC_CONTRACT}`);
+  const client = getEthMainnetClient();
 
-  const data = await res.json();
+	const balance = await client.readContract({
+		address: RELIC_CONTRACT,
+		abi: parseAbi(["function balanceOf(address owner) view returns (uint256)"]),
+		functionName: "balanceOf",
+		args: [walletAddress as Address],
+	}) as bigint;
 
-  return data.ownedNfts[0] as Record<string, any> | null | undefined;
+  return balance > 0n;
 }

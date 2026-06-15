@@ -60,6 +60,7 @@ export default function UsersCreate() {
   const displayUsername = profileLoading ? "Loading..." : mainAppUsername || generatedUsername;
 
   const handleSubmit = async () => {
+    console.log("[ACTION] UserCreate.handleSubmit — create user account");
     if (!email || !password || !confirmPassword) {
       toast({
         title: "Missing fields",

@@ -9,16 +9,20 @@ import {
 	createMiniQuest,
 	startQuest
 } from "@/controllers/quest.controller";
-import { updateSubmission, validatePortalTask, validateTrustNameTask } from "@/controllers/app.controller";
+import { checkRelics, claimRelicReward, updateSubmission, validateAtlasTask, validatePortalTask, validateTrustNameTask } from "@/controllers/app.controller";
 
 const router = Router();
 
 router
 	.post("/claim-ecosystem-quest", claimEcosystemQuest)
-	.post("/set-timer", setTimer)
+  .post("/set-timer", setTimer)
 	.post("/create-mini-quest", createMiniQuest)
 	.post("/start-quest", startQuest)
-  .post("/check-portal-task", validatePortalTask)
+	.post("/check-portal-task", validatePortalTask)
+	.post("/validate-atlas-task", validateAtlasTask)
+	.post("/check-atlas-task", validateAtlasTask)
+	.post("/verify-relic", checkRelics)
+	.post("/claim-relic-reward", claimRelicReward)
 	.post("/check-trust-name", validateTrustNameTask)
 	.post("/claim-mini-quest", claimMiniQuest)
 	.post("/update-submission", updateSubmission)

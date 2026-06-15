@@ -1,5 +1,6 @@
 import { defineChain } from "viem";
 import { network } from "./constants";
+import { getNetwork } from "./runtimeNetwork";
 
 const intuitionMainnet = defineChain({
   id: 1155,
@@ -36,6 +37,9 @@ const intuitionTestnet = defineChain({
     default: { name: "Explorer", url: "https://testnet.explorer.intuition.systems" },
   },
 });
+
+export const getChain = () =>
+  getNetwork() === "mainnet" ? intuitionMainnet : intuitionTestnet;
 
 const chain = network === "mainnet" ? intuitionMainnet : intuitionTestnet;
 

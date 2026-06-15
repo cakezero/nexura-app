@@ -36,6 +36,11 @@ const submissionSchema = new mongoose.Schema({
     type: String,
     default: ""
   },
+  category: {
+    type: String,
+    enum: ["seasonal", "featured", "daily"],
+    required: false
+  },
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "users",

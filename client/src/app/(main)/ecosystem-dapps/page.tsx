@@ -39,6 +39,7 @@ export default function EcosystemDapps() {
 
   useEffect(() => {
     (async () => {
+      console.log("[ACTION] fetchEcosystemDapps");
       const { ecosystemQuests } = await apiRequestV2("GET", "/api/ecosystem-quests");
 
       setDapps(ecosystemQuests);
@@ -93,6 +94,7 @@ export default function EcosystemDapps() {
 
 
   const markVisited = async (dapp: Dapp) => {
+    console.log("[ACTION] markVisited", { dappId: dapp._id, websiteUrl: dapp.websiteUrl });
     if (!visitedDapps.includes(dapp._id)) setVisitedDapps(prev => [...prev, dapp._id]);
     window.open(dapp.websiteUrl, "_blank");
 
@@ -110,6 +112,7 @@ export default function EcosystemDapps() {
   };
 
   const handleClaim = async (dapp: Dapp) => {
+    console.log("[ACTION] handleClaim", { dappId: dapp._id, reward: dapp.reward });
     if (!getStoredAccessToken()) {
       toast({ title: 'Sign in required', description: 'Please sign in to claim XP', variant: 'destructive' });
       return;
@@ -126,6 +129,7 @@ export default function EcosystemDapps() {
   const finalizeDappClaim = async (txHash: string) => {
     const dapp = proofModalDapp;
     if (!dapp) return;
+    console.log("[ACTION] finalizeDappClaim", { dappId: dapp._id, txHash });
 
     try {
       await apiRequestV2("POST", "/api/user/update-claims-created", { txHash });
@@ -140,6 +144,7 @@ export default function EcosystemDapps() {
       markClaimed(dapp._id);
       toast({ title: 'XP awarded', description: `+${dapp.reward} XP` });
     } catch (error: any) {
+      console.error("[ACTION] finalizeDappClaim ✗", error);
       console.error('claim error:', error.message);
       toast({ title: 'Claim failed', description: error.message, variant: 'destructive' });
       throw error;

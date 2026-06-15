@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { projectApiRequest } from "@/lib/projectApi";
 import { userApiRequest } from "@/lib/userApi";
 import { payStudioHubFee } from "@/lib/performOnchainAction";
-import { QUEST_FEE_CONTRACT } from "@/lib/constants";
+import { getQuestFeeContract } from "@/lib/constants";
 import { useToast } from "@/hooks/use-toast";
 import { getStoredUserSession } from "@/lib/userSession";
 import { apiRequestV2 } from "@/lib/queryClient";
@@ -161,6 +161,10 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
     if (tag === "comment-x") return "Comment on X";
     if (tag === "follow-x") return "Follow on X";
     if (tag === "portal") return "Portal Claims";
+    if (tag === "i-trust") return "I Trust (Portal Claim)";
+    if (tag === "i-collaborated") return "I Collaborated (Portal Claim)";
+    if (tag === "i-interact") return "I Interacted (Portal Claim)";
+    if (tag === "i-follow") return "I Follow (Portal Claim)";
     if (tag === "feedback") return "Give Feedback";
     if (tag === "trust-name") return "Own a .trust username";
     if (tag === "create-post") return "Create a Post";
@@ -181,6 +185,10 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
     if (type === "Comment on X") return "comment-x";
     if (type === "Follow on X") return "follow-x";
     if (type === "Portal Claims") return "portal";
+    if (type === "I Trust (Portal Claim)") return "i-trust";
+    if (type === "I Collaborated (Portal Claim)") return "i-collaborated";
+    if (type === "I Interacted (Portal Claim)") return "i-interact";
+    if (type === "I Follow (Portal Claim)") return "i-follow";
     if (type === "Give Feedback") return "feedback";
     if (type === "Create a Post") return "create-post";
     if (type === "Own a .trust username") return "trust-name";
@@ -196,6 +204,12 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
     if (type === "Visit a Link") return "visit-website";
     return "other";
   };
+
+  const isIntuitionType = (type: string) =>
+    type === "I Trust (Portal Claim)" ||
+    type === "I Collaborated (Portal Claim)" ||
+    type === "I Interacted (Portal Claim)" ||
+    type === "I Follow (Portal Claim)";
 
   const buildQuestFormData = (isDraft: boolean): FormData => {
     const fd = new FormData();
@@ -227,6 +241,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
   };
 
   const handleSaveDraft = async (thenNavigate?: string) => {
+    console.log("[ACTION] QuestCreate.handleSaveDraft — save draft");
     if (!questName) {
       toast({ title: "Missing Name", description: "Please enter a quest name.", variant: "destructive" });
       return null;
@@ -271,6 +286,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
   };
 
   const handlePublish = async () => {
+    console.log("[ACTION] QuestCreate.handlePublish — publish quest");
     if (!questName || tasks.length < 5) {
       toast({ title: "Incomplete", description: "Please provide a name and at least 5 tasks.", variant: "destructive" });
       return;
@@ -309,6 +325,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
   };
 
   const handleUpdateQuest = async () => {
+    console.log("[ACTION] QuestCreate.handleUpdateQuest — update quest");
     if (!questId) return;
 
     if (questDescription.length < 50 || questDescription.length > 100) {
@@ -336,6 +353,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
   };
 
   const handleSaveTask = () => {
+    console.log("[ACTION] QuestCreate.handleSaveTask — add/save task");
     const finalTask = { ...newTask };
     if (finalTask.type === "Create a Post") {
       finalTask.handleOrUrl = "https://x.com";
@@ -764,16 +782,17 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                     const isPortal = type === "Portal Claims";
                     const isFeedback = type === "Give Feedback";
                     const isTrustName = type === "Own a .trust username";
+                    const isIntuition = isIntuitionType(type);
                     const validationLabel =
                       isTrustName ? "Verified by TNS" :
-                      isPortal ? "Auto Verified" :
+                      (isPortal || isIntuition) ? "Auto Verified" :
                       "Manual Validation";
                     setNewTask({
                       ...newTask,
                       type,
-                      platform: isTwitter ? "Twitter" : (isPortal || isFeedback || isTrustName) ? "" : newTask.platform || "Other",
+                      platform: isTwitter ? "Twitter" : (isPortal || isFeedback || isTrustName || isIntuition) ? "" : newTask.platform || "Other",
                       validation: validationLabel,
-                      verificationMode: isPortal ? "auto" : isFeedback ? "feedback" : isTrustName ? "auto" : "",
+                      verificationMode: (isPortal || isIntuition) ? "auto" : isFeedback ? "feedback" : isTrustName ? "auto" : "",
                       handleOrUrl: type === "Create a Post" ? "https://x.com" : (isTrustName ? "https://tns.intuition.box" : (newTask.handleOrUrl === "https://x.com" || newTask.handleOrUrl === "https://tns.intuition.box" ? "" : newTask.handleOrUrl)),
                     });
                   }}
@@ -784,12 +803,16 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                   <option value="Create a Post">Create a Post</option>
                   <option value="Own a .trust username">Own a .trust username</option>
                   <option value="Portal Claims">Portal Claims</option>
+                  <option value="I Trust (Portal Claim)">I Trust (Portal Claim)</option>
+                  <option value="I Collaborated (Portal Claim)">I Collaborated (Portal Claim)</option>
+                  <option value="I Interacted (Portal Claim)">I Interacted (Portal Claim)</option>
+                  <option value="I Follow (Portal Claim)">I Follow (Portal Claim)</option>
                   <option value="Give Feedback">Give Feedback</option>
                 </select>
               </div>
 
               {/* Platform - Matches Campaign UI but restricted for Quest modal */}
-              {newTask.type !== "Portal Claims" && newTask.type !== "Give Feedback" && newTask.type !== "Own a .trust username" && (
+              {newTask.type !== "Portal Claims" && newTask.type !== "Give Feedback" && newTask.type !== "Own a .trust username" && !isIntuitionType(newTask.type) && (
                 <div>
                   <label className="text-sm text-white/70 mb-2 block">Platform</label>
                   <div className="flex gap-3">
@@ -878,7 +901,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
             </div>
 
             {/* Validation & Evidence - Matches Campaign UI for standard tasks */}
-            {newTask.validation && (newTask.type === "Portal Claims" || newTask.type === "Give Feedback" || newTask.type === "Own a .trust username") ? (
+            {newTask.validation && (newTask.type === "Portal Claims" || newTask.type === "Give Feedback" || newTask.type === "Own a .trust username" || isIntuitionType(newTask.type)) ? (
               <div className={`mb-6 flex items-center gap-3 rounded-lg px-4 py-3 border ${newTask.type === "Give Feedback" ? "bg-emerald-900/50 border-emerald-500/50" : "bg-purple-900/50 border-purple-500/50"}`}>
                 {newTask.type === "Give Feedback" ? (
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-emerald-400 flex-shrink-0">
@@ -891,14 +914,16 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                 )}
                 <div>
                   <p className={`text-sm font-medium ${newTask.type === "Give Feedback" ? "text-emerald-300" : "text-purple-300"}`}>
-                    {newTask.type === "Own a .trust username" ? "Verified by TNS" : newTask.type === "Portal Claims" ? "Auto-verified via Portal" : newTask.validation}
+                    {newTask.type === "Own a .trust username" ? "Verified by TNS" : newTask.type === "Portal Claims" ? "Auto-verified via Portal" : isIntuitionType(newTask.type) ? "Auto-verified via Intuition" : newTask.validation}
                   </p>
                   <p className="text-xs text-white/50 mt-0.5">
-                    {newTask.type === "Give Feedback" 
+                    {newTask.type === "Give Feedback"
                       ? "Users will visit the website and submit written feedback (min. 200 characters). Reviewed manually."
                       : newTask.type === "Own a .trust username"
                         ? "Completion is verified automatically by checking the user's TNS records."
-                        : "Completion is verified automatically after the user completes the task."}
+                        : isIntuitionType(newTask.type)
+                          ? "The user visits the view link, performs the on-chain claim, then returns and completion is verified automatically."
+                          : "Completion is verified automatically after the user completes the task."}
                   </p>
                 </div>
               </div>
@@ -983,7 +1008,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                 <button disabled={paymentLoading} onClick={async () => {
                   setPaymentLoading(true);
                   try {
-                    const hash = await payStudioHubFee(undefined, QUEST_FEE_CONTRACT);
+                    const hash = await payStudioHubFee(undefined, getQuestFeeContract());
                     setPaymentTxHash(hash);
                     await apiRequest({ method: "PATCH", endpoint: `/${apiPrefix}/save-payment-hash`, data: { txHash: hash } });
                     toast({ title: "Payment successful", description: "60 $TRUST sent." });

@@ -24,6 +24,7 @@ function XCallbackInner() {
 
     // update user
     (async () => {
+      console.log("[ACTION] xCallback", { x_id, username });
       try {
         const { user } = await apiRequestV2("GET", `/api/x/update?x_id=${x_id}&username=${username}`);
 
@@ -32,6 +33,7 @@ function XCallbackInner() {
         toast({ title: "Success", description: "X login successful!" });
         router.push("/profile/edit")
       } catch (error: any) {
+        console.error("[ACTION] xCallback ✗", error);
         console.error(error);
         toast({ title: "Error", description: error.message, variant: "destructive" });
         router.push("/profile/edit");

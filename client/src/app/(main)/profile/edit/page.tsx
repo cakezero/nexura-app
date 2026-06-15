@@ -65,6 +65,7 @@ const getFinalUsername = (name: string, mode: string) => {
   }, [user]);
 
   const handleSave = async () => {
+    console.log("[ACTION] handleSave", { username: profileData.username, activeUsernameMode });
     try {
       let updateUser: FormData | Record<string, unknown>;
 
@@ -101,6 +102,7 @@ const getFinalUsername = (name: string, mode: string) => {
       router.push("/profile");
       window.location.reload();
     } catch (e: any) {
+      console.error("[ACTION] handleSave ✗", e);
       console.error("Profile update error:", e);
       toast({
         title: "Update failed",
@@ -168,6 +170,7 @@ const getFinalUsername = (name: string, mode: string) => {
   };
 
   const handleConnect = async (service: "x" | "discord") => {
+    console.log("[ACTION] handleConnect", { service });
     const urls = {
       x: "",
       discord: discordAuthUrl
@@ -187,6 +190,7 @@ const getFinalUsername = (name: string, mode: string) => {
   };
 
   const handleDisconnect = async (service: "x" | "discord") => {
+    console.log("[ACTION] handleDisconnect", { service });
     try {
       if (service === "x") {
         await apiRequestV2("GET", "/api/auth/x/logout");
@@ -207,6 +211,7 @@ const getFinalUsername = (name: string, mode: string) => {
         description: `Your ${service} account has been disconnected.`
       });
     } catch (error: any) {
+      console.error("[ACTION] handleDisconnect ✗", error);
       toast({
         title: "Error",
         description: error.message,

@@ -43,7 +43,7 @@ import {
   miniQuestCompleted,
   questCompleted,
 } from "@/models/questsCompleted.models";
-import { GRAPHQL_API_URL, RELIC_CONTRACT } from "@/utils/constants";
+import { atomIds, GRAPHQL_API_URL, RELIC_CONTRACT } from "@/utils/constants";
 import { GraphQLClient } from "graphql-request";
 import { checksumAddress, parseAbi, parseEther, type Address } from "viem";
 import { campaign, campaignCompleted } from "@/models/campaign.model";
@@ -908,6 +908,21 @@ export const updateBadge = async (req: GlobalRequest, res: GlobalResponse) => {
 
 export const checkRelics = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
+    const questFound = await quest.findById(req.query.questId).lean();
+    if (!questFound) {
+      res.status(BAD_REQUEST).json({ error: "invalid quest id" });
+      return;
+    }
+
+    const questAlreadyCompleted = await questCompleted.findOne({ quest: questFound._id, user: req.id }).lean();
+    if (questAlreadyCompleted && questAlreadyCompleted?.done) {
+      res.status(BAD_REQUEST).json({ error: "quest has already been completed" });
+      return;
+    } else if (questAlreadyCompleted && !questAlreadyCompleted.done) {
+      res.status(BAD_REQUEST).json({ error: "claim xp to complete quest" });
+      return;
+    }
+
     const nft = await getNFT(req.user.address as string);
 
     if (!nft) {
@@ -915,25 +930,204 @@ export const checkRelics = async (req: GlobalRequest, res: GlobalResponse) => {
       return;
     }
 
-    const tokenIdExists = await tokenModel.findOne({ tokenId: nft.tokenId, user: req.id, nft: "relic" });
-    if (tokenIdExists) {
-      res.status(BAD_REQUEST).json({ error: "relic has already been used to claim reward" });
-      return;
-    }
+    await questCompleted.create({ done: false, category: "one-time", quest: questFound._id, user: req.id });
 
-    await user.findByIdAndUpdate(req.id, { $inc: { xp: 6000 } });
-    await tokenModel.create({ tokenId: nft.tokenId, user: req.id, nft: "relic" });
-
-    res.status(OK).json({ message: "relics verified" })
+    res.status(OK).json({ message: "relics verified", verified: true });
   } catch (error) {
     logger.error(error);
     res.status(INTERNAL_SERVER_ERROR).json({ error: "error checking user address forrelics contract" })
   }
 }
 
+export const confirmRelicHodl = async (res: GlobalResponse, req: GlobalRequest) => {
+  try {
+
+    res.sendStatus(OK);
+  } catch (error) {
+    logger.error(error);
+    res.sendStatus(INTERNAL_SERVER_ERROR);
+  }
+}
+
+export const claimRelicReward = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const questFound = await quest.findById(req.query.questId).lean();
+    if (!questFound) {
+      res.status(BAD_REQUEST).json({ error: "invalid quest id" });
+      return;
+    }
+
+    const isQuestCompleted = await questCompleted.findOne({ quest: questFound._id, user: req.id });
+    if (!isQuestCompleted) {
+      res.status(BAD_REQUEST).json({ error: "verify relic to proceed" });
+      return;
+    }
+
+    if (isQuestCompleted.done === true) {
+      res.status(BAD_REQUEST).json({ error: "quest reward has already been claimed" });
+      return;
+    }
+
+    isQuestCompleted.done = true;
+
+    await isQuestCompleted.save();
+
+    await user.findByIdAndUpdate(req.id, { $inc: { xp: 6000 } });
+
+    res.status(OK).json({ message: "relic reward claimed successfully" });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error claiming relic reward" })
+  }
+};
+
 export const validateAtlasTask = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
-    
+    const { id, questId, tag, page } = req.body;
+    if (!questId || !id || !tag) {
+      res.status(BAD_REQUEST).json({ error: "questId, id and tag is required" });
+      return;
+    }
+
+    const allowedTags = ["i-follow", "i-collaborated", "i-trust", "i-interact"];
+    if (!allowedTags.includes(tag)) {
+      res.status(BAD_REQUEST).json({ error: "invalid tag" });
+      return;
+    }
+
+    const userToCheck = await user.findById(req.id);
+    if (!userToCheck) {
+      res.status(BAD_REQUEST).json({ error: "id associated with user is invalid" });
+      return;
+    }
+
+    const query = `query GetAtomRelationships($atomId: String!, $address: String!) {
+      atom(term_id: $atomId) {
+        term {
+          positions (where:  {
+            account_id:  {
+              _eq: $address
+            }
+            shares:  {
+              _gt: 0
+            }
+          }) {
+            account_id
+          }
+        }
+      }
+    }`;
+
+    const atomId = atomIds[tag as string];
+
+    const formattedAddress = checksumAddress(
+      userToCheck.address as `0x${string}`,
+    );
+
+    const response = await client.request(query, {
+      atomId,
+      address: formattedAddress,
+    });
+
+    const { atom } = response;
+
+    if (!atom) {
+      res.status(NOT_FOUND).json({ error: "atom id is invaid" });
+      return;
+    }
+
+    const positionExists = atom.term.positions.length;
+
+    if (page !== "campaign") {
+      const miniQuestExists = await miniQuestCompleted.findOne({
+        miniQuest: id,
+        quest: questId,
+        user: userToCheck._id,
+      });
+
+      if (!miniQuestExists) {
+        if (!positionExists) {
+          await miniQuestCompleted.create({
+            miniQuest: id,
+            quest: questId,
+            done: false,
+            status: "retry",
+            user: userToCheck._id,
+          });
+        } else {
+          await miniQuestCompleted.create({
+            miniQuest: id,
+            quest: questId,
+            done: true,
+            status: "done",
+            user: userToCheck._id,
+          });
+
+          res.status(OK).json({ message: "task completed" });
+          return;
+        }
+      } else {
+        if (positionExists) {
+          miniQuestExists!.done = true;
+          miniQuestExists!.status = "done";
+
+          await miniQuestExists.save();
+
+          res.status(OK).json({ message: "task completed" });
+          return;
+        }
+      }
+
+      res.status(BAD_REQUEST).json({
+        error:
+          "User has not supported or opposed a claim or shares is less than 5",
+      });
+      return;
+    }
+
+    const campaignQuestExists = await campaignQuestCompleted.findOne({
+      campaignQuest: id,
+      campaign: questId,
+      user: userToCheck._id,
+    });
+
+    if (!campaignQuestExists) {
+      if (!positionExists) {
+        await campaignQuestCompleted.create({
+          campaignQuest: id,
+          campaign: questId,
+          done: false,
+          status: "retry",
+          user: userToCheck._id,
+        });
+      } else {
+        await campaignQuestCompleted.create({
+          campaignQuest: id,
+          campaign: questId,
+          done: true,
+          status: "done",
+          user: userToCheck._id,
+        });
+
+        res.status(OK).json({ message: "task completed" });
+        return;
+      }
+    } else {
+      if (positionExists) {
+        campaignQuestExists!.done = true;
+        campaignQuestExists!.status = "done";
+
+        await campaignQuestExists.save();
+
+        res.status(OK).json({ message: "task completed" });
+        return;
+      }
+    }
+
+    res.status(BAD_REQUEST).json({
+      error:
+        "User has not supported or opposed a claim or shares is less than 5",
+    });
   } catch (error) {
     logger.error(error);
     res.status(INTERNAL_SERVER_ERROR).json({ error: "error validating atlas task" });
@@ -1666,7 +1860,6 @@ export const referralLeaderboard = async (req: GlobalRequest, res: GlobalRespons
       {
         $project: {
           username: "$user.username",
-          tier: "$user.tier",
           totalReferrals: 1,
           activeReferrals: 1
         }
@@ -1676,14 +1869,16 @@ export const referralLeaderboard = async (req: GlobalRequest, res: GlobalRespons
     const referralLeaderboardInfo = [];
 
     for (const referral of referrals) {
-      const tier = referral.tier;
+      const activeReferrals = referral.activeReferrals;
 
       let xpEarned = 0;
-      if (tier !== 0) {
-        xpEarned = tier === 1 ? 2000 : tier === 2 ? 5000 : 10000;
+      if (activeReferrals >= 10 && activeReferrals < 20) {
+        xpEarned = 2000;
+      } else if (activeReferrals >= 20 && activeReferrals < 30) {
+        xpEarned = 5000;
+    } else if (activeReferrals >= 30) {
+        xpEarned = 10000;
       }
-
-      delete referral.tier;
 
       referralLeaderboardInfo.push({ ...referral, xpEarned });
     }

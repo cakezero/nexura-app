@@ -24,6 +24,7 @@ function DiscordCallbackInner() {
 
     // update user
     (async () => {
+      console.log("[ACTION] discordCallback", { discord_id, username });
       try {
         const { user } = await apiRequestV2("GET", `/api/discord/update?discord_id=${discord_id}&username=${username}`);
 
@@ -32,6 +33,7 @@ function DiscordCallbackInner() {
         toast({ title: "Success", description: "Discord login successful!" });
         router.push("/profile/edit")
       } catch (error: any) {
+        console.error("[ACTION] discordCallback ✗", error);
         console.error(error);
         toast({ title: "Error", description: error.message, variant: "destructive" });
         router.push("/profile/edit");

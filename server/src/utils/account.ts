@@ -3,6 +3,7 @@ import { privateKeyToAccount } from "viem/accounts";
 import { PRIVATE_KEY, network } from "./env.utils";
 import { NexonsAddress } from "./constants";
 import chain from "./chain.utils";
+import { mainnet } from "viem/chains";
 
 let walletClient: WalletClient | undefined = undefined;
 let publicClient: PublicClient | undefined = undefined;
@@ -32,6 +33,21 @@ export const getPublicClient = () => {
 	}
 
 	return publicClient;
+};
+
+let ethMainnetClient: PublicClient | undefined = undefined;
+
+// Relics live on Ethereum mainnet, not the Intuition chain, so relic
+// ownership checks must query an Ethereum-mainnet client.
+export const getEthMainnetClient = () => {
+	if (!ethMainnetClient) {
+		ethMainnetClient = createPublicClient({
+			chain: mainnet,
+			transport: http(process.env.ETH_RPC_URL || "https://ethereum-rpc.publicnode.com"),
+		});
+	}
+
+	return ethMainnetClient;
 };
 
 export const getCampaignContractStartDate = async (contractAddress: string) => {

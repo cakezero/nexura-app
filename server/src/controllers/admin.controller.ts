@@ -17,6 +17,7 @@ import { bannedUser } from "@/models/bannedUser.model";
 import { REDIS } from "@/utils/redis.utils";
 import { xpLog } from "@/models/xpLog.model";
 import { ADMIN_CAMPAIGN_SYSTEM_KEY } from "@/utils/adminCampaignHub";
+import { withSubmissionCategory } from "@/controllers/quest.controller";
 
 const MAX_ADMIN_LEADERBOARD_LIMIT = 500;
 const DEFAULT_ADMIN_LEADERBOARD_LIMIT = 500;
@@ -817,10 +818,12 @@ export const getTasks = async (req: GlobalRequest, res: GlobalResponse) => {
       return;
     }
 
-    const pendingTasks = await submission
+    const rawTasks = await submission
       .find({ hub: adminHub })
       .lean()
       .sort({ createdAt: 1 });
+
+    const pendingTasks = await withSubmissionCategory(rawTasks);
 
     res.status(OK).json({ message: "submitted tasks fetched", pendingTasks });
   } catch (error) {
@@ -1867,5 +1870,3 @@ export const publishAdminQuest = async (req: GlobalRequest, res: GlobalResponse)
     res.status(INTERNAL_SERVER_ERROR).json({ error: error?.message || "Error publishing quest" });
   }
 };
-
-// export const getXpHistory

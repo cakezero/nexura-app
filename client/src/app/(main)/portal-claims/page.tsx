@@ -9,12 +9,12 @@ import { formatNumber } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { getPublicClient } from "@/lib/viem";
 import { useAuth } from "@/lib/auth";
-import { network } from "@/lib/constants";
+import { getNetwork } from "@/lib/runtimeNetwork";
 import { Term, Position } from "@/types/types";
 import XPRewardPopup from "@/components/XPRewardPopup"
 import { toFixed } from "@/lib/claimsFormat";
 
-const explorer = network === "testnet" ? "https://testnet.explorer.intuition.systems" : "https://explorer.intuition.systems";
+const getExplorer = () => getNetwork() === "testnet" ? "https://testnet.explorer.intuition.systems" : "https://explorer.intuition.systems";
 
 interface Claim {
   user: { address: Address };
@@ -176,6 +176,7 @@ const hasNoResults = isSearching && !searchLoading && searchResults.length === 0
 const requestLockRef = useRef(false);
 
 const loadMore = async () => {
+  console.log("[ACTION] loadMore", { offset: offsetRef.current, sortOption });
   if (requestLockRef.current || isSearching) return;
   if (!hasMore) return;
 
@@ -200,6 +201,7 @@ const loadMore = async () => {
     if (claims.length < LIMIT) setHasMore(false);
 
   } catch (err) {
+    console.error("[ACTION] loadMore ✗", err);
     console.error(err);
   } finally {
     requestLockRef.current = false;
@@ -354,6 +356,7 @@ useEffect(() => {
   const maxRedeemable = Number(displayedShares) / 10 ** 18;
 
   const handleClaimAction = async (action: "deposit" | "redeem" = "deposit") => {
+    console.log("[ACTION] handleClaimAction", { action, termId, amount: transactionAmount, opposeMode, isToggled });
     if (!termId || !user?.address) return;
 
     try {
@@ -378,7 +381,7 @@ useEffect(() => {
 
       await apiRequestV2("POST", "/api/user/update-claims", { transactionHash, action: action === "deposit" ? "buy" : "sell" });
 
-      setTransactionLink(`${explorer}/tx/${transactionHash}`);
+      setTransactionLink(`${getExplorer()}/tx/${transactionHash}`);
 
       // Refresh wallet balance after transaction
       const balance = await fetchWalletBalance(user.address);
@@ -419,6 +422,7 @@ useEffect(() => {
       setModalStep("success");
 
     } catch (err: any) {
+      console.error("[ACTION] handleClaimAction ✗", err);
       console.error(err);
 
       setModalStep("failed");
@@ -582,7 +586,7 @@ useEffect(() => {
                         {/* Claim cell: clickable to navigate */}
                         <td
                           className="px-4 py-3"
-                          onClick={() => router.push(`/portal-claims/${claim.term_id}`)}
+                          onClick={() => { console.log("[ACTION] openClaim", { termId: claim.term_id }); router.push(`/portal-claims/${claim.term_id}`); }}
                         >
                           <div className="flex flex-wrap items-center gap-2">
                             {/* Subject */}
@@ -678,7 +682,7 @@ useEffect(() => {
                     <div
                       key={index}
                       className="bg-[#060210] border border-gray-700 rounded-xl p-3 shadow-md hover:shadow-lg hover:scale-[1.01] transition-all cursor-pointer mx-auto w-full max-w-[95vw]"
-                      onClick={() => router.push(`/portal-claims/${claim.term_id}`)}
+                      onClick={() => { console.log("[ACTION] openClaim", { termId: claim.term_id }); router.push(`/portal-claims/${claim.term_id}`); }}
                     >
                       {/* Claim Statement */}
                       {/* Claim Statement */}
@@ -774,7 +778,7 @@ useEffect(() => {
                   <div
                     key={claim.term_id}
                     className="bg-[#060210] border border-gray-700 rounded-xl p-3 hover:bg-[#2c0738] transition cursor-pointer"
-                    onClick={() => router.push(`/portal-claims/${claim.term_id}`)}
+                    onClick={() => { console.log("[ACTION] openClaim", { termId: claim.term_id }); router.push(`/portal-claims/${claim.term_id}`); }}
                   >
                     {/* Statement */}
                     <div className="text-gray-300 mb-2 flex flex-wrap items-center gap-1 text-sm">
@@ -1434,6 +1438,7 @@ useEffect(() => {
                     <button
                       className="mx-auto block bg-white text-black px-6 py-1.5 rounded-3xl text-sm"
                       onClick={() => {
+                        console.log("[ACTION] confirmDeposit", { termId, amount: transactionAmount });
                         handleClaimAction("deposit");
                         setShowModal(false);
                       }}
@@ -1564,6 +1569,7 @@ useEffect(() => {
                     <button
                       className="mx-auto block bg-white text-black px-6 py-1.5 rounded-3xl text-sm"
                       onClick={() => {
+                        console.log("[ACTION] confirmRedeem", { termId, amount: transactionAmount });
                         handleClaimAction("redeem");
                         setShowModal(false);
                       }}

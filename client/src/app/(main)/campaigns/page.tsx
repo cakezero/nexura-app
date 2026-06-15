@@ -83,11 +83,13 @@ export default function Campaigns() {
   }, []);
 
   const fetchCampaignsData = useCallback(async () => {
+    console.log("[ACTION] fetchCampaignsData");
     try {
       const res = await apiRequestV2("GET", `/api/campaigns`);
       setCampaigns(res.campaigns);
       setIsLoading(false);
     } catch (err: any) {
+      console.error("[ACTION] fetchCampaignsData ✗", err);
       console.error(err);
       toast({ title: "Error", description: err.message, variant: "destructive" });
       setIsLoading(false);
@@ -135,6 +137,7 @@ export default function Campaigns() {
   }, [campaigns, serverOffset, fetchCampaignsData]);
 
   const goToCampaign = async (campaign: Campaign, active: boolean) => {
+    console.log("[ACTION] goToCampaign", { campaignId: campaign._id, active, joined: campaign.joined });
     if (!active) return;
 
     try {
@@ -165,6 +168,7 @@ export default function Campaigns() {
       );
       router.push(`/campaign/${campaign._id}`);
     } catch (error: any) {
+      console.error("[ACTION] goToCampaign ✗", error);
       console.error(error);
       toast({ title: "Error", description: error.message, variant: "destructive" });
       setLoadingCampaign(null);

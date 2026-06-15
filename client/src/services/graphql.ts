@@ -3,6 +3,7 @@ const GRAPHQL_URL = "https://mainnet.intuition.sh/v1/graphql";
 type Variables = Record<string, any>;
 
 export const fetchGraphQL = async (query: string, variables: Variables = {}) => {
+  console.log("[GRAPHQL] fetchGraphQL", { query, variables });
   const res = await fetch(GRAPHQL_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -14,10 +15,12 @@ export const fetchGraphQL = async (query: string, variables: Variables = {}) => 
   }
 
   const json = await res.json();
+  console.log("[GRAPHQL] fetchGraphQL ✓", json.data);
   return json.data;
 };
 
 export const getAllAgents = async () => {
+  console.log("[GRAPHQL] getAllAgents");
   const vaultQuery = `
     query GetAllAgents {
       vaults(limit: 100, order_by: { total_assets: desc }) {
@@ -34,7 +37,10 @@ export const getAllAgents = async () => {
 
   const termIds = vaults.map((v: any) => v.term_id);
 
-  if (termIds.length === 0) return [];
+  if (termIds.length === 0) {
+    console.log("[GRAPHQL] getAllAgents ✓", []);
+    return [];
+  }
 
   const atomQuery = `
     query GetAgentsData($ids: [String!]!) {

@@ -61,6 +61,7 @@ function WalletDropdown({ trustName }: { trustName?: string }) {
       <Button
         size="sm"
         onClick={async () => {
+          console.log("[ACTION] connectWallet");
           try { await connectWallet(); } finally { try { emitSessionChange(); } catch (e) { } }
         }}
       >
@@ -87,6 +88,7 @@ function WalletDropdown({ trustName }: { trustName?: string }) {
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onClick={() => {
+            console.log("[ACTION] logOut");
             try { disconnect(); } catch (e) { }
             try { signOut(); } catch (e) { }
             try { emitSessionChange(); } catch (e) { }
@@ -113,6 +115,8 @@ export default function Profile() {
     if (typeof window === "undefined") return [];
     return JSON.parse(localStorage.getItem('nexura:nexon:minted') || '{}')[userId] || [];
   });
+
+  const [mintingLevel, setMintingLevel] = useState<number | null>(null);
 
   const [referralCount, setReferralCount] = useState<number>(0);
   const [loadingReferrals, setLoadingReferrals] = useState(false);
@@ -228,6 +232,9 @@ export default function Profile() {
 
   // STRICT MINT LOGIC
   const handleMint = async (levelIndex: number) => {
+    console.log("[ACTION] handleMint", { levelIndex });
+    if (mintingLevel !== null) return; // a mint is already in flight
+
     try {
       if (!user) {
         toast({ title: "Error", description: "Please log in to continue", variant: "destructive" });
@@ -249,16 +256,24 @@ export default function Profile() {
         return;
       } // not achieved yet
 
+      setMintingLevel(levelIndex);
+
       await apiRequestV2("POST", "/api/allow-mint", { level: levelIndex });
 
       await mintNexon(levelIndex, user._id);
 
-      await apiRequestV2("PATCH", "/api/user/update-badge", { level: levelIndex });
+      // on-chain mint is the source of truth — lock the button now so a hiccup on
+      // update-badge below can't leave it clickable after a successful mint
       setMintedLevels([...mintedLevels, levelIndex]);
+
+      await apiRequestV2("PATCH", "/api/user/update-badge", { level: levelIndex });
 
       toast({ title: "Nexon Minted", description: `Level ${levelIndex} Nexon minted successfully` });
     } catch (error: any) {
+      console.error("[ACTION] handleMint ✗", error);
       toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setMintingLevel(null);
     }
   };
 
@@ -411,9 +426,10 @@ export default function Profile() {
                 {showMint && (
                   <button
                     onClick={() => handleMint(idx + 1)}
-                    className="absolute top-3 right-3 text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-lg"
+                    disabled={mintingLevel !== null}
+                    className="absolute top-3 right-3 text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-blue-600"
                   >
-                    Mint
+                    {mintingLevel === idx + 1 ? "Minting…" : "Mint"}
                   </button>
                 )}
 

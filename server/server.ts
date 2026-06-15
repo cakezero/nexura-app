@@ -19,7 +19,7 @@ server.use(express.urlencoded({ extended: true }));
 
 server.use((req, res, next) => {
 	const start = Date.now();
-	const originalUrl = req.url; // Capture original URL before Express modifies it
+	const originalUrl = req.url;
 	res.on("finish", () => {
 		const duration = Date.now() - start;
 		const logMsg = `${req.method} ${originalUrl} ${res.statusCode} ${duration}ms`;

@@ -51,6 +51,7 @@ export default function UsersHub() {
   const canCreate = name && avatar && !profileError;
 
   const handleSubmit = async () => {
+    console.log("[ACTION] UsersHub.handleSubmit — finalize user hub (post sign-up)");
     setLoading(true);
 
     try {
