@@ -40,6 +40,38 @@ export function Providers({ children }: { children: ReactNode }) {
     })();
   }, []);
 
+  // Browser wallet/other extensions inject scripts that can throw unhandled
+  // errors (e.g. "The source <origin> has not been authorized yet"), which
+  // Next.js's dev error overlay then surfaces on screen. These originate from
+  // extension code (chrome-extension:// / moz-extension://), not the app — keep
+  // them in the console but out of the on-screen overlay.
+  useEffect(() => {
+    const isExternalError = (message?: string, stack?: string) =>
+      (!!stack && (stack.includes("chrome-extension://") || stack.includes("moz-extension://"))) ||
+      (!!message && message.includes("has not been authorized"));
+    const onError = (e: ErrorEvent) => {
+      if (isExternalError(e.message, e.error?.stack)) {
+        e.stopImmediatePropagation();
+        e.preventDefault();
+        console.warn("[extension error suppressed]", e.message);
+      }
+    };
+    const onRejection = (e: PromiseRejectionEvent) => {
+      const reason = e.reason as { message?: string; stack?: string } | undefined;
+      if (isExternalError(reason?.message, reason?.stack)) {
+        e.stopImmediatePropagation();
+        e.preventDefault();
+        console.warn("[extension rejection suppressed]", reason?.message ?? reason);
+      }
+    };
+    window.addEventListener("error", onError, true);
+    window.addEventListener("unhandledrejection", onRejection, true);
+    return () => {
+      window.removeEventListener("error", onError, true);
+      window.removeEventListener("unhandledrejection", onRejection, true);
+    };
+  }, []);
+
   const wagmiConfig = useMemo(() => (ready ? buildWagmiConfig() : null), [ready]);
 
   if (!ready || !wagmiConfig) return null;
