@@ -1722,6 +1722,50 @@ export const deleteQuest = async (req: GlobalRequest, res: GlobalResponse) => {
   }
 }
 
+// Dedicated delete for single (featured/daily) quests so they don't share the
+// seasonal delete path. Verifies the quest belongs to the admin's hub, then
+// removes the quest, its mini-quest, and any completion/submission records.
+export const deleteSingleQuest = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const id = (req.query.id as string) || (req.body.id as string) || (req.body.questId as string);
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      res.status(BAD_REQUEST).json({ error: "valid quest id is required" });
+      return;
+    }
+
+    const adminHub = req.admin?.hub ? String(req.admin.hub) : null;
+    if (!adminHub) {
+      res.status(BAD_REQUEST).json({ error: "Admin has no associated hub" });
+      return;
+    }
+
+    const questDoc = await quest.findById(id).select("_id creator").lean();
+    if (!questDoc) {
+      res.status(NOT_FOUND).json({ error: "quest not found" });
+      return;
+    }
+    if (String(questDoc.creator) !== adminHub) {
+      res.status(FORBIDDEN).json({ error: "You are not allowed to delete this quest" });
+      return;
+    }
+
+    const miniQuestIds = (await miniQuest.find({ quest: id }).select("_id").lean()).map((m: any) => m._id);
+
+    await Promise.all([
+      quest.findByIdAndDelete(id),
+      miniQuest.deleteMany({ quest: id }),
+      miniQuestCompleted.deleteMany({ quest: id }),
+      questCompleted.deleteMany({ quest: id }),
+      submission.deleteMany({ miniQuestId: { $in: miniQuestIds } }),
+    ]);
+
+    res.status(OK).json({ message: "quest deleted successfully" });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error deleting quest" });
+  }
+}
+
 export const deleteMiniQuest = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
     const id = (req.query.id as string) || (req.body.id as string) || (req.body.questId as string);
