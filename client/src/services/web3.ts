@@ -8,14 +8,12 @@ import { PROXY_CONTRACT_ABI, PROXY_FEE_CONTRACT } from "../lib/constants";
 import { allowToDeposit } from "../lib/utils";
 
 // --- Deposit / Support or Oppose function ---
-export const buyShares = async ({ buyAmount, termId, curveId, isApproved }: { buyAmount: string; termId: Address; isApproved: boolean; curveId: bigint }) => {
+export const buyShares = async ({ account, buyAmount, termId, curveId, isApproved }: { account: Address; buyAmount: string; termId: Address; isApproved: boolean; curveId: bigint }) => {
   console.log("[WEB3] buyShares", { buyAmount, termId, curveId, isApproved });
   const walletClient = await getWalletClient();
   const publicClient = getPublicClient();
 
   await walletClient.switchChain({ id: getChain().id });
-
-  const account = walletClient?.account?.address as "0x";
 
   if (!isApproved) {
     await allowToDeposit(walletClient, account);

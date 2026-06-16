@@ -367,7 +367,7 @@ useEffect(() => {
       let transactionHash: string = "";
 
       if (action === "deposit") {
-        transactionHash = await buyShares({ buyAmount: transactionAmount, termId: addressTermId, curveId: isToggled ? 2n : 1n, isApproved: user.isApproved });
+        transactionHash = await buyShares({ account: user?.address as Address, buyAmount: transactionAmount, termId: addressTermId, curveId: isToggled ? 2n : 1n, isApproved: user.isApproved });
         if (parseFloat(transactionAmount) >= 200) {
           const { success } = await apiRequestV2("POST", "/api/user/claim-deposit-xp", { transactionHash });
           if (!success) {
