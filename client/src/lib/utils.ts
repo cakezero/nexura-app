@@ -1,7 +1,7 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { getPublicClient } from "./viem";
-import { WalletClient } from "viem";
+import { Address, WalletClient } from "viem";
 import { getMultivaultAddress, PROXY_FEE_CONTRACT, MULTIVAULT_ABI } from "./constants";
 
 export function cn(...inputs: ClassValue[]) {
@@ -41,7 +41,7 @@ export const getIntuitionNetworkParams = (isTestnet: boolean, chainId: string) =
 	}];
 };
 
-export const allowToDeposit = async (walletClient: WalletClient, account: "0x") => {
+export const allowToDeposit = async (walletClient: WalletClient, account: Address) => {
   try {
     const publicClient = getPublicClient();
 
