@@ -556,8 +556,10 @@ export const validateCampaignSubmissions = async (req: GlobalRequest, res: Globa
     }
 
     let model;
+    let isSeasonalQuest = false;
 
     if (userSubmission.page === "quest" || userSubmission.page === "user") {
+      isSeasonalQuest = true;
       model = await miniQuestCompleted.findOne({ _id: userSubmission.questCompleted, status: { $in: ["pending", "retry"] } });
       if (!model) {
         res.status(NOT_FOUND).json({ error: "mini quest already completed or id is invalid" });
@@ -574,8 +576,15 @@ export const validateCampaignSubmissions = async (req: GlobalRequest, res: Globa
     if (action === "accept") {
       userSubmission.status = "done";
       userSubmission.validatedBy = req.adminName;
-      model.done = true;
-      model.status = "done";
+      if (isSeasonalQuest) {
+        // Seasonal mini-tasks decouple approval from completion: the user must
+        // still click "Claim XP" to finalize, so leave it claimable (not done).
+        model.status = "approved";
+        model.done = false;
+      } else {
+        model.done = true;
+        model.status = "done";
+      }
     } else if (action === "reject") {
       userSubmission.status = "retry";
       userSubmission.validatedBy = req.adminName;

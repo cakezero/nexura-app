@@ -262,6 +262,35 @@ export default function QuestEnvironment() {
     }
   };
 
+  const claimApproved = async (quest: Quest) => {
+    console.log("[ACTION] claimApproved", { questId, id: quest._id, tag: quest.tag });
+    try {
+      if (!getStoredAccessToken()) {
+        toast({ title: "Error", description: "You must be logged in to claim rewards.", variant: "destructive" });
+        return;
+      }
+
+      if (claimedQuests.includes(quest._id) || quest.done) {
+        toast({ title: "Already Claimed", description: "Task already completed", variant: "destructive" });
+        return;
+      }
+
+      const res = await apiRequest("POST", `/api/quest/claim-mini-quest`, { id: quest._id, questId });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error || "Unable to claim reward");
+      }
+
+      setClaimedQuests((prev) => [...prev, quest._id]);
+      setMiniQuests((prev) =>
+        prev.map((q) => (q._id === quest._id ? { ...q, done: true, status: "done" } : q))
+      );
+    } catch (error: any) {
+      console.error("[ACTION] claimApproved ✗", error);
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  };
+
   const retryQuest = async (quest: Quest) => {
     console.log("[ACTION] retryQuest", { questId, id: quest._id });
     try {
@@ -353,7 +382,8 @@ export default function QuestEnvironment() {
     const isTns = quest.tag === "trust-name";
     const visited = visitedQuests.includes(quest._id);
     const claimed = quest.done || claimedQuests.includes(quest._id);
-    const pending = quest.status === "pending" || pendingQuests.includes(quest._id);
+    const approved = quest.status === "approved" && !claimed;
+    const pending = !approved && (quest.status === "pending" || pendingQuests.includes(quest._id));
     const isRetry = quest.status === "retry";
     const isSubmitProof = MANUAL_PROOF_TAGS.includes(quest.tag);
     const isExpanded = expandedQuestId === quest._id;
@@ -372,7 +402,7 @@ export default function QuestEnvironment() {
             </p>
           }
 
-          {!visited && !claimed && (
+          {!visited && !claimed && !pending && !approved && !isRetry && (
             <button
               onClick={() => visitQuest(quest)}
               className="px-5 py-2 rounded-full bg-purple-700 hover:bg-purple-800 text-sm font-semibold"
@@ -381,7 +411,7 @@ export default function QuestEnvironment() {
             </button>
           )}
 
-          {visited && !claimed && !isSubmitProof && (
+          {visited && !claimed && !pending && !approved && !isSubmitProof && (
             <button
               onClick={() => claimReward(quest)}
               className="px-5 py-2 rounded-full bg-purple-700 hover:bg-purple-800 text-sm font-semibold"
@@ -390,7 +420,7 @@ export default function QuestEnvironment() {
             </button>
           )}
 
-          {visited && isSubmitProof && !claimed && !pending && (
+          {visited && isSubmitProof && !claimed && !pending && !approved && (
             <button
               onClick={() =>
                 setExpandedQuestId(isExpanded ? null : quest._id)
@@ -404,8 +434,23 @@ export default function QuestEnvironment() {
           {claimed && (
             <span className="text-sm text-green-400 font-semibold">Completed</span>
           )}
-          {!claimed && pending && isSubmitProof && (
-            <span className="text-sm text-white font-semibold">Pending Verification</span>
+
+          {approved && (
+            <button
+              onClick={() => claimApproved(quest)}
+              className="px-5 py-2 rounded-full bg-purple-700 hover:bg-purple-800 text-sm font-semibold"
+            >
+              Claim XP
+            </button>
+          )}
+
+          {pending && (
+            <button
+              disabled
+              className="px-5 py-2 rounded-full bg-white/10 text-white/40 cursor-not-allowed text-sm font-semibold"
+            >
+              Claim XP
+            </button>
           )}
 
           {isRetry && !claimed && !isTns && (
