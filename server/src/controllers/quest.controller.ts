@@ -720,13 +720,15 @@ export const claimMiniQuest = async (req: GlobalRequest, res: GlobalResponse) =>
 			return;
 		}
 
-		if (miniQuestExists.status !== "done" && miniQuestExists.status !== "pending") {
+		if (miniQuestExists.status !== "done" && miniQuestExists.status !== "pending" && miniQuestExists.status !== "approved") {
 			res.status(BAD_REQUEST).json({ error: "quest needs to be marked as pending before it can be caimed" });
 			return;
 		}
 
 		miniQuestExists.done = true;
 		miniQuestExists.status = "done";
+
+		await miniQuestExists.save();
 
 		res.status(OK).json({ message: "quest done" });
 	} catch (error) {
@@ -996,7 +998,7 @@ export const submitQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 				questCategory = parentQuest?.category;
 			}
 
-			notComplete = await miniQuestCompleted.create({ miniQuest: id, quest: questId, user: userId });
+			notComplete = await miniQuestCompleted.create({ miniQuest: id, quest: questId, user: userId, done: false, status: "pending" });
 		} else {
 			questExists = await campaignQuest.findById(id);
 			if (!questExists) {
