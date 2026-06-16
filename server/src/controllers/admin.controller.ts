@@ -792,6 +792,7 @@ export const getAdminHubQuests = async (req: GlobalRequest, res: GlobalResponse)
       title: q.title || "",
       description: q.description || q.project_name || "",
       projectCoverImage: q.projectCoverImage || "",
+      category: q.category || "seasonal",
       status: getStatus(q),
       starts_at: q.starts_at ?? null,
       ends_at: q.ends_at ?? null,
