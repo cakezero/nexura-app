@@ -1344,6 +1344,7 @@ export const saveQuest = async (req: GlobalRequest, res: GlobalResponse) => {
         questNumber: questCount + 1,
         projectCoverImage: req.body.coverImage ?? "pending",
         creator: req.admin.hub,
+        hub: req.admin.hub,
         creatorModel: page === "user" ? "user" : "admin",
         status: "Save", // Enforce Save status for new quests from Studio
       };
@@ -1380,6 +1381,7 @@ export const saveQuest = async (req: GlobalRequest, res: GlobalResponse) => {
         questNumber: questCount + 1,
         projectCoverImage: req.body.coverImage ?? "pending",
         creator: req.admin.hub,
+        hub: req.admin.hub,
         creatorModel: page === "user" ? "user" : "admin",
         status: "Save", // Enforce Save status for new quests from Studio
       };

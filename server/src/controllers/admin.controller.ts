@@ -1835,7 +1835,7 @@ export const publishAdminQuest = async (req: GlobalRequest, res: GlobalResponse)
       return;
     }
 
-    const { status } = req.body;
+    const { status } = req.body || {};
     if (status === "Ended") {
       questDoc.status = "Ended";
       await questDoc.save();
