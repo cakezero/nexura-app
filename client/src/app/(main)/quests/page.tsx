@@ -165,6 +165,15 @@ const handleStartQuest = async (quest: Quest) => {
   }
 };
 
+// Featured/daily quests complete on this page: open the task link immediately
+// and reveal the proof box inline, instead of navigating to a quest detail page.
+const handleStartInline = (quest: any) => {
+  apiRequestV2("POST", "/api/quest/start-quest", { questId: quest._id }).catch(() => {});
+  const link = quest.taskLink || quest.link;
+  if (link && link !== "#") window.open(link, "_blank", "noopener,noreferrer");
+  setActiveQuestId(quest._id);
+};
+
 const [isVerifyingTask, setIsVerifyingTask] = useState<string | null>(null);
 
 const handleAtlasTask = async (quest: Quest) => {
@@ -307,40 +316,35 @@ const HaloButton = ({
 );
 
 const renderDefaultQuestCard = (quest: any, index: number = 0) => {
-  const isExpanded =
-    quest.taskType === "twitter" && activeQuestId === quest._id;
-
   const isAtlasTask = ATLAS_TAGS.includes(quest.taskType);
 
-  const buttonLabel = quest.isRelicQuest
-    ? "Check Relic"
-    : quest.taskType === "twitter"
-    ? "Submit Proof"
-    : "Start Task";
+  // Featured/daily proof tasks (anything that isn't a relic check or a self-
+  // verifying atlas task) complete inline on this page via the proof box.
+  const isInlineProofTask = !quest.isRelicQuest && !isAtlasTask;
+  const isExpanded = isInlineProofTask && activeQuestId === quest._id;
+
+  const buttonLabel = quest.isRelicQuest ? "Check Relic" : "Start Quest";
 
   const handleAction = () => {
     if (quest.isRelicQuest) {
       setRelicQuest({ id: quest._id, reward: Number(quest.reward) || 0 });
     } else if (isAtlasTask) {
       handleAtlasTask(quest);
-    } else if (quest.taskType === "twitter") {
-      setActiveQuestId(isExpanded ? null : quest._id);
     } else {
-      handleStartQuest(quest);
+      handleStartInline(quest);
     }
   };
 
   return (
     <div
       className="w-full rounded-[12px] border border-white/10 bg-[rgba(10,14,19,0.7)] backdrop-blur-[6px] transition hover:border-[#8b3efe]/60"
-      style={{ minHeight: 104 }}
     >
       {/* COLLAPSED ROW */}
-      <div className="flex items-center py-5">
+      <div className="flex items-center py-3">
         {/* LEFT */}
-        <div className="flex items-center gap-6 pl-6 min-w-0">
+        <div className="flex items-center gap-4 pl-5 min-w-0">
           <div
-            className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-[12px]"
+            className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-[10px]"
             style={{
               background:
                 "linear-gradient(135deg, rgba(120,93,200,0.4) 0%, rgba(138,63,252,0.4) 100%)",
@@ -356,23 +360,23 @@ const renderDefaultQuestCard = (quest: any, index: number = 0) => {
               <img
                 src={getTaskIcon(quest)}
                 alt={quest.taskType || quest.title}
-                className="h-7 w-7 object-contain"
+                className="h-6 w-6 object-contain"
               />
             )}
           </div>
 
           <div className="min-w-0">
-            <h3 className="text-[20px] font-semibold text-[#e0e2ea] leading-tight">
+            <h3 className="text-[16px] font-semibold text-[#e0e2ea] leading-tight">
               {quest.title}
             </h3>
-            <p className="text-[14px] font-normal text-[#cdc2d8] mt-0.5">
+            <p className="text-[13px] font-normal text-[#cdc2d8] mt-0.5">
               {quest.description}
             </p>
           </div>
         </div>
 
         {/* RIGHT */}
-        <div className="ml-auto flex items-center gap-6 pr-6">
+        <div className="ml-auto flex items-center gap-5 pr-5">
           <div className="flex flex-col items-start">
             <span className="text-[12px] font-medium uppercase tracking-[0.6px] text-[rgba(205,194,216,0.5)]">
               Reward
