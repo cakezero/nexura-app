@@ -224,46 +224,38 @@ const handleAtlasTask = async (quest: Quest) => {
   }
 };
 
-const handleSubmitQuest = async (questId: string, proof: string) => {
-  console.log("[ACTION] handleSubmitQuest", { questId, proof });
+const handleSubmitQuest = async (quest: any, proof: string) => {
+  if (!proof.trim()) {
+    toast({
+      title: "Add your proof",
+      description: "Paste your link or username first.",
+      variant: "destructive",
+    });
+    return;
+  }
 
   try {
-    const res = await fetch("/api/quest/submit-quest", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        questId,
-        proof,
-      }),
+    const data = await apiRequestV2("POST", "/api/quest/submit-quest", {
+      submissionLink: proof,
+      questId: quest._id,
+      page: "quest",
+      id: quest.taskId,
+      tag: quest.taskType,
     });
-
-    const data = await res.json();
-
-    console.log("STATUS:", res.status);
-    console.log("DATA:", data);
-
-    if (!res.ok) {
-      throw new Error(data?.error || "Failed to submit quest");
-    }
 
     toast({
       title: "Submitted",
-      description: data?.message || "Proof submitted",
+      description: data?.message || "Proof submitted for review",
     });
 
     setActiveQuestId(null);
     setProofInput("");
 
     await refetch?.();
-  } catch (err) {
-    console.error("[ACTION] handleSubmitQuest ✗", err);
-    console.error("❌ Submit quest failed:", err);
-
+  } catch (err: any) {
     toast({
       title: "Error",
-      description: "Failed to submit quest",
+      description: err?.info?.error || err?.message || "Failed to submit quest",
       variant: "destructive",
     });
   }
@@ -304,7 +296,7 @@ const HaloButton = ({
       onClick={onClick}
       className={`relative ${
         fullWidth ? "w-full" : ""
-      } px-8 py-2.5 rounded-full bg-[#8b3efe] text-white text-[16px] font-semibold tracking-[0.8px] whitespace-nowrap transition hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed`}
+      } px-6 py-2 rounded-full bg-[#8b3efe] text-white text-[13px] font-semibold tracking-[0.5px] whitespace-nowrap transition hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed`}
       style={{
         boxShadow:
           "0px 8px 15px -3px rgba(212,187,255,0.2), 0px 4px 6px -4px rgba(212,187,255,0.2)",
@@ -340,11 +332,11 @@ const renderDefaultQuestCard = (quest: any, index: number = 0) => {
       className="w-full rounded-[12px] border border-white/10 bg-[rgba(10,14,19,0.7)] backdrop-blur-[6px] transition hover:border-[#8b3efe]/60"
     >
       {/* COLLAPSED ROW */}
-      <div className="flex items-center py-3">
+      <div className="flex items-center py-2.5">
         {/* LEFT */}
-        <div className="flex items-center gap-4 pl-5 min-w-0">
+        <div className="flex items-center gap-3.5 pl-4 min-w-0">
           <div
-            className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-[10px]"
+            className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-[9px]"
             style={{
               background:
                 "linear-gradient(135deg, rgba(120,93,200,0.4) 0%, rgba(138,63,252,0.4) 100%)",
@@ -360,28 +352,28 @@ const renderDefaultQuestCard = (quest: any, index: number = 0) => {
               <img
                 src={getTaskIcon(quest)}
                 alt={quest.taskType || quest.title}
-                className="h-6 w-6 object-contain"
+                className="h-5 w-5 object-contain"
               />
             )}
           </div>
 
           <div className="min-w-0">
-            <h3 className="text-[16px] font-semibold text-[#e0e2ea] leading-tight">
+            <h3 className="text-[15px] font-semibold text-[#e0e2ea] leading-tight">
               {quest.title}
             </h3>
-            <p className="text-[13px] font-normal text-[#cdc2d8] mt-0.5">
+            <p className="text-[12px] font-normal text-[#cdc2d8] mt-0.5">
               {quest.description}
             </p>
           </div>
         </div>
 
         {/* RIGHT */}
-        <div className="ml-auto flex items-center gap-5 pr-5">
+        <div className="ml-auto flex items-center gap-4 pr-4">
           <div className="flex flex-col items-start">
-            <span className="text-[12px] font-medium uppercase tracking-[0.6px] text-[rgba(205,194,216,0.5)]">
+            <span className="text-[11px] font-medium uppercase tracking-[0.6px] text-[rgba(205,194,216,0.5)]">
               Reward
             </span>
-            <span className="text-[16px] font-semibold text-white">
+            <span className="text-[14px] font-semibold text-white">
               {Number(quest.reward).toLocaleString()} XP
             </span>
           </div>
@@ -415,7 +407,7 @@ const renderDefaultQuestCard = (quest: any, index: number = 0) => {
             <HaloButton
               fullWidth
               label="Submit For Review"
-              onClick={() => handleSubmitQuest(quest._id, proofInput)}
+              onClick={() => handleSubmitQuest(quest, proofInput)}
             />
           </div>
         </div>

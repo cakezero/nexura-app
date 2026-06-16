@@ -74,17 +74,30 @@ export default function RelicScanModal({
       return;
     }
 
-    // hold on scanning briefly so the spinner reads, then resolve from the API
+    // Resolve from the API, but cap the scan so the modal never spins longer
+    // than ~6s (if verify is slow or hangs, fall through to the recheck screen).
     const verifyPromise = apiRequestV2(
       "POST",
       `/api/quest/verify-relic?questId=${encodeURIComponent(questId)}`
     );
 
     try {
-      const res = await Promise.all([
-        verifyPromise,
-        new Promise((r) => setTimeout(r, 1000)),
-      ]).then(([r]) => r);
+      let timedOut = false;
+      const timeoutPromise = new Promise<null>((resolve) => {
+        timers.current.push(
+          setTimeout(() => {
+            timedOut = true;
+            resolve(null);
+          }, 6000)
+        );
+      });
+
+      const res: any = await Promise.race([verifyPromise, timeoutPromise]);
+
+      if (timedOut || !res) {
+        runFailureSimulation();
+        return;
+      }
 
       const verified = res?.verified === true || /verified/i.test(res?.message || "");
       if (!verified) {
@@ -94,10 +107,10 @@ export default function RelicScanModal({
       const count = Number(res?.count) || 1;
       setRelicCount(count);
       setPhase("found");
-      timers.current.push(setTimeout(() => setPhase("ready"), 1000));
+      timers.current.push(setTimeout(() => setPhase("ready"), 800));
     } catch {
-      // backend currently broken (missing ALCHEMY_API_KEY / questCompleted enum bug)
-      // and/or auth — fail gracefully into the no-relics phase
+      // Verify failed (no relic / auth / network) — fail gracefully into the
+      // no-relics recheck phase instead of spinning.
       runFailureSimulation();
     }
   }, [clearTimers, forcePhase, simulate, questId, runSimulation, runFailureSimulation]);
