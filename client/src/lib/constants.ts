@@ -4,7 +4,7 @@ import { DISCORD_CLIENT_ID, X_CLIENT_ID } from "./oauthClients";
 const normalizedNetwork = (process.env.NEXT_PUBLIC_NETWORK as string | undefined)?.trim().toLowerCase();
 export const network: "testnet" | "mainnet" = normalizedNetwork === "mainnet" ? "mainnet" : "testnet";
 
-const DEFAULT_BACKEND_URL = "https://api-nexura.intuition.box";
+const DEFAULT_BACKEND_URL = "https://api.nexura.intuition.box";
 
 export const environment = process.env.NEXT_PUBLIC_ENV as "development" | "production";
 

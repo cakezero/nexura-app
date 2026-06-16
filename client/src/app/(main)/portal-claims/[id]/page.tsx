@@ -419,7 +419,7 @@ export default function ClaimDetails() {
 
       // -------------------- Execute transaction --------------------
       if (isBuy) {
-        transactionHash = await buyShares({ buyAmount, termId: termId as Address, curveId, isApproved: user.isApproved});
+        transactionHash = await buyShares({ account: user?.address as Address, buyAmount, termId: termId as Address, curveId, isApproved: user.isApproved});
       } else {
         console.log({ sellAmount });
         transactionHash = await sellShares(sellAmount, termId as Address, curveId);
