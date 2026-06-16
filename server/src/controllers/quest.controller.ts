@@ -1572,6 +1572,17 @@ export const saveSingleQuest = async (req: GlobalRequest, res: GlobalResponse) =
 
     const existingQuest = id ? await quest.findById(id).lean() : null;
 
+    let uploadedIconUrl: string | undefined;
+    const iconFileBuffer = req.file?.buffer;
+    if (iconFileBuffer) {
+      uploadedIconUrl = await uploadImg({
+        file: iconFileBuffer,
+        filename: req.file?.originalname as string,
+        folder: "cover-images",
+        maxSize: 2 * 1024 ** 2, // 2 MB
+      });
+    }
+
     if (!existingQuest) {
       const questCount = await quest.countDocuments({ creator: req.admin.hub });
       const body = {
@@ -1582,9 +1593,9 @@ export const saveSingleQuest = async (req: GlobalRequest, res: GlobalResponse) =
         page,
         nameOfProject,
         sub_title: description,
-        project_image: hubFound.logo ?? "pending",
+        project_image: uploadedIconUrl ?? hubFound.logo ?? "pending",
         project_name: hubFound.name ?? nameOfProject,
-        projectCoverImage: "pending",
+        projectCoverImage: uploadedIconUrl ?? "pending",
         questNumber: questCount + 1,
         starts_at,
         ends_at,
@@ -1610,6 +1621,7 @@ export const saveSingleQuest = async (req: GlobalRequest, res: GlobalResponse) =
       sub_title: description,
       starts_at,
       ends_at,
+      ...(uploadedIconUrl ? { project_image: uploadedIconUrl, projectCoverImage: uploadedIconUrl } : {}),
     });
     await miniQuest.deleteMany({ quest: id });
     await miniQuest.create(buildMiniQuest(id));
