@@ -48,7 +48,7 @@ export const allowToDeposit = async (walletClient: WalletClient, account: Addres
     const { request } = await publicClient.simulateContract({
       abi: MULTIVAULT_ABI,
       address: getMultivaultAddress(),
-      args: [PROXY_FEE_CONTRACT, 1],
+      args: [PROXY_FEE_CONTRACT, 3],
       functionName: "approve",
       account
     });

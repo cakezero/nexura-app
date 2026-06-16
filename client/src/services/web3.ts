@@ -1,6 +1,6 @@
 import { redeem, getMultiVaultAddressFromChainId, getAtomDetails, createTripleStatement, calculateAtomId, calculateTripleId, getTripleDetails, createAtomFromString } from "@0xintuition/sdk";
 import { MultiVaultAbi } from "@0xintuition/protocol";
-import { Address, parseEther, toHex } from "viem";
+import { Address, checksumAddress, parseEther, toHex } from "viem";
 import { getWalletClient, getPublicClient } from "../lib/viem";
 import { apiRequestV2 } from "../lib/queryClient";
 import { getChain } from "../lib/chain";
@@ -15,8 +15,10 @@ export const buyShares = async ({ account, buyAmount, termId, curveId, isApprove
 
   await walletClient.switchChain({ id: getChain().id });
 
+  const formattedAddress = checksumAddress(account);
+
   if (!isApproved) {
-    await allowToDeposit(walletClient, account);
+    await allowToDeposit(walletClient, formattedAddress);
     await apiRequestV2("POST", "/api/user/set-approved");
   }
 
@@ -24,9 +26,9 @@ export const buyShares = async ({ account, buyAmount, termId, curveId, isApprove
     address: PROXY_FEE_CONTRACT,
     abi: PROXY_CONTRACT_ABI,
     functionName: "deposit",
-    account,
+    account: formattedAddress,
     args: [
-      account,
+      formattedAddress,
       termId,
       curveId,
       0n,
