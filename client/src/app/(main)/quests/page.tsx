@@ -268,6 +268,15 @@ const getTaskIcon = (quest: any) => {
   return quest.project_image || "/x-icon.png";
 };
 
+const getCustomIcon = (quest: any): string | null => {
+  // Relic / i-* (atlas) tasks keep their dedicated icons via getTaskIcon.
+  if (quest.isRelicQuest || quest.taskType === "relic") return null;
+  if (typeof quest.taskType === "string" && quest.taskType.startsWith("i-")) return null;
+  const candidate = quest.projectCoverImage || quest.image;
+  if (!candidate || candidate === "pending") return null;
+  return candidate;
+};
+
 const HaloButton = ({
   label,
   onClick,
@@ -331,17 +340,25 @@ const renderDefaultQuestCard = (quest: any, index: number = 0) => {
         {/* LEFT */}
         <div className="flex items-center gap-6 pl-6 min-w-0">
           <div
-            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[12px]"
+            className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-[12px]"
             style={{
               background:
                 "linear-gradient(135deg, rgba(120,93,200,0.4) 0%, rgba(138,63,252,0.4) 100%)",
             }}
           >
-            <img
-              src={getTaskIcon(quest)}
-              alt={quest.taskType || quest.title}
-              className="h-7 w-7 object-contain"
-            />
+            {getCustomIcon(quest) ? (
+              <img
+                src={getCustomIcon(quest) as string}
+                alt={quest.title || quest.taskType}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <img
+                src={getTaskIcon(quest)}
+                alt={quest.taskType || quest.title}
+                className="h-7 w-7 object-contain"
+              />
+            )}
           </div>
 
           <div className="min-w-0">
