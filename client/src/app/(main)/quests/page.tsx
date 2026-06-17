@@ -527,7 +527,7 @@ const renderSeasonalQuestCard = (quest: Quest, index: number = 0) => {
       {/* BUTTON ALWAYS STICKS TO BOTTOM */}
       <button
         onClick={() => handleStartQuest(quest)}
-        className="w-full py-2 mb-2 mt-4 text-xs font-medium rounded-xl bg-[#8b3efe] hover:bg-[#B65FC8] text-white transition -translate-y-2"
+        className="w-full py-2 mb-2 mt-4 text-xs font-medium rounded-xl bg-[#8b3efe] hover:bg-[#7b35e6] text-white transition -translate-y-2"
       >
         Start Task
       </button>
@@ -549,9 +549,9 @@ const renderSeasonalQuestCard = (quest: Quest, index: number = 0) => {
           <div className="flex items-center gap-2">
             <div
               className="h-[5px] w-[5px] rounded-full"
-              style={{ background: "linear-gradient(90deg, #b184c4, #ff8cd9)" }}
+              style={{ background: "linear-gradient(90deg, #8b3efe, #b388ff)" }}
             />
-            <span className="text-[16px] font-semibold bg-gradient-to-r from-[#b184c4] to-[#ff8cd9] bg-clip-text text-transparent">
+            <span className="text-[16px] font-semibold bg-gradient-to-r from-[#8b3efe] to-[#b388ff] bg-clip-text text-transparent">
               QUESTS
             </span>
           </div>
