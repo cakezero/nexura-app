@@ -290,16 +290,15 @@ const HaloButton = ({
   fullWidth?: boolean;
 }) => (
   <div className={`relative ${fullWidth ? "w-full" : "inline-flex"}`}>
-    <div className="absolute inset-0 rounded-full bg-[#d4bbff] blur-[10px] opacity-60" />
     <button
       disabled={disabled}
       onClick={onClick}
       className={`relative ${
         fullWidth ? "w-full" : ""
-      } px-5 py-1.5 rounded-full bg-[#8b3efe] text-white text-[11px] font-semibold tracking-[0.3px] whitespace-nowrap transition hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed`}
+      } px-5 py-1.5 rounded-full bg-[#8b3efe] text-white text-[11px] font-semibold tracking-[0.3px] whitespace-nowrap transition hover:bg-[#7b35e6] disabled:opacity-50 disabled:cursor-not-allowed`}
       style={{
         boxShadow:
-          "0px 8px 15px -3px rgba(212,187,255,0.2), 0px 4px 6px -4px rgba(212,187,255,0.2)",
+          "0px 6px 14px -4px rgba(139,62,254,0.35), 0px 3px 6px -4px rgba(139,62,254,0.35)",
       }}
     >
       {label}
@@ -388,11 +387,11 @@ const renderDefaultQuestCard = (quest: any, index: number = 0) => {
 
       {/* EXPANDED PROOF PANEL */}
       {isExpanded && (
-        <div className="mx-[23px] mb-5">
-          <div className="rounded-[16px] border border-[rgba(139,62,254,0.3)] bg-[#0a0a0a] p-5 space-y-4">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 shrink-0 text-amber-400" />
-              <p className="text-[14px] font-bold text-[rgba(255,255,255,0.8)]">
+        <div className="mx-4 mb-3.5">
+          <div className="rounded-[12px] border border-[rgba(139,62,254,0.3)] bg-[#0a0a0a] p-3.5 space-y-3">
+            <div className="flex items-center gap-1.5">
+              <AlertTriangle className="h-4 w-4 shrink-0 text-amber-400" />
+              <p className="text-[11px] font-bold text-[rgba(255,255,255,0.8)]">
                 It may take 10 minutes to 10 hours to validate your submission.
               </p>
             </div>
@@ -401,7 +400,7 @@ const renderDefaultQuestCard = (quest: any, index: number = 0) => {
               value={proofInput}
               onChange={(e) => setProofInput(e.target.value)}
               placeholder="Paste your comment link or twitter username here"
-              className="h-[46px] w-full rounded-[16px] border border-[rgba(138,62,254,0.3)] bg-[#060210] px-4 text-[14px] font-bold text-white outline-none placeholder:text-[14px] placeholder:font-bold placeholder:text-[rgba(255,255,255,0.4)]"
+              className="h-9 w-full rounded-[10px] border border-[rgba(138,62,254,0.3)] bg-[#060210] px-3 text-[11px] font-bold text-white outline-none placeholder:text-[11px] placeholder:font-bold placeholder:text-[rgba(255,255,255,0.4)]"
             />
 
             <HaloButton
