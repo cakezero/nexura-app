@@ -574,7 +574,7 @@ const renderSeasonalQuestCard = (quest: Quest, index: number = 0) => {
               <button
                 key={filter}
                 onClick={() => setQuestFilter(filter)}
-                className={`rounded-[20px] border border-[#8b3efe] px-4 py-3 text-[14px] capitalize text-white transition ${
+                className={`rounded-[20px] border border-[#8b3efe] px-4 py-1.5 text-[14px] capitalize text-white transition ${
                   isActive ? "bg-[#8b3efe] font-semibold" : "bg-transparent font-medium"
                 }`}
               >
