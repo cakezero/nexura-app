@@ -38,6 +38,7 @@ import { parseDate, normalizeCampaignDateInput } from "@/utils/dates";
 import { xpLog } from "@/models/xpLog.model";
 import { consumePaymentHash } from "./studioPayment.controller";
 import { environment } from "@/utils/env.utils";
+import { resolveAdminCampaignHub } from "@/utils/adminCampaignHub";
 
 const DISCORD_CAMPAIGN_TAGS = new Set([
 	"join",
@@ -141,6 +142,18 @@ export const fetchQuests = async (req: GlobalRequest, res: GlobalResponse) => {
 			if (key && !firstMiniQuestByQuestId.has(key)) firstMiniQuestByQuestId.set(key, mq);
 		}
 
+		// This user's submission/approval state for each quest's single task, so the
+		// card can reflect submitted/pending/approved/completed. Batched to avoid N+1.
+		const allMiniQuestCompleted = await miniQuestCompleted
+			.find({ user: new mongoose.Types.ObjectId(req.id), quest: { $in: questsInDB.map((q) => q._id) } })
+			.select("quest status done updatedAt")
+			.lean();
+		const miniQuestCompletedByQuestId = new Map<string, any>();
+		for (const mqc of allMiniQuestCompleted) {
+			const key = mqc.quest?.toString();
+			if (key) miniQuestCompletedByQuestId.set(key, mqc);
+		}
+
 		const quests: any[] = [];
 
 		for (const singleQuest of questsInDB) {
@@ -159,6 +172,17 @@ export const fetchQuests = async (req: GlobalRequest, res: GlobalResponse) => {
 
 			mergedQuest.done = singleQuestCompleted && !isStaleDaily ? singleQuestCompleted.done : false;
 			mergedQuest.joined = !!singleQuestCompleted && !isStaleDaily;
+
+			// This user's task submission state (pending/retry/approved/done) for the
+			// single task, so the card can mirror the seasonal state machine. A stale
+			// prior-day daily completion reads as not-submitted so it can be redone today.
+			const taskCompleted = miniQuestCompletedByQuestId.get(singleQuest._id.toString());
+			const isStaleDailyTask =
+				singleQuest.category === "daily" &&
+				taskCompleted &&
+				(!taskCompleted.updatedAt || new Date(taskCompleted.updatedAt) < startOfToday);
+			mergedQuest.taskStatus = taskCompleted && !isStaleDailyTask ? taskCompleted.status : "";
+			mergedQuest.taskDone = taskCompleted && !isStaleDailyTask ? !!taskCompleted.done : false;
 
 			// Expose the single task's tag so the main app can render the right action
 			// (relic -> Check Relic / RelicScanModal, i-* -> atlas verify via check-atlas-task).
@@ -996,6 +1020,14 @@ export const submitQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 				const parentQuest = await quest.findById(questExists.quest).select("hub category").lean();
 				if (!resolvedHub) resolvedHub = parentQuest?.hub?.toString() || hubId;
 				questCategory = parentQuest?.category;
+			}
+
+			// Legacy/admin singular quests often have no hub on their parent quest. Fall back
+			// to the admin-campaign system hub the dashboard review lane queries (getTasks),
+			// instead of the "nexura-hub" placeholder that orphans the submission.
+			if (!resolvedHub) {
+				const adminCampaignHub = await resolveAdminCampaignHub();
+				resolvedHub = adminCampaignHub._id.toString();
 			}
 
 			notComplete = await miniQuestCompleted.create({ miniQuest: id, quest: questId, user: userId, done: false, status: "pending" });

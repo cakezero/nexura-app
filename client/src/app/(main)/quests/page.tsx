@@ -35,6 +35,8 @@ interface Quest {
   taskType?: string;
   taskId?: string;
   taskLink?: string;
+  taskStatus?: string;
+  taskDone?: boolean;
   isRelicQuest?: boolean;
   participants?: number;
   maxParticipants?: number;
@@ -261,6 +263,33 @@ const handleSubmitQuest = async (quest: any, proof: string) => {
   }
 };
 
+const [isClaimingQuest, setIsClaimingQuest] = useState<string | null>(null);
+
+const handleClaimQuest = async (quest: Quest) => {
+  if (isClaimingQuest === quest._id) return;
+
+  setIsClaimingQuest(quest._id);
+
+  try {
+    const data = await apiRequestV2("POST", "/api/quest/claim-quest", { questId: quest._id });
+
+    toast({
+      title: "Reward Claimed",
+      description: data?.message || "Reward claimed successfully",
+    });
+
+    await refetch?.();
+  } catch (err: any) {
+    toast({
+      title: "Error",
+      description: err?.info?.error || err?.message || "Failed to claim reward",
+      variant: "destructive",
+    });
+  } finally {
+    setIsClaimingQuest(null);
+  }
+};
+
 const getTaskIcon = (quest: any) => {
   if (quest.isRelicQuest || quest.taskType === "relic") return "/relic.png";
   if (quest.taskType === "discord") return "/discordd.png";
@@ -312,7 +341,14 @@ const renderDefaultQuestCard = (quest: any, index: number = 0) => {
   // Featured/daily proof tasks (anything that isn't a relic check or a self-
   // verifying atlas task) complete inline on this page via the proof box.
   const isInlineProofTask = !quest.isRelicQuest && !isAtlasTask;
-  const isExpanded = isInlineProofTask && activeQuestId === quest._id;
+
+  // This user's submission state for the single task, mirroring the seasonal
+  // state machine inline on the card (only meaningful for inline-proof tasks).
+  const completed = quest.taskDone || quest.taskStatus === "done";
+  const approved = !completed && quest.taskStatus === "approved";
+  const pending = isInlineProofTask && !completed && !approved && quest.taskStatus === "pending";
+
+  const isExpanded = isInlineProofTask && !completed && !approved && !pending && activeQuestId === quest._id;
 
   const buttonLabel = quest.isRelicQuest ? "Check Relic" : "Start Quest";
 
@@ -377,11 +413,23 @@ const renderDefaultQuestCard = (quest: any, index: number = 0) => {
             </span>
           </div>
 
-          <HaloButton
-            label={isAtlasTask && isVerifyingTask === quest._id ? "Verifying…" : buttonLabel}
-            disabled={isStartingQuest === quest._id || isVerifyingTask === quest._id}
-            onClick={handleAction}
-          />
+          {completed ? (
+            <span className="text-[11px] font-semibold text-green-400">Completed</span>
+          ) : approved ? (
+            <HaloButton
+              label={isClaimingQuest === quest._id ? "Claiming…" : "Claim XP"}
+              disabled={isClaimingQuest === quest._id}
+              onClick={() => handleClaimQuest(quest)}
+            />
+          ) : pending ? (
+            <HaloButton label="Pending Review" disabled onClick={() => {}} />
+          ) : (
+            <HaloButton
+              label={isAtlasTask && isVerifyingTask === quest._id ? "Verifying…" : buttonLabel}
+              disabled={isStartingQuest === quest._id || isVerifyingTask === quest._id}
+              onClick={handleAction}
+            />
+          )}
         </div>
       </div>
 
