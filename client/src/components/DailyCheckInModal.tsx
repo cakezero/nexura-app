@@ -47,7 +47,7 @@ export default function DailyCheckInModal({ open, onOpenChange, onCheckInSuccess
   const [chestOpen, setChestOpen] = useState(false);
   const [justHitMilestone, setJustHitMilestone] = useState(false);
   const [claimed, setClaimed] = useState(false);
-  const [showXp, setShowXp] = useState(true);
+  const [showXp, setShowXp] = useState(false);
   const [displayXp, setDisplayXp] = useState(0);
   const animateXp = (target: number) => {
   const duration = 2000;
