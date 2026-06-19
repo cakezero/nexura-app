@@ -47,7 +47,6 @@ export default function DailyCheckInModal({ open, onOpenChange, onCheckInSuccess
   const [chestOpen, setChestOpen] = useState(false);
   const [justHitMilestone, setJustHitMilestone] = useState(false);
   const [claimed, setClaimed] = useState(false);
-  const [showXp, setShowXp] = useState(false);
   const [displayXp, setDisplayXp] = useState(0);
   const animateXp = (target: number) => {
   const duration = 2000;
@@ -891,15 +890,16 @@ const isUpcoming = streak < m.day;
               autoPlay
               className="w-full h-auto object-cover mix-blend-screen"
               onEnded={() => {
-  setShowXp(true);
   animateXp(completedMilestone?.xp ?? 0);
 }}
             />
           )}
         </div>
 
-        {/* XP BELOW MEDIA (NOT INSIDE) */}
-        {claimed && showXp && (
+        {/* XP BELOW MEDIA (NOT INSIDE) — always shown once claimed so the
+            counter reserves its space (no layout shift). It sits at +0 XP
+            during the reward video, then counts up once the video ends. */}
+        {claimed && (
           <div className="mb-3">
             <div className="text-[#E990F7] text-3xl font-bold">
               +{displayXp} XP
