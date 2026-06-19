@@ -271,6 +271,10 @@ const handleClaimQuest = async (quest: Quest) => {
   setIsClaimingQuest(quest._id);
 
   try {
+    // Ensure the quest is marked started before claiming, so a quest approved
+    // before it was ever started (claimQuest requires the record) still claims.
+    await apiRequestV2("POST", "/api/quest/start-quest", { questId: quest._id }).catch(() => {});
+
     const data = await apiRequestV2("POST", "/api/quest/claim-quest", { questId: quest._id });
 
     toast({
