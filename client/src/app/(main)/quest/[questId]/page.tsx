@@ -158,6 +158,10 @@ export default function QuestEnvironment() {
     try {
       await apiRequestV2("POST", "/api/user/update-claims-created", { txHash });
 
+      // Ensure the quest is marked started so the reward is claimable
+      // (claimQuest requires a quest-completion record to exist).
+      await apiRequestV2("POST", "/api/quest/start-quest", { questId }).catch(() => {});
+
       await apiRequestV2("POST", `/api/quest/claim-quest?id=${questId}`);
 
       setCompleted(true);

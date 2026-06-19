@@ -60,6 +60,21 @@ const PROOF_REQUIRED_CAMPAIGN_TAGS = new Set([
 	"wallet-address",
 ]);
 
+// Ensures the overall quest-completion record exists for {quest, user} so the
+// reward claim (claimQuest) can find it, regardless of which UI surface drove
+// the task completion. Genuine completion endpoints (submit/verify/claim-mini)
+// call this after confirming the user did the task. $setOnInsert leaves any
+// existing record untouched, so a stale prior-day daily completion is not
+// resurrected (the daily reset is still owned by startQuest).
+export const ensureQuestStarted = async (questId: any, userId: any): Promise<void> => {
+	if (!questId || !userId) return;
+	await questCompleted.updateOne(
+		{ quest: questId, user: userId },
+		{ $setOnInsert: { quest: questId, user: userId, done: false, category: "one-time" } },
+		{ upsert: true }
+	);
+};
+
 // Ensures each submission in a review lane carries the linked quest's category
 // (seasonal/featured/daily). New submissions store it at creation time; this
 // backfills any that predate the field by resolving miniQuestId -> quest.
@@ -754,6 +769,10 @@ export const claimMiniQuest = async (req: GlobalRequest, res: GlobalResponse) =>
 
 		await miniQuestExists.save();
 
+		// Guarantee the overall quest-completion record exists so the reward can be
+		// claimed (claimQuest requires it) regardless of which surface started this.
+		await ensureQuestStarted(questId, req.id);
+
 		res.status(OK).json({ message: "quest done" });
 	} catch (error) {
 		logger.error(error);
@@ -1031,6 +1050,10 @@ export const submitQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 			}
 
 			notComplete = await miniQuestCompleted.create({ miniQuest: id, quest: questId, user: userId, done: false, status: "pending" });
+
+			// Guarantee the overall quest-completion record exists so the reward can be
+			// claimed after this submission is approved (claimQuest requires it).
+			await ensureQuestStarted(questId, userId);
 		} else {
 			questExists = await campaignQuest.findById(id);
 			if (!questExists) {
