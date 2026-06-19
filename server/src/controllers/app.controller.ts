@@ -1807,9 +1807,9 @@ export const claimStreakReward = async (req: GlobalRequest, res: GlobalResponse)
     }
 
     dailyXpReward!.xpClaimedThisMonth += streakReward;
-    await dailyXpReward!.save();
 
     await user.findByIdAndUpdate(req.id, { $inc: { xp: streakReward }, $set: { dayCount } });
+    await dailyXpReward!.save();
 
     await xpLog.create({ amount: streakReward, address: req.user.address, username: req.user.username, type: "daily-xp-streak-reward", status: "success" });
 
@@ -1961,6 +1961,7 @@ export const performDailySignIn = async (
 
     userExists.level = level;
     userExists.totalCheckIns += 1;
+    userExists.streakToRestore = 0;
 
     const dailySignInRecord = await dailySignIn.findOne({ month, user: userId }).select("xpClaimedThisMonth date");
     if (!dailySignInRecord) {
