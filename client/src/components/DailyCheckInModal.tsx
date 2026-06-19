@@ -889,6 +889,12 @@ const isUpcoming = streak < m.day;
               playsInline
               autoPlay
               className="w-full h-auto object-cover mix-blend-screen"
+              style={{
+                WebkitMaskImage:
+                  "radial-gradient(ellipse 72% 72% at 50% 48%, #000 55%, transparent 92%)",
+                maskImage:
+                  "radial-gradient(ellipse 72% 72% at 50% 48%, #000 55%, transparent 92%)",
+              }}
               onEnded={() => {
   animateXp(completedMilestone?.xp ?? 0);
 }}
