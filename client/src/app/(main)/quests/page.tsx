@@ -233,6 +233,10 @@ const handleSubmitQuest = async (quest: any, proof: string) => {
   }
 
   try {
+    // Mark the quest started so the reward is claimable after approval
+    // (claimQuest requires a quest-completion record to exist).
+    await apiRequestV2("POST", "/api/quest/start-quest", { questId: quest._id }).catch(() => {});
+
     const data = await apiRequestV2("POST", "/api/quest/submit-quest", {
       submissionLink: proof,
       questId: quest._id,

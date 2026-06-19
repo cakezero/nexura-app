@@ -54,6 +54,7 @@ import { evaluateDailyStreak } from "@/utils/streak.utils";
 import { lesson, lessonCompleted } from "@/models/lesson.model";
 import { xpLog } from "@/models/xpLog.model";
 import { formatDate } from "date-fns";
+import { ensureQuestStarted } from "./quest.controller";
 
 const client = new GraphQLClient(GRAPHQL_API_URL);
 
@@ -173,6 +174,12 @@ export const validateTrustNameTask = async (
       taskExists.status = "done";
 
       await taskExists.save();
+    }
+
+    // Mini-quest (non-campaign) tasks claim through claimQuest, which needs the
+    // overall quest-completion record; campaign tasks use a separate claim path.
+    if (!isCampaign) {
+      await ensureQuestStarted(parentId, req.id);
     }
 
     await user.findByIdAndUpdate(req.id, { trustName: hasTrustName, username: hasTrustName });
@@ -1083,6 +1090,8 @@ export const validateAtlasTask = async (req: GlobalRequest, res: GlobalResponse)
             user: userToCheck._id,
           });
 
+          await ensureQuestStarted(questId, userToCheck._id);
+
           res.status(OK).json({ message: "task completed" });
           return;
         }
@@ -1092,6 +1101,8 @@ export const validateAtlasTask = async (req: GlobalRequest, res: GlobalResponse)
           miniQuestExists!.status = "done";
 
           await miniQuestExists.save();
+
+          await ensureQuestStarted(questId, userToCheck._id);
 
           res.status(OK).json({ message: "task completed" });
           return;
@@ -1247,6 +1258,8 @@ export const validatePortalTask = async (
             user: userToCheck._id,
           });
 
+          await ensureQuestStarted(questId, userToCheck._id);
+
           res.status(OK).json({ message: "task completed" });
           return;
         }
@@ -1261,6 +1274,8 @@ export const validatePortalTask = async (
           miniQuestExists!.status = "done";
 
           await miniQuestExists.save();
+
+          await ensureQuestStarted(questId, userToCheck._id);
 
           res.status(OK).json({ message: "task completed" });
           return;
