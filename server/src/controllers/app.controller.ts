@@ -968,11 +968,31 @@ export const claimRelicReward = async (req: GlobalRequest, res: GlobalResponse) 
       return;
     }
 
+    const questUser = await user.findById(req.id);
+    if (!questUser) {
+      res.status(BAD_REQUEST).json({ error: "invalid user" });
+      return;
+    }
+
     isQuestCompleted.done = true;
 
     await isQuestCompleted.save();
 
-    await user.findByIdAndUpdate(req.id, { $inc: { xp: 6000 } });
+    questUser.xp += questFound.reward;
+
+    const level = await updateLevel(questUser.xp, questUser.badges, questUser._id.toString());
+
+    questUser.level = level;
+
+    await xpLog.create({
+      address: questUser.address,
+      amount: questFound.reward,
+      username: questUser.username,
+      status: "success",
+      type: "quest"
+    });
+
+    await questUser.save();
 
     res.status(OK).json({ message: "relic reward claimed successfully" });
   } catch (error) {

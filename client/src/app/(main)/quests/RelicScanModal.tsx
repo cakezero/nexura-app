@@ -4,7 +4,21 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { ArrowUp, X, ExternalLink } from "lucide-react";
 import { apiRequestV2 } from "@/lib/queryClient";
 
-export type RelicPhase = "scanning" | "found" | "ready" | "failure";
+export type RelicPhase = "scanning" | "found" | "ready" | "failure" | "claimed";
+
+// The relic XP was already CLAIMED for this quest (vs. genuinely no relics).
+// Backend: "quest has already been completed" / "quest reward has already been claimed".
+const isAlreadyClaimedError = (err: any) => {
+  const msg = String(err?.message || err?.info?.error || "").toLowerCase();
+  return msg.includes("already") && (msg.includes("complete") || msg.includes("claim"));
+};
+
+// Relics were verified on a previous open but the XP was never claimed.
+// Backend: "claim xp to complete quest" — send the user straight to the claim step.
+const isPendingClaimError = (err: any) => {
+  const msg = String(err?.message || err?.info?.error || "").toLowerCase();
+  return !msg.includes("already") && msg.includes("claim") && msg.includes("complete");
+};
 
 interface RelicScanModalProps {
   questId: string;
@@ -108,7 +122,20 @@ export default function RelicScanModal({
       setRelicCount(count);
       setPhase("found");
       timers.current.push(setTimeout(() => setPhase("ready"), 800));
-    } catch {
+    } catch (err: any) {
+      // Already claimed — show the claimed state, not the no-relics screen.
+      if (isAlreadyClaimedError(err)) {
+        clearTimers();
+        setPhase("claimed");
+        return;
+      }
+      // Verified before but never claimed — jump straight to the claim step.
+      if (isPendingClaimError(err)) {
+        clearTimers();
+        setRelicCount((c) => c || 1);
+        setPhase("ready");
+        return;
+      }
       // Verify failed (no relic / auth / network) — fail gracefully into the
       // no-relics recheck phase instead of spinning.
       runFailureSimulation();
@@ -133,13 +160,17 @@ export default function RelicScanModal({
       }
       onClaimed?.();
       onClose();
-    } catch {
-      onClaimed?.();
-      onClose();
+    } catch (err: any) {
+      // Already claimed — surface the claimed state instead of a false success.
+      // Any other failure keeps the modal open so the user can retry.
+      if (isAlreadyClaimedError(err)) {
+        clearTimers();
+        setPhase("claimed");
+      }
     } finally {
       setClaiming(false);
     }
-  }, [phase, claiming, simulate, forcePhase, questId, onClaimed, onClose]);
+  }, [phase, claiming, simulate, forcePhase, questId, onClaimed, onClose, clearTimers]);
 
   const handleRecheck = useCallback(() => {
     setRelicCount(0);
@@ -148,6 +179,7 @@ export default function RelicScanModal({
 
   const active = phase === "scanning" || phase === "found" || phase === "ready";
   const isFailure = phase === "failure";
+  const isClaimed = phase === "claimed";
 
   const statusText =
     phase === "scanning"
@@ -156,6 +188,8 @@ export default function RelicScanModal({
       ? `${relicCount} relics found`
       : phase === "ready"
       ? "Preparing XP rewards"
+      : isClaimed
+      ? "Relics already verified"
       : "Oops! No Relics Found";
 
   const stepDone = (i: number) => {
@@ -248,12 +282,14 @@ export default function RelicScanModal({
               style={{
                 background: isFailure
                   ? "rgba(255,146,138,0.12)"
+                  : isClaimed
+                  ? "rgba(0,225,162,0.12)"
                   : "rgba(155,109,255,0.15)",
               }}
             >
               <ArrowUp
                 className="h-[18px] w-[18px]"
-                style={{ color: isFailure ? "#ff928a" : "#9b6dff" }}
+                style={{ color: isFailure ? "#ff928a" : isClaimed ? "#00e1a2" : "#9b6dff" }}
                 strokeWidth={2.5}
               />
             </div>
@@ -263,13 +299,28 @@ export default function RelicScanModal({
         {/* STATUS TEXT */}
         <p
           className="mt-4 text-center text-[16px] font-medium"
-          style={{ color: isFailure ? "#ff928a" : "#9b6dff" }}
+          style={{ color: isFailure ? "#ff928a" : isClaimed ? "#00e1a2" : "#9b6dff" }}
         >
           {statusText}
         </p>
 
-        {/* BODY: steps + claim (active) OR failure block */}
-        {!isFailure ? (
+        {/* BODY: claimed block OR steps + claim (active) OR failure block */}
+        {isClaimed ? (
+          <div className="px-[22px] pb-[22px] pt-5">
+            <p className="text-center text-[13px] leading-relaxed text-[rgba(255,255,255,0.6)]">
+              Your Relics are verified and the{" "}
+              <span className="text-white">XP reward has already been claimed</span>.
+            </p>
+
+            <button
+              onClick={onClose}
+              className="mt-5 w-full rounded-full border px-[32px] py-[10px] text-[16px] font-semibold tracking-[0.8px] text-white transition hover:bg-[rgba(139,62,254,0.12)]"
+              style={{ borderColor: "#8b3efe" }}
+            >
+              Close
+            </button>
+          </div>
+        ) : !isFailure ? (
           <>
             <div className="mt-6 flex flex-col gap-[9px] px-[22px]">
               {STEPS.map((label, i) => {

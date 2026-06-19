@@ -167,13 +167,13 @@ const handleStartQuest = async (quest: Quest) => {
   }
 };
 
-// Featured/daily quests complete on this page: open the task link immediately
-// and reveal the proof box inline, instead of navigating to a quest detail page.
-const handleStartInline = (quest: any) => {
+// Featured/daily quests complete on this page. The "Retry" button (re)opens the
+// task link and ensures a completion record exists, so users can revisit the task
+// without navigating to a quest detail page.
+const handleReopenTask = (quest: any) => {
   apiRequestV2("POST", "/api/quest/start-quest", { questId: quest._id }).catch(() => {});
   const link = quest.taskLink || quest.link;
   if (link && link !== "#") window.open(link, "_blank", "noopener,noreferrer");
-  setActiveQuestId(quest._id);
 };
 
 const [isVerifyingTask, setIsVerifyingTask] = useState<string | null>(null);
@@ -195,10 +195,6 @@ const handleAtlasTask = async (quest: Quest) => {
   try {
     // Make sure a quest-completion record exists so the reward can be claimed.
     await apiRequestV2("POST", "/api/quest/start-quest", { questId: quest._id }).catch(() => {});
-
-    if (quest.taskLink) {
-      window.open(quest.taskLink, "_blank", "noopener,noreferrer");
-    }
 
     await apiRequestV2("POST", "/api/quest/check-atlas-task", {
       tag: quest.taskType,
@@ -312,11 +308,13 @@ const HaloButton = ({
   onClick,
   disabled,
   fullWidth,
+  variant = "primary",
 }: {
   label: string;
   onClick: () => void;
   disabled?: boolean;
   fullWidth?: boolean;
+  variant?: "primary" | "outline";
 }) => (
   <div className={`relative ${fullWidth ? "w-full" : "inline-flex"}`}>
     <button
@@ -324,11 +322,19 @@ const HaloButton = ({
       onClick={onClick}
       className={`relative ${
         fullWidth ? "w-full" : ""
-      } px-5 py-1.5 rounded-full bg-[#8b3efe] text-white text-[11px] font-semibold tracking-[0.3px] whitespace-nowrap transition hover:bg-[#7b35e6] disabled:opacity-50 disabled:cursor-not-allowed`}
-      style={{
-        boxShadow:
-          "0px 6px 14px -4px rgba(139,62,254,0.35), 0px 3px 6px -4px rgba(139,62,254,0.35)",
-      }}
+      } px-5 py-1.5 rounded-full ${
+        variant === "outline"
+          ? "border border-[#8b3efe] bg-transparent text-[#8b3efe] hover:bg-[rgba(139,62,254,0.12)]"
+          : "bg-[#8b3efe] text-white hover:bg-[#7b35e6]"
+      } text-[11px] font-semibold tracking-[0.3px] whitespace-nowrap transition disabled:opacity-50 disabled:cursor-not-allowed`}
+      style={
+        variant === "outline"
+          ? undefined
+          : {
+              boxShadow:
+                "0px 6px 14px -4px rgba(139,62,254,0.35), 0px 3px 6px -4px rgba(139,62,254,0.35)",
+            }
+      }
     >
       {label}
     </button>
@@ -344,23 +350,12 @@ const renderDefaultQuestCard = (quest: any, index: number = 0) => {
 
   // This user's submission state for the single task, mirroring the seasonal
   // state machine inline on the card (only meaningful for inline-proof tasks).
-  const completed = quest.taskDone || quest.taskStatus === "done";
+  // A relic quest reads as completed once its XP reward has been claimed.
+  const completed = quest.taskDone || quest.taskStatus === "done" || (quest.isRelicQuest && quest.done === true);
   const approved = !completed && quest.taskStatus === "approved";
   const pending = isInlineProofTask && !completed && !approved && quest.taskStatus === "pending";
 
   const isExpanded = isInlineProofTask && !completed && !approved && !pending && activeQuestId === quest._id;
-
-  const buttonLabel = quest.isRelicQuest ? "Check Relic" : "Start Quest";
-
-  const handleAction = () => {
-    if (quest.isRelicQuest) {
-      setRelicQuest({ id: quest._id, reward: Number(quest.reward) || 0 });
-    } else if (isAtlasTask) {
-      handleAtlasTask(quest);
-    } else {
-      handleStartInline(quest);
-    }
-  };
 
   return (
     <div
@@ -423,12 +418,28 @@ const renderDefaultQuestCard = (quest: any, index: number = 0) => {
             />
           ) : pending ? (
             <HaloButton label="Pending Review" disabled onClick={() => {}} />
-          ) : (
+          ) : quest.isRelicQuest ? (
             <HaloButton
-              label={isAtlasTask && isVerifyingTask === quest._id ? "Verifying…" : buttonLabel}
-              disabled={isStartingQuest === quest._id || isVerifyingTask === quest._id}
-              onClick={handleAction}
+              label="Check Relic"
+              onClick={() => setRelicQuest({ id: quest._id, reward: Number(quest.reward) || 0 })}
             />
+          ) : isAtlasTask ? (
+            <div className="flex items-center gap-2">
+              <HaloButton
+                label={isVerifyingTask === quest._id ? "Verifying…" : "Verify"}
+                disabled={isVerifyingTask === quest._id}
+                onClick={() => handleAtlasTask(quest)}
+              />
+              <HaloButton variant="outline" label="Retry" onClick={() => handleReopenTask(quest)} />
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <HaloButton
+                label="Submit Proof"
+                onClick={() => setActiveQuestId(activeQuestId === quest._id ? null : quest._id)}
+              />
+              <HaloButton variant="outline" label="Retry" onClick={() => handleReopenTask(quest)} />
+            </div>
           )}
         </div>
       </div>
