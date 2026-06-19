@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ExternalLink, Clock, Users, AlertTriangle } from "lucide-react";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import { apiRequestV2 } from "@/lib/queryClient";
@@ -50,12 +50,26 @@ export default function Quests() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
 
+const queryClient = useQueryClient();
+
 const { data, isLoading, error, refetch } = useQuery({
   queryKey: ["quests"],
   queryFn: async () => apiRequestV2("GET", "/api/quests"),
-  refetchInterval: 300000,
-  refetchIntervalInBackground: true,
+  refetchInterval: 30000,
+  refetchIntervalInBackground: false,
 });
+
+const setLocalTaskStatus = (questId: string, taskStatus: string) => {
+  queryClient.setQueryData(["quests"], (old: any) => {
+    if (!old?.quests) return old;
+    const patch = (arr: any[] = []) => arr.map((q) => (q._id === questId ? { ...q, taskStatus } : q));
+    return { ...old, quests: {
+      featuredQuests: patch(old.quests.featuredQuests),
+      dailyQuests: patch(old.quests.dailyQuests),
+      seasonalQuests: patch(old.quests.seasonalQuests),
+    }};
+  });
+};
 
   const [serverOffset, setServerOffset] = useState(0);
   const [timeLeft, setTimeLeft] = useState("");
@@ -233,17 +247,28 @@ const handleSubmitQuest = async (quest: any, proof: string) => {
   }
 
   try {
-    // Mark the quest started so the reward is claimable after approval
-    // (claimQuest requires a quest-completion record to exist).
-    await apiRequestV2("POST", "/api/quest/start-quest", { questId: quest._id }).catch(() => {});
+    let data: any;
 
-    const data = await apiRequestV2("POST", "/api/quest/submit-quest", {
-      submissionLink: proof,
-      questId: quest._id,
-      page: "quest",
-      id: quest.taskId,
-      tag: quest.taskType,
-    });
+    if (quest.taskStatus === "retry") {
+      // A rejected submission already exists, so submit-quest would 409
+      // ("quest already submitted"). update-submission replaces the proof instead.
+      data = await apiRequestV2("POST", "/api/quest/update-submission", {
+        submissionLink: proof,
+        miniQuestId: quest.taskId,
+      });
+    } else {
+      // Mark the quest started so the reward is claimable after approval
+      // (claimQuest requires a quest-completion record to exist).
+      await apiRequestV2("POST", "/api/quest/start-quest", { questId: quest._id }).catch(() => {});
+
+      data = await apiRequestV2("POST", "/api/quest/submit-quest", {
+        submissionLink: proof,
+        questId: quest._id,
+        page: "quest",
+        id: quest.taskId,
+        tag: quest.taskType,
+      });
+    }
 
     toast({
       title: "Submitted",
@@ -252,6 +277,10 @@ const handleSubmitQuest = async (quest: any, proof: string) => {
 
     setActiveQuestId(null);
     setProofInput("");
+
+    // Optimistically flip the card to "Pending Review" so it updates instantly;
+    // the refetch below reconciles with the server.
+    setLocalTaskStatus(quest._id, "pending");
 
     await refetch?.();
   } catch (err: any) {
@@ -322,7 +351,7 @@ const HaloButton = ({
   onClick: () => void;
   disabled?: boolean;
   fullWidth?: boolean;
-  variant?: "primary" | "outline";
+  variant?: "primary" | "outline" | "amber";
 }) => (
   <div className={`relative ${fullWidth ? "w-full" : "inline-flex"}`}>
     <button
@@ -333,11 +362,18 @@ const HaloButton = ({
       } px-5 py-1.5 rounded-full ${
         variant === "outline"
           ? "border border-[#8b3efe] bg-transparent text-[#8b3efe] hover:bg-[rgba(139,62,254,0.12)]"
+          : variant === "amber"
+          ? "bg-[#f59e0b] text-black hover:bg-[#d97706]"
           : "bg-[#8b3efe] text-white hover:bg-[#7b35e6]"
       } text-[11px] font-semibold tracking-[0.3px] whitespace-nowrap transition disabled:opacity-50 disabled:cursor-not-allowed`}
       style={
         variant === "outline"
           ? undefined
+          : variant === "amber"
+          ? {
+              boxShadow:
+                "0px 6px 14px -4px rgba(245,158,11,0.35), 0px 3px 6px -4px rgba(245,158,11,0.35)",
+            }
           : {
               boxShadow:
                 "0px 6px 14px -4px rgba(139,62,254,0.35), 0px 3px 6px -4px rgba(139,62,254,0.35)",
@@ -362,6 +398,8 @@ const renderDefaultQuestCard = (quest: any, index: number = 0) => {
   const completed = quest.taskDone || quest.taskStatus === "done" || (quest.isRelicQuest && quest.done === true);
   const approved = !completed && quest.taskStatus === "approved";
   const pending = isInlineProofTask && !completed && !approved && quest.taskStatus === "pending";
+  // An admin rejected this user's submission; they must review and resubmit.
+  const retry = isInlineProofTask && !completed && !approved && !pending && quest.taskStatus === "retry";
 
   const isExpanded = isInlineProofTask && !completed && !approved && !pending && activeQuestId === quest._id;
 
@@ -426,6 +464,15 @@ const renderDefaultQuestCard = (quest: any, index: number = 0) => {
             />
           ) : pending ? (
             <HaloButton label="Pending Review" disabled onClick={() => {}} />
+          ) : retry ? (
+            <div className="flex items-center gap-2">
+              <HaloButton
+                variant="amber"
+                label="Retry"
+                onClick={() => setActiveQuestId(activeQuestId === quest._id ? null : quest._id)}
+              />
+              <HaloButton variant="outline" label="Reopen" onClick={() => handleReopenTask(quest)} />
+            </div>
           ) : quest.isRelicQuest ? (
             <HaloButton
               label="Check Relic"
@@ -458,9 +505,15 @@ const renderDefaultQuestCard = (quest: any, index: number = 0) => {
           <div className="rounded-[12px] border border-[rgba(139,62,254,0.3)] bg-[#0a0a0a] p-3.5 space-y-3">
             <div className="flex items-center gap-1.5">
               <AlertTriangle className="h-4 w-4 shrink-0 text-amber-400" />
-              <p className="text-[11px] font-bold text-[rgba(255,255,255,0.8)]">
-                It may take 10 minutes to 10 hours to validate your submission.
-              </p>
+              {retry ? (
+                <p className="text-[11px] font-bold text-amber-400">
+                  Your submission was rejected — please review and resubmit.
+                </p>
+              ) : (
+                <p className="text-[11px] font-bold text-[rgba(255,255,255,0.8)]">
+                  It may take 10 minutes to 10 hours to validate your submission.
+                </p>
+              )}
             </div>
 
             <input
