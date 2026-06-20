@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ExternalLink, Clock, Users, AlertTriangle } from "lucide-react";
+import { ExternalLink, Clock, Users, AlertTriangle, Eye } from "lucide-react";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import { apiRequestV2 } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -128,6 +128,9 @@ const [relicQuest, setRelicQuest] = useState<{ id: string; reward: number } | nu
 
 const [activeQuestId, setActiveQuestId] = useState(null);
 const [proofInput, setProofInput] = useState("");
+// Quests where the user clicked "Retry" on a rejected submission: the Retry
+// button reopens the task link, then the card returns to Submit Proof + eye.
+const [retryOpened, setRetryOpened] = useState<string[]>([]);
 
 const featuredQuests: Quest[] = data?.quests?.featuredQuests ?? [];
 const dailyQuests: Quest[] = data?.quests?.dailyQuests ?? [];
@@ -278,9 +281,10 @@ const handleSubmitQuest = async (quest: any, proof: string) => {
     setActiveQuestId(null);
     setProofInput("");
 
-    // Optimistically flip the card to "Pending Review" so it updates instantly;
-    // the refetch below reconciles with the server.
+    // Optimistically flip the card to "Pending Verification" so it updates
+    // instantly; the refetch below reconciles with the server.
     setLocalTaskStatus(quest._id, "pending");
+    setRetryOpened((prev) => prev.filter((id) => id !== quest._id));
 
     await refetch?.();
   } catch (err: any) {
@@ -399,7 +403,9 @@ const renderDefaultQuestCard = (quest: any, index: number = 0) => {
   const approved = !completed && quest.taskStatus === "approved";
   const pending = isInlineProofTask && !completed && !approved && quest.taskStatus === "pending";
   // An admin rejected this user's submission; they must review and resubmit.
-  const retry = isInlineProofTask && !completed && !approved && !pending && quest.taskStatus === "retry";
+  // Show the dedicated "Retry" button only until the user clicks it (which
+  // reopens the link); after that the card returns to Submit Proof + eye.
+  const retry = isInlineProofTask && !completed && !approved && !pending && quest.taskStatus === "retry" && !retryOpened.includes(quest._id);
 
   const isExpanded = isInlineProofTask && !completed && !approved && !pending && activeQuestId === quest._id;
 
@@ -463,16 +469,16 @@ const renderDefaultQuestCard = (quest: any, index: number = 0) => {
               onClick={() => handleClaimQuest(quest)}
             />
           ) : pending ? (
-            <HaloButton label="Pending Review" disabled onClick={() => {}} />
+            <HaloButton label="Pending Verification" disabled onClick={() => {}} />
           ) : retry ? (
-            <div className="flex items-center gap-2">
-              <HaloButton
-                variant="amber"
-                label="Retry"
-                onClick={() => setActiveQuestId(activeQuestId === quest._id ? null : quest._id)}
-              />
-              <HaloButton variant="outline" label="Reopen" onClick={() => handleReopenTask(quest)} />
-            </div>
+            <HaloButton
+              variant="amber"
+              label="Retry"
+              onClick={() => {
+                handleReopenTask(quest);
+                setRetryOpened((prev) => (prev.includes(quest._id) ? prev : [...prev, quest._id]));
+              }}
+            />
           ) : quest.isRelicQuest ? (
             <HaloButton
               label="Check Relic"
@@ -485,7 +491,15 @@ const renderDefaultQuestCard = (quest: any, index: number = 0) => {
                 disabled={isVerifyingTask === quest._id}
                 onClick={() => handleAtlasTask(quest)}
               />
-              <HaloButton variant="outline" label="Retry" onClick={() => handleReopenTask(quest)} />
+              <button
+                type="button"
+                onClick={() => handleReopenTask(quest)}
+                title="Reopen task link"
+                aria-label="Reopen task link"
+                className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full border border-[#8b3efe] text-[#8b3efe] transition hover:bg-[rgba(139,62,254,0.12)]"
+              >
+                <Eye className="h-4 w-4" />
+              </button>
             </div>
           ) : (
             <div className="flex items-center gap-2">
@@ -493,7 +507,15 @@ const renderDefaultQuestCard = (quest: any, index: number = 0) => {
                 label="Submit Proof"
                 onClick={() => setActiveQuestId(activeQuestId === quest._id ? null : quest._id)}
               />
-              <HaloButton variant="outline" label="Retry" onClick={() => handleReopenTask(quest)} />
+              <button
+                type="button"
+                onClick={() => handleReopenTask(quest)}
+                title="Reopen task link"
+                aria-label="Reopen task link"
+                className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full border border-[#8b3efe] text-[#8b3efe] transition hover:bg-[rgba(139,62,254,0.12)]"
+              >
+                <Eye className="h-4 w-4" />
+              </button>
             </div>
           )}
         </div>
