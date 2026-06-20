@@ -770,6 +770,7 @@ export const getAdminQuestDetail = async (req: GlobalRequest, res: GlobalRespons
         title: found.title || "",
         description: found.description || found.project_name || "",
         status: temporalStatus,
+        category: found.category ?? "seasonal",
         starts_at: found.starts_at ?? null,
         ends_at: found.ends_at ?? null,
         reward: found.reward ?? 0,
