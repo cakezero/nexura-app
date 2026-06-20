@@ -37,7 +37,7 @@ const STEPS = [
   "Preparing XP rewards",
 ];
 
-const OPENSEA_URL = "https://opensea.io/collection/nexura-relics";
+const OPENSEA_URL = "https://opensea.io/collection/relics-by-intuition";
 
 export default function RelicScanModal({
   questId,
