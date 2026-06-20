@@ -131,6 +131,9 @@ const [proofInput, setProofInput] = useState("");
 // Quests where the user clicked "Retry" on a rejected submission: the Retry
 // button reopens the task link, then the card returns to Submit Proof + eye.
 const [retryOpened, setRetryOpened] = useState<string[]>([]);
+// Quests the user just clicked "Start Quest" on, so the card flips to Submit
+// Proof immediately (optimistic) without waiting for the joined refetch.
+const [startedLocal, setStartedLocal] = useState<string[]>([]);
 
 const featuredQuests: Quest[] = data?.quests?.featuredQuests ?? [];
 const dailyQuests: Quest[] = data?.quests?.dailyQuests ?? [];
@@ -406,6 +409,10 @@ const renderDefaultQuestCard = (quest: any, index: number = 0) => {
   // Show the dedicated "Retry" button only until the user clicks it (which
   // reopens the link); after that the card returns to Submit Proof + eye.
   const retry = isInlineProofTask && !completed && !approved && !pending && quest.taskStatus === "retry" && !retryOpened.includes(quest._id);
+  // A task is "started" once the user clicked Start Quest (opening the link) or
+  // the server already has a completion record (joined). New tasks show Start
+  // Quest first; started ones show Submit Proof + eye.
+  const started = quest.joined || startedLocal.includes(quest._id);
 
   const isExpanded = isInlineProofTask && !completed && !approved && !pending && activeQuestId === quest._id;
 
@@ -501,6 +508,14 @@ const renderDefaultQuestCard = (quest: any, index: number = 0) => {
                 <Eye className="h-4 w-4" />
               </button>
             </div>
+          ) : !started ? (
+            <HaloButton
+              label="Start Quest"
+              onClick={() => {
+                handleReopenTask(quest);
+                setStartedLocal((prev) => (prev.includes(quest._id) ? prev : [...prev, quest._id]));
+              }}
+            />
           ) : (
             <div className="flex items-center gap-2">
               <HaloButton
