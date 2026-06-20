@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { ArrowUp, X, ExternalLink } from "lucide-react";
 import { apiRequestV2 } from "@/lib/queryClient";
+import { motion } from "framer-motion";
+import { modalBackdrop, modalPanel } from "@/lib/motion";
 
 export type RelicPhase = "scanning" | "found" | "preparing" | "ready" | "failure" | "claimed";
 
@@ -208,11 +210,16 @@ export default function RelicScanModal({
   const claimEnabled = phase === "ready" && !claiming;
 
   return (
-    <div
+    <motion.div
+      variants={modalBackdrop}
+      initial="initial"
+      animate="animate"
+      exit="exit"
       className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
       onClick={onClose}
     >
-      <div
+      <motion.div
+        variants={modalPanel}
         onClick={(e) => e.stopPropagation()}
         className="relative w-full max-w-[420px] overflow-hidden rounded-[40px]"
         style={{
@@ -412,7 +419,7 @@ export default function RelicScanModal({
             </button>
           </div>
         )}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

@@ -8,7 +8,7 @@ import AnimatedBackground from "@/components/AnimatedBackground";
 import { apiRequestV2 } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -789,8 +789,10 @@ const renderSeasonalQuestCard = (quest: Quest, index: number = 0) => {
 
       </div>
 
+<AnimatePresence>
 {relicQuest && (
   <RelicScanModal
+    key="relic-scan-modal"
     questId={relicQuest.id}
     reward={relicQuest.reward}
     onClose={() => setRelicQuest(null)}
@@ -803,6 +805,7 @@ const renderSeasonalQuestCard = (quest: Quest, index: number = 0) => {
     }}
   />
 )}
+</AnimatePresence>
 
     </div>
   );

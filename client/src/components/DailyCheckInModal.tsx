@@ -15,6 +15,8 @@ import { Check, Flame, ChevronLeft, ChevronRight, Trophy, X } from "lucide-react
 import { useAuth } from "../lib/auth";
 import { payRestoreStreakFee } from "../lib/performOnchainAction";
 import { createPortal } from "react-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import { modalBackdrop, modalPanel } from "../lib/motion";
 
 interface DailyCheckInModalProps {
   open: boolean;
@@ -831,9 +833,17 @@ const isUpcoming = streak < m.day;
       </DialogContent>
     </Dialog>
 
+<AnimatePresence>
 {chestOpen &&
   createPortal(
-    <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black">
+    <motion.div
+      key="chest-open-overlay"
+      variants={modalBackdrop}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      className="fixed inset-0 z-[99999] flex items-center justify-center bg-black"
+    >
 
       {/* OUTSIDE CLICK LAYER */}
       <div
@@ -843,7 +853,8 @@ const isUpcoming = streak < m.day;
       />
 
       {/* MODAL */}
-      <div
+      <motion.div
+        variants={modalPanel}
         className="relative z-10 w-[85%] max-w-xs text-center"
         style={{ pointerEvents: "auto" }}
         onClick={(e) => e.stopPropagation()}
@@ -947,11 +958,12 @@ const isUpcoming = streak < m.day;
   </button>
 )}
 
-      </div>
-    </div>,
+      </motion.div>
+    </motion.div>,
     document.body
   )
 }
+</AnimatePresence>
 </>
   );
 }
