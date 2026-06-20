@@ -835,7 +835,7 @@ export const getTasks = async (req: GlobalRequest, res: GlobalResponse) => {
 
 export const getXpHistory = async (req: GlobalRequest, res: GlobalResponse) => {
 	try {
-		const history = await xpLog.find().sort({ timestamp: -1 }).limit(1000).lean();
+		const history = await xpLog.find().sort({ timestamp: -1 }).lean();
 		res.status(OK).json({ history });
 	} catch (error) {
 		logger.error(error);
