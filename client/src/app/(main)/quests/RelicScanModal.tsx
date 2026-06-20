@@ -385,14 +385,14 @@ export default function RelicScanModal({
             <p className="text-center text-[13px] leading-relaxed text-[rgba(255,255,255,0.5)]">
               Your wallet{" "}
               <span className="text-white">doesn&apos;t hold any Relics</span>. You
-              need at least one Relics to complete this task.
+              need at least one Relic to complete this task.
             </p>
 
             {/* divider */}
             <div className="my-4 h-px w-full bg-[rgba(255,255,255,0.08)]" />
 
             <p className="text-center text-[12px] text-[rgba(255,255,255,0.5)]">
-              Acquire a Relics to claim your XP rewards
+              Acquire a Relic to claim your XP rewards.
             </p>
 
             {/* Browse OpenSea */}
@@ -404,7 +404,7 @@ export default function RelicScanModal({
                 className="flex h-[30px] w-[166px] items-center justify-center gap-1.5 rounded-full text-[12px] text-white transition hover:opacity-90"
                 style={{ background: "#2081e2" }}
               >
-                Browse Opensea
+                Browse OpenSea
                 <ExternalLink className="h-3 w-3" />
               </a>
             </div>
@@ -412,8 +412,8 @@ export default function RelicScanModal({
             {/* Recheck */}
             <button
               onClick={handleRecheck}
-              className="mt-5 w-full rounded-full border px-[32px] py-[10px] text-[16px] font-semibold tracking-[0.8px] text-white transition hover:bg-[rgba(139,62,254,0.12)]"
-              style={{ borderColor: "#8b3efe" }}
+              className="mt-5 mx-auto block rounded-full px-[44px] py-[10px] text-[16px] font-semibold tracking-[0.8px] text-white transition hover:opacity-90"
+              style={{ background: "#8b3efe" }}
             >
               Recheck
             </button>

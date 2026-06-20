@@ -710,7 +710,7 @@ export default function CampaignEnvironment() {
                       ) : (
                         <input
                           type="url"
-                          placeholder={quest.tag === "create-post" ? "Paste the link to your post here" : "Paste your comment link or twitter username here"}
+                          placeholder={quest.tag === "create-post" ? "Paste the link to your post here" : "Paste your comment link or Twitter username here"}
                           value={proofLinks[quest._id] || ""}
                           onChange={(e) => setProofLinks({ ...proofLinks, [quest._id]: e.target.value })}
                           className="w-full bg-black/40 border border-white/20 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-purple-500"
@@ -739,7 +739,7 @@ export default function CampaignEnvironment() {
               );
             })
           ) : (
-            <p>No campaigns available</p>
+            <p>No quests available</p>
           )}
         </div>
       </div>

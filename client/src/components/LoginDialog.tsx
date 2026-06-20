@@ -34,11 +34,11 @@ export default function LoginDialog({ onClose }: { onClose?: () => void }) {
 		<form onSubmit={handleSubmit} className="max-w-sm p-4 space-y-3">
 			<div>
 				<label className="block text-sm text-muted-foreground mb-1">Username</label>
-				<Input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="choose a username" />
+				<Input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Choose a username" />
 			</div>
 			<div>
 				<label className="block text-sm text-muted-foreground mb-1">Referrer (optional)</label>
-				<Input value={referrer} onChange={(e) => setReferrer(e.target.value)} placeholder="referrer code" />
+				<Input value={referrer} onChange={(e) => setReferrer(e.target.value)} placeholder="Referrer code" />
 			</div>
 			{error && <div className="text-sm text-red-500">{error}</div>}
 			<div className="flex gap-2">

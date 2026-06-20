@@ -188,7 +188,7 @@ const handleCheckIn = async () => {
 
     toast({
       title: "Check-in complete!",
-      description: "+50 XP earned",
+      description: "+50 XP earned.",
     });
 
     onCheckInSuccess?.();
@@ -198,7 +198,7 @@ const handleCheckIn = async () => {
 
     toast({
       title: "Error",
-      description: error.message || "Failed to check in",
+      description: error.message || "Failed to check in.",
       variant: "destructive",
     });
 
@@ -789,7 +789,7 @@ const isUpcoming = streak < m.day;
       </div>
 
       <p className="text-[10px] leading-relaxed mt-1 text-[#A78BFA80]">
-        You can restore your streak for 1 trust
+        You can restore your streak for 1 TRUST.
       </p>
     </div>
 

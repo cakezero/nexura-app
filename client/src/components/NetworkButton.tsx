@@ -12,7 +12,7 @@ export default function NetworkButton({ className }: { className?: string }) {
     if (!(window as any).ethereum) {
       toast({
         title: "Wallet not found",
-        description: "Please install MetaMask or another Web3 wallet",
+        description: "Please install MetaMask or another Web3 wallet.",
         variant: "destructive",
       });
       return;
@@ -24,11 +24,11 @@ export default function NetworkButton({ className }: { className?: string }) {
         method: "wallet_switchEthereumChain",
         params: [{ chainId: MAINNET_CHAIN_ID }],
       });
-      toast({ title: "Network switched!", description: "Now on Intuition Mainnet" });
+      toast({ title: "Network switched!", description: "Now on Intuition Mainnet." });
       return;
     } catch (switchErr: any) {
       if (switchErr.code === 4001) {
-        toast({ title: "Request cancelled", description: "You cancelled the request", variant: "destructive" });
+        toast({ title: "Request cancelled", description: "You cancelled the request.", variant: "destructive" });
         return;
       }
       // Any other error (4902, -32603, unrecognised chain, etc.) → fall through to addEthereumChain
@@ -41,12 +41,12 @@ export default function NetworkButton({ className }: { className?: string }) {
         method: "wallet_addEthereumChain",
         params,
       });
-      toast({ title: "Network added!", description: "Intuition Mainnet has been added and activated" });
+      toast({ title: "Network added!", description: "Intuition Mainnet has been added and activated." });
     } catch (addErr: any) {
       if (addErr.code === 4001) {
-        toast({ title: "Request cancelled", description: "You cancelled the request", variant: "destructive" });
+        toast({ title: "Request cancelled", description: "You cancelled the request.", variant: "destructive" });
       } else {
-        toast({ title: "Failed to add network", description: addErr.message || "Please try again", variant: "destructive" });
+        toast({ title: "Failed to add network", description: addErr.message || "Please try again.", variant: "destructive" });
       }
     }
   };

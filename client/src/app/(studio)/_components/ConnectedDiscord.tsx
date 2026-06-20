@@ -62,7 +62,7 @@ export default function ConnectedDiscord() {
         setDiscordData(servers ?? []);
       } catch (error) {
         console.error(error);
-        toast({ title: "Error", description: "Failed to fetch server data", variant: "destructive" });
+        toast({ title: "Error", description: "Failed to fetch server data.", variant: "destructive" });
       } finally {
         setLoading(false);
       }
@@ -83,7 +83,7 @@ export default function ConnectedDiscord() {
       setRoles(roles ?? []);
     } catch (error) {
       console.error(error);
-      toast({ title: "Error", description: "Failed to fetch roles", variant: "destructive" });
+      toast({ title: "Error", description: "Failed to fetch roles.", variant: "destructive" });
     } finally {
       setLoadingRoles(false);
     }

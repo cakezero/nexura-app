@@ -237,22 +237,22 @@ export default function Profile() {
 
     try {
       if (!user) {
-        toast({ title: "Error", description: "Please log in to continue", variant: "destructive" });
+        toast({ title: "Error", description: "Please log in to continue.", variant: "destructive" });
         return;
       }
 
       if (levelIndex - 1 > currentLevelIndex) {
-        toast({ title: "Error", description: "Cannot mint future level", variant: "destructive" });
+        toast({ title: "Error", description: "Cannot mint future level.", variant: "destructive" });
         return;
       } // can't mint future level
 
       if (mintedLevels.includes(levelIndex) || userData.badges.includes(levelIndex)) {
-        toast({ title: "Error", description: "Cannot mint Nexon twice", variant: "destructive" });
+        toast({ title: "Error", description: "Cannot mint Nexon twice.", variant: "destructive" });
         return;
       }
 
       if (xpValue < LEVELS[levelIndex - 1].xp) {
-        toast({ title: "Error", description: "xp not enough to mint nexon", variant: "destructive" });
+        toast({ title: "Error", description: "XP not enough to mint Nexon.", variant: "destructive" });
         return;
       } // not achieved yet
 
@@ -268,7 +268,7 @@ export default function Profile() {
 
       await apiRequestV2("PATCH", "/api/user/update-badge", { level: levelIndex });
 
-      toast({ title: "Nexon Minted", description: `Level ${levelIndex} Nexon minted successfully` });
+      toast({ title: "Nexon Minted", description: `Level ${levelIndex} Nexon minted successfully.` });
     } catch (error: any) {
       console.error("[ACTION] handleMint ✗", error);
       toast({ title: "Error", description: error.message, variant: "destructive" });

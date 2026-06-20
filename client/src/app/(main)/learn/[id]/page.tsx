@@ -173,9 +173,9 @@ function LessonPageInner() {
 
     const lessonTitle = sanitize(lesson?.title) || "this lesson";
     const introHeader = "Ready to test your knowledge?";
-    const introBody = `Take a quiz to see how much you understand ${lessonTitle}`;
+    const introBody = `Take a quiz to see how much you understand ${lessonTitle}.`;
     const outroHeader = "Great job!";
-    const outroBody = `You finished the quiz on ${lessonTitle}`;
+    const outroBody = `You finished the quiz on ${lessonTitle}.`;
 
     // Build steps for a single section from combined items
     const buildSectionSteps = (items: AnyItem[], omitLastOutro = false): LessonStep[] => {
@@ -1183,7 +1183,7 @@ function LessonPageInner() {
 
               {/* Description */}
               <p className="mt-1 text-[11px] sm:text-[12px] text-[#c3c6d3] leading-relaxed max-w-[260px] sm:max-w-[300px]" style={{ fontFamily: "'Inter', sans-serif" }}>
-                You've successfully completed {lesson?.title ?? "this lesson"}
+                You've successfully completed {lesson?.title ?? "this lesson"}.
               </p>
 
               {/* XP amount */}

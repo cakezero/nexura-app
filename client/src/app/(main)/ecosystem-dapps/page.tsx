@@ -114,7 +114,7 @@ export default function EcosystemDapps() {
   const handleClaim = async (dapp: Dapp) => {
     console.log("[ACTION] handleClaim", { dappId: dapp._id, reward: dapp.reward });
     if (!getStoredAccessToken()) {
-      toast({ title: 'Sign in required', description: 'Please sign in to claim XP', variant: 'destructive' });
+      toast({ title: 'Sign in required', description: 'Please sign in to claim XP.', variant: 'destructive' });
       return;
     }
 
@@ -142,7 +142,7 @@ export default function EcosystemDapps() {
       }
 
       markClaimed(dapp._id);
-      toast({ title: 'XP awarded', description: `+${dapp.reward} XP` });
+      toast({ title: 'XP awarded', description: `+${dapp.reward} XP.` });
     } catch (error: any) {
       console.error("[ACTION] finalizeDappClaim ✗", error);
       console.error('claim error:', error.message);

@@ -404,7 +404,7 @@ export default function ClaimDetails() {
 
     const amountNum = parseFloat(isBuy ? buyAmount : sellAmount);
     if (!amountNum || amountNum <= 0) {
-      toast({ title: "Error", description: "Enter a valid amount", variant: "destructive" });
+      toast({ title: "Error", description: "Enter a valid amount.", variant: "destructive" });
       return;
     }
 
@@ -433,7 +433,7 @@ export default function ClaimDetails() {
       if (isBuy && amountNum >= 200) {
         const { success } = await apiRequestV2("POST", "/api/user/claim-deposit-xp", { transactionHash });
         if (!success) {
-          toast({ title: "Error", description: "Error rewarding user with xp" });
+          toast({ title: "Error", description: "Error rewarding user with XP." });
           return
         };
       }
@@ -463,7 +463,7 @@ export default function ClaimDetails() {
       console.error(err);
       toast({
         title: "Error",
-        description: `Failed to ${isBuy ? "buy" : "sell"} shares`,
+        description: `Failed to ${isBuy ? "buy" : "sell"} shares.`,
         variant: "destructive",
       });
     } finally {

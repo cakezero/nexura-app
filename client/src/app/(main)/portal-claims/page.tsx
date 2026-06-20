@@ -371,7 +371,7 @@ useEffect(() => {
         if (parseFloat(transactionAmount) >= 200) {
           const { success } = await apiRequestV2("POST", "/api/user/claim-deposit-xp", { transactionHash });
           if (!success) {
-            toast({ title: "Error", description: "Error rewarding user with xp" });
+            toast({ title: "Error", description: "Error rewarding user with XP." });
             return
           };
         }
@@ -408,7 +408,7 @@ useEffect(() => {
         description: (
           <div className="flex items-center gap-2">
             <img src="/check.png" alt="success" className="w-4 h-4" />
-            <span>Successfully {action === "deposit" ? "depoosited" : "redeemed"}</span>
+            <span>Successfully {action === "deposit" ? "deposited" : "redeemed"}</span>
           </div>
         ),
       });
@@ -429,7 +429,7 @@ useEffect(() => {
 
       toast({
         title: "Error",
-        description: "Transaction failed",
+        description: "Transaction failed.",
         variant: "destructive",
       });
     }
@@ -494,7 +494,7 @@ useEffect(() => {
       <h1 className="text-base">Claims</h1>
 
       <p className="text-gray-400 mt-2 max-w-xl text-xs">
-        Semantic statements, allowing anyone to claim anything about anything
+        Semantic statements, allowing anyone to claim anything about anything.
       </p>
 
       {/* Controls Section */}
@@ -912,7 +912,7 @@ useEffect(() => {
 
                 {/* Subtitle */}
                 <p className="text-gray-400 text-xs mb-12 -pt-2">
-                  Staking on a Triple enhances its discoverability in the Intuition system
+                  Staking on a Triple enhances its discoverability in the Intuition system.
                 </p>
 
                 {/* Statement */}
@@ -1424,7 +1424,7 @@ useEffect(() => {
                 </div>
 
                 <p className="text-gray-400 text-sm mb-6">
-                  Staking on a Triple enhances its discoverability in the Intuition system
+                  Staking on a Triple enhances its discoverability in the Intuition system.
                 </p>
 
                 {/* REVIEW */}
@@ -1555,7 +1555,7 @@ useEffect(() => {
 
                 {/* Subtitle */}
                 <p className="text-gray-400 text-sm mb-6">
-                  Staking on a Triple enhances its discoverability in the Intuition system
+                  Staking on a Triple enhances its discoverability in the Intuition system.
                 </p>
 
                 {/* REVIEW */}

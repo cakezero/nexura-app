@@ -98,7 +98,7 @@ const podiumList = list;
             </div>
 
               <p className="mt-1 text-xs sm:text-base text-white/60 max-w-full sm:max-w-md">
-                Real time ranking based on user engagement
+                Real time ranking based on user engagement.
               </p>
             </div>
           </div>

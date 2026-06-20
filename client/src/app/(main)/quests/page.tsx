@@ -124,6 +124,16 @@ const setLocalTaskStatus = (questId: string, taskStatus: string) => {
 
   const [questFilter, setQuestFilter] = useState(QUEST_FILTERS.SEASONAL);
 
+  // Persist the selected tab so a reload keeps the user on their current tab.
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("nexura-quest-tab");
+      if (saved === "seasonal" || saved === "featured" || saved === "daily") {
+        setQuestFilter(saved);
+      }
+    } catch {}
+  }, []);
+
 const [relicQuest, setRelicQuest] = useState<{ id: string; reward: number } | null>(null);
 
 const [activeQuestId, setActiveQuestId] = useState(null);
@@ -162,7 +172,7 @@ const handleStartQuest = async (quest: Quest) => {
 
     toast({
       title: "Quest Started",
-      description: data?.message || "Quest started successfully",
+      description: data?.message || "Quest started successfully.",
     });
 
     await refetch?.();
@@ -279,7 +289,7 @@ const handleSubmitQuest = async (quest: any, proof: string) => {
 
     toast({
       title: "Submitted",
-      description: data?.message || "Proof submitted for review",
+      description: data?.message || "Proof submitted for review.",
     });
 
     setActiveQuestId(null);
@@ -294,7 +304,7 @@ const handleSubmitQuest = async (quest: any, proof: string) => {
   } catch (err: any) {
     toast({
       title: "Error",
-      description: err?.info?.error || err?.message || "Failed to submit quest",
+      description: err?.info?.error || err?.message || "Failed to submit quest.",
       variant: "destructive",
     });
   }
@@ -316,14 +326,14 @@ const handleClaimQuest = async (quest: Quest) => {
 
     toast({
       title: "Reward Claimed",
-      description: data?.message || "Reward claimed successfully",
+      description: data?.message || "Reward claimed successfully.",
     });
 
     await refetch?.();
   } catch (err: any) {
     toast({
       title: "Error",
-      description: err?.info?.error || err?.message || "Failed to claim reward",
+      description: err?.info?.error || err?.message || "Failed to claim reward.",
       variant: "destructive",
     });
   } finally {
@@ -557,7 +567,7 @@ const renderDefaultQuestCard = (quest: any, index: number = 0) => {
             <input
               value={proofInput}
               onChange={(e) => setProofInput(e.target.value)}
-              placeholder="Paste your comment link or twitter username here"
+              placeholder="Paste your comment link or Twitter username here"
               className="h-9 w-full rounded-[10px] border border-[rgba(138,62,254,0.3)] bg-[#060210] px-3 text-[11px] font-bold text-white outline-none placeholder:text-[11px] placeholder:font-bold placeholder:text-[rgba(255,255,255,0.4)]"
             />
 
@@ -616,7 +626,7 @@ const renderSeasonalQuestCard = (quest: Quest, index: number = 0) => {
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
 
       {quest.category && (
-        <div className="absolute top-2 left-2 text-[0.65rem] sm:text-xs text-white/80 font-medium">
+        <div className="absolute top-2 left-2 text-[0.65rem] sm:text-xs text-white/80 font-medium capitalize">
           {quest.category}
         </div>
       )}
@@ -731,7 +741,7 @@ const renderSeasonalQuestCard = (quest: Quest, index: number = 0) => {
             return (
               <button
                 key={filter}
-                onClick={() => setQuestFilter(filter)}
+                onClick={() => { setQuestFilter(filter); try { localStorage.setItem("nexura-quest-tab", filter); } catch {} }}
                 className={`rounded-[20px] border border-[#8b3efe] px-4 py-1.5 text-[14px] capitalize text-white transition ${
                   isActive ? "bg-[#8b3efe] font-semibold" : "bg-transparent font-medium"
                 }`}
@@ -799,7 +809,7 @@ const renderSeasonalQuestCard = (quest: Quest, index: number = 0) => {
     onClaimed={() => {
       toast({
         title: "Reward Claimed",
-        description: "Relic XP reward claimed successfully",
+        description: "Relic XP reward claimed successfully.",
       });
       refetch?.();
     }}
