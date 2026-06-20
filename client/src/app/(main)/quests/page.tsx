@@ -122,7 +122,7 @@ const setLocalTaskStatus = (questId: string, taskStatus: string) => {
     DAILY: "daily",
   };
 
-  const [questFilter, setQuestFilter] = useState(QUEST_FILTERS.FEATURED);
+  const [questFilter, setQuestFilter] = useState(QUEST_FILTERS.SEASONAL);
 
 const [relicQuest, setRelicQuest] = useState<{ id: string; reward: number } | null>(null);
 
