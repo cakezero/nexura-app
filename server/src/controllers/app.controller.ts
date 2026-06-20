@@ -163,15 +163,19 @@ export const validateTrustNameTask = async (
       return;
     }
 
+    // Non-campaign tasks stay CLAIMABLE (user presses Claim XP); campaign tasks
+    // complete on verify (they use a separate claim path).
+    const tnsState = isCampaign
+      ? { done: true, status: "done" }
+      : { done: false, status: "approved" };
     if (!taskExists) {
       await Model.create({
         ...filter,
-        done: true,
-        status: "done",
+        ...tnsState,
       });
     } else {
-      taskExists.done = true;
-      taskExists.status = "done";
+      taskExists.done = tnsState.done;
+      taskExists.status = tnsState.status;
 
       await taskExists.save();
     }
@@ -1255,14 +1259,14 @@ export const validatePortalTask = async (
           await miniQuestCompleted.create({
             miniQuest: id,
             quest: questId,
-            done: true,
-            status: "done",
+            done: false,
+            status: "approved",
             user: userToCheck._id,
           });
 
           await ensureQuestStarted(questId, userToCheck._id);
 
-          res.status(OK).json({ message: "task completed" });
+          res.status(OK).json({ message: "task verified" });
           return;
         }
       } else {
@@ -1272,8 +1276,8 @@ export const validatePortalTask = async (
 
           await miniQuestExists!.save();
         } else {
-          miniQuestExists!.done = true;
-          miniQuestExists!.status = "done";
+          miniQuestExists!.done = false;
+          miniQuestExists!.status = "approved";
 
           await miniQuestExists.save();
 
