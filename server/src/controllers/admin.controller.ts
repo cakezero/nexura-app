@@ -1290,8 +1290,10 @@ export const markTask = async (req: GlobalRequest, res: GlobalResponse) => {
 		} else {
 			submissionToBeVerified.status = "done";
 			submissionToBeVerified.validatedBy = adminExists.username;
-			model.status = "done";
-			model.done = true;
+			// Approval makes the task CLAIMABLE, not done — the user must press
+			// "Claim XP" to actually collect the reward (xp is awarded on claim).
+			model.status = "approved";
+			model.done = false;
 		}
 
 		await submissionToBeVerified.save();
