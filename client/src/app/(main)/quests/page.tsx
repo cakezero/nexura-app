@@ -367,7 +367,7 @@ const HaloButton = ({
         variant === "outline"
           ? "border border-[#8b3efe] bg-transparent text-[#8b3efe] hover:bg-[rgba(139,62,254,0.12)]"
           : variant === "amber"
-          ? "bg-[#f59e0b] text-black hover:bg-[#d97706]"
+          ? "bg-[#ef4444] text-white hover:bg-[#dc2626]"
           : "bg-[#8b3efe] text-white hover:bg-[#7b35e6]"
       } text-[11px] font-semibold tracking-[0.3px] whitespace-nowrap transition disabled:opacity-50 disabled:cursor-not-allowed`}
       style={
@@ -376,7 +376,7 @@ const HaloButton = ({
           : variant === "amber"
           ? {
               boxShadow:
-                "0px 6px 14px -4px rgba(245,158,11,0.35), 0px 3px 6px -4px rgba(245,158,11,0.35)",
+                "0px 6px 14px -4px rgba(239,68,68,0.35), 0px 3px 6px -4px rgba(239,68,68,0.35)",
             }
           : {
               boxShadow:
