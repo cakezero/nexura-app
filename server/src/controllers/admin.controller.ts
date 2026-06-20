@@ -794,7 +794,12 @@ export const getAdminHubQuests = async (req: GlobalRequest, res: GlobalResponse)
     }
 
     const quests = await quest
-      .find({ hub: adminHub, status: { $ne: "Deleted" } })
+      // Include legacy/global quests (no hub — created before hubs existed) alongside
+      // this admin's hub quests, so the old featured/daily quests still show.
+      .find({
+        status: { $ne: "Deleted" },
+        $or: [{ hub: adminHub }, { hub: { $exists: false } }, { hub: null }],
+      })
       .sort({ createdAt: -1 })
       .lean();
 
