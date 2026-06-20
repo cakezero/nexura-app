@@ -497,6 +497,11 @@ const renderDefaultQuestCard = (quest: any, index: number = 0) => {
                 setRetryOpened((prev) => (prev.includes(quest._id) ? prev : [...prev, quest._id]));
               }}
             />
+          ) : quest.isRelicQuest ? (
+            <HaloButton
+              label="Check Relic"
+              onClick={() => setRelicQuest({ id: quest._id, reward: Number(quest.reward) || 0 })}
+            />
           ) : !started ? (
             <HaloButton
               label="Start Quest"
@@ -504,11 +509,6 @@ const renderDefaultQuestCard = (quest: any, index: number = 0) => {
                 handleReopenTask(quest);
                 setStartedLocal((prev) => (prev.includes(quest._id) ? prev : [...prev, quest._id]));
               }}
-            />
-          ) : quest.isRelicQuest ? (
-            <HaloButton
-              label="Check Relic"
-              onClick={() => setRelicQuest({ id: quest._id, reward: Number(quest.reward) || 0 })}
             />
           ) : isAtlasTask ? (
             <div className="flex items-center gap-2">
