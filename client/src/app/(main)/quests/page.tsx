@@ -187,11 +187,11 @@ const handleStartQuest = async (quest: Quest) => {
   }
 };
 
-// Featured/daily quests complete on this page. The "Retry" button (re)opens the
-// task link and ensures a completion record exists, so users can revisit the task
-// without navigating to a quest detail page.
+// Opens the task's external link in a new tab. Used by Start Quest, the eye
+// (reopen), and Retry. The quest-completion record is created by the actual
+// actions (submit / verify / claim), NOT here — so opening the link for a relic
+// task doesn't pre-create a record that would short-circuit the relic scan.
 const handleReopenTask = (quest: any) => {
-  apiRequestV2("POST", "/api/quest/start-quest", { questId: quest._id }).catch(() => {});
   const link = quest.taskLink || quest.link;
   if (link && link !== "#") window.open(link, "_blank", "noopener,noreferrer");
 };
@@ -486,6 +486,14 @@ const renderDefaultQuestCard = (quest: any, index: number = 0) => {
                 setRetryOpened((prev) => (prev.includes(quest._id) ? prev : [...prev, quest._id]));
               }}
             />
+          ) : !started ? (
+            <HaloButton
+              label="Start Quest"
+              onClick={() => {
+                handleReopenTask(quest);
+                setStartedLocal((prev) => (prev.includes(quest._id) ? prev : [...prev, quest._id]));
+              }}
+            />
           ) : quest.isRelicQuest ? (
             <HaloButton
               label="Check Relic"
@@ -508,14 +516,6 @@ const renderDefaultQuestCard = (quest: any, index: number = 0) => {
                 <Eye className="h-4 w-4" />
               </button>
             </div>
-          ) : !started ? (
-            <HaloButton
-              label="Start Quest"
-              onClick={() => {
-                handleReopenTask(quest);
-                setStartedLocal((prev) => (prev.includes(quest._id) ? prev : [...prev, quest._id]));
-              }}
-            />
           ) : (
             <div className="flex items-center gap-2">
               <HaloButton
