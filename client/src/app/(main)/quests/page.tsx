@@ -223,12 +223,13 @@ const handleAtlasTask = async (quest: Quest) => {
       page: "quest",
     });
 
-    await apiRequestV2("POST", "/api/quest/claim-quest", { questId: quest._id });
-
     toast({
-      title: "Task Completed",
-      description: "Reward claimed successfully",
+      title: "Task Verified",
+      description: "Press Claim XP to collect your reward.",
     });
+
+    // Optimistically flip the card to the "Claim XP" state; refetch reconciles.
+    setLocalTaskStatus(quest._id, "approved");
 
     await refetch?.();
   } catch (error: any) {

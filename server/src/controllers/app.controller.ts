@@ -1082,29 +1082,31 @@ export const validateAtlasTask = async (req: GlobalRequest, res: GlobalResponse)
             user: userToCheck._id,
           });
         } else {
+          // Validated on-chain, but XP is claimed manually: mark approved (not done)
+          // so the card shows a "Claim XP" button instead of auto-claiming.
           await miniQuestCompleted.create({
             miniQuest: id,
             quest: questId,
-            done: true,
-            status: "done",
+            done: false,
+            status: "approved",
             user: userToCheck._id,
           });
 
           await ensureQuestStarted(questId, userToCheck._id);
 
-          res.status(OK).json({ message: "task completed" });
+          res.status(OK).json({ message: "task verified" });
           return;
         }
       } else {
         if (positionExists) {
-          miniQuestExists!.done = true;
-          miniQuestExists!.status = "done";
+          miniQuestExists!.done = false;
+          miniQuestExists!.status = "approved";
 
           await miniQuestExists.save();
 
           await ensureQuestStarted(questId, userToCheck._id);
 
-          res.status(OK).json({ message: "task completed" });
+          res.status(OK).json({ message: "task verified" });
           return;
         }
       }

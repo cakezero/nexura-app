@@ -828,6 +828,11 @@ export const claimQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 
 		await questCompleted.updateOne({ quest: id, user: questUser._id }, { expires: new Date(new Date().getTime() + 14 * 24 * 60 * 60 * 1000), done: true });
 
+		// Mark this quest's task(s) done so the card reads "Completed" after the reward
+		// is claimed (the card's completed state derives from the miniQuestCompleted
+		// record). Without this an approved/verified task would keep showing "Claim XP".
+		await miniQuestCompleted.updateMany({ quest: id, user: questUser._id }, { done: true, status: "done" });
+
 		if (questUser.status !== "Active") {
 			questUser.status = "Active";
 
