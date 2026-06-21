@@ -968,7 +968,7 @@ export const checkRelics = async (req: GlobalRequest, res: GlobalResponse) => {
 
 export const confirmRelicHodl = async (res: GlobalResponse, req: GlobalRequest) => {
   try {
-    const relicOwners = await user.find({ hasRelic: true, $gte: { xp: 6000 } }).lean();
+    const relicOwners = await user.find({ hasRelic: true, xp: { $gte: 6000 } }).lean();
     if (relicOwners.length === 0) {
       res.sendStatus(OK);
       return;
