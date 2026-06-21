@@ -1036,7 +1036,10 @@ export const claimRelicReward = async (req: GlobalRequest, res: GlobalResponse) 
       questUser.badges,
       questUser._id.toString(),
     );
+
     questUser.level = level;
+
+    await questUser.save();
 
     await xpLog.create({
       address: questUser.address,
@@ -1045,8 +1048,6 @@ export const claimRelicReward = async (req: GlobalRequest, res: GlobalResponse) 
       status: "success",
       type: "quest",
     });
-
-    await questUser.save();
 
     res.status(OK).json({ message: "relic reward claimed successfully" });
   } catch (error) {
