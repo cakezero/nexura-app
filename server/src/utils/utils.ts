@@ -456,7 +456,7 @@ export const getNFT = async (walletAddress: string) => {
 		address: RELIC_CONTRACT,
 		abi: parseAbi(["function balanceOf(address owner) view returns (uint256)"]),
 		functionName: "balanceOf",
-		args: [checksumAddress(walletAddress)],
+		args: [checksumAddress(walletAddress as `0x${string}`)],
 	}) as bigint;
 
   return balance > 0n;

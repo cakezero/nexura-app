@@ -1,7 +1,7 @@
 import { createWalletClient, parseAbi, http, type WalletClient, type PublicClient, createPublicClient } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { PRIVATE_KEY, network } from "./env.utils";
-import { NexonsAddress } from "./constants";
+import { NexonsAddress, ETH_MAINNET_RPC } from "./constants";
 import chain from "./chain.utils";
 import { mainnet } from "viem/chains";
 
@@ -43,7 +43,7 @@ export const getEthMainnetClient = () => {
 	if (!ethMainnetClient) {
 		ethMainnetClient = createPublicClient({
 			chain: mainnet,
-			transport: http(process.env.ETH_RPC_URL || "https://ethereum-rpc.publicnode.com"),
+			transport: http(ETH_MAINNET_RPC),
 		});
 	}
 

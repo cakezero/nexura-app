@@ -4,6 +4,10 @@ import { checksumAddress } from "viem";
 
 export const RELIC_CONTRACT = checksumAddress("0x7ab2f10cac6e27971fa93a5d5470bb84126bb734");
 
+// Hard-coded Ethereum-mainnet RPC for relic ownership checks (relics live on
+// mainnet). Kept in config so a misconfigured env var can't break the check.
+export const ETH_MAINNET_RPC = "https://ethereum-rpc.publicnode.com";
+
 export const GRAPHQL_API_URL = network === "testnet" ? API_URL_DEV : API_URL_PROD;
 
 export const atomIds: Record<string, `0x${string}`> = {
