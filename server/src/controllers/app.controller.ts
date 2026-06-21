@@ -952,7 +952,7 @@ export const checkRelics = async (req: GlobalRequest, res: GlobalResponse) => {
 
     await questCompleted.create({
       done: false,
-      category: "featured",
+      category: "one-time",
       quest: questFound._id,
       user: req.id,
     });
