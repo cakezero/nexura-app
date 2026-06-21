@@ -15,7 +15,6 @@ import {
   allowNexonsMint,
   referralLeaderboard,
   searchTriple,
-  confirmRelicHodl,
 } from "@/controllers/app.controller";
 import {
   discordCallback,
@@ -28,7 +27,6 @@ const router = Router();
 
 router
   .get("/", home)
-  .get("/confirm-relic-hodl", confirmRelicHodl)
   .get("/studio-payment-config", getStudioPaymentConfig)
   .post("/allow-mint", authenticateUser, allowNexonsMint)
   .get("/get-claims", rateLimiter, authenticateUser2, getClaims)

@@ -966,28 +966,71 @@ export const checkRelics = async (req: GlobalRequest, res: GlobalResponse) => {
   }
 };
 
-export const confirmRelicHodl = async (req: GlobalRequest, res: GlobalResponse) => {
+export const runRelicHodlCheck = async () => {
   try {
-    const relicOwners = await user.find({ hasRelic: true, xp: { $gte: 6000 } }).lean();
-    if (relicOwners.length === 0) {
-      res.sendStatus(OK);
-      return;
-    }
+    const relicMiniQuests = await miniQuest
+      .find({ tag: "relic" })
+      .select("quest")
+      .lean();
 
-    for (const relicOwner of relicOwners) {
-      const hasRelic = await getNFT(relicOwner.address);
-      if (!hasRelic) {
-        await user.findByIdAndUpdate(relicOwner._id, {
-          $inc: { xp: -6000 },
-          $set: { hasRelic: false },
-        });
+    const rewardByQuestId = new Map<string, number>();
+    for (const relicMiniQuest of relicMiniQuests) {
+      if (!relicMiniQuest.quest) continue;
+      const relicQuest = await quest
+        .findById(relicMiniQuest.quest)
+        .select("reward")
+        .lean();
+      if (relicQuest) {
+        rewardByQuestId.set(
+          relicQuest._id.toString(),
+          relicQuest.reward ?? 6000,
+        );
       }
     }
 
-    res.sendStatus(OK);
+    if (rewardByQuestId.size === 0) return;
+
+    const relicQuestIds = [...rewardByQuestId.keys()];
+    const claims = await questCompleted.find({
+      quest: { $in: relicQuestIds },
+      done: true,
+    });
+
+    for (const claim of claims) {
+      try {
+        const reward = rewardByQuestId.get(claim.quest!.toString()) ?? 6000;
+
+        const claimUser = await user.findById(claim.user);
+        if (!claimUser) continue;
+
+        const stillHoldsRelic = await getNFT(claimUser.address);
+        if (stillHoldsRelic) continue;
+
+        claimUser.xp = Math.max(0, claimUser.xp - reward);
+        claimUser.hasRelic = false;
+        claimUser.level = await updateLevel(
+          claimUser.xp,
+          claimUser.badges,
+          claimUser._id.toString(),
+        );
+        await claimUser.save();
+
+        claim.done = false;
+        await claim.save();
+
+        await xpLog.create({
+          address: claimUser.address,
+          amount: -reward,
+          username: claimUser.username,
+          status: "success",
+          type: "quest",
+        });
+      } catch (error) {
+        logger.error(error);
+      }
+    }
   } catch (error) {
     logger.error(error);
-    res.sendStatus(INTERNAL_SERVER_ERROR);
   }
 };
 
