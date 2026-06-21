@@ -966,7 +966,7 @@ export const checkRelics = async (req: GlobalRequest, res: GlobalResponse) => {
   }
 };
 
-export const confirmRelicHodl = async (res: GlobalResponse, req: GlobalRequest) => {
+export const confirmRelicHodl = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
     const relicOwners = await user.find({ hasRelic: true, xp: { $gte: 6000 } }).lean();
     if (relicOwners.length === 0) {
