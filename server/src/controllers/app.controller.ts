@@ -1516,9 +1516,7 @@ export const getAnalytics = async (req: GlobalRequest, res: GlobalResponse) => {
 
     const totalQuests = await quest.countDocuments({
       $or: [
-        { status: { $eq: "Ended" } },
-        { status: { $eq: "Active" } },
-        { status: { $eq: "Scheduled" } },
+        { status: { $in: ["Ended", "Active", "Scheduled"] } },
       ],
     });
 
@@ -1541,9 +1539,7 @@ export const getAnalytics = async (req: GlobalRequest, res: GlobalResponse) => {
 
     const others = rewardContractDeployed + soldClaims;
 
-    const totalQuestsCompleted = await questCompleted.countDocuments({
-      done: true,
-    });
+    const totalQuestsCompleted = await questCompleted.countDocuments({ done: true });
 
     const totalCampaignsCompletedFound = await campaignCompleted
       .find()
@@ -1558,9 +1554,7 @@ export const getAnalytics = async (req: GlobalRequest, res: GlobalResponse) => {
 
     const lessonsCreated = await lesson.countDocuments({ status: "published" });
 
-    const totalLessonCompleted = await lessonCompleted.countDocuments({
-      done: true,
-    });
+    const totalLessonCompleted = await lessonCompleted.countDocuments({ done: true });
 
     const totalJoined =
       totalQuestsJoined +
