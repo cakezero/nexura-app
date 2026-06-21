@@ -141,6 +141,10 @@ const userSchema = new Schema({
 	questsCompleted: {
 		type: Number,
 		default: 0,
+  },
+  hasRelic: {
+    type: Boolean,
+    default: false
 	},
 	campaignsCompleted: {
 		type: Number,
