@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/table";
 import { apiRequestV2, getStoredAccessToken } from "@/lib/queryClient";
 import { xpTypeLabel } from "@/lib/xpTags";
+import AnalyticsBackground from "@/components/AnalyticsBackground";
 
 type XpHistoryItem = {
   _id: string;
@@ -53,29 +54,7 @@ export default function XpHistory() {
 
   return (
     <div className="bg-black text-white relative min-h-full overflow-hidden">
-      <div aria-hidden className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-        {[
-          { left: "-2%", top: "-88%", width: "182%", height: "202%" },
-          { left: "-68%", top: "-5%", width: "182%", height: "202%" },
-          { left: "22%", top: "90%", width: "182%", height: "194%" },
-          { left: "3%", top: "129%", width: "182%", height: "194%" },
-        ].map((s, i) => (
-          <div
-            key={i}
-            className="absolute"
-            style={{
-              left: s.left,
-              top: s.top,
-              width: s.width,
-              height: s.height,
-              opacity: 0.8,
-              backgroundImage: "url('/xp-history-gradient.png')",
-              backgroundSize: "100% 100%",
-              backgroundRepeat: "no-repeat",
-            }}
-          />
-        ))}
-      </div>
+      <AnalyticsBackground />
       <motion.div
         className="max-w-6xl mx-auto space-y-6 relative z-10"
         initial={{ opacity: 0, y: 12 }}
