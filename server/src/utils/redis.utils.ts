@@ -5,7 +5,7 @@ export const REDIS = {
   set: async ({ key, data, ttl }: { key: string; data: Record<string, any> | string[], ttl?: number }) => {
     try {
       if (ttl) {
-        await redis.set(key, JSON.stringify(data), "EX", ttl);
+        await redis.set(key, JSON.stringify(data), { EX: ttl });
       } else {
         await redis.set(key, JSON.stringify(data));
       }

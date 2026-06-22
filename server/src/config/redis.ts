@@ -20,7 +20,7 @@ else
     // username: REDIS_USERNAME,
   // });
 
-  redis = createClient({ url: uri });
+  redis = createClient({ url: uri, socket: { reconnectStrategy: false } });
 
 // redis.on("connect", () => {
 //   logger.info("🔌 Redis connected");
@@ -30,11 +30,15 @@ else
 //   logger.info("✅ Redis ready");
 // });
 
-await redis.connect();
-
 redis.on("error", (error: any) => {
   logger.error(`❌ Redis error: ${error.message}`);
 });
+
+try {
+  await redis.connect();
+} catch (error: any) {
+  logger.error(`❌ Redis connect failed, continuing without cache: ${error?.message}`);
+}
 
 // redis.on("end", () => {
 //   logger.warn("⚠️ Redis connection closed");
