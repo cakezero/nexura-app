@@ -14,7 +14,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Edit2, Calendar } from "lucide-react";
+import { Edit2, Calendar, History } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
@@ -299,6 +299,11 @@ export default function Profile() {
             <Link href="/profile/edit">
               <Button data-testid="button-edit-profile">
                 <Edit2 className="w-4 h-4 mr-2" />Edit Profile
+              </Button>
+            </Link>
+            <Link href="/profile/xp-history">
+              <Button variant="outline" className="rounded-full" data-testid="button-xp-history">
+                <History className="w-4 h-4 mr-2" />My XP History
               </Button>
             </Link>
             <WalletDropdown trustName={user?.trustName} />
