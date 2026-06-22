@@ -11,7 +11,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import AnimatedBackground from "@/components/AnimatedBackground";
 import { apiRequestV2, getStoredAccessToken } from "@/lib/queryClient";
 import { xpTypeLabel } from "@/lib/xpTags";
 
@@ -53,9 +52,7 @@ export default function XpHistory() {
   }, []);
 
   return (
-    <div className="bg-black text-white relative">
-      <AnimatedBackground />
-
+    <div className="text-white relative">
       <motion.div
         className="max-w-6xl mx-auto space-y-6 relative z-10"
         initial={{ opacity: 0, y: 12 }}
