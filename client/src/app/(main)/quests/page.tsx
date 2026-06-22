@@ -350,8 +350,7 @@ const getTaskIcon = (quest: any) => {
 };
 
 const getCustomIcon = (quest: any): string | null => {
-  // Relic / i-* (atlas) tasks keep their dedicated icons via getTaskIcon.
-  if (quest.isRelicQuest || quest.taskType === "relic") return null;
+  // i-* (atlas) tasks keep their dedicated icons via getTaskIcon.
   if (typeof quest.taskType === "string" && quest.taskType.startsWith("i-")) return null;
   const candidate = quest.projectCoverImage || quest.image;
   if (!candidate || candidate === "pending") return null;
