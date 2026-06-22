@@ -57,7 +57,7 @@ export default function XpHistory() {
       <AnimatedBackground />
 
       <motion.div
-        className="max-w-6xl mx-auto space-y-8 relative z-10"
+        className="max-w-6xl mx-auto space-y-6 relative z-10"
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, ease: "easeOut" }}
@@ -84,7 +84,7 @@ export default function XpHistory() {
           ) : (
             <Table>
               <TableHeader>
-                <TableRow className="h-[50px] border-white/10 bg-[#050318]/80 hover:bg-[#050318]/80">
+                <TableRow className="h-[38px] border-white/10 bg-[#050318]/80 hover:bg-[#050318]/80 [&>th]:py-0">
                   <TableHead className="px-6 text-[12px] font-bold uppercase tracking-wider text-white/50">
                     XP earned
                   </TableHead>
@@ -103,7 +103,7 @@ export default function XpHistory() {
                 {history.map((item, index) => (
                   <MotionTableRow
                     key={item._id}
-                    className="h-[65px] border-white/10 hover:bg-white/[0.03]"
+                    className="h-[44px] border-white/10 hover:bg-white/[0.03] [&>td]:py-1.5"
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.25, delay: Math.min(index * 0.03, 0.4) }}
