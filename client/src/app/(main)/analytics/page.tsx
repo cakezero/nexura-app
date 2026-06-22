@@ -13,6 +13,7 @@ interface AnalyticsData {
   totalCampaigns: number;
   user: {
     totalUsers: number;
+    activeUsersDaily: number;
     activeUsersWeekly: number;
     activeUsersMonthly: number;
     users24h: number;
@@ -80,7 +81,7 @@ export default function Analytics() {
   };
 
   const activeUsersForRange: Record<Range, number> = {
-    "Last 24 Hrs": data?.user.users24h ?? 0,
+    "Last 24 Hrs": data?.user.activeUsersDaily ?? 0,
     "Last 7 days": data?.user.activeUsersWeekly ?? 0,
     "Last 30 days": data?.user.activeUsersMonthly ?? 0,
     "All Time": data?.user.totalUsers ?? 0,
