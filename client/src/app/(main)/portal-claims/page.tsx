@@ -1143,7 +1143,7 @@ useEffect(() => {
                       {/* Min Button */}
                       <button
                         type="button"
-                        onClick={() => setTransactionAmount("0.01")}
+                        onClick={() => setTransactionAmount("0.1")}
                         className="mt-4 px-2 py-1 text-xs text-white bg-[#0A2D4D] rounded-full border border-white hover:bg-[#123a63] hover:border-[#8B3EFE] transition-colors"
                       >
                         Min

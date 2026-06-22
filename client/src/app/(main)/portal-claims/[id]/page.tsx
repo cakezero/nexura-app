@@ -301,8 +301,6 @@ export default function ClaimDetails() {
         pos?.direction === mainTab
     );
 
-    console.log({ hj: up?.shares });
-
     return up ? Number(formatEther(BigInt(parseInt(up.shares) > 0 ? up.shares : 0))) : 0;
   }, [userPositions, user, growthType, mainTab]);
 
@@ -1132,7 +1130,7 @@ export default function ClaimDetails() {
                 }`}
               onClick={() => {
                 if (tradeLocked) return;
-                if (isBuy) setBuyAmount("0.01");
+                if (isBuy) setBuyAmount("0.1");
                 else setSellAmount(userShares.toString());
               }}
             >
