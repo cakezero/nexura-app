@@ -137,7 +137,7 @@ export const fetchQuests = async (req: GlobalRequest, res: GlobalResponse) => {
 	try {
 		const Hub = (await import('../models/hub.model')).hub;
 
-		const questsInDB = await quest.find({ status: { $ne: "Save" } }).lean();
+		const questsInDB = await quest.find({ status: { $ne: "Save" }, isPublished: { $ne: false } }).lean();
 		const completedQuests = await questCompleted.find({
 			user: new mongoose.Types.ObjectId(req.id),
 		}).lean().select("_id done quest updatedAt");
@@ -2010,5 +2010,47 @@ export const getAdminQuestDetail = async (req: GlobalRequest, res: GlobalRespons
   } catch (error) {
     logger.error("Error fetching admin quest detail: " + error);
     res.status(INTERNAL_SERVER_ERROR).json({ error: "Error fetching admin quest detail" });
+  }
+};
+
+// Admin toggle for a quest's publish state. Unpublished quests are hidden from
+// the main app (see fetchQuests' isPublished filter). Superadmin-gated by route.
+export const toggleQuestPublish = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const id = (req.query.id as string) || (req.body.id as string) || (req.body.questId as string);
+    if (!id) {
+      res.status(BAD_REQUEST).json({ error: "Quest ID is required" });
+      return;
+    }
+
+    const adminHub = req.admin?.hub ? String(req.admin.hub) : null;
+    if (!adminHub) {
+      res.status(BAD_REQUEST).json({ error: "Admin has no associated hub" });
+      return;
+    }
+
+    const questDoc = await quest.findById(id);
+    if (!questDoc) {
+      res.status(NOT_FOUND).json({ error: "quest not found" });
+      return;
+    }
+
+    if (String(questDoc.creator) !== adminHub) {
+      res.status(FORBIDDEN).json({ error: "You are not allowed to update this quest" });
+      return;
+    }
+
+    if (questDoc.category !== "featured" && questDoc.category !== "daily") {
+      res.status(BAD_REQUEST).json({ error: "Only featured or daily quests can be published/unpublished" });
+      return;
+    }
+
+    questDoc.isPublished = questDoc.isPublished === false;
+    await questDoc.save();
+
+    res.status(OK).json({ message: "quest publish state updated", quest: questDoc });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error toggling quest publish state" });
   }
 };

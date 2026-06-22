@@ -153,6 +153,10 @@ const questSchema = new Schema({
 		enum: ["Active", "Scheduled", "Save", "Ended", "Deleted"],
 		default: "Save"
 	},
+	isPublished: {
+		type: Boolean,
+		default: true
+	},
 	deletedAt: {
 		type: Date,
 		default: null,
