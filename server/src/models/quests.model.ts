@@ -86,6 +86,9 @@ const campaignQuestSchema = new Schema({
 		type: Number,
 		required: false,
 	},
+	verificationMode: {
+		type: String,
+	},
 	campaign: {
 		type: mongoose.Schema.Types.ObjectId,
 		ref: "campaign",

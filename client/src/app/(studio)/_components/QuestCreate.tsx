@@ -803,10 +803,6 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                   <option value="Create a Post">Create a Post</option>
                   <option value="Own a .trust username">Own a .trust username</option>
                   <option value="Portal Claims">Portal Claims</option>
-                  <option value="I Trust (Portal Claim)">I Trust (Portal Claim)</option>
-                  <option value="I Collaborated (Portal Claim)">I Collaborated (Portal Claim)</option>
-                  <option value="I Interacted (Portal Claim)">I Interacted (Portal Claim)</option>
-                  <option value="I Follow (Portal Claim)">I Follow (Portal Claim)</option>
                   <option value="Give Feedback">Give Feedback</option>
                 </select>
               </div>
