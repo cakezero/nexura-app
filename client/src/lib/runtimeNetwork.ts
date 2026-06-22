@@ -1,3 +1,5 @@
+import { network } from "./constants";
+
 type Network = "testnet" | "mainnet";
 
 // TEMPORARY (2026-06-12): the client network is pinned to mainnet and does NOT
@@ -8,7 +10,7 @@ type Network = "testnet" | "mainnet";
 //   getNetwork = () => resolvedNetwork ?? buildTimeNetwork;
 //   initNetworkFromServer fetches `${BACKEND_URL}/api/studio-payment-config`
 //   and sets resolvedNetwork from data.network.
-export const getNetwork = (): Network => "mainnet";
+export const getNetwork = (): Network => network;
 
 export const initNetworkFromServer = async (): Promise<void> => {
   // no-op: network is pinned to mainnet above; no server fetch.
