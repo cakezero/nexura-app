@@ -70,7 +70,7 @@ export default function Levels() {
 
   if (!userId) return (
     <AuthGuard>
-      <div className="min-h-screen bg-black text-white p-6">Please sign in to view levels</div>
+      <div className="min-h-screen bg-black text-white p-6">Please sign in to view levels.</div>
     </AuthGuard>
   );
 

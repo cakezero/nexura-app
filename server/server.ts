@@ -8,6 +8,7 @@ import logger from "@/config/logger";
 import appRoutes from "@/routes";
 import { firstMessage } from "@/models/msg.model";
 import { startAdminActivityCron } from "@/utils/adminActivityCron";
+import { startRelicHodlCron } from "@/utils/relicHodlCron";
 
 const server = express();
 
@@ -71,7 +72,10 @@ server.listen(port, async () => {
 	
 	// Start admin activity cron job
 	startAdminActivityCron();
-	
+
+	// Start relic hodl cron job
+	startRelicHodlCron();
+
 	if (BOT_TOKEN) {
 		await client.login(BOT_TOKEN);
 	} else {

@@ -3,8 +3,10 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { ArrowUp, X, ExternalLink } from "lucide-react";
 import { apiRequestV2 } from "@/lib/queryClient";
+import { motion } from "framer-motion";
+import { modalBackdrop, modalPanel } from "@/lib/motion";
 
-export type RelicPhase = "scanning" | "found" | "ready" | "failure" | "claimed";
+export type RelicPhase = "scanning" | "found" | "preparing" | "ready" | "failure" | "claimed";
 
 // The relic XP was already CLAIMED for this quest (vs. genuinely no relics).
 // Backend: "quest has already been completed" / "quest reward has already been claimed".
@@ -37,7 +39,7 @@ const STEPS = [
   "Preparing XP rewards",
 ];
 
-const OPENSEA_URL = "https://opensea.io/collection/nexura-relics";
+const OPENSEA_URL = "https://opensea.io/collection/relics-by-intuition";
 
 export default function RelicScanModal({
   questId,
@@ -63,7 +65,8 @@ export default function RelicScanModal({
     setPhase("scanning");
     setRelicCount(count);
     timers.current.push(setTimeout(() => setPhase("found"), 1000));
-    timers.current.push(setTimeout(() => setPhase("ready"), 2000));
+    timers.current.push(setTimeout(() => setPhase("preparing"), 2000));
+    timers.current.push(setTimeout(() => setPhase("ready"), 3000));
   }, [clearTimers]);
 
   const runFailureSimulation = useCallback(() => {
@@ -121,7 +124,8 @@ export default function RelicScanModal({
       const count = Number(res?.count) || 1;
       setRelicCount(count);
       setPhase("found");
-      timers.current.push(setTimeout(() => setPhase("ready"), 800));
+      timers.current.push(setTimeout(() => setPhase("preparing"), 800));
+      timers.current.push(setTimeout(() => setPhase("ready"), 1700));
     } catch (err: any) {
       // Already claimed — show the claimed state, not the no-relics screen.
       if (isAlreadyClaimedError(err)) {
@@ -177,17 +181,20 @@ export default function RelicScanModal({
     startScan();
   }, [startScan]);
 
-  const active = phase === "scanning" || phase === "found" || phase === "ready";
+  const active = phase === "scanning" || phase === "found" || phase === "preparing";
   const isFailure = phase === "failure";
   const isClaimed = phase === "claimed";
+  const isReady = phase === "ready";
 
   const statusText =
     phase === "scanning"
       ? "Scanning for Relics…"
       : phase === "found"
       ? `${relicCount} relics found`
-      : phase === "ready"
+      : phase === "preparing"
       ? "Preparing XP rewards"
+      : isReady
+      ? "XP rewards ready"
       : isClaimed
       ? "Relics already verified"
       : "Oops! No Relics Found";
@@ -195,6 +202,7 @@ export default function RelicScanModal({
   const stepDone = (i: number) => {
     if (phase === "scanning") return i < 1;
     if (phase === "found") return i < 2;
+    if (phase === "preparing") return i < 2;
     if (phase === "ready") return i < 3;
     return false;
   };
@@ -202,11 +210,16 @@ export default function RelicScanModal({
   const claimEnabled = phase === "ready" && !claiming;
 
   return (
-    <div
+    <motion.div
+      variants={modalBackdrop}
+      initial="initial"
+      animate="animate"
+      exit="exit"
       className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
       onClick={onClose}
     >
-      <div
+      <motion.div
+        variants={modalPanel}
         onClick={(e) => e.stopPropagation()}
         className="relative w-full max-w-[420px] overflow-hidden rounded-[40px]"
         style={{
@@ -282,14 +295,14 @@ export default function RelicScanModal({
               style={{
                 background: isFailure
                   ? "rgba(255,146,138,0.12)"
-                  : isClaimed
+                  : isClaimed || isReady
                   ? "rgba(0,225,162,0.12)"
                   : "rgba(155,109,255,0.15)",
               }}
             >
               <ArrowUp
                 className="h-[18px] w-[18px]"
-                style={{ color: isFailure ? "#ff928a" : isClaimed ? "#00e1a2" : "#9b6dff" }}
+                style={{ color: isFailure ? "#ff928a" : isClaimed || isReady ? "#00e1a2" : "#9b6dff" }}
                 strokeWidth={2.5}
               />
             </div>
@@ -299,7 +312,7 @@ export default function RelicScanModal({
         {/* STATUS TEXT */}
         <p
           className="mt-4 text-center text-[16px] font-medium"
-          style={{ color: isFailure ? "#ff928a" : isClaimed ? "#00e1a2" : "#9b6dff" }}
+          style={{ color: isFailure ? "#ff928a" : isClaimed || isReady ? "#00e1a2" : "#9b6dff" }}
         >
           {statusText}
         </p>
@@ -372,14 +385,14 @@ export default function RelicScanModal({
             <p className="text-center text-[13px] leading-relaxed text-[rgba(255,255,255,0.5)]">
               Your wallet{" "}
               <span className="text-white">doesn&apos;t hold any Relics</span>. You
-              need at least one Relics to complete this task.
+              need at least one Relic to complete this task.
             </p>
 
             {/* divider */}
             <div className="my-4 h-px w-full bg-[rgba(255,255,255,0.08)]" />
 
             <p className="text-center text-[12px] text-[rgba(255,255,255,0.5)]">
-              Acquire a Relics to claim your XP rewards
+              Acquire a Relic to claim your XP rewards.
             </p>
 
             {/* Browse OpenSea */}
@@ -391,7 +404,7 @@ export default function RelicScanModal({
                 className="flex h-[30px] w-[166px] items-center justify-center gap-1.5 rounded-full text-[12px] text-white transition hover:opacity-90"
                 style={{ background: "#2081e2" }}
               >
-                Browse Opensea
+                Browse OpenSea
                 <ExternalLink className="h-3 w-3" />
               </a>
             </div>
@@ -399,14 +412,14 @@ export default function RelicScanModal({
             {/* Recheck */}
             <button
               onClick={handleRecheck}
-              className="mt-5 w-full rounded-full border px-[32px] py-[10px] text-[16px] font-semibold tracking-[0.8px] text-white transition hover:bg-[rgba(139,62,254,0.12)]"
-              style={{ borderColor: "#8b3efe" }}
+              className="mt-5 mx-auto block rounded-full px-[44px] py-[10px] text-[16px] font-semibold tracking-[0.8px] text-white transition hover:opacity-90"
+              style={{ background: "#8b3efe" }}
             >
               Recheck
             </button>
           </div>
         )}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

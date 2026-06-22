@@ -48,7 +48,7 @@ export default function Lessons() {
       toast({
         variant: "destructive",
         title: "Error",
-        description: err instanceof Error ? err.message : "Failed to load lessons",
+        description: err instanceof Error ? err.message : "Failed to load lessons.",
       });
     } finally {
       setLoading(false);
@@ -79,7 +79,7 @@ export default function Lessons() {
       toast({
         variant: "destructive",
         title: "Error",
-        description: err instanceof Error ? err.message : "Failed to update status",
+        description: err instanceof Error ? err.message : "Failed to update status.",
       });
     } finally {
       setPublishingId("");
@@ -105,7 +105,7 @@ export default function Lessons() {
       toast({
         variant: "destructive",
         title: "Error",
-        description: err instanceof Error ? err.message : "Failed to delete lesson",
+        description: err instanceof Error ? err.message : "Failed to delete lesson.",
       });
     }
   };

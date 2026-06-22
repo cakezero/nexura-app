@@ -145,7 +145,7 @@ export default function Home() {
 
     {/* Subheading */}
     <p className="font-geist text-base md:text-lg lg:text-xl text-gray-300 max-w-2xl mb-12">
-      NEXURA connects users and builders through interactive quests and campaigns
+      Nexura connects users and builders through interactive quests and campaigns
     </p>
 
     {/* Cards Container */}
@@ -189,7 +189,7 @@ export default function Home() {
           Earn Rewards
         </h3>
         <p className="text-gray-300 font-geist text-sm">
-          Every action earns XP, TRUST and badges that builds your reputation. The more you engage, the higher you climb.
+          Every action earns XP, TRUST and badges that build your reputation. The more you engage, the higher you climb.
         </p>
       </motion.div>
 

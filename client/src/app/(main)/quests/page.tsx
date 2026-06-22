@@ -3,12 +3,12 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ExternalLink, Clock, Users, AlertTriangle } from "lucide-react";
+import { ExternalLink, Clock, Users, AlertTriangle, Eye } from "lucide-react";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import { apiRequestV2 } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -122,12 +122,28 @@ const setLocalTaskStatus = (questId: string, taskStatus: string) => {
     DAILY: "daily",
   };
 
-  const [questFilter, setQuestFilter] = useState(QUEST_FILTERS.FEATURED);
+  const [questFilter, setQuestFilter] = useState(QUEST_FILTERS.SEASONAL);
+
+  // Persist the selected tab so a reload keeps the user on their current tab.
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("nexura-quest-tab");
+      if (saved === "seasonal" || saved === "featured" || saved === "daily") {
+        setQuestFilter(saved);
+      }
+    } catch {}
+  }, []);
 
 const [relicQuest, setRelicQuest] = useState<{ id: string; reward: number } | null>(null);
 
 const [activeQuestId, setActiveQuestId] = useState(null);
 const [proofInput, setProofInput] = useState("");
+// Quests where the user clicked "Retry" on a rejected submission: the Retry
+// button reopens the task link, then the card returns to Submit Proof + eye.
+const [retryOpened, setRetryOpened] = useState<string[]>([]);
+// Quests the user just clicked "Start Quest" on, so the card flips to Submit
+// Proof immediately (optimistic) without waiting for the joined refetch.
+const [startedLocal, setStartedLocal] = useState<string[]>([]);
 
 const featuredQuests: Quest[] = data?.quests?.featuredQuests ?? [];
 const dailyQuests: Quest[] = data?.quests?.dailyQuests ?? [];
@@ -156,7 +172,7 @@ const handleStartQuest = async (quest: Quest) => {
 
     toast({
       title: "Quest Started",
-      description: data?.message || "Quest started successfully",
+      description: data?.message || "Quest started successfully.",
     });
 
     await refetch?.();
@@ -181,11 +197,11 @@ const handleStartQuest = async (quest: Quest) => {
   }
 };
 
-// Featured/daily quests complete on this page. The "Retry" button (re)opens the
-// task link and ensures a completion record exists, so users can revisit the task
-// without navigating to a quest detail page.
+// Opens the task's external link in a new tab. Used by Start Quest, the eye
+// (reopen), and Retry. The quest-completion record is created by the actual
+// actions (submit / verify / claim), NOT here — so opening the link for a relic
+// task doesn't pre-create a record that would short-circuit the relic scan.
 const handleReopenTask = (quest: any) => {
-  apiRequestV2("POST", "/api/quest/start-quest", { questId: quest._id }).catch(() => {});
   const link = quest.taskLink || quest.link;
   if (link && link !== "#") window.open(link, "_blank", "noopener,noreferrer");
 };
@@ -217,12 +233,13 @@ const handleAtlasTask = async (quest: Quest) => {
       page: "quest",
     });
 
-    await apiRequestV2("POST", "/api/quest/claim-quest", { questId: quest._id });
-
     toast({
-      title: "Task Completed",
-      description: "Reward claimed successfully",
+      title: "Task Verified",
+      description: "Press Claim XP to collect your reward.",
     });
+
+    // Optimistically flip the card to the "Claim XP" state; refetch reconciles.
+    setLocalTaskStatus(quest._id, "approved");
 
     await refetch?.();
   } catch (error: any) {
@@ -272,21 +289,22 @@ const handleSubmitQuest = async (quest: any, proof: string) => {
 
     toast({
       title: "Submitted",
-      description: data?.message || "Proof submitted for review",
+      description: data?.message || "Proof submitted for review.",
     });
 
     setActiveQuestId(null);
     setProofInput("");
 
-    // Optimistically flip the card to "Pending Review" so it updates instantly;
-    // the refetch below reconciles with the server.
+    // Optimistically flip the card to "Pending Verification" so it updates
+    // instantly; the refetch below reconciles with the server.
     setLocalTaskStatus(quest._id, "pending");
+    setRetryOpened((prev) => prev.filter((id) => id !== quest._id));
 
     await refetch?.();
   } catch (err: any) {
     toast({
       title: "Error",
-      description: err?.info?.error || err?.message || "Failed to submit quest",
+      description: err?.info?.error || err?.message || "Failed to submit quest.",
       variant: "destructive",
     });
   }
@@ -308,14 +326,14 @@ const handleClaimQuest = async (quest: Quest) => {
 
     toast({
       title: "Reward Claimed",
-      description: data?.message || "Reward claimed successfully",
+      description: data?.message || "Reward claimed successfully.",
     });
 
     await refetch?.();
   } catch (err: any) {
     toast({
       title: "Error",
-      description: err?.info?.error || err?.message || "Failed to claim reward",
+      description: err?.info?.error || err?.message || "Failed to claim reward.",
       variant: "destructive",
     });
   } finally {
@@ -363,7 +381,7 @@ const HaloButton = ({
         variant === "outline"
           ? "border border-[#8b3efe] bg-transparent text-[#8b3efe] hover:bg-[rgba(139,62,254,0.12)]"
           : variant === "amber"
-          ? "bg-[#f59e0b] text-black hover:bg-[#d97706]"
+          ? "bg-[#ef4444] text-white hover:bg-[#dc2626]"
           : "bg-[#8b3efe] text-white hover:bg-[#7b35e6]"
       } text-[11px] font-semibold tracking-[0.3px] whitespace-nowrap transition disabled:opacity-50 disabled:cursor-not-allowed`}
       style={
@@ -372,7 +390,7 @@ const HaloButton = ({
           : variant === "amber"
           ? {
               boxShadow:
-                "0px 6px 14px -4px rgba(245,158,11,0.35), 0px 3px 6px -4px rgba(245,158,11,0.35)",
+                "0px 6px 14px -4px rgba(239,68,68,0.35), 0px 3px 6px -4px rgba(239,68,68,0.35)",
             }
           : {
               boxShadow:
@@ -399,7 +417,13 @@ const renderDefaultQuestCard = (quest: any, index: number = 0) => {
   const approved = !completed && quest.taskStatus === "approved";
   const pending = isInlineProofTask && !completed && !approved && quest.taskStatus === "pending";
   // An admin rejected this user's submission; they must review and resubmit.
-  const retry = isInlineProofTask && !completed && !approved && !pending && quest.taskStatus === "retry";
+  // Show the dedicated "Retry" button only until the user clicks it (which
+  // reopens the link); after that the card returns to Submit Proof + eye.
+  const retry = isInlineProofTask && !completed && !approved && !pending && quest.taskStatus === "retry" && !retryOpened.includes(quest._id);
+  // A task is "started" once the user clicked Start Quest (opening the link) or
+  // the server already has a completion record (joined). New tasks show Start
+  // Quest first; started ones show Submit Proof + eye.
+  const started = quest.joined || startedLocal.includes(quest._id);
 
   const isExpanded = isInlineProofTask && !completed && !approved && !pending && activeQuestId === quest._id;
 
@@ -463,20 +487,28 @@ const renderDefaultQuestCard = (quest: any, index: number = 0) => {
               onClick={() => handleClaimQuest(quest)}
             />
           ) : pending ? (
-            <HaloButton label="Pending Review" disabled onClick={() => {}} />
+            <HaloButton label="Pending Verification" disabled onClick={() => {}} />
           ) : retry ? (
-            <div className="flex items-center gap-2">
-              <HaloButton
-                variant="amber"
-                label="Retry"
-                onClick={() => setActiveQuestId(activeQuestId === quest._id ? null : quest._id)}
-              />
-              <HaloButton variant="outline" label="Reopen" onClick={() => handleReopenTask(quest)} />
-            </div>
+            <HaloButton
+              variant="amber"
+              label="Retry"
+              onClick={() => {
+                handleReopenTask(quest);
+                setRetryOpened((prev) => (prev.includes(quest._id) ? prev : [...prev, quest._id]));
+              }}
+            />
           ) : quest.isRelicQuest ? (
             <HaloButton
               label="Check Relic"
               onClick={() => setRelicQuest({ id: quest._id, reward: Number(quest.reward) || 0 })}
+            />
+          ) : !started ? (
+            <HaloButton
+              label="Start Quest"
+              onClick={() => {
+                handleReopenTask(quest);
+                setStartedLocal((prev) => (prev.includes(quest._id) ? prev : [...prev, quest._id]));
+              }}
             />
           ) : isAtlasTask ? (
             <div className="flex items-center gap-2">
@@ -485,7 +517,15 @@ const renderDefaultQuestCard = (quest: any, index: number = 0) => {
                 disabled={isVerifyingTask === quest._id}
                 onClick={() => handleAtlasTask(quest)}
               />
-              <HaloButton variant="outline" label="Retry" onClick={() => handleReopenTask(quest)} />
+              <button
+                type="button"
+                onClick={() => handleReopenTask(quest)}
+                title="Reopen task link"
+                aria-label="Reopen task link"
+                className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full border border-[#8b3efe] text-[#8b3efe] transition hover:bg-[rgba(139,62,254,0.12)]"
+              >
+                <Eye className="h-4 w-4" />
+              </button>
             </div>
           ) : (
             <div className="flex items-center gap-2">
@@ -493,7 +533,15 @@ const renderDefaultQuestCard = (quest: any, index: number = 0) => {
                 label="Submit Proof"
                 onClick={() => setActiveQuestId(activeQuestId === quest._id ? null : quest._id)}
               />
-              <HaloButton variant="outline" label="Retry" onClick={() => handleReopenTask(quest)} />
+              <button
+                type="button"
+                onClick={() => handleReopenTask(quest)}
+                title="Reopen task link"
+                aria-label="Reopen task link"
+                className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full border border-[#8b3efe] text-[#8b3efe] transition hover:bg-[rgba(139,62,254,0.12)]"
+              >
+                <Eye className="h-4 w-4" />
+              </button>
             </div>
           )}
         </div>
@@ -519,7 +567,7 @@ const renderDefaultQuestCard = (quest: any, index: number = 0) => {
             <input
               value={proofInput}
               onChange={(e) => setProofInput(e.target.value)}
-              placeholder="Paste your comment link or twitter username here"
+              placeholder="Paste your comment link or Twitter username here"
               className="h-9 w-full rounded-[10px] border border-[rgba(138,62,254,0.3)] bg-[#060210] px-3 text-[11px] font-bold text-white outline-none placeholder:text-[11px] placeholder:font-bold placeholder:text-[rgba(255,255,255,0.4)]"
             />
 
@@ -578,7 +626,7 @@ const renderSeasonalQuestCard = (quest: Quest, index: number = 0) => {
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
 
       {quest.category && (
-        <div className="absolute top-2 left-2 text-[0.65rem] sm:text-xs text-white/80 font-medium">
+        <div className="absolute top-2 left-2 text-[0.65rem] sm:text-xs text-white/80 font-medium capitalize">
           {quest.category}
         </div>
       )}
@@ -693,7 +741,7 @@ const renderSeasonalQuestCard = (quest: Quest, index: number = 0) => {
             return (
               <button
                 key={filter}
-                onClick={() => setQuestFilter(filter)}
+                onClick={() => { setQuestFilter(filter); try { localStorage.setItem("nexura-quest-tab", filter); } catch {} }}
                 className={`rounded-[20px] border border-[#8b3efe] px-4 py-1.5 text-[14px] capitalize text-white transition ${
                   isActive ? "bg-[#8b3efe] font-semibold" : "bg-transparent font-medium"
                 }`}
@@ -751,20 +799,23 @@ const renderSeasonalQuestCard = (quest: Quest, index: number = 0) => {
 
       </div>
 
+<AnimatePresence>
 {relicQuest && (
   <RelicScanModal
+    key="relic-scan-modal"
     questId={relicQuest.id}
     reward={relicQuest.reward}
     onClose={() => setRelicQuest(null)}
     onClaimed={() => {
       toast({
         title: "Reward Claimed",
-        description: "Relic XP reward claimed successfully",
+        description: "Relic XP reward claimed successfully.",
       });
       refetch?.();
     }}
   />
 )}
+</AnimatePresence>
 
     </div>
   );

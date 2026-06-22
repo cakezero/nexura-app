@@ -190,7 +190,7 @@ export default function QuestEnvironment() {
       }
 
       if (claimedQuests.includes(miniQuest._id)) {
-        toast({ title: "Already Claimed", description: "Task already completed", variant: "destructive" });
+        toast({ title: "Already Claimed", description: "Task already completed.", variant: "destructive" });
         return;
       }
 
@@ -275,7 +275,7 @@ export default function QuestEnvironment() {
       }
 
       if (claimedQuests.includes(quest._id) || quest.done) {
-        toast({ title: "Already Claimed", description: "Task already completed", variant: "destructive" });
+        toast({ title: "Already Claimed", description: "Task already completed.", variant: "destructive" });
         return;
       }
 
@@ -477,7 +477,7 @@ export default function QuestEnvironment() {
             </p>
             <input
               type="url"
-              placeholder="Paste your comment link or twitter username here"
+              placeholder="Paste your comment link or Twitter username here"
               value={proofLinks[quest._id] || ""}
               onChange={(e) =>
                 setProofLinks({

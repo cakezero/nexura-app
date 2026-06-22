@@ -1,4 +1,3 @@
-import { getNetwork } from "./runtimeNetwork";
 import { DISCORD_CLIENT_ID, X_CLIENT_ID } from "./oauthClients";
 
 const normalizedNetwork = (process.env.NEXT_PUBLIC_NETWORK as string | undefined)?.trim().toLowerCase();
@@ -8,42 +7,26 @@ const DEFAULT_BACKEND_URL = "https://api.nexura.intuition.box";
 
 export const environment = process.env.NEXT_PUBLIC_ENV as "development" | "production";
 
-function normalizeBackendUrl(value: string | undefined) {
-	const trimmed = value?.trim();
-	const candidate = trimmed && trimmed.length > 0 ? trimmed : DEFAULT_BACKEND_URL;
+export const BACKEND_URL = (process.env.NEXT_PUBLIC_BACKEND_URL as string | undefined)?.trim();
 
-	if (/^https?:\/\//i.test(candidate)) {
-		return candidate.replace(/\/+$/g, "");
-	}
+export const getStreakRestoreCA = () => network === "mainnet" ? "0x48f4462FcbB1E6cc49D23Ff8Da58a38Adc0998a1" : "0x564885ee83Aa8565Da47F38186079cD552Cf60De";
 
-	if (candidate.startsWith("//")) {
-		return `https:${candidate}`.replace(/\/+$/g, "");
-	}
+export const getAuthorizedAddress = () => network === "testnet" ? "0x4167E3Afdc91c8b15A16041F813E2a19EAaEcAE0" : "0xF6499B880CcD28080E6aF32A04b9201adCb655a9";
 
-	return `https://${candidate}`.replace(/\/+$/g, "");
-}
+export const getLessonFeeContractUser = () => network === "testnet" ? "0x3F68e0b7f2601d4146d1DABaE9b36b56724A0EC6" : "0x95DF721C7582910785BbC4BC23BcbC7140Cc8BF1";
 
-const rawBackendUrl = (process.env.NEXT_PUBLIC_BACKEND_URL as string | undefined)?.trim();
-export const BACKEND_URL = normalizeBackendUrl(rawBackendUrl);
+export const getLessonFeeContractProject = () => network === "testnet" ? "0x3F68e0b7f2601d4146d1DABaE9b36b56724A0EC6" : "0xc2718280c37E24c6F0b1A77f24f07413755fd21D";
 
-export const getStreakRestoreCA = () => getNetwork() === "mainnet" ? "0x48f4462FcbB1E6cc49D23Ff8Da58a38Adc0998a1" : "0x564885ee83Aa8565Da47F38186079cD552Cf60De";
+export const getQuestFeeContract = () => network === "testnet" ? "0x3F68e0b7f2601d4146d1DABaE9b36b56724A0EC6" : "0x1B7d6307E76846c7459FC0D7d09Cadfa33c62a89";
 
-export const getAuthorizedAddress = () => getNetwork() === "testnet" ? "0x4167E3Afdc91c8b15A16041F813E2a19EAaEcAE0" : "0xF6499B880CcD28080E6aF32A04b9201adCb655a9";
-
-export const getLessonFeeContractUser = () => getNetwork() === "testnet" ? "0x3F68e0b7f2601d4146d1DABaE9b36b56724A0EC6" : "0x95DF721C7582910785BbC4BC23BcbC7140Cc8BF1";
-
-export const getLessonFeeContractProject = () => getNetwork() === "testnet" ? "0x3F68e0b7f2601d4146d1DABaE9b36b56724A0EC6" : "0xc2718280c37E24c6F0b1A77f24f07413755fd21D";
-
-export const getQuestFeeContract = () => getNetwork() === "testnet" ? "0x3F68e0b7f2601d4146d1DABaE9b36b56724A0EC6" : "0x1B7d6307E76846c7459FC0D7d09Cadfa33c62a89";
-
-export const getMultivaultAddress = (): `0x${string}` => getNetwork() === "testnet" ? "0x2Ece8D4dEdcB9918A398528f3fa4688b1d2CAB91" : "0x6E35cF57A41fA15eA0EaE9C33e751b01A784Fe7e";
+export const getMultivaultAddress = (): `0x${string}` => network === "testnet" ? "0x2Ece8D4dEdcB9918A398528f3fa4688b1d2CAB91" : "0x6E35cF57A41fA15eA0EaE9C33e751b01A784Fe7e";
 
 export const url = process.env.NEXT_PUBLIC_CLIENT_URL || "https://nexura-app.vercel.app";
 
 export const projectId = process.env.NEXT_PUBLIC_REOWN_PROJECT_ID;
 
 const VITE_DISCORD_CLIENT_ID = DISCORD_CLIENT_ID;
-
+ 
 export const PROXY_FEE_CONTRACT = process.env.NEXT_PUBLIC_PROXY_FEE_CONTRACT as `0x${string}`;
 
 export const discordAuthUrl = "https://discord.com/oauth2/authorize" + "?client_id=" + VITE_DISCORD_CLIENT_ID + "&redirect_uri=" + encodeURIComponent(BACKEND_URL + "/api/auth/discord/callback") + "&response_type=code" + "&scope=identify";

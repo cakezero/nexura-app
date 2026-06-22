@@ -79,7 +79,7 @@ export default function ReferralsPage() {
       // await claimReferralReward(user?._id || "");
       await apiRequestV2("POST", "/api/user/claim-referral-reward", { tier: nextTier });
       setClaimedTier(nextTier);
-      toast({ title: "Success", description: `Milestone ${nextTier} reward claimed! +${MILESTONES[claimedTier].reward.toLocaleString()} XP` });
+      toast({ title: "Success", description: `Milestone ${nextTier} reward claimed! +${MILESTONES[claimedTier].reward.toLocaleString()} XP.` });
     } catch (error: unknown) {
       console.error("[ACTION] handleClaim ✗", error);
       const message = error instanceof Error ? error.message : "Something went wrong";

@@ -88,7 +88,7 @@ export function useWallet() {
           localStorage.setItem("nexura:token", data.accessToken);
           emitSessionChange();
         } else {
-          toast({ title: "Error", description: "Error signing in", variant: "destructive" });
+          toast({ title: "Error", description: "Error signing in.", variant: "destructive" });
           return;
         }
       }
@@ -98,7 +98,7 @@ export function useWallet() {
     } catch (e: any) {
       const msg = e?.message ?? String(e);
       if (msg.includes("rejected") || msg.includes("denied")) return;
-      toast({ title: "Error", description: msg || "Authentication failed", variant: "destructive" });
+      toast({ title: "Error", description: msg || "Authentication failed.", variant: "destructive" });
     }
   }
 

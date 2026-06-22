@@ -723,13 +723,41 @@ export const getAdminQuestDetail = async (req: GlobalRequest, res: GlobalRespons
     else if (s && s > now) temporalStatus = "Scheduled";
     else if (found.status !== "Save") temporalStatus = "Active";
 
-    const questTasks = ((found as any).campaignQuests || (found as any).quests || []).map((t: any) => ({
-      type: t.type || t.taskType || "",
-      platform: t.platform || "",
-      handleOrUrl: t.handleOrUrl || t.handle || "",
-      description: t.description || "",
-      evidence: t.evidence || "",
-      validation: t.validation || "Manual Validation",
+    // Mini-quests for single (featured/daily) quests live in their own collection
+    // linked by { quest }. Map each into the task shape the dashboard editor expects,
+    // returning a `type` string that round-trips through its typeToTag() back to the
+    // stored tag so the task renders correctly and can be deleted.
+    const tagToType: Record<string, string> = {
+      "comment-x": "Comment on our X post",
+      "follow-x": "Follow us on X",
+      "create-post": "Create a Post",
+      "join-discord": "Join Us On Discord",
+      "acquire-role-discord": "Acquire a Role (Discord)",
+      "send-message-discord": "Send Message in Channel (Discord)",
+      portal: "Check Out the Portal Claims",
+      relic: "Relic Checker",
+      "i-trust": "I Trust",
+      "i-collaborated": "I Collaborated",
+      "i-interact": "I Interacted",
+      "i-follow": "I Follow",
+      feedback: "Give Feedback",
+      "trust-name": "Own a TNS Name",
+    };
+    const platformFromCategory = (category?: string) => {
+      if (category === "twitter") return "Twitter";
+      if (category === "discord") return "Discord";
+      return "";
+    };
+
+    const miniQuests = await miniQuest.find({ quest: found._id }).lean();
+    const questTasks = miniQuests.map((t: any) => ({
+      _id: String(t._id),
+      type: tagToType[t.tag as string] || "others",
+      platform: platformFromCategory(t.category),
+      handleOrUrl: t.link || "",
+      description: t.text || "",
+      evidence: "",
+      validation: "Manual Validation",
       verificationMode: t.verificationMode || "",
       roleId: t.roleId || "",
       channelId: t.channelId || "",
@@ -742,6 +770,7 @@ export const getAdminQuestDetail = async (req: GlobalRequest, res: GlobalRespons
         title: found.title || "",
         description: found.description || found.project_name || "",
         status: temporalStatus,
+        category: found.category ?? "seasonal",
         starts_at: found.starts_at ?? null,
         ends_at: found.ends_at ?? null,
         reward: found.reward ?? 0,
@@ -765,7 +794,12 @@ export const getAdminHubQuests = async (req: GlobalRequest, res: GlobalResponse)
     }
 
     const quests = await quest
-      .find({ hub: adminHub, status: { $ne: "Deleted" } })
+      // Include legacy/global quests (no hub — created before hubs existed) alongside
+      // this admin's hub quests, so the old featured/daily quests still show.
+      .find({
+        status: { $ne: "Deleted" },
+        $or: [{ hub: adminHub }, { hub: { $exists: false } }, { hub: null }],
+      })
       .sort({ createdAt: -1 })
       .lean();
 
@@ -835,7 +869,7 @@ export const getTasks = async (req: GlobalRequest, res: GlobalResponse) => {
 
 export const getXpHistory = async (req: GlobalRequest, res: GlobalResponse) => {
 	try {
-		const history = await xpLog.find().sort({ timestamp: -1 }).limit(1000).lean();
+		const history = await xpLog.find().sort({ timestamp: -1 }).lean();
 		res.status(OK).json({ history });
 	} catch (error) {
 		logger.error(error);
@@ -1261,8 +1295,10 @@ export const markTask = async (req: GlobalRequest, res: GlobalResponse) => {
 		} else {
 			submissionToBeVerified.status = "done";
 			submissionToBeVerified.validatedBy = adminExists.username;
-			model.status = "done";
-			model.done = true;
+			// Approval makes the task CLAIMABLE, not done — the user must press
+			// "Claim XP" to actually collect the reward (xp is awarded on claim).
+			model.status = "approved";
+			model.done = false;
 		}
 
 		await submissionToBeVerified.save();

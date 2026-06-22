@@ -31,7 +31,7 @@ export default function OrgSignInButton() {
     //   setLoading(false);
     // }
 
-    alert("Creating an organisation is on its way, in the mean time contact the nexura team with your campaign information. Thank you!")
+    alert("Creating an organisation is on its way, in the meantime contact the Nexura team with your campaign information. Thank you!")
   };
 
   return (

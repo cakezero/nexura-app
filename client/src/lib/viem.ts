@@ -1,36 +1,57 @@
-import { type WalletClient, type PublicClient } from "viem";
 import {
-  getWalletClient as coreGetWalletClient,
-  getPublicClient as coreGetPublicClient,
-} from "@wagmi/core";
-import { getActiveWagmiConfig } from "./wagmiConfig";
-import { getChain } from "./chain";
+  type WalletClient,
+  type Address,
+  type PublicClient,
+  custom,
+  createWalletClient, createPublicClient
+} from "viem";
+import chain from "./chain";
 
-const NO_WALLET_MSG =
-  "No wallet provider available. Connect a wallet with RainbowKit first.";
+let walletClient: WalletClient | undefined = undefined;
+let publicClient: PublicClient | undefined = undefined;
 
-export const getPublicClient = (): PublicClient => {
-  const client = coreGetPublicClient(getActiveWagmiConfig(), { chainId: getChain().id });
-  if (!client) {
-    throw new Error(NO_WALLET_MSG);
+export const getPublicClient = () => {
+  if (typeof window === 'undefined') {
+    throw new Error("window is undefined");
+  };
+
+  const provider = (window as any).ethereum;
+
+  if (!provider) {
+    throw new Error("No Ethereum provider found");
   }
-  return client as unknown as PublicClient;
+
+  if (!publicClient) {
+    publicClient = createPublicClient({
+      chain,
+      transport: custom(provider)
+    });
+    
+    return publicClient;
+  }
+
+  return publicClient;
 };
 
-export const getWalletClient = async (): Promise<WalletClient> => {
-  try {
-    const client = await coreGetWalletClient(getActiveWagmiConfig(), { chainId: getChain().id });
-    if (!client) {
-      throw new Error(NO_WALLET_MSG);
-    }
-    return client as unknown as WalletClient;
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    if (
-      /connector|not connected|no wallet/i.test(msg)
-    ) {
-      throw new Error(NO_WALLET_MSG);
-    }
-    throw err;
+export const getWalletClient = async () => {
+  if (typeof window === 'undefined') {
+    throw new Error("window is undefined");
+  };
+
+  const [account] = await window.ethereum!.request({ method: 'eth_requestAccounts' });
+  if (!account) {
+    throw new Error("No account found");
   }
-};
+
+  if (!walletClient) {
+    walletClient = createWalletClient({
+      chain,
+      account,
+      transport: custom(window.ethereum!)
+    });
+
+    return walletClient;
+  }
+
+  return walletClient;
+}

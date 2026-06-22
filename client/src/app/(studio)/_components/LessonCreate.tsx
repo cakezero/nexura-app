@@ -354,7 +354,7 @@ export default function CreateLesson({
           toast({
             variant: "destructive",
             title: "Error",
-            description: err instanceof Error ? err.message : "Failed to load lesson",
+            description: err instanceof Error ? err.message : "Failed to load lesson.",
           });
           }
           } finally {
@@ -435,7 +435,7 @@ export default function CreateLesson({
             description:
               fallbackErr instanceof Error
                 ? fallbackErr.message
-                : "Failed to load lesson content",
+                : "Failed to load lesson content.",
           });
           return;
           }
@@ -443,7 +443,7 @@ export default function CreateLesson({
           toast({
           variant: "destructive",
           title: "Error",
-          description: err instanceof Error ? err.message : "Failed to load lesson content",
+          description: err instanceof Error ? err.message : "Failed to load lesson content.",
           });
           }
           };
@@ -486,7 +486,7 @@ export default function CreateLesson({
           toast({
           variant: "destructive",
           title: "Error",
-          description: err instanceof Error ? err.message : "Failed to save lesson",
+          description: err instanceof Error ? err.message : "Failed to save lesson.",
           });
           return null;
           } finally {
@@ -568,7 +568,7 @@ export default function CreateLesson({
           toast({
           variant: "destructive",
           title: "Error",
-          description: err instanceof Error ? err.message : "Failed to add paragraph",
+          description: err instanceof Error ? err.message : "Failed to add paragraph.",
           });
           } finally {
           setSaving(false);
@@ -612,7 +612,7 @@ export default function CreateLesson({
           toast({
           variant: "destructive",
           title: "Error",
-          description: err instanceof Error ? err.message : "Failed to add quiz",
+          description: err instanceof Error ? err.message : "Failed to add quiz.",
           });
           } finally {
           setSaving(false);
@@ -651,7 +651,7 @@ export default function CreateLesson({
           toast({
           variant: "destructive",
           title: "Error",
-          description: err instanceof Error ? err.message : "Failed to add video",
+          description: err instanceof Error ? err.message : "Failed to add video.",
           });
           } finally {
           setSaving(false);
@@ -682,7 +682,7 @@ export default function CreateLesson({
           toast({
           variant: "destructive",
           title: "Error",
-          description: err instanceof Error ? err.message : "Failed to save paragraph",
+          description: err instanceof Error ? err.message : "Failed to save paragraph.",
           });
           }
           };
@@ -729,7 +729,7 @@ export default function CreateLesson({
           toast({
           variant: "destructive",
           title: "Error",
-          description: err instanceof Error ? err.message : "Failed to save quiz",
+          description: err instanceof Error ? err.message : "Failed to save quiz.",
           });
           }
           };
@@ -779,7 +779,7 @@ export default function CreateLesson({
           toast({
           variant: "destructive",
           title: "Error",
-          description: err instanceof Error ? err.message : `Failed to save ${side}`,
+          description: err instanceof Error ? err.message : `Failed to save ${side}.`,
           });
           }
           };
@@ -808,7 +808,7 @@ export default function CreateLesson({
           toast({
           variant: "destructive",
           title: "Error",
-          description: err instanceof Error ? err.message : "Failed to save video",
+          description: err instanceof Error ? err.message : "Failed to save video.",
           });
           }
           };
@@ -841,7 +841,7 @@ export default function CreateLesson({
           toast({
             variant: "destructive",
             title: "Error",
-            description: err instanceof Error ? err.message : "Failed to delete",
+            description: err instanceof Error ? err.message : "Failed to delete.",
           });
           } finally {
           setDeletingContentId("");
@@ -1053,7 +1053,7 @@ export default function CreateLesson({
       toast({
         variant: "destructive",
         title: "Error",
-        description: err instanceof Error ? err.message : "Failed to update lesson status",
+        description: err instanceof Error ? err.message : "Failed to update lesson status.",
       });
     } finally {
       setPublishing(false);
@@ -1079,7 +1079,7 @@ export default function CreateLesson({
       toast({
         variant: "destructive",
         title: "Error",
-        description: err instanceof Error ? err.message : "Failed to save completion",
+        description: err instanceof Error ? err.message : "Failed to save completion.",
       });
     } finally {
       setSaving(false);

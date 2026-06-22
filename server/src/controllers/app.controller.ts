@@ -48,7 +48,12 @@ import { GraphQLClient } from "graphql-request";
 import { checksumAddress, parseAbi, parseEther, type Address } from "viem";
 import { campaign, campaignCompleted } from "@/models/campaign.model";
 import { dailySignIn } from "@/models/dailySignIn.model";
-import { startOfDayUTC, updateLevel, getNFT, getAmountPaid } from "@/utils/utils";
+import {
+  startOfDayUTC,
+  updateLevel,
+  getNFT,
+  getAmountPaid,
+} from "@/utils/utils";
 import chain from "@/utils/chain.utils";
 import { evaluateDailyStreak } from "@/utils/streak.utils";
 import { lesson, lessonCompleted } from "@/models/lesson.model";
@@ -83,7 +88,7 @@ const getTrustNameProvider = () => {
   }
 
   return provider;
-}
+};
 
 export const validateTrustNameTask = async (
   req: GlobalRequest,
@@ -163,15 +168,19 @@ export const validateTrustNameTask = async (
       return;
     }
 
+    // Non-campaign tasks stay CLAIMABLE (user presses Claim XP); campaign tasks
+    // complete on verify (they use a separate claim path).
+    const tnsState = isCampaign
+      ? { done: true, status: "done" }
+      : { done: false, status: "approved" };
     if (!taskExists) {
       await Model.create({
         ...filter,
-        done: true,
-        status: "done",
+        ...tnsState,
       });
     } else {
-      taskExists.done = true;
-      taskExists.status = "done";
+      taskExists.done = tnsState.done;
+      taskExists.status = tnsState.status;
 
       await taskExists.save();
     }
@@ -923,7 +932,9 @@ export const checkRelics = async (req: GlobalRequest, res: GlobalResponse) => {
 
     const questAlreadyCompleted = await questCompleted.findOne({ quest: questFound._id, user: req.id }).lean();
     if (questAlreadyCompleted && questAlreadyCompleted?.done) {
-      res.status(BAD_REQUEST).json({ error: "quest has already been completed" });
+      res
+        .status(BAD_REQUEST)
+        .json({ error: "quest has already been completed" });
       return;
     } else if (questAlreadyCompleted && !questAlreadyCompleted.done) {
       res.status(BAD_REQUEST).json({ error: "claim xp to complete quest" });
@@ -933,28 +944,95 @@ export const checkRelics = async (req: GlobalRequest, res: GlobalResponse) => {
     const nft = await getNFT(req.user.address as string);
 
     if (!nft) {
-      res.status(BAD_REQUEST).json({ error: "user does not have relic on connected wallet" });
+      res
+        .status(BAD_REQUEST)
+        .json({ error: "user does not have relic on connected wallet" });
       return;
     }
 
-    await questCompleted.create({ done: false, category: "one-time", quest: questFound._id, user: req.id });
+    await questCompleted.create({
+      done: false,
+      category: "one-time",
+      quest: questFound._id,
+      user: req.id,
+    });
 
     res.status(OK).json({ message: "relics verified", verified: true });
   } catch (error) {
     logger.error(error);
-    res.status(INTERNAL_SERVER_ERROR).json({ error: "error checking user address forrelics contract" })
+    res
+      .status(INTERNAL_SERVER_ERROR)
+      .json({ error: "error checking user address for relics contract" });
   }
-}
+};
 
-export const confirmRelicHodl = async (res: GlobalResponse, req: GlobalRequest) => {
+export const runRelicHodlCheck = async () => {
   try {
+    const relicMiniQuests = await miniQuest
+      .find({ tag: "relic" })
+      .select("quest")
+      .lean();
 
-    res.sendStatus(OK);
+    const rewardByQuestId = new Map<string, number>();
+    for (const relicMiniQuest of relicMiniQuests) {
+      if (!relicMiniQuest.quest) continue;
+      const relicQuest = await quest
+        .findById(relicMiniQuest.quest)
+        .select("reward")
+        .lean();
+      if (relicQuest) {
+        rewardByQuestId.set(
+          relicQuest._id.toString(),
+          relicQuest.reward ?? 6000,
+        );
+      }
+    }
+
+    if (rewardByQuestId.size === 0) return;
+
+    const relicQuestIds = [...rewardByQuestId.keys()];
+    const claims = await questCompleted.find({
+      quest: { $in: relicQuestIds },
+      done: true,
+    });
+
+    for (const claim of claims) {
+      try {
+        const reward = rewardByQuestId.get(claim.quest!.toString()) ?? 6000;
+
+        const claimUser = await user.findById(claim.user);
+        if (!claimUser) continue;
+
+        const stillHoldsRelic = await getNFT(claimUser.address);
+        if (stillHoldsRelic) continue;
+
+        claimUser.xp = Math.max(0, claimUser.xp - reward);
+        claimUser.hasRelic = false;
+        claimUser.level = await updateLevel(
+          claimUser.xp,
+          claimUser.badges,
+          claimUser._id.toString(),
+        );
+        await claimUser.save();
+
+        claim.done = false;
+        await claim.save();
+
+        await xpLog.create({
+          address: claimUser.address,
+          amount: -reward,
+          username: claimUser.username,
+          status: "success",
+          type: "quest",
+        });
+      } catch (error) {
+        logger.error(error);
+      }
+    }
   } catch (error) {
     logger.error(error);
-    res.sendStatus(INTERNAL_SERVER_ERROR);
   }
-}
+};
 
 export const claimRelicReward = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
@@ -964,14 +1042,19 @@ export const claimRelicReward = async (req: GlobalRequest, res: GlobalResponse) 
       return;
     }
 
-    const isQuestCompleted = await questCompleted.findOne({ quest: questFound._id, user: req.id });
+    const isQuestCompleted = await questCompleted.findOne({
+      quest: questFound._id,
+      user: req.id,
+    });
     if (!isQuestCompleted) {
       res.status(BAD_REQUEST).json({ error: "verify relic to proceed" });
       return;
     }
 
     if (isQuestCompleted.done === true) {
-      res.status(BAD_REQUEST).json({ error: "quest reward has already been claimed" });
+      res
+        .status(BAD_REQUEST)
+        .json({ error: "quest reward has already been claimed" });
       return;
     }
 
@@ -985,26 +1068,36 @@ export const claimRelicReward = async (req: GlobalRequest, res: GlobalResponse) 
 
     await isQuestCompleted.save();
 
-    questUser.xp += questFound.reward;
+    // Grant relic reward XP and mark the user as owning a relic
+    const rewardAmount = questFound.reward ?? 6000;
+    questUser.xp += rewardAmount;
+    questUser.hasRelic = true;
 
-    const level = await updateLevel(questUser.xp, questUser.badges, questUser._id.toString());
+    // Recalculate level based on the new XP and badges
+    const level = await updateLevel(
+      questUser.xp,
+      questUser.badges,
+      questUser._id.toString(),
+    );
 
     questUser.level = level;
 
+    await questUser.save();
+
     await xpLog.create({
       address: questUser.address,
-      amount: questFound.reward,
+      amount: rewardAmount,
       username: questUser.username,
       status: "success",
-      type: "quest"
+      type: "quest",
     });
-
-    await questUser.save();
 
     res.status(OK).json({ message: "relic reward claimed successfully" });
   } catch (error) {
     logger.error(error);
-    res.status(INTERNAL_SERVER_ERROR).json({ error: "error claiming relic reward" })
+    res
+      .status(INTERNAL_SERVER_ERROR)
+      .json({ error: "error claiming relic reward" });
   }
 };
 
@@ -1012,7 +1105,9 @@ export const validateAtlasTask = async (req: GlobalRequest, res: GlobalResponse)
   try {
     const { id, questId, tag, page } = req.body;
     if (!questId || !id || !tag) {
-      res.status(BAD_REQUEST).json({ error: "questId, id and tag is required" });
+      res
+        .status(BAD_REQUEST)
+        .json({ error: "questId, id and tag is required" });
       return;
     }
 
@@ -1024,7 +1119,9 @@ export const validateAtlasTask = async (req: GlobalRequest, res: GlobalResponse)
 
     const userToCheck = await user.findById(req.id);
     if (!userToCheck) {
-      res.status(BAD_REQUEST).json({ error: "id associated with user is invalid" });
+      res
+        .status(BAD_REQUEST)
+        .json({ error: "id associated with user is invalid" });
       return;
     }
 
@@ -1082,29 +1179,31 @@ export const validateAtlasTask = async (req: GlobalRequest, res: GlobalResponse)
             user: userToCheck._id,
           });
         } else {
+          // Validated on-chain, but XP is claimed manually: mark approved (not done)
+          // so the card shows a "Claim XP" button instead of auto-claiming.
           await miniQuestCompleted.create({
             miniQuest: id,
             quest: questId,
-            done: true,
-            status: "done",
+            done: false,
+            status: "approved",
             user: userToCheck._id,
           });
 
           await ensureQuestStarted(questId, userToCheck._id);
 
-          res.status(OK).json({ message: "task completed" });
+          res.status(OK).json({ message: "task verified" });
           return;
         }
       } else {
         if (positionExists) {
-          miniQuestExists!.done = true;
-          miniQuestExists!.status = "done";
+          miniQuestExists!.done = false;
+          miniQuestExists!.status = "approved";
 
           await miniQuestExists.save();
 
           await ensureQuestStarted(questId, userToCheck._id);
 
-          res.status(OK).json({ message: "task completed" });
+          res.status(OK).json({ message: "task verified" });
           return;
         }
       }
@@ -1161,9 +1260,11 @@ export const validateAtlasTask = async (req: GlobalRequest, res: GlobalResponse)
     });
   } catch (error) {
     logger.error(error);
-    res.status(INTERNAL_SERVER_ERROR).json({ error: "error validating atlas task" });
+    res
+      .status(INTERNAL_SERVER_ERROR)
+      .json({ error: "error validating atlas task" });
   }
-}
+};
 
 export const validatePortalTask = async (
   req: GlobalRequest,
@@ -1253,14 +1354,14 @@ export const validatePortalTask = async (
           await miniQuestCompleted.create({
             miniQuest: id,
             quest: questId,
-            done: true,
-            status: "done",
+            done: false,
+            status: "approved",
             user: userToCheck._id,
           });
 
           await ensureQuestStarted(questId, userToCheck._id);
 
-          res.status(OK).json({ message: "task completed" });
+          res.status(OK).json({ message: "task verified" });
           return;
         }
       } else {
@@ -1270,8 +1371,8 @@ export const validatePortalTask = async (
 
           await miniQuestExists!.save();
         } else {
-          miniQuestExists!.done = true;
-          miniQuestExists!.status = "done";
+          miniQuestExists!.done = false;
+          miniQuestExists!.status = "approved";
 
           await miniQuestExists.save();
 
@@ -1458,9 +1559,7 @@ export const getAnalytics = async (req: GlobalRequest, res: GlobalResponse) => {
 
     const totalQuests = await quest.countDocuments({
       $or: [
-        { status: { $eq: "Ended" } },
-        { status: { $eq: "Active" } },
-        { status: { $eq: "Scheduled" } },
+        { status: { $in: ["Ended", "Active", "Scheduled"] } },
       ],
     });
 
@@ -1483,9 +1582,7 @@ export const getAnalytics = async (req: GlobalRequest, res: GlobalResponse) => {
 
     const others = rewardContractDeployed + soldClaims;
 
-    const totalQuestsCompleted = await questCompleted.countDocuments({
-      done: true,
-    });
+    const totalQuestsCompleted = await questCompleted.countDocuments({ done: true });
 
     const totalCampaignsCompletedFound = await campaignCompleted
       .find()
@@ -1695,18 +1792,12 @@ export const getAnalytics = async (req: GlobalRequest, res: GlobalResponse) => {
 
     const prevActiveWeekly = usersFound.filter(
       (u: { updatedAt: Date; status: string }) => {
-        return (
-          u.updatedAt >= prev7dStart &&
-          u.updatedAt < prev7dEnd
-        );
+        return u.updatedAt >= prev7dStart && u.updatedAt < prev7dEnd;
       },
     ).length;
     const prevActiveMonthly = usersFound.filter(
       (u: { updatedAt: Date; status: string }) => {
-        return (
-          u.updatedAt >= prev30dStart &&
-          u.updatedAt < prev30dEnd
-        );
+        return u.updatedAt >= prev30dStart && u.updatedAt < prev30dEnd;
       },
     ).length;
 
@@ -1769,7 +1860,10 @@ export const fetchDailyXpDetails = async (req: GlobalRequest, res: GlobalRespons
     const month = formatDate(new Date(), "MMM, y");
 
     const [dailyXpDetailsInDB, userStreakToUpdate] = await Promise.all([
-      dailySignIn.findOne({ user: req.id, month }).lean().select("xpClaimedThisMonth date"),
+      dailySignIn
+        .findOne({ user: req.id, month })
+        .lean()
+        .select("xpClaimedThisMonth date"),
       user.findById(req.id).select("lastSignInDate streak streakToRestore"),
     ]);
 
@@ -1782,11 +1876,16 @@ export const fetchDailyXpDetails = async (req: GlobalRequest, res: GlobalRespons
 
     const { streakLost } = evaluateDailyStreak(
       userStreakToUpdate.lastSignInDate,
-      userStreakToUpdate.streak
+      userStreakToUpdate.streak,
     );
 
     if (!streakLost) {
-      res.status(OK).json({ message: "daily xp details fetched", dailyXpDetails: { streakLost, xpClaimedThisMonth } });
+      res
+        .status(OK)
+        .json({
+          message: "daily xp details fetched",
+          dailyXpDetails: { streakLost, xpClaimedThisMonth },
+        });
       return;
     }
 
@@ -1795,14 +1894,19 @@ export const fetchDailyXpDetails = async (req: GlobalRequest, res: GlobalRespons
       await userStreakToUpdate.save();
     }
 
-    res.status(OK).json({ message: "daily xp details fetched", dailyXpDetails: { streakLost, xpClaimedThisMonth } });
+    res
+      .status(OK)
+      .json({
+        message: "daily xp details fetched",
+        dailyXpDetails: { streakLost, xpClaimedThisMonth },
+      });
   } catch (error) {
     logger.error(error);
     res
       .status(INTERNAL_SERVER_ERROR)
       .json({ error: "error fetching daily xp details" });
   }
-}
+};
 
 export const claimStreakReward = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
@@ -1819,16 +1923,32 @@ export const claimStreakReward = async (req: GlobalRequest, res: GlobalResponse)
     if (userFromReq.streak >= 7 && userFromReq.streak < 15 && dayCount === 0) {
       streakReward = 500;
       dayCount = 7;
-    } else if (userFromReq.streak >= 15 && userFromReq.streak < 30 && dayCount === 7) {
+    } else if (
+      userFromReq.streak >= 15 &&
+      userFromReq.streak < 30 &&
+      dayCount === 7
+    ) {
       streakReward = 1000;
       dayCount = 15;
-    } else if (userFromReq.streak >= 30 && userFromReq.streak < 45 && dayCount === 15) {
+    } else if (
+      userFromReq.streak >= 30 &&
+      userFromReq.streak < 45 &&
+      dayCount === 15
+    ) {
       streakReward = 2500;
       dayCount = 30;
-    } else if (userFromReq.streak >= 45 && userFromReq.streak < 60 && dayCount === 30) {
+    } else if (
+      userFromReq.streak >= 45 &&
+      userFromReq.streak < 60 &&
+      dayCount === 30
+    ) {
       streakReward = 5000;
       dayCount = 45;
-    } else if (userFromReq.streak >= 60 && userFromReq.streak < 90 && dayCount === 45) {
+    } else if (
+      userFromReq.streak >= 60 &&
+      userFromReq.streak < 90 &&
+      dayCount === 45
+    ) {
       streakReward = 10000;
       dayCount = 60;
     } else if (userFromReq.streak >= 90 && dayCount === 60) {
@@ -1837,16 +1957,27 @@ export const claimStreakReward = async (req: GlobalRequest, res: GlobalResponse)
     }
 
     if (streakReward === 0) {
-      res.status(BAD_REQUEST).json({ error: "streak reward not available to claim" });
+      res
+        .status(BAD_REQUEST)
+        .json({ error: "streak reward not available to claim" });
       return;
     }
 
     dailyXpReward!.xpClaimedThisMonth += streakReward;
+
+    await user.findByIdAndUpdate(req.id, {
+      $inc: { xp: streakReward },
+      $set: { dayCount },
+    });
     await dailyXpReward!.save();
 
-    await user.findByIdAndUpdate(req.id, { $inc: { xp: streakReward }, $set: { dayCount } });
-
-    await xpLog.create({ amount: streakReward, address: req.user.address, username: req.user.username, type: "daily-xp-streak-reward", status: "success" });
+    await xpLog.create({
+      amount: streakReward,
+      address: req.user.address,
+      username: req.user.username,
+      type: "daily-xp-streak-reward",
+      status: "success",
+    });
 
     res.status(OK).json({ message: "streak reward claimed", streakReward });
   } catch (error) {
@@ -1855,7 +1986,7 @@ export const claimStreakReward = async (req: GlobalRequest, res: GlobalResponse)
       .status(INTERNAL_SERVER_ERROR)
       .json({ error: "error claiming streak reward" });
   }
-}
+};
 
 export const referralLeaderboard = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
@@ -1866,39 +1997,35 @@ export const referralLeaderboard = async (req: GlobalRequest, res: GlobalRespons
           totalReferrals: { $sum: 1 },
           activeReferrals: {
             $sum: {
-              $cond: [
-                { $eq: ["$status", "Active"] },
-                1,
-                0
-              ]
-            }
+              $cond: [{ $eq: ["$status", "Active"] }, 1, 0],
+            },
           },
-        }
+        },
       },
       {
         $sort: {
           activeReferrals: -1,
-          totalReferrals: -1
-        }
+          totalReferrals: -1,
+        },
       },
       {
         $lookup: {
           from: "users",
           localField: "_id",
           foreignField: "_id",
-          as: "user"
-        }
+          as: "user",
+        },
       },
       {
-        $unwind: "$user"
+        $unwind: "$user",
       },
       {
         $project: {
           username: "$user.username",
           totalReferrals: 1,
-          activeReferrals: 1
-        }
-      }
+          activeReferrals: 1,
+        },
+      },
     ]);
 
     const referralLeaderboardInfo = [];
@@ -1911,19 +2038,26 @@ export const referralLeaderboard = async (req: GlobalRequest, res: GlobalRespons
         xpEarned = 2000;
       } else if (activeReferrals >= 20 && activeReferrals < 30) {
         xpEarned = 5000;
-    } else if (activeReferrals >= 30) {
+      } else if (activeReferrals >= 30) {
         xpEarned = 10000;
       }
 
       referralLeaderboardInfo.push({ ...referral, xpEarned });
     }
 
-    res.status(OK).json({ message: "referral leaderboard info fetched", referralLeaderboardInfo });
+    res
+      .status(OK)
+      .json({
+        message: "referral leaderboard info fetched",
+        referralLeaderboardInfo,
+      });
   } catch (error) {
     logger.error(error);
-    res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching referral leaderboard info" });
+    res
+      .status(INTERNAL_SERVER_ERROR)
+      .json({ error: "error fetching referral leaderboard info" });
   }
-}
+};
 
 export const getUserXpHistory = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
@@ -1932,16 +2066,18 @@ export const getUserXpHistory = async (req: GlobalRequest, res: GlobalResponse) 
     res.status(OK).json({ userXpHistory });
   } catch (error) {
     logger.error(error);
-    res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching user xp history" });
+    res
+      .status(INTERNAL_SERVER_ERROR)
+      .json({ error: "error fetching user xp history" });
   }
-}
+};
 
 export const performDailySignIn = async (
   req: GlobalRequest,
   res: GlobalResponse,
 ) => {
   const userId = req.id;
-  
+
   const userExists = await user.findById(userId);
   if (!userExists) {
     res.status(NOT_FOUND).json({ message: "User not found" });
@@ -1949,7 +2085,6 @@ export const performDailySignIn = async (
   }
 
   try {
-
     const today = startOfDayUTC();
     const yesterday = new Date(today);
     yesterday.setUTCDate(today.getUTCDate() - 1);
@@ -1996,10 +2131,18 @@ export const performDailySignIn = async (
 
     userExists.level = level;
     userExists.totalCheckIns += 1;
+    userExists.streakToRestore = 0;
 
-    const dailySignInRecord = await dailySignIn.findOne({ month, user: userId }).select("xpClaimedThisMonth date");
+    const dailySignInRecord = await dailySignIn
+      .findOne({ month, user: userId })
+      .select("xpClaimedThisMonth date");
     if (!dailySignInRecord) {
-      await dailySignIn.create({ month, user: userId, xpClaimedThisMonth: dailyXpAmount, date: onlyDate });
+      await dailySignIn.create({
+        month,
+        user: userId,
+        xpClaimedThisMonth: dailyXpAmount,
+        date: onlyDate,
+      });
     } else {
       dailySignInRecord.xpClaimedThisMonth += dailyXpAmount;
       dailySignInRecord.date = onlyDate;
@@ -2043,22 +2186,34 @@ export const restoreStreak = async (req: GlobalRequest, res: GlobalResponse) => 
 
     const { from, timestamp, value } = await getAmountPaid(txHash);
 
-    if (checksumAddress(from as Address) !== checksumAddress(req.user.address)) {
-      res.status(BAD_REQUEST).json({ error: "transaction must be from the user's address" });
+    if (
+      checksumAddress(from as Address) !== checksumAddress(req.user.address)
+    ) {
+      res
+        .status(BAD_REQUEST)
+        .json({ error: "transaction must be from the user's address" });
       return;
     }
 
     const amount = network === "mainnet" ? "1" : "0.01";
 
     if (value !== amount) {
-      res.status(BAD_REQUEST).json({ error: `user must deposit ${amount} trust before streak can be restored` });
+      res
+        .status(BAD_REQUEST)
+        .json({
+          error: `user must deposit ${amount} trust before streak can be restored`,
+        });
       return;
     }
 
-    const currentDate = new Date().toLocaleDateString("en-US", { timeZone: "Africa/Lagos" }) as string;
+    const currentDate = new Date().toLocaleDateString("en-US", {
+      timeZone: "Africa/Lagos",
+    }) as string;
 
     if (timestamp !== currentDate) {
-      res.status(BAD_REQUEST).json({ error: "transaction must be from the current day" });
+      res
+        .status(BAD_REQUEST)
+        .json({ error: "transaction must be from the current day" });
       return;
     }
 
@@ -2066,9 +2221,12 @@ export const restoreStreak = async (req: GlobalRequest, res: GlobalResponse) => 
 
     const date = today.toISOString().split("T")[0] as string;
 
-    const streak = req.user.streakToRestore += 1;
+    const streak = (req.user.streakToRestore += 1);
 
-    await user.findByIdAndUpdate(req.id, { $inc: { totalCheckIns: 1, xp: 50 }, $set: { streak, lastSignInDate: date, streakToRestore: 0 } });
+    await user.findByIdAndUpdate(req.id, {
+      $inc: { totalCheckIns: 1, xp: 50 },
+      $set: { streak, lastSignInDate: date, streakToRestore: 0 },
+    });
 
     const month = formatDate(new Date(), "MMM, y");
 
@@ -2076,31 +2234,16 @@ export const restoreStreak = async (req: GlobalRequest, res: GlobalResponse) => 
     if (!dailySignInExists) {
       await dailySignIn.create({ user: req.id, date, month, xpClaimedThisMonth: 50 });
     } else {
-      dailySignInExists.xpClaimedThisMonth += 50; 
+      dailySignInExists.xpClaimedThisMonth += 50;
       await dailySignInExists.save();
     }
 
     res.status(OK).json({ message: "streak restored" });
   } catch (error) {
     logger.error(error);
-    res
-      .status(INTERNAL_SERVER_ERROR)
-      .json({ error: "error restoring streak" });
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error restoring streak" });
   }
 }
-
-export const claimsCreated = async (
-  req: GlobalRequest,
-  res: GlobalResponse,
-) => {
-  try {
-  } catch (error) {
-    logger.error(error);
-    res
-      .status(INTERNAL_SERVER_ERROR)
-      .json({ error: "error updating claims created" });
-  }
-};
 
 export const searchTriple = async (req: GlobalRequest, res: GlobalResponse) => {
   try {

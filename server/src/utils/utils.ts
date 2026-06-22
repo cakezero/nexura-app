@@ -7,7 +7,7 @@ import { ethers } from "ethers";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
 import chain from "./chain.utils";
-import { formatEther, parseAbi, type Address } from "viem";
+import { checksumAddress, formatEther, parseAbi, type Address } from "viem";
 
 export const padNumber = (numberToBePadded: number) => {
 	return numberToBePadded.toString().padStart(3, "0");
@@ -456,7 +456,7 @@ export const getNFT = async (walletAddress: string) => {
 		address: RELIC_CONTRACT,
 		abi: parseAbi(["function balanceOf(address owner) view returns (uint256)"]),
 		functionName: "balanceOf",
-		args: [walletAddress as Address],
+		args: [checksumAddress(walletAddress as `0x${string}`)],
 	}) as bigint;
 
   return balance > 0n;

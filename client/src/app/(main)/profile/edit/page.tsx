@@ -118,7 +118,7 @@ const getFinalUsername = (name: string, mode: string) => {
     if (!file.type.startsWith("image/")) {
       toast({
         title: "Invalid file",
-        description: "Please select an image file",
+        description: "Please select an image file.",
         variant: "destructive"
       });
       return;
@@ -127,7 +127,7 @@ const getFinalUsername = (name: string, mode: string) => {
     if (file.size > 5 * 1024 * 1024) {
       toast({
         title: "File too large",
-        description: "Please select an image under 5MB",
+        description: "Please select an image under 5MB.",
         variant: "destructive"
       });
       return;

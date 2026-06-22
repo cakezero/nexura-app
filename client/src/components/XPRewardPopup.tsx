@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import { modalBackdrop } from "../lib/motion";
 import { usePathname } from "next/navigation";
 
 type Props = {
@@ -29,10 +31,16 @@ const TARGET_PAGE = "/portal-claims";
     localStorage.setItem(LOCAL_KEY, (count + 1).toString());
   }
 }, [forceShow, pathname]);
-  if (!show) return null;
-
   return createPortal(
-    <div className="fixed top-0 left-0 w-screen h-screen bg-black bg-opacity-90 flex items-center justify-center z-[9999]">
+    <AnimatePresence>
+      {show && (
+        <motion.div
+          variants={modalBackdrop}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          className="fixed top-0 left-0 w-screen h-screen bg-black bg-opacity-90 flex items-center justify-center z-[9999]"
+        >
       <div className="bg-[#0a0a0a] border-2 border-purple-400 p-6 rounded-xl max-w-md w-full max-h-[90vh] overflow-auto shadow-2xl animate-bounce-slow">
         <h2
           className="text-2xl font-extrabold mb-4 text-center text-purple-400 tracking-wide animate-pulse"
@@ -60,7 +68,9 @@ const TARGET_PAGE = "/portal-claims";
           </button>
         </div>
       </div>
-    </div>,
+        </motion.div>
+      )}
+    </AnimatePresence>,
     document.body
   );
 };
