@@ -4,8 +4,6 @@ const nextConfig = {
   output: 'standalone',
   env: {
     NEXT_PUBLIC_BACKEND_URL: process.env.NEXT_PUBLIC_BACKEND_URL || "https://api.nexura.intuition.box",
-    NEXT_PUBLIC_NETWORK: "testnet",
-    NEXT_PUBLIC_ENV: "production",
     NEXT_PUBLIC_DISCORD_CLIENT_ID: process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID || "1452214561238286419",
   },
   eslint: {
