@@ -108,7 +108,7 @@ export const resetPasswordOTPEmail = async (email: string, code: string) => {
     } as MailOptions);
   } catch (error: any) {
     logger.error(error);
-    // throw new Error(error.message); // Don't throw for now so I can test the flow
+    throw new Error(error.message);
   }
 };
 
