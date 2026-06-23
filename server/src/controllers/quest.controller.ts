@@ -101,10 +101,7 @@ export const withSubmissionCategory = async (submissions: any[]): Promise<any[]>
 };
 
 // todo: add ecosystem completed to eco quests
-export const fetchEcosystemDapps = async (
-	req: GlobalRequest,
-	res: GlobalResponse
-) => {
+export const fetchEcosystemDapps = async (req: GlobalRequest, res: GlobalResponse) => {
 	try {
 		const ecosystemQuests = await ecosystemQuest.find().lean();
 		const ecosystemQuestsCompleted = await ecosystemQuestCompleted.find({
@@ -405,10 +402,7 @@ export const startQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 	}
 }
 
-export const fetchCampaignQuests = async (
-	req: GlobalRequest,
-	res: GlobalResponse
-) => {
+export const fetchCampaignQuests = async (req: GlobalRequest, res: GlobalResponse) => {
 	try {
 		const id = (req.query.id as string) || (req.body.id as string) || (req.body.questId as string);
 		if (!id) {
@@ -512,10 +506,7 @@ export const fetchCampaignQuests = async (
 	}
 };
 
-export const createCampaignQuests = async (
-	req: GlobalRequest,
-	res: GlobalResponse
-) => {
+export const createCampaignQuests = async (req: GlobalRequest, res: GlobalResponse) => {
 	try {
 		const { success } = validateCampaignQuestData(req.body);
 		if (!success) {
@@ -565,10 +556,7 @@ export const createMiniQuest = async (req: GlobalRequest, res: GlobalResponse) =
 };
 
 // todo: link ecosystem quest to hub
-export const createEcosystemQuests = async (
-	req: GlobalRequest,
-	res: GlobalResponse
-) => {
+export const createEcosystemQuests = async (req: GlobalRequest, res: GlobalResponse) => {
 	try {
 		const { success } = validateEcosystemQuestData(req.body);
 		if (!success) {
@@ -589,10 +577,7 @@ export const createEcosystemQuests = async (
 	}
 };
 
-export const performCampaignQuest = async (
-	req: GlobalRequest,
-	res: GlobalResponse
-) => {
+export const performCampaignQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 	try {
 		const { id, campaignId } = req.body;
 
@@ -865,10 +850,7 @@ export const claimQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 	}
 };
 
-export const claimEcosystemQuest = async (
-	req: GlobalRequest,
-	res: GlobalResponse
-) => {
+export const claimEcosystemQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 	try {
 		const id = (req.query.id as string) || (req.body.id as string) || (req.body.questId as string);
 		if (!id) {

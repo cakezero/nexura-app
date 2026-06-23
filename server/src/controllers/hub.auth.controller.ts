@@ -18,6 +18,8 @@ import {
 	DISCORD_CLIENT_ID,
 	DISCORD_CLIENT_SECRET,
 	BOT_TOKEN,
+  DISCORD_ADMIN_HUB_CLIENT_REDIRECT_URI,
+  DISCORD_ADMIN_HUB_REDIRECT_URI
 } from "@/utils/env.utils";
 import { hubAdmin, hub, userHubAdmin, userHub } from "@/models/hub.model";
 import { user } from "@/models/user.model";
@@ -181,6 +183,43 @@ export const hubDiscordCallback = async (req: GlobalRequest, res: GlobalResponse
 		console.error(error);
 		console.error("DISCORD HUB TOKEN ERROR STATUS:", error.response?.status);
 		console.error("DISCORD HUB TOKEN ERROR DATA:", error.response?.data);
+		res.status(INTERNAL_SERVER_ERROR).json({ error: "Error signing in with discord" });
+	}
+}
+
+export const discordAdminCallback = async (req: GlobalRequest, res: GlobalResponse) => {
+	try {
+		const { code } = req.query as { code: string };
+
+		if (!code) {
+			res.send("Please sign-in/connect discord again");
+			return;
+		}
+
+		const params = new URLSearchParams({
+			client_id: DISCORD_CLIENT_ID,
+			client_secret: DISCORD_CLIENT_SECRET,
+			redirect_uri: DISCORD_ADMIN_HUB_REDIRECT_URI,
+			code,
+			grant_type: "authorization_code",
+		});
+
+		const { data: { access_token, refresh_token } } = await axios.post("https://discord.com/api/v10/oauth2/token", params, { headers });
+
+		const { data } = await axios.get("https://discord.com/api/v10/users/@me/guilds", {
+			headers: {
+				...headers,
+				Authorization: `Bearer ${access_token}`,
+			}
+		});
+
+		const serversCreated = await server.create({ servers: data });
+
+		res.redirect(DISCORD_ADMIN_HUB_CLIENT_REDIRECT_URI + `?id=${serversCreated._id}`);
+	} catch (error: any) {
+		console.error(error);
+		console.error("DISCORD ADMIN HUB TOKEN ERROR STATUS:", error.response?.status);
+		console.error("DISCORD ADMIN HUB TOKEN ERROR DATA:", error.response?.data);
 		res.status(INTERNAL_SERVER_ERROR).json({ error: "Error signing in with discord" });
 	}
 }
