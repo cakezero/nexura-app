@@ -12,6 +12,8 @@ export const network: "testnet" | "mainnet" = normalizedNetwork === "mainnet" ? 
 export const STUDIO_FEE_CONTRACT = network === "mainnet" ? "0xF26c210FAa3a7d3cB4107F222C5d994D064DCBa6" : "0xbb8AB9bfFDf563067F849f52e8E810d0084FfEB4";
 export const JWT_SECRET = process.env.JWT_SECRET as string;
 export const REFRESH_SECRET = process.env.REFRESH_SECRET as string;
+export const DISCORD_ADMIN_HUB_CLIENT_REDIRECT_URI = process.env.DISCORD_ADMIN_HUB_CLIENT_REDIRECT_URI as string;
+export const DISCORD_ADMIN_HUB_REDIRECT_URI = process.env.DISCORD_ADMIN_HUB_REDIRECT_URI as string;
 
 export const CLIENT_URL = process.env.CLIENT_URL as string;
 
@@ -86,7 +88,7 @@ const DEV_DISCORD_HUB_REDIRECT_URI = deriveHubRedirect(
 );
 const MAIN_DISCORD_HUB_REDIRECT_URI = deriveHubRedirect(
   process.env.MAIN_DISCORD_HUB_REDIRECT_URI,
-  MAIN_DISCORD_REDIRECT_URI || "https://api-nexura.intuition.box/api/auth/discord/callback"
+  MAIN_DISCORD_REDIRECT_URI || "https://api.nexura.intuition.box/api/auth/discord/callback"
 );
 
 export const MAIN_DISCORD_CLIENT_REDIRECT_URI = process.env.MAIN_DISCORD_CLIENT_REDIRECT_URI as string;

@@ -15,11 +15,11 @@ import {
 	CLIENT_URL,
 	DISCORD_HUB_CLIENT_REDIRECT_URI,
 	DISCORD_HUB_REDIRECT_URI,
-	ADMIN_DISCORD_REDIRECT_URI,
-	ADMIN_DISCORD_CLIENT_REDIRECT_URI,
 	DISCORD_CLIENT_ID,
 	DISCORD_CLIENT_SECRET,
 	BOT_TOKEN,
+  DISCORD_ADMIN_HUB_CLIENT_REDIRECT_URI,
+  DISCORD_ADMIN_HUB_REDIRECT_URI
 } from "@/utils/env.utils";
 import { hubAdmin, hub, userHubAdmin, userHub } from "@/models/hub.model";
 import { user } from "@/models/user.model";
@@ -187,36 +187,22 @@ export const hubDiscordCallback = async (req: GlobalRequest, res: GlobalResponse
 	}
 }
 
-export const adminConnectDiscord = async (_req: GlobalRequest, res: GlobalResponse) => {
-	const url = "https://discord.com/oauth2/authorize"
-		+ "?client_id=" + DISCORD_CLIENT_ID
-		+ "&redirect_uri=" + encodeURIComponent(ADMIN_DISCORD_REDIRECT_URI)
-		+ "&response_type=code"
-		+ "&scope=identify+guilds+bot+applications.commands";
-	res.redirect(url);
-};
-
-export const adminDiscordCallback = async (req: GlobalRequest, res: GlobalResponse) => {
+export const discordAdminCallback = async (req: GlobalRequest, res: GlobalResponse) => {
 	try {
 		const { code } = req.query as { code: string };
 
 		if (!code) {
-			res.send("Please connect Discord again");
+			res.send("Please sign-in/connect discord again");
 			return;
 		}
 
 		const params = new URLSearchParams({
 			client_id: DISCORD_CLIENT_ID,
 			client_secret: DISCORD_CLIENT_SECRET,
-			redirect_uri: ADMIN_DISCORD_REDIRECT_URI,
+			redirect_uri: DISCORD_ADMIN_HUB_REDIRECT_URI,
 			code,
 			grant_type: "authorization_code",
 		});
-
-		const headers = {
-			"Content-Type": "application/x-www-form-urlencoded",
-			"Accept-encoding": "application/x-www-form-urlencoded",
-		};
 
 		const { data: { access_token, refresh_token } } = await axios.post("https://discord.com/api/v10/oauth2/token", params, { headers });
 
@@ -229,14 +215,14 @@ export const adminDiscordCallback = async (req: GlobalRequest, res: GlobalRespon
 
 		const serversCreated = await server.create({ servers: data });
 
-		res.redirect(ADMIN_DISCORD_CLIENT_REDIRECT_URI + `?discord_servers_id=${serversCreated._id}`);
+		res.redirect(DISCORD_ADMIN_HUB_CLIENT_REDIRECT_URI + `?id=${serversCreated._id}`);
 	} catch (error: any) {
 		console.error(error);
-		console.error("ADMIN DISCORD TOKEN ERROR STATUS:", error.response?.status);
-		console.error("ADMIN DISCORD TOKEN ERROR DATA:", error.response?.data);
-		res.status(INTERNAL_SERVER_ERROR).json({ error: "Error connecting Discord" });
+		console.error("DISCORD ADMIN HUB TOKEN ERROR STATUS:", error.response?.status);
+		console.error("DISCORD ADMIN HUB TOKEN ERROR DATA:", error.response?.data);
+		res.status(INTERNAL_SERVER_ERROR).json({ error: "Error signing in with discord" });
 	}
-};
+}
 
 export const fetchServers = async (req: GlobalRequest, res: GlobalResponse) => {
 	try {
