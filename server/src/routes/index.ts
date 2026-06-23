@@ -18,7 +18,7 @@ import { createAdmin, adminLogin, forgotAdminPassword, resetAdminPassword } from
 import { authenticateUser2, authenticateAdmin, authenticateUser } from "@/middlewares/auth.middleware";
 import userHubRoutes from "./userHub.routes.ts";
 // import testSeedRoutes from "./test-seed.routes.ts";
-import { confirmHubEmailValidation, validateHubEmail } from "@/controllers/hub.auth.controller.ts";
+import { confirmHubEmailValidation, validateHubEmail, adminConnectDiscord, discordAdminCallback } from "@/controllers/hub.auth.controller.ts";
 
 const router = Router();
 
@@ -30,6 +30,8 @@ router
   .post("/admin/login", adminLogin)
   .post("/admin/forgot-password", forgotAdminPassword)
   .post("/admin/reset-password", resetAdminPassword)
+  .get("/admin/connect-discord", adminConnectDiscord)
+  .get("/admin/discord/callback", discordAdminCallback)
   .post("/user/sign-in", signIn)
 	.use("/", appRoutes)
 	.use("/admin", authenticateAdmin, adminRoutes)

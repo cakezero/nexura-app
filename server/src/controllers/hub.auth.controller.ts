@@ -19,7 +19,8 @@ import {
 	DISCORD_CLIENT_SECRET,
 	BOT_TOKEN,
   DISCORD_ADMIN_HUB_CLIENT_REDIRECT_URI,
-  DISCORD_ADMIN_HUB_REDIRECT_URI
+  DISCORD_ADMIN_HUB_REDIRECT_URI,
+  ADMIN_DISCORD_REDIRECT_URI,
 } from "@/utils/env.utils";
 import { hubAdmin, hub, userHubAdmin, userHub } from "@/models/hub.model";
 import { user } from "@/models/user.model";
@@ -188,9 +189,10 @@ export const hubDiscordCallback = async (req: GlobalRequest, res: GlobalResponse
 }
 
 export const adminConnectDiscord = async (_req: GlobalRequest, res: GlobalResponse) => {
+	const redirectUri = DISCORD_ADMIN_HUB_REDIRECT_URI || ADMIN_DISCORD_REDIRECT_URI;
 	const url = "https://discord.com/oauth2/authorize"
 		+ "?client_id=" + DISCORD_CLIENT_ID
-		+ "&redirect_uri=" + encodeURIComponent(DISCORD_ADMIN_HUB_REDIRECT_URI)
+		+ "&redirect_uri=" + encodeURIComponent(redirectUri)
 		+ "&response_type=code"
 		+ "&scope=identify+guilds+bot+applications.commands";
 	res.redirect(url);
