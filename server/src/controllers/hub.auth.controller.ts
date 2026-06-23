@@ -21,6 +21,7 @@ import {
   DISCORD_ADMIN_HUB_CLIENT_REDIRECT_URI,
   DISCORD_ADMIN_HUB_REDIRECT_URI,
   ADMIN_DISCORD_REDIRECT_URI,
+  ADMIN_DISCORD_CLIENT_REDIRECT_URI,
 } from "@/utils/env.utils";
 import { hubAdmin, hub, userHubAdmin, userHub } from "@/models/hub.model";
 import { user } from "@/models/user.model";
@@ -210,7 +211,7 @@ export const discordAdminCallback = async (req: GlobalRequest, res: GlobalRespon
 		const params = new URLSearchParams({
 			client_id: DISCORD_CLIENT_ID,
 			client_secret: DISCORD_CLIENT_SECRET,
-			redirect_uri: DISCORD_ADMIN_HUB_REDIRECT_URI,
+			redirect_uri: DISCORD_ADMIN_HUB_REDIRECT_URI || ADMIN_DISCORD_REDIRECT_URI,
 			code,
 			grant_type: "authorization_code",
 		});
@@ -226,7 +227,7 @@ export const discordAdminCallback = async (req: GlobalRequest, res: GlobalRespon
 
 		const serversCreated = await server.create({ servers: data });
 
-		res.redirect(DISCORD_ADMIN_HUB_CLIENT_REDIRECT_URI + `?id=${serversCreated._id}`);
+		res.redirect((DISCORD_ADMIN_HUB_CLIENT_REDIRECT_URI || ADMIN_DISCORD_CLIENT_REDIRECT_URI) + `?id=${serversCreated._id}`);
 	} catch (error: any) {
 		console.error(error);
 		console.error("DISCORD ADMIN HUB TOKEN ERROR STATUS:", error.response?.status);
