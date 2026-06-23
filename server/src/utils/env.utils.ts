@@ -97,12 +97,21 @@ export const DEV_DISCORD_CLIENT_REDIRECT_URI = process.env.DEV_DISCORD_CLIENT_RE
 export const MAIN_X_CLIENT_REDIRECT_URI = process.env.MAIN_X_CLIENT_REDIRECT_URI as string;
 export const DEV_X_CLIENT_REDIRECT_URI = process.env.DEV_X_CLIENT_REDIRECT_URI as string;
 
-// Admin dashboard Discord OAuth
+// Admin dashboard Discord OAuth — follows same derive pattern as hub
+const deriveAdminClientConnected = (value: string | undefined, fallback: string) =>
+  withFallback(value, fallback).replace("/discord/callback", "/discord-connected");
+
 export const MAIN_ADMIN_DISCORD_REDIRECT_URI = process.env.MAIN_ADMIN_DISCORD_REDIRECT_URI || "https://staging-api.nexura.intuition.box/api/admin/discord/callback";
 export const DEV_ADMIN_DISCORD_REDIRECT_URI = process.env.DEV_ADMIN_DISCORD_REDIRECT_URI || "http://localhost:5600/api/admin/discord/callback";
 
-export const MAIN_ADMIN_DISCORD_CLIENT_REDIRECT_URI = process.env.MAIN_ADMIN_DISCORD_CLIENT_REDIRECT_URI || "";
-export const DEV_ADMIN_DISCORD_CLIENT_REDIRECT_URI = process.env.DEV_ADMIN_DISCORD_CLIENT_REDIRECT_URI || "http://localhost:5174";
+const DEV_ADMIN_DISCORD_CLIENT_CONNECTED_URI = deriveAdminClientConnected(
+  process.env.DEV_ADMIN_DISCORD_HUB_CLIENT_REDIRECT_URI,
+  process.env.DEV_ADMIN_DISCORD_CLIENT_REDIRECT_URI || "http://localhost:5174/discord/callback"
+);
+const MAIN_ADMIN_DISCORD_CLIENT_CONNECTED_URI = deriveAdminClientConnected(
+  process.env.MAIN_ADMIN_DISCORD_HUB_CLIENT_REDIRECT_URI,
+  process.env.MAIN_ADMIN_DISCORD_CLIENT_REDIRECT_URI || (ADMIN_URL ? ADMIN_URL + "/discord/callback" : "")
+);
 
 export const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET as string;
 
@@ -125,7 +134,7 @@ export const DISCORD_HUB_REDIRECT_URI = environment === "development" ? DEV_DISC
 export const DISCORD_HUB_CLIENT_REDIRECT_URI = environment === "development" ? DEV_DISCORD_HUB_CLIENT_REDIRECT_URI : MAIN_DISCORD_HUB_CLIENT_REDIRECT_URI;
 
 export const ADMIN_DISCORD_REDIRECT_URI = environment === "development" ? DEV_ADMIN_DISCORD_REDIRECT_URI : MAIN_ADMIN_DISCORD_REDIRECT_URI;
-export const ADMIN_DISCORD_CLIENT_REDIRECT_URI = environment === "development" ? DEV_ADMIN_DISCORD_CLIENT_REDIRECT_URI : MAIN_ADMIN_DISCORD_CLIENT_REDIRECT_URI;
+export const ADMIN_DISCORD_CLIENT_REDIRECT_URI = environment === "development" ? DEV_ADMIN_DISCORD_CLIENT_CONNECTED_URI : MAIN_ADMIN_DISCORD_CLIENT_CONNECTED_URI;
 
 export const X_CLIENT_REDIRECT_URI = environment === "development" ? DEV_X_CLIENT_REDIRECT_URI : MAIN_X_CLIENT_REDIRECT_URI;
 
