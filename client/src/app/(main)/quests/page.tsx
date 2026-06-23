@@ -44,6 +44,10 @@ interface Quest {
 
 const ATLAS_TAGS = ["i-trust", "i-collaborated", "i-interact", "i-follow"];
 
+const MANUAL_PROOF_TAGS = ["comment", "comment-x", "follow", "follow-x", "feedback", "create-post", "twitter", "social"];
+
+const DISCORD_TAGS = ["join", "join-discord", "message", "message-discord", "send-message-discord", "acquire-role-discord", "discord"];
+
 export default function Quests() {
   const { toast } = useToast();
   const router = useRouter()
@@ -253,6 +257,43 @@ const handleAtlasTask = async (quest: Quest) => {
   }
 };
 
+const handleAutoVerify = async (quest: Quest) => {
+  if (isVerifyingTask === quest._id) return;
+
+  setIsVerifyingTask(quest._id);
+
+  try {
+    await apiRequestV2("POST", "/api/quest/start-quest", { questId: quest._id }).catch(() => {});
+
+    const tag = quest.taskType || "";
+
+    if (DISCORD_TAGS.includes(tag)) {
+      await apiRequestV2("POST", "/api/check-discord", { questId: quest._id, id: quest.taskId, tag });
+    } else if (tag === "portal") {
+      await apiRequestV2("POST", "/api/quest/check-portal-task", { id: quest.taskId, questId: quest._id, page: "quest" });
+    } else if (tag === "trust-name") {
+      await apiRequestV2("POST", "/api/quest/check-trust-name", { id: quest.taskId, questId: quest._id });
+    }
+
+    toast({
+      title: "Task Verified",
+      description: "Press Claim XP to collect your reward.",
+    });
+
+    setLocalTaskStatus(quest._id, "approved");
+
+    await refetch?.();
+  } catch (error: any) {
+    toast({
+      title: "Error",
+      description: error?.message || "Could not verify the task. Please complete it and try again.",
+      variant: "destructive",
+    });
+  } finally {
+    setIsVerifyingTask(null);
+  }
+};
+
 const handleSubmitQuest = async (quest: any, proof: string) => {
   if (!proof.trim()) {
     toast({
@@ -405,9 +446,12 @@ const HaloButton = ({
 const renderDefaultQuestCard = (quest: any, index: number = 0) => {
   const isAtlasTask = ATLAS_TAGS.includes(quest.taskType);
 
-  // Featured/daily proof tasks (anything that isn't a relic check or a self-
-  // verifying atlas task) complete inline on this page via the proof box.
-  const isInlineProofTask = !quest.isRelicQuest && !isAtlasTask;
+  // Featured/daily proof tasks (anything that needs manual proof submission)
+  // complete inline on this page via the proof box.
+  const isInlineProofTask = MANUAL_PROOF_TAGS.includes(quest.taskType);
+
+  // Auto-verified tasks (Discord, Portal, TNS) — not atlas, not relic, not manual proof.
+  const isAutoVerify = !quest.isRelicQuest && !isAtlasTask && !isInlineProofTask;
 
   // This user's submission state for the single task, mirroring the seasonal
   // state machine inline on the card (only meaningful for inline-proof tasks).
@@ -509,6 +553,23 @@ const renderDefaultQuestCard = (quest: any, index: number = 0) => {
                 setStartedLocal((prev) => (prev.includes(quest._id) ? prev : [...prev, quest._id]));
               }}
             />
+          ) : isAutoVerify ? (
+            <div className="flex items-center gap-2">
+              <HaloButton
+                label={isVerifyingTask === quest._id ? "Verifying…" : "Verify"}
+                disabled={isVerifyingTask === quest._id}
+                onClick={() => handleAutoVerify(quest)}
+              />
+              <button
+                type="button"
+                onClick={() => handleReopenTask(quest)}
+                title="Reopen task link"
+                aria-label="Reopen task link"
+                className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full border border-[#8b3efe] text-[#8b3efe] transition hover:bg-[rgba(139,62,254,0.12)]"
+              >
+                <Eye className="h-4 w-4" />
+              </button>
+            </div>
           ) : isAtlasTask ? (
             <div className="flex items-center gap-2">
               <HaloButton
