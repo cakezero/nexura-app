@@ -187,6 +187,15 @@ export const hubDiscordCallback = async (req: GlobalRequest, res: GlobalResponse
 	}
 }
 
+export const adminConnectDiscord = async (_req: GlobalRequest, res: GlobalResponse) => {
+	const url = "https://discord.com/oauth2/authorize"
+		+ "?client_id=" + DISCORD_CLIENT_ID
+		+ "&redirect_uri=" + encodeURIComponent(DISCORD_ADMIN_HUB_REDIRECT_URI)
+		+ "&response_type=code"
+		+ "&scope=identify+guilds+bot+applications.commands";
+	res.redirect(url);
+};
+
 export const discordAdminCallback = async (req: GlobalRequest, res: GlobalResponse) => {
 	try {
 		const { code } = req.query as { code: string };
