@@ -45,7 +45,7 @@ import {
   getBannedCreators,
 } from "@/controllers/admin.controller";
 import { deleteQuest, deleteSingleQuest, saveQuest, saveSingleQuest, publishSingleQuest, toggleQuestPublish } from "@/controllers/quest.controller";
-import { fetchChannels, fetchRoles, fetchServers } from "@/controllers/hub.auth.controller";
+import { fetchChannels, fetchRoles, fetchServers, adminConnectDiscord, adminDiscordCallback } from "@/controllers/hub.auth.controller";
 import { disconnectHubDiscord, getCampaign, getHub, saveCampaign, saveCampaignWithQuests, updateHub } from "@/controllers/hub.controller";
 import {
   createLesson,
@@ -78,6 +78,8 @@ import { addCampaignAddress, closeCampaign, fetchHubCampaigns, recordCampaignRew
 const router = Router();
 
 router
+  .get("/connect-discord", adminConnectDiscord)
+  .get("/discord/callback", adminDiscordCallback)
   .post("/create-quest", createQuest)
   .post("/validate-task", markTask)
   .post("/add-admin", addAdmin)

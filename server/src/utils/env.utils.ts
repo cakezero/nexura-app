@@ -95,6 +95,13 @@ export const DEV_DISCORD_CLIENT_REDIRECT_URI = process.env.DEV_DISCORD_CLIENT_RE
 export const MAIN_X_CLIENT_REDIRECT_URI = process.env.MAIN_X_CLIENT_REDIRECT_URI as string;
 export const DEV_X_CLIENT_REDIRECT_URI = process.env.DEV_X_CLIENT_REDIRECT_URI as string;
 
+// Admin dashboard Discord OAuth
+export const MAIN_ADMIN_DISCORD_REDIRECT_URI = process.env.MAIN_ADMIN_DISCORD_REDIRECT_URI || "https://staging-api.nexura.intuition.box/api/admin/discord/callback";
+export const DEV_ADMIN_DISCORD_REDIRECT_URI = process.env.DEV_ADMIN_DISCORD_REDIRECT_URI || "http://localhost:5600/api/admin/discord/callback";
+
+export const MAIN_ADMIN_DISCORD_CLIENT_REDIRECT_URI = process.env.MAIN_ADMIN_DISCORD_CLIENT_REDIRECT_URI || "";
+export const DEV_ADMIN_DISCORD_CLIENT_REDIRECT_URI = process.env.DEV_ADMIN_DISCORD_CLIENT_REDIRECT_URI || "http://localhost:5174";
+
 export const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET as string;
 
 export const X_API_BEARER_TOKEN = process.env.X_API_BEARER_TOKEN as string;
@@ -114,6 +121,9 @@ export const X_REDIRECT_URI = process.env.X_REDIRECT_URI as string;
 
 export const DISCORD_HUB_REDIRECT_URI = environment === "development" ? DEV_DISCORD_HUB_REDIRECT_URI : MAIN_DISCORD_HUB_REDIRECT_URI;
 export const DISCORD_HUB_CLIENT_REDIRECT_URI = environment === "development" ? DEV_DISCORD_HUB_CLIENT_REDIRECT_URI : MAIN_DISCORD_HUB_CLIENT_REDIRECT_URI;
+
+export const ADMIN_DISCORD_REDIRECT_URI = environment === "development" ? DEV_ADMIN_DISCORD_REDIRECT_URI : MAIN_ADMIN_DISCORD_REDIRECT_URI;
+export const ADMIN_DISCORD_CLIENT_REDIRECT_URI = environment === "development" ? DEV_ADMIN_DISCORD_CLIENT_REDIRECT_URI : MAIN_ADMIN_DISCORD_CLIENT_REDIRECT_URI;
 
 export const X_CLIENT_REDIRECT_URI = environment === "development" ? DEV_X_CLIENT_REDIRECT_URI : MAIN_X_CLIENT_REDIRECT_URI;
 
