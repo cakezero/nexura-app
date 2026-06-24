@@ -227,7 +227,11 @@ export const discordAdminCallback = async (req: GlobalRequest, res: GlobalRespon
 
 		const serversCreated = await server.create({ servers: data });
 
-		res.redirect((DISCORD_ADMIN_HUB_CLIENT_REDIRECT_URI || ADMIN_DISCORD_CLIENT_REDIRECT_URI) + `?id=${serversCreated._id}`);
+		const clientBase = ((process.env.DISCORD_ADMIN_HUB_CLIENT_REDIRECT_URI || process.env.AUTH_URL) as string || "").replace(/\/$/, "");
+		const redirectTo = clientBase
+			? (clientBase.endsWith("/discord-connected") ? clientBase : `${clientBase}/discord-connected`)
+			: "";
+		res.redirect(`${redirectTo}?id=${serversCreated._id}`);
 	} catch (error: any) {
 		console.error(error);
 		console.error("DISCORD ADMIN HUB TOKEN ERROR STATUS:", error.response?.status);
