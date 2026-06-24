@@ -23,7 +23,7 @@ export const REDIS_PASSWORD = process.env.REDIS_PASSWORD as string;
 export const REDIS_PORT = process.env.REDIS_PORT as string;
 export const REDIS_USERNAME = process.env.REDIS_USERNAME as string;
 
-export const ADMIN_URL = process.env.ADMIN_URL as string;
+export const ADMIN_URL = process.env.AUTH_URL as string;
 
 export const SERVER_ENV = z
   .object({
