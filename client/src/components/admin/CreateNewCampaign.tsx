@@ -839,7 +839,7 @@ const handleSaveTask = () => {
   const requiresRole = isDiscordRoleTaskType(finalTask.type);
   const requiresChannel = isDiscordMessageTaskType(finalTask.type);
 
-  if (!finalTask.type || (requiresPlatform && !finalTask.platform) || !finalTask.handleOrUrl || !finalTask.description) {
+  if (!finalTask.type || (requiresPlatform && !finalTask.platform) || (!isIntuitionTaskType(finalTask.type) && finalTask.type !== "Check Out the Portal Claims" && finalTask.type !== "Give Feedback" && !finalTask.handleOrUrl) || !finalTask.description) {
     return setError("All fields are required.");
   }
 
