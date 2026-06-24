@@ -247,6 +247,7 @@ export const completeHubDiscordConnect = async (req: GlobalRequest, res: GlobalR
       guildId: primaryGuild.id,
       discordServer: primaryGuild.name,
       discordConnected: true,
+      discordSessionId: serverId,
     });
 
     res.status(OK).json({ message: "Discord connected successfully" });
