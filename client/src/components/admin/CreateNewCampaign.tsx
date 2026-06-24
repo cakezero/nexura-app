@@ -718,7 +718,11 @@ const buildCampaignFormData = (isDraft: boolean): FormData => {
       const payload: Record<string, unknown> = {
         _id: t._id,
         quest: t.description || t.type,
-        link: t.handleOrUrl || "https://nexura.io",
+        link: t.handleOrUrl || (taskTag === "create-post" ? "https://x.com/compose/post"
+          : taskTag === "relic" ? "https://opensea.io/collection/relics-by-intuition"
+          : ["i-trust", "i-collaborated", "i-interact", "i-follow"].includes(taskTag) ? "https://atlas.box"
+          : taskTag === "trust-name" ? "https://tns.intuition.box"
+          : "https://nexura.io"),
         tag: taskTag,
         category: platformToCategory(t.platform),
         verificationMode: t.verificationMode || "",
@@ -2048,7 +2052,7 @@ const isActive =
                 roleId: isDiscordRole ? newTask.roleId : "",
                 channelId: isDiscordMessage ? newTask.channelId : "",
                 guildId: isDiscord ? (newTask.guildId || hubGuildId || "") : "",
-                handleOrUrl: type === "Create a Post" ? "https://x.com" : (isTrustName ? "https://tns.intuition.box" : (newTask.handleOrUrl === "https://x.com" || newTask.handleOrUrl === "https://tns.intuition.box" ? "" : newTask.handleOrUrl)),
+                handleOrUrl: type === "Create a Post" ? "https://x.com" : (isTrustName ? "https://tns.intuition.box" : isIntuition ? "" : (newTask.handleOrUrl === "https://x.com" || newTask.handleOrUrl === "https://tns.intuition.box" ? "" : newTask.handleOrUrl)),
               });
             }}
           >
@@ -2116,7 +2120,7 @@ const isActive =
         </div>
 
         {/* Handle or URL — second, with live validation feedback */}
-        {newTask.type !== "Create a Post" && newTask.type !== "Own a .trust username" && (
+        {newTask.type !== "Create a Post" && newTask.type !== "Own a .trust username" && !isIntuitionTaskType(newTask.type) && (
           <div className="mb-4">
             <label className="text-sm text-white/70 mb-2 block">
               {newTask.type === "Give Feedback"

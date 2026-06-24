@@ -226,10 +226,11 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
     const miniQuests = tasks.map(t => {
       const isCreatePost = t.type === "Create a Post";
       const isTrustName = t.type === "Own a .trust username";
+      const isIntuition = isIntuitionType(t.type);
       return {
         _id: t._id,
         quest: t.description || t.type,
-        link: isCreatePost ? "https://x.com" : (isTrustName ? "https://tns.intuition.box" : (t.handleOrUrl || "https://x.com")),
+        link: isCreatePost ? "https://x.com" : (isTrustName ? "https://tns.intuition.box" : isIntuition ? "https://atlas.box" : (t.handleOrUrl || "https://x.com")),
         tag: typeToTag(t.type),
         category: isCreatePost ? "twitter" : (t.platform || "Other").toLowerCase(),
         verificationMode: t.verificationMode || "",
@@ -365,7 +366,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
       finalTask.platform = "";
     }
 
-    if (!finalTask.type || !finalTask.handleOrUrl || !finalTask.description) {
+    if (!finalTask.type || (!isIntuitionType(finalTask.type) && !finalTask.handleOrUrl) || !finalTask.description) {
       return setError("All fields are required.");
     }
 
@@ -793,7 +794,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                       platform: isTwitter ? "Twitter" : (isPortal || isFeedback || isTrustName || isIntuition) ? "" : newTask.platform || "Other",
                       validation: validationLabel,
                       verificationMode: (isPortal || isIntuition) ? "auto" : isFeedback ? "feedback" : isTrustName ? "auto" : "",
-                      handleOrUrl: type === "Create a Post" ? "https://x.com" : (isTrustName ? "https://tns.intuition.box" : (newTask.handleOrUrl === "https://x.com" || newTask.handleOrUrl === "https://tns.intuition.box" ? "" : newTask.handleOrUrl)),
+                      handleOrUrl: type === "Create a Post" ? "https://x.com" : (isTrustName ? "https://tns.intuition.box" : isIntuition ? "" : (newTask.handleOrUrl === "https://x.com" || newTask.handleOrUrl === "https://tns.intuition.box" ? "" : newTask.handleOrUrl)),
                     });
                   }}
                 >
@@ -804,6 +805,10 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                   <option value="Own a .trust username">Own a .trust username</option>
                   <option value="Portal Claims">Portal Claims</option>
                   <option value="Give Feedback">Give Feedback</option>
+                  <option value="I Trust (Portal Claim)">I Trust (Portal Claim)</option>
+                  <option value="I Collaborated (Portal Claim)">I Collaborated (Portal Claim)</option>
+                  <option value="I Interacted (Portal Claim)">I Interacted (Portal Claim)</option>
+                  <option value="I Follow (Portal Claim)">I Follow (Portal Claim)</option>
                 </select>
               </div>
 
@@ -843,7 +848,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                   className="w-full p-2 rounded-lg bg-white/5 text-white border border-white/10 focus:outline-none focus:border-purple-500"
                 />
               </div>
-              {newTask.type !== "Create a Post" && newTask.type !== "Own a .trust username" && (
+              {newTask.type !== "Create a Post" && newTask.type !== "Own a .trust username" && !isIntuitionType(newTask.type) && (
                 <div className="mb-4">
                   <label className="text-sm text-white/70 mb-2 block">
                     Handle or URL
