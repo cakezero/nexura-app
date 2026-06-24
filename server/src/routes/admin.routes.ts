@@ -46,7 +46,7 @@ import {
 } from "@/controllers/admin.controller";
 import { deleteQuest, deleteSingleQuest, saveQuest, saveSingleQuest, publishSingleQuest, toggleQuestPublish } from "@/controllers/quest.controller";
 import { discordAdminCallback, adminConnectDiscord, fetchChannels, fetchRoles, fetchServers } from "@/controllers/hub.auth.controller";
-import { disconnectHubDiscord, getCampaign, getHub, saveCampaign, saveCampaignWithQuests, updateHub } from "@/controllers/hub.controller";
+import { disconnectHubDiscord, completeHubDiscordConnect, getCampaign, getHub, saveCampaign, saveCampaignWithQuests, updateHub } from "@/controllers/hub.controller";
 import {
   createLesson,
   deleteLesson,
@@ -97,6 +97,7 @@ router
   .get("/me", attachAdminCampaignHub, getHub)
   .patch("/update-hub", requireAdminSuperadmin, attachAdminCampaignHub, upload.fields([{ name: "logo", maxCount: 1 }, { name: "document", maxCount: 1 }]), updateHub)
   .patch("/disconnect-discord", requireAdminSuperadmin, attachAdminCampaignHub, disconnectHubDiscord)
+  .post("/complete-discord-connect", requireAdminSuperadmin, attachAdminCampaignHub, completeHubDiscordConnect)
   .get("/connect-discord", adminConnectDiscord)
   .get("/discord/callback", discordAdminCallback)
   .get("/get-campaigns", attachAdminCampaignHub, fetchHubCampaigns)

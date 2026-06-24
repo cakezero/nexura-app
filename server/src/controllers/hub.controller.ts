@@ -1,6 +1,7 @@
 import { OTP } from '@/models/otp.model';
 import { hub, hubAdmin, userHub, userHubAdmin } from '@/models/hub.model';
 import { user } from '@/models/user.model';
+import { server } from '@/models/server.model';
 import { addHubAdminEmail } from '@/utils/sendMail';
 import { BAD_REQUEST, INTERNAL_SERVER_ERROR, CREATED, OK, NO_CONTENT, NOT_FOUND, FORBIDDEN } from '@/utils/status.utils';
 import { CLIENT_URL } from '@/utils/env.utils';
@@ -226,6 +227,34 @@ export const updateIds = async (req: GlobalRequest, res: GlobalResponse) => {
     res.status(INTERNAL_SERVER_ERROR).json({ error: "Error updating ids" });
 	}
 }
+
+export const completeHubDiscordConnect = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const { serverId } = req.body as { serverId?: string };
+    if (!serverId) {
+      res.status(BAD_REQUEST).json({ error: "serverId is required" });
+      return;
+    }
+
+    const serverDoc = await server.findById(serverId);
+    if (!serverDoc || !serverDoc.servers?.length) {
+      res.status(NOT_FOUND).json({ error: "Discord server data not found" });
+      return;
+    }
+
+    const primaryGuild = serverDoc.servers[0]!;
+    await hub.findByIdAndUpdate(req.admin.hub, {
+      guildId: primaryGuild.id,
+      discordServer: primaryGuild.name,
+      discordConnected: true,
+    });
+
+    res.status(OK).json({ message: "Discord connected successfully" });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "Error connecting Discord" });
+  }
+};
 
 export const disconnectHubDiscord = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
