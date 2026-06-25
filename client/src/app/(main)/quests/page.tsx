@@ -460,9 +460,8 @@ const renderDefaultQuestCard = (quest: any, index: number = 0) => {
   const approved = !completed && quest.taskStatus === "approved";
   const pending = isInlineProofTask && !completed && !approved && quest.taskStatus === "pending";
   // An admin rejected this user's submission; they must review and resubmit.
-  // Show the dedicated "Retry" button only until the user clicks it (which
-  // reopens the link); after that the card returns to Submit Proof + eye.
-  const retry = isInlineProofTask && !completed && !approved && !pending && quest.taskStatus === "retry" && !retryOpened.includes(quest._id);
+  // Show "Retry" even if they've retried before (in case of repeated rejections).
+  const retry = isInlineProofTask && !completed && !approved && !pending && quest.taskStatus === "retry";
   // A task is "started" once the user clicked Start Quest (opening the link) or
   // the server already has a completion record (joined). New tasks show Start
   // Quest first; started ones show Submit Proof + eye.

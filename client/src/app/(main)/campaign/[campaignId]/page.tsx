@@ -598,10 +598,10 @@ export default function CampaignEnvironment() {
               const isExpanded = expandedQuestId === quest._id;
 
               let buttonText = "Start Quest";
-
-              if (visited) buttonText = "Claim";
-              if (pending) buttonText = "Pending";
               if (claimed) buttonText = "Completed";
+              else if (retry) buttonText = "Retry";
+              else if (pending) buttonText = "Pending";
+              else if (visited) buttonText = "Claim";
 
               return (
                 <div key={quest._id}>
