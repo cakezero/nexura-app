@@ -1014,7 +1014,7 @@ export default function QuestCreate({ isUserMode = false }: QuestCreateProps) {
                     await apiRequest({ method: "PATCH", endpoint: `/${apiPrefix}/save-payment-hash`, data: { txHash: hash } });
                     toast({ title: "Payment successful", description: "60 $TRUST sent." });
                   } catch (err: any) {
-                    toast({ title: "Payment failed", description: err.message, variant: "destructive" });
+                    toast({ title: "Payment failed", description: err?.message || "Insufficient funds.", variant: "destructive" });
                   } finally { setPaymentLoading(false); }
                 }} className="w-full bg-[#8B3EFE] hover:bg-[#7b35e6] text-white py-2 rounded-lg font-semibold flex items-center justify-center gap-2">{paymentLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Pay 60 $TRUST"}</button>
               )}

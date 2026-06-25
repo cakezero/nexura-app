@@ -2689,7 +2689,7 @@ const isActive =
                   setPaymentTxHash(hash);
                   toast({ title: "Payment successful", description: "1000 $TRUST sent. You can now publish your campaign." });
                 } catch (err: any) {
-                  toast({ title: "Payment failed", description: err.message ?? "Transaction was rejected.", variant: "destructive" });
+                  toast({ title: "Payment failed", description: err?.message || "Insufficient funds.", variant: "destructive" });
                 } finally {
                   setPaymentLoading(false);
                 }

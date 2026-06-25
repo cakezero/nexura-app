@@ -128,7 +128,7 @@ export const payRestoreStreakFee = async (): Promise<string> => {
       const iface = new ethers.Interface(STREAK_RESTORE_ABI);
       const decoded = iface.parseError(error.data);
 
-      throw toUserFriendlyError(decoded?.name ?? error, "Payment failed.");
+      throw toUserFriendlyError(decoded?.name ?? error, "Transaction failed.");
     }
 
     console.error(error);
@@ -173,7 +173,7 @@ export const payStudioHubFee = async (testAmount?: number, contractAddress?: str
       const iface = new ethers.Interface(STUDIO_FEE_ABI);
       const decoded = iface.parseError(error.data);
 
-      throw toUserFriendlyError(decoded?.name ?? error, "Payment failed.");
+      throw toUserFriendlyError(decoded?.name ?? error, "Transaction failed.");
     }
 
     console.error(error);
