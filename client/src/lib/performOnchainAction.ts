@@ -18,6 +18,7 @@ type StudioPaymentConfig = {
   contractAddress?: string;
   chainId: string;
   amount: string;
+  campaignAmount: string;
   authorizedAddress?: string;
 };
 
@@ -136,8 +137,8 @@ export const payRestoreStreakFee = async (): Promise<string> => {
   }
 }
 
-export const payStudioHubFee = async (testAmount?: number, contractAddress?: string): Promise<string> => {
-  console.log("[ONCHAIN] payStudioHubFee", { testAmount, contractAddress });
+export const payStudioHubFee = async (testAmount?: number, contractAddress?: string, useCampaignAmount?: boolean): Promise<string> => {
+  console.log("[ONCHAIN] payStudioHubFee", { testAmount, contractAddress, useCampaignAmount });
   try {
     if (!window.ethereum) throw new Error("No wallet provider available. Connect a wallet with RainbowKit first.");
 
@@ -148,7 +149,7 @@ export const payStudioHubFee = async (testAmount?: number, contractAddress?: str
       config.network ?? "the server"
     );
     const targetChainId = config.chainId;
-    const amount = config.amount;
+    const amount = useCampaignAmount ? config.campaignAmount : config.amount;
 
     await ensureSwitch(targetChainId);
 

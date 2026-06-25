@@ -2680,7 +2680,7 @@ const isActive =
                 }
                 setPaymentLoading(true);
                 try {
-                  const hash = await payStudioHubFee(1000);
+                  const hash = await payStudioHubFee(undefined, undefined, true);
                   await projectApiRequest({
                     method: "PATCH",
                     endpoint: "/hub/save-payment-hash",
