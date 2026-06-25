@@ -394,6 +394,7 @@ export const updateHub = async (req: GlobalRequest, res: GlobalResponse) => {
     if (safeBody.website !== undefined) safeBody.website = String(safeBody.website ?? "").trim();
     if (safeBody.xAccount !== undefined) safeBody.xAccount = String(safeBody.xAccount ?? "").trim();
     if (safeBody.discordServer !== undefined) safeBody.discordServer = String(safeBody.discordServer ?? "").trim();
+    if (safeBody.guildId !== undefined) safeBody.guildId = String(safeBody.guildId ?? "").trim();
     if (safeBody.document !== undefined) safeBody.document = String(safeBody.document ?? "").trim();
     const updatedHub = await hub.findByIdAndUpdate(req.admin.hub, safeBody, { new: true });
     res.status(OK).json(updatedHub);
