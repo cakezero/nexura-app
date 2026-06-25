@@ -204,14 +204,6 @@ export const updateIds = async (req: GlobalRequest, res: GlobalResponse) => {
     const normalizedGuildId = String(guildId ?? "").trim();
     const normalizedDiscordServer = String(discordServer ?? "").trim();
     const normalizedDiscordSessionId = String(discordSessionId ?? "").trim();
-    const requiredOngoingGuildId = await getRequiredOngoingDiscordGuildIdForHub(req.admin.hub);
-
-    if (requiredOngoingGuildId && normalizedGuildId && normalizedGuildId !== requiredOngoingGuildId) {
-      res.status(FORBIDDEN).json({
-        error: "An active campaign with Discord tasks is still tied to a different Discord server. Reconnect the same Discord server that was used to launch that campaign until it ends.",
-      });
-      return;
-    }
 
     await hub.findByIdAndUpdate(req.admin.hub, {
       verifiedId,
