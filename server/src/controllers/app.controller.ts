@@ -1296,7 +1296,7 @@ export const validatePortalTask = async (
               _eq: $address
             }
             shares:  {
-              _gte: 1300000000000000000
+              _gte: 650000000000000000
             }
           }) {
             account_id
@@ -1307,14 +1307,14 @@ export const validatePortalTask = async (
               _eq: $address
             }
             shares:  {
-              _gte: 1300000000000000000
+              _gte: 650000000000000000
             }
           }) {
             account_id
           }
         }
       }
-    `; // user needs to atleast support or oppose with 5 trust;
+    `; // user needs to atleast support or oppose with 2.5 trust;
 
     const formattedAddress = checksumAddress(
       userToCheck.address as `0x${string}`,
