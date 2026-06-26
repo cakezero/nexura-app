@@ -52,9 +52,6 @@ export default function XpHistory() {
     })();
   }, []);
 
-  return null;
-
-  /*
   return (
     <div className="bg-black text-white relative min-h-full overflow-hidden">
       <AnalyticsBackground />
@@ -157,5 +154,4 @@ export default function XpHistory() {
       </motion.div>
     </div>
   );
-  */
 }
