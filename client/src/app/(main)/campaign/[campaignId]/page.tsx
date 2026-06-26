@@ -341,7 +341,7 @@ export default function CampaignEnvironment() {
           } else if (quest.tag === "portal") {
             await apiRequestV2("POST", "/api/quest/check-portal-task", { termId: id, id: quest._id, questId: campaignId, page: "campaign" });
           } else if (["i-trust", "i-collaborated", "i-interact", "i-follow"].includes(quest.tag)) {
-            await apiRequestV2("POST", "/api/quest/check-atlas-task", { tag: quest.tag, id: quest._id, questId: campaignId, page: "campaign" });
+            await apiRequestV2("POST", "/api/quest/validate-atlas-task", { tag: quest.tag, id: quest._id, questId: campaignId, page: "campaign" });
           } else if (quest.tag === "trust-name") {
             await apiRequestV2("POST", "/api/quest/check-trust-name", { id: quest._id, campaignId });
           }
