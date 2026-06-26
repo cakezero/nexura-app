@@ -280,7 +280,7 @@ export default function OTPModal({ isOpen, onClose, email, page }: OTPModalProps
 
         {/* Subtitle */}
         <p className="mt-[10px] max-w-[429px] px-6 text-[16px] font-light text-white text-center">
-          Enter the OTP we sent to your email to continue resetting your password.
+          Enter the OTP we sent to your email to complete your sign-up.
         </p>
 
         {/* OTP Inputs */}
@@ -337,13 +337,13 @@ export default function OTPModal({ isOpen, onClose, email, page }: OTPModalProps
           </button>
         </div>
 
-        {/* Reset Password Button */}
+        {/* Verify Button */}
         <button
           onClick={verifyOtp}
           disabled={loading || !otp.every((d) => d !== "")}
           className="mt-[28px] mb-[40px] w-[340px] h-[45px] bg-[#8b3efe] hover:bg-[#9b51ff] disabled:bg-[#8b3efe]/50 disabled:cursor-not-allowed text-white text-[16px] font-semibold rounded-[30px] flex items-center justify-center transition-colors"
         >
-          {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Reset Password"}
+          {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Verify Email"}
         </button>
       </DialogContent>
     </Dialog>
