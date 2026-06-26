@@ -1,5 +1,6 @@
 import logger from "@/config/logger";
 import { admin } from "@/models/admin.model";
+import mongoose from "mongoose";
 import { bannedUser } from "@/models/bannedUser.model";
 import { hubAdmin, userHubAdmin } from "@/models/hub.model";
 import { user } from "@/models/user.model";
@@ -158,7 +159,7 @@ export const authenticateHubAdmin2 = async (req: GlobalRequest, res: GlobalRespo
 
     let exists = await hubAdmin.findById(id).lean();
     if (!exists) {
-      exists = await userHubAdmin.findOne({ userId: id }).lean() as any;
+      exists = await userHubAdmin.findOne({ userId: new mongoose.Types.ObjectId(id) }).lean() as any;
     }
     if (!exists) {
       res.status(UNAUTHORIZED).json({ error: "route is available only to admins" });
