@@ -3231,17 +3231,27 @@ export const checkDiscordTask = async (
       return;
     }
 
-    const questInCampaign = await campaignQuest.findById(id).lean();
-    if (!questInCampaign) {
-      res.status(NOT_FOUND).json({ error: "campaign quest not found" });
+    // The same handler serves both campaign quests and main-app mini-quests.
+    // The id posted by the client can belong to either collection, so look
+    // both up and pick whichever matches. Mirrors the dual-lookup pattern
+    // already used by validateTrustNameTask above.
+    const campaignQuestData = await campaignQuest.findById(id).lean();
+    const miniQuestData = !campaignQuestData
+      ? await miniQuest.findById(id).lean()
+      : null;
+
+    if (!campaignQuestData && !miniQuestData) {
+      res.status(NOT_FOUND).json({ error: "task not found" });
       return;
     }
 
-    const questCampaignId = questInCampaign.campaign?.toString?.() ?? "";
+    const isCampaign = !!campaignQuestData;
+
     if (
+      isCampaign &&
       campaignIdFromBody &&
-      questCampaignId &&
-      questCampaignId !== String(campaignIdFromBody)
+      campaignQuestData!.campaign?.toString() &&
+      campaignQuestData!.campaign?.toString() !== String(campaignIdFromBody)
     ) {
       res.status(BAD_REQUEST).json({
         error: "campaign quest does not belong to the provided campaign",
@@ -3249,21 +3259,31 @@ export const checkDiscordTask = async (
       return;
     }
 
-    const campaignId = String(
-      campaignIdFromBody ?? questCampaignId ?? "",
+    const resolvedParentId = String(
+      isCampaign
+        ? campaignIdFromBody || campaignQuestData!.campaign?.toString() || ""
+        : (req.body.questId as string | undefined) ||
+          miniQuestData!.quest?.toString() ||
+          "",
     ).trim();
-    if (!campaignId) {
-      res
-        .status(BAD_REQUEST)
-        .json({ error: "campaign id is required for discord verification" });
+
+    if (!resolvedParentId) {
+      res.status(BAD_REQUEST).json({
+        error: isCampaign
+          ? "campaign id is required for discord verification"
+          : "quest id is required for discord verification",
+      });
       return;
     }
 
-    let completed = await campaignQuestCompleted.findOne({
-      user: req.id,
-      campaignQuest: id,
-      campaign: campaignId,
-    });
+    const CompletedModel = isCampaign
+      ? (campaignQuestCompleted as any)
+      : (miniQuestCompleted as any);
+    const completedFilter = isCampaign
+      ? { user: req.id, campaignQuest: id, campaign: resolvedParentId }
+      : { user: req.id, miniQuest: id, quest: resolvedParentId };
+
+    let completed: any = await CompletedModel.findOne(completedFilter);
     if (completed?.done) {
       res
         .status(BAD_REQUEST)
@@ -3271,13 +3291,11 @@ export const checkDiscordTask = async (
       return;
     }
 
-    const setDiscordTaskStatus = async (status: "pending" | "retry") => {
+    const setDiscordTaskStatus = async (status: "pending" | "retry" | "approved") => {
       if (!completed) {
-        completed = await campaignQuestCompleted.create({
-          user: req.id,
+        completed = await CompletedModel.create({
+          ...completedFilter,
           status,
-          campaign: campaignId,
-          campaignQuest: id,
         });
         return;
       }
@@ -3295,21 +3313,28 @@ export const checkDiscordTask = async (
     };
 
     const passDiscordTask = async (message = "validated") => {
-      await setDiscordTaskStatus("pending");
+      await setDiscordTaskStatus(isCampaign ? "pending" : "approved");
+      // Main-app quest path: claim-mini-quest requires the overall quest-
+      // completion record to exist (otherwise claimQuest fails). Mirror
+      // what validateTrustNameTask does for non-campaign tasks.
+      if (!isCampaign && req.id) {
+        await ensureQuestStarted(resolvedParentId, req.id);
+      }
       res.status(OK).json({ message, success: true });
     };
 
-    const resolvedTag = String(questInCampaign.tag ?? tagFromBody ?? "")
+    const sourceDoc = (campaignQuestData ?? miniQuestData) as any;
+    const resolvedTag = String(sourceDoc.tag ?? tagFromBody ?? "")
       .trim()
       .toLowerCase();
     const resolvedGuildId = String(
-      questInCampaign.guildId ?? guildIdFromBody ?? "",
+      sourceDoc.guildId ?? guildIdFromBody ?? "",
     ).trim();
     const resolvedRoleId = String(
-      questInCampaign.roleId ?? roleIdFromBody ?? "",
+      sourceDoc.roleId ?? roleIdFromBody ?? "",
     ).trim();
     const resolvedChannelId = String(
-      questInCampaign.channelId ?? channelIdFromBody ?? "",
+      sourceDoc.channelId ?? channelIdFromBody ?? "",
     ).trim();
 
     if (!BOT_TOKEN) {
@@ -3320,22 +3345,43 @@ export const checkDiscordTask = async (
       return;
     }
 
-    const relatedCampaign = await campaign
-      .findById(campaignId)
-      .select("hub")
-      .lean();
-    if (!relatedCampaign?.hub) {
-      await failDiscordTask(
-        "campaign project not found for this discord task",
-        NOT_FOUND,
-      );
-      return;
+    // Find the project's hub via the correct parent collection: campaign
+    // quests → campaign → .hub; mini quests → quest → .hub. The downstream
+    // studioHub check then behaves identically in both paths.
+    let studioHub: any;
+    if (isCampaign) {
+      const relatedCampaign = await campaign
+        .findById(resolvedParentId)
+        .select("hub")
+        .lean();
+      if (!relatedCampaign?.hub) {
+        await failDiscordTask(
+          "campaign project not found for this discord task",
+          NOT_FOUND,
+        );
+        return;
+      }
+      studioHub = await hub
+        .findById(relatedCampaign.hub)
+        .select("discordConnected guildId verifiedId")
+        .lean();
+    } else {
+      const relatedQuest = await quest
+        .findById(resolvedParentId)
+        .select("hub")
+        .lean();
+      if (!relatedQuest?.hub) {
+        await failDiscordTask(
+          "quest project not found for this discord task",
+          NOT_FOUND,
+        );
+        return;
+      }
+      studioHub = await hub
+        .findById(relatedQuest.hub)
+        .select("discordConnected guildId verifiedId")
+        .lean();
     }
-
-    const studioHub = await hub
-      .findById(relatedCampaign.hub)
-      .select("discordConnected guildId verifiedId")
-      .lean();
     const studioGuildId = String(studioHub?.guildId ?? "").trim();
     const verifiedRoleId = String(studioHub?.verifiedId ?? "").trim();
 
