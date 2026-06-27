@@ -73,6 +73,12 @@ export default function QuestEnvironment() {
     return JSON.parse(localStorage.getItem('nexura:quest:visited') || '{}')[userId] || [];
   });
   const [claimedQuests, setClaimedQuests] = useState<string[]>([]);
+  // Per-quest verify/claim in-flight guard. Prevents double-clicks from
+  // creating duplicate miniQuestCompleted docs on the server during the
+  // 2-step Verify → Claim XP flow.
+  const [inFlight, setInFlight] = useState<Record<string, boolean>>({});
+  const setQuestInFlight = (id: string, v: boolean) =>
+    setInFlight((prev) => (prev[id] === v ? prev : { ...prev, [id]: v }));
   const [retryQuests, setRetryQuests] = useState<string[]>([]);
   const [pendingQuests, setPendingQuests] = useState<string[]>([]);
   const [showProofModal, setShowProofModal] = useState<boolean>(false);
@@ -108,6 +114,15 @@ export default function QuestEnvironment() {
       setCompleted(comp);
       // setMiniQuestsCompleted();
       setMiniQuests(quests);
+      // Hydrate claimedQuests from server-side quest.done so a refresh
+      // doesn't re-present Verify buttons for quests the server already
+      // marked done:true. Also clear any stale in-flight guards.
+      setClaimedQuests((prev) => {
+        const doneIds = (quests as Quest[]).filter((q) => q.done).map((q) => q._id);
+        const merged = Array.from(new Set([...prev, ...doneIds]));
+        return merged.length === prev.length ? prev : merged;
+      });
+      setInFlight({});
       setTotalXP(totalXp);
       setQuestNumber(quest_no);
       setTitle(t);
@@ -180,8 +195,19 @@ export default function QuestEnvironment() {
   // Tags that require manual proof submission (not auto-verifiable)
   const MANUAL_PROOF_TAGS = ["comment", "comment-x", "follow", "follow-x", "feedback", "create-post"];
 
+  // Tags with a third-party verify endpoint (atlas.box, intuition portal,
+  // TNS) are 2-step: verify endpoint only persists `done:false`
+  // server-side, so the user must press the resulting "Claim XP" button
+  // which calls claimApproved → claim-mini-quest (the only path that
+  // flips done:true and emits the XP grant). Every other tag is 1-step:
+  // verify + claim-mini-quest happen on a single click.
+  const TWO_STEP_TAGS = ["i-trust", "i-collaborated", "i-interact", "i-follow", "portal", "trust-name"];
+
   const claimReward = async (miniQuest: Quest) => {
     console.log("[ACTION] claimReward", { questId, id: miniQuest._id, tag: miniQuest.tag });
+    // Guard against double-clicks.
+    if (inFlight[miniQuest._id]) return;
+    setQuestInFlight(miniQuest._id, true);
     try {
 
       if (!getStoredAccessToken()) {
@@ -244,30 +270,45 @@ export default function QuestEnvironment() {
         throw new Error(error.message);
       }
 
-      if (miniQuest.tag !== "portal" && miniQuest.tag !== "trust-name" && !["i-trust", "i-collaborated", "i-interact", "i-follow"].includes(miniQuest.tag)) {
+      if (TWO_STEP_TAGS.includes(miniQuest.tag)) {
+        // 2-step: verify endpoint only — server persisted `done: false`.
+        // Mark the row approved locally so the UI surfaces "Claim XP";
+        // the actual done:true + XP grant happens in claimApproved once
+        // the user confirms (or on next mount from server-side state).
+        setMiniQuests((prev) =>
+          prev.map((q) =>
+            q._id === miniQuest._id && q.status !== "approved"
+              ? { ...q, status: "approved" }
+              : q
+          )
+        );
+      } else {
+        // 1-step: verify + claim-mini-quest grant XP atomically.
         const res = await apiRequest("POST", `/api/quest/claim-mini-quest`, { id: miniQuest._id, questId });
-
         if (!res.ok) return;
+
+        setClaimedQuests((prev) => (prev.includes(miniQuest._id) ? prev : [...prev, miniQuest._id]));
+        setMiniQuests((prev) =>
+          prev.map((q) =>
+            q._id === miniQuest._id ? { ...q, done: true, status: "done" } : q
+          )
+        );
       }
-
-      setClaimedQuests((prev) => [...prev, miniQuest._id]);
-
-      setMiniQuests((prev) =>
-        prev.map((q) =>
-          q._id === miniQuest._id ? { ...q, done: true } : q
-        )
-      );
 
     } catch (error: any) {
       console.error("[ACTION] claimReward ✗", error);
       console.error(error);
       setMiniQuests(prev => prev.map(q => q._id === miniQuest._id ? { ...q, status: "retry" } : q));
       toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setQuestInFlight(miniQuest._id, false);
     }
   };
 
   const claimApproved = async (quest: Quest) => {
     console.log("[ACTION] claimApproved", { questId, id: quest._id, tag: quest.tag });
+    if (inFlight[quest._id]) return;
+    setQuestInFlight(quest._id, true);
     try {
       if (!getStoredAccessToken()) {
         toast({ title: "Error", description: "You must be logged in to claim rewards.", variant: "destructive" });
@@ -292,6 +333,8 @@ export default function QuestEnvironment() {
     } catch (error: any) {
       console.error("[ACTION] claimApproved ✗", error);
       toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setQuestInFlight(quest._id, false);
     }
   };
 
@@ -418,9 +461,16 @@ export default function QuestEnvironment() {
           {visited && !claimed && !pending && !approved && !isSubmitProof && (
             <button
               onClick={() => claimReward(quest)}
-              className="px-5 py-2 rounded-full bg-purple-700 hover:bg-purple-800 text-sm font-semibold"
+              disabled={inFlight[quest._id]}
+              className={`px-5 py-2 rounded-full text-sm font-semibold ${
+                inFlight[quest._id]
+                  ? "bg-white/10 text-white/40 cursor-not-allowed"
+                  : "bg-purple-700 hover:bg-purple-800"
+              }`}
             >
-              {isTns ? "Verify" : "Claim"}
+              {inFlight[quest._id]
+                ? "Verifying…"
+                : TWO_STEP_TAGS.includes(quest.tag) ? "Verify" : "Claim"}
             </button>
           )}
 
@@ -442,9 +492,14 @@ export default function QuestEnvironment() {
           {approved && (
             <button
               onClick={() => claimApproved(quest)}
-              className="px-5 py-2 rounded-full bg-purple-700 hover:bg-purple-800 text-sm font-semibold"
+              disabled={inFlight[quest._id]}
+              className={`px-5 py-2 rounded-full text-sm font-semibold ${
+                inFlight[quest._id]
+                  ? "bg-white/10 text-white/40 cursor-not-allowed"
+                  : "bg-purple-700 hover:bg-purple-800"
+              }`}
             >
-              Claim XP
+              {inFlight[quest._id] ? "Claiming…" : "Claim XP"}
             </button>
           )}
 
