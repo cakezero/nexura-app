@@ -218,10 +218,9 @@ export const updateIds = async (req: GlobalRequest, res: GlobalResponse) => {
     const adminHubId = String((req.admin as any).hub ?? "");
     console.log("[updateIds] isUserHub:", isUserHub, "hubId:", adminHubId, "payload:", JSON.stringify(updatePayload));
 
-    // Clear guildId from any other hub that currently has it (unique constraint)
-    if (normalizedGuildId) {
-      await hub.updateMany({ guildId: normalizedGuildId, _id: { $ne: req.admin.hub } }, { $unset: { guildId: 1 } });
-    }
+    // Note: with the schema no longer enforcing guildId uniqueness, we no
+    // longer $unset other hubs' guildId here — multiple hubs may legitimately
+    // share a Discord server.
 
     if (isUserHub) {
       await userHub.findByIdAndUpdate(req.admin.hub, updatePayload);
@@ -255,6 +254,11 @@ export const completeHubDiscordConnect = async (req: GlobalRequest, res: GlobalR
     }
 
     const primaryGuild = serverDoc.servers[0]!;
+
+    // Multi-hub to one-server is allowed: guildId is no longer unique-indexed,
+    // so a disconnected hub doesn't block another hub from connecting either
+    // to the same Discord server or to a different one.
+
     await hub.findByIdAndUpdate(req.admin.hub, {
       guildId: primaryGuild.id,
       discordServer: primaryGuild.name,
@@ -263,15 +267,24 @@ export const completeHubDiscordConnect = async (req: GlobalRequest, res: GlobalR
     });
 
     res.status(OK).json({ message: "Discord connected successfully" });
-  } catch (error) {
+  } catch (error: any) {
     logger.error(error);
+    if (error?.code === 11000 || error?.message?.includes("E11000")) {
+      res.status(FORBIDDEN).json({
+        error: "This Discord server is already linked to another hub. Disconnect it there first.",
+      });
+      return;
+    }
     res.status(INTERNAL_SERVER_ERROR).json({ error: "Error connecting Discord" });
   }
 };
 
 export const disconnectHubDiscord = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
+    // Also $unset guildId and verifiedId so the unique-indexed slot is released
+    // — otherwise a future hub can no longer connect to the same Discord server.
     await hub.findByIdAndUpdate(req.admin.hub, {
+      $unset: { guildId: 1, verifiedId: 1 },
       discordConnected: false,
       discordServer: "",
       discordSessionId: "",
