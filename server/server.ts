@@ -56,16 +56,17 @@ client.on(Events.MessageCreate, async (message) => {
 	const user_id = message.author.id;
 	const guild_id = message.guild.id;
 	const channel_id = message.channelId;
-	
-	const alreadySentMessage = await firstMessage.findOne({ user_id });
 
-	if (!alreadySentMessage) {
-		await firstMessage.create({
-			user_id,
-			guild_id,
-			channel_id,
-		});
-	}
+	// Upsert per-guild so the verify-fallback queries (which filter by
+	// {user_id, guild_id}) always match the most recent message the user
+	// sent inside the quest's guild. Previously the lookup was global
+	// (only {user_id}), so a user who had ever sent a message in ANY
+	// Discord server would never get a record for a different guild.
+	await firstMessage.findOneAndUpdate(
+		{ user_id, guild_id },
+		{ user_id, guild_id, channel_id },
+		{ upsert: true, new: true },
+	);
 });
 
 server.listen(port, async () => {
