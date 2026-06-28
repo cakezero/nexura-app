@@ -9,6 +9,7 @@ import appRoutes from "@/routes";
 import { firstMessage } from "@/models/msg.model";
 import { startAdminActivityCron } from "@/utils/adminActivityCron";
 import { startRelicHodlCron } from "@/utils/relicHodlCron";
+import { initRedis } from "@/config/redis";
 
 const server = express();
 
@@ -80,6 +81,12 @@ server.listen(port, async () => {
 		await client.login(BOT_TOKEN);
 	} else {
 		logger.warn("BOT_TOKEN not set – Discord bot disabled");
-	}
-	logger.info(`Server is running on port ${port}`);
+	}  logger.info(`Server is running on port ${port}`);
+
+  // Fire-and-forget Redis init; initRedis() resolves once the connect either
+  // succeeds or hits REDIS_CONNECT_TIMEOUT_MS (default 5s). Never blocks the
+  // HTTP server so cache outages can never blackhole startup again.
+  initRedis().catch((error: any) =>
+    logger.error(`❌ initRedis crashed unexpectedly: ${error?.message}`),
+  );
 });
