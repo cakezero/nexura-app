@@ -1243,6 +1243,12 @@ export const saveQuestWithMiniQuests = async (req: GlobalRequest, res: GlobalRes
       // Enforce Save status for new quests from Studio.
       req.body.status = "Save";
 
+      // Ensure the quest is always connected to the admin's hub so Discord
+      // verification (checkDiscordTask) and project lookups work end-to-end.
+      if (!req.body.hub) req.body.hub = req.admin.hub;
+      if (!req.body.creator) req.body.creator = req.admin.hub;
+      if (!req.body.creatorModel) req.body.creatorModel = req.body.page === "user" ? "user" : "admin";
+
       const savedQuest = await quest.create(req.body);
 
       questId = savedQuest._id.toString();
