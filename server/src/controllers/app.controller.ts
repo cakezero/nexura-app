@@ -3284,6 +3284,24 @@ export const checkDiscordTask = async (
       : { user: req.id, miniQuest: id, quest: resolvedParentId };
 
     let completed: any = await CompletedModel.findOne(completedFilter);
+
+    // Daily quests reset each UTC day: a stale prior-day completion must not
+    // block today's re-verify. Time source is server-only (startOfDayUTC()).
+    // Mirrors startQuest's daily-reset so the verify button stays usable on a
+    // new day even when Start was never clicked explicitly.
+    if (completed && !isCampaign) {
+      const parentQuest = await quest.findById(resolvedParentId).lean();
+      if (parentQuest?.category === "daily") {
+        const isStaleDaily =
+          !completed.updatedAt ||
+          new Date(completed.updatedAt) < startOfDayUTC();
+        if (isStaleDaily) {
+          await CompletedModel.deleteOne({ _id: completed._id });
+          completed = null;
+        }
+      }
+    }
+
     if (completed?.done) {
       res
         .status(BAD_REQUEST)
@@ -3324,18 +3342,20 @@ export const checkDiscordTask = async (
     };
 
     const sourceDoc = (campaignQuestData ?? miniQuestData) as any;
-    const resolvedTag = String(sourceDoc.tag ?? tagFromBody ?? "")
+
+    // Verify uses the build-time Discord IDs from the persisted quest document,
+    // not whatever the client posts in the request body. A malicious / stale
+    // client cannot reroute the verify to a different channel or role if the
+    // studio's task editor set them at build time. Body fields are still used
+    // above purely for guild-mismatch diagnostics against the project's active
+    // Studio Discord connection. Time-based gating is server-only (Mongoose
+    // timestamps + startOfDayUTC()).
+    const resolvedTag = String(sourceDoc.tag ?? "")
       .trim()
       .toLowerCase();
-    const resolvedGuildId = String(
-      sourceDoc.guildId ?? guildIdFromBody ?? "",
-    ).trim();
-    const resolvedRoleId = String(
-      sourceDoc.roleId ?? roleIdFromBody ?? "",
-    ).trim();
-    const resolvedChannelId = String(
-      sourceDoc.channelId ?? channelIdFromBody ?? "",
-    ).trim();
+    const resolvedGuildId = String(sourceDoc.guildId ?? "").trim();
+    const resolvedRoleId = String(sourceDoc.roleId ?? "").trim();
+    const resolvedChannelId = String(sourceDoc.channelId ?? "").trim();
 
     if (!BOT_TOKEN) {
       await failDiscordTask(
