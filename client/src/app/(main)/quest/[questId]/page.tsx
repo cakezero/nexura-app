@@ -201,7 +201,29 @@ export default function QuestEnvironment() {
   // which calls claimApproved → claim-mini-quest (the only path that
   // flips done:true and emits the XP grant). Every other tag is 1-step:
   // verify + claim-mini-quest happen on a single click.
-  const TWO_STEP_TAGS = ["i-trust", "i-collaborated", "i-interact", "i-follow", "portal", "trust-name"];
+  const TWO_STEP_TAGS = [
+    "i-trust",
+    "i-collaborated",
+    "i-interact",
+    "i-follow",
+    "portal",
+    "trust-name",
+    // Discord tasks (acquire-role-discord / send-message-discord / message /
+    // message-discord / join / join-discord) are explicitly NOT auto-claim.
+    // The user presses Verify, the predicate confirms against
+    // `user.socialProfiles.discord.id`, the server writes
+    // `miniQuestCompleted.status = "approved"` on success, and the card
+    // then surfaces the "Claim XP" button. The user must click that to
+    // call claim-mini-quest → flips done:true and lets the parent quest
+    // claim route grant XP. Mirrors the existing 2-step pattern used by
+    // i-trust / i-follow / portal / trust-name above.
+    "join",
+    "join-discord",
+    "message",
+    "message-discord",
+    "acquire-role-discord",
+    "send-message-discord",
+  ];
 
   const claimReward = async (miniQuest: Quest) => {
     console.log("[ACTION] claimReward", { questId, id: miniQuest._id, tag: miniQuest.tag });
