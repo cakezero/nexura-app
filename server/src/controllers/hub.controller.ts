@@ -5,7 +5,7 @@ import { server } from '@/models/server.model';
 import { addHubAdminEmail } from '@/utils/sendMail';
 import { BAD_REQUEST, INTERNAL_SERVER_ERROR, CREATED, OK, NO_CONTENT, NOT_FOUND, FORBIDDEN } from '@/utils/status.utils';
 import { CLIENT_URL } from '@/utils/env.utils';
-import { generateOTP, validateHubData, getMissingFields, validateCampaignData, validateCampaignQuestData, validateSaveCampaignData, validateUserHubData } from '@/utils/utils';
+import { generateOTP, validateHubData, getMissingFields, validateCampaignData, validateCampaignQuestData, validateSaveCampaignData, validateUserHubData, validateDiscordTaskConfig } from '@/utils/utils';
 import logger from '@/config/logger';
 import { submission } from '@/models/submission.model';
 import { miniQuestCompleted, campaignQuestCompleted } from '@/models/questsCompleted.models';
@@ -780,6 +780,17 @@ export const saveCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
 
       // Save quests
       if (questsToSave !== null) {
+        // Per-task Discord validation: refuse to persist quests that the
+        // verifier will immediately reject with "missing discord channel/role".
+        for (let i = 0; i < questsToSave.length; i++) {
+          const taskCheck = validateDiscordTaskConfig(questsToSave[i] as any);
+          if (!taskCheck.success) {
+            res.status(BAD_REQUEST).json({
+              error: `task #${i + 1}: ${taskCheck.error}`,
+            });
+            return;
+          }
+        }
         await campaignQuest.deleteMany({ campaign: savedCampaignId });
         if (questsToSave.length > 0) {
           await campaignQuest.insertMany(
@@ -912,6 +923,19 @@ export const saveCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
       const questsToInsert = questsToSave.filter((q: any) => !q._id);
 
       if (questsToUpdate.length > 0) {
+        // Per-task Discord validation on the update path: refuse malformed
+        // tag flips/channels on existing quests as well (e.g. swapping a "like"
+        // task's tag to "send-message-discord" without channelId would have silently
+        // persisted before this guard).
+        for (let i = 0; i < questsToUpdate.length; i++) {
+          const taskCheck = validateDiscordTaskConfig(questsToUpdate[i] as any);
+          if (!taskCheck.success) {
+            res.status(BAD_REQUEST).json({
+              error: `task #${i + 1}: ${taskCheck.error}`,
+            });
+            return;
+          }
+        }
         await campaignQuest.bulkWrite(
           questsToUpdate.map((q: any) => {
             const { _id, ...rest } = q;
@@ -930,6 +954,17 @@ export const saveCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
       }
 
       if (questsToInsert.length > 0) {
+        // Newly inserted rows also go through the per-task Discord validation to
+        // keep behaviour consistent with the create-only branch above.
+        for (let i = 0; i < questsToInsert.length; i++) {
+          const taskCheck = validateDiscordTaskConfig(questsToInsert[i] as any);
+          if (!taskCheck.success) {
+            res.status(BAD_REQUEST).json({
+              error: `task #${i + 1}: ${taskCheck.error}`,
+            });
+            return;
+          }
+        }
         await campaignQuest.insertMany(
           questsToInsert.map((q: any) => (
             isDiscordCampaignTask(q)
@@ -1014,6 +1049,11 @@ export const saveCampaignWithQuests = async (req: GlobalRequest, res: GlobalResp
     const newQuests = [];
 
     for (const qd of req.body.questData) {
+      const taskCheck = validateDiscordTaskConfig(qd as Record<string, any>);
+      if (!taskCheck.success) {
+        res.status(BAD_REQUEST).json({ error: taskCheck.error });
+        return;
+      }
       const questData = isDiscordCampaignTask(qd)
         ? { ...qd, guildId: hubFound.guildId }
         : { ...qd };
