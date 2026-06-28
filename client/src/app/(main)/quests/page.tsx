@@ -530,7 +530,7 @@ const renderDefaultQuestCard = (quest: any, index: number = 0) => {
             />
           ) : pending ? (
             <HaloButton label="Pending Verification" disabled onClick={() => {}} />
-          ) : retry ? (
+          ) : retry && !retryOpened.includes(quest._id) ? (
             <HaloButton
               variant="amber"
               label="Retry"

@@ -1923,7 +1923,7 @@ export const claimStreakReward = async (req: GlobalRequest, res: GlobalResponse)
 
     let dayCount = userFromReq.dayCount || 0;
 
-    const dailyXpReward = await dailySignIn.findOne({ user: req.id, month });
+    let dailyXpReward = await dailySignIn.findOne({ user: req.id, month });
 
     if (userFromReq.streak >= 7 && userFromReq.streak < 15 && dayCount === 0) {
       streakReward = 500;
@@ -1968,13 +1968,25 @@ export const claimStreakReward = async (req: GlobalRequest, res: GlobalResponse)
       return;
     }
 
-    dailyXpReward!.xpClaimedThisMonth += streakReward;
+    // The dailySignIn record is keyed by {month, user}. When a streak
+    // spans a month boundary (e.g. day 7 lands on Feb 1), the new month
+    // may not have a record yet — create it instead of crashing.
+    if (!dailyXpReward) {
+      await dailySignIn.create({
+        month,
+        user: req.id,
+        xpClaimedThisMonth: streakReward,
+        date: formatDate(new Date(), "yyyy-MM-dd"),
+      });
+    } else {
+      dailyXpReward.xpClaimedThisMonth += streakReward;
+      await dailyXpReward.save();
+    }
 
     await user.findByIdAndUpdate(req.id, {
       $inc: { xp: streakReward },
       $set: { dayCount },
     });
-    await dailyXpReward!.save();
 
     await xpLog.create({
       amount: streakReward,
