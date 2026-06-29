@@ -95,6 +95,11 @@ export default function ConnectedDiscord() {
       return;
     }
 
+    if (!selectedRole) {
+      toast({ title: "Select a role", description: "Please choose a role for verification.", variant: "destructive" });
+      return;
+    }
+
     try {
       setSaving(true);
 
@@ -102,7 +107,7 @@ export default function ConnectedDiscord() {
         method: "PATCH",
         endpoint: "/hub/update-ids",
         data: {
-          verifiedId: selectedRole || "",
+          verifiedId: selectedRole,
           guildId: selectedServer.id,
           discordServer: selectedServer.name,
           discordSessionId: id,
