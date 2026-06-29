@@ -156,10 +156,7 @@ export const authenticateHubAdmin2 = async (req: GlobalRequest, res: GlobalRespo
 
     const { id } = await JWT.verify(token) as decodedDataType;
 
-    let exists = await hubAdmin.findById(id).lean();
-    if (!exists) {
-      exists = await userHubAdmin.findById(id).lean() as any;
-    }
+    const exists = await hubAdmin.findById(id).lean();
     if (!exists) {
       res.status(UNAUTHORIZED).json({ error: "route is available only to admins" });
       return;

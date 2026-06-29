@@ -205,20 +205,13 @@ export const updateIds = async (req: GlobalRequest, res: GlobalResponse) => {
     const normalizedDiscordServer = String(discordServer ?? "").trim();
     const normalizedDiscordSessionId = String(discordSessionId ?? "").trim();
 
-    const updatePayload: Record<string, any> = {
+    await hub.findByIdAndUpdate(req.admin.hub, {
       verifiedId,
       guildId: normalizedGuildId,
       discordConnected: true,
-    };
-    if (normalizedDiscordServer) updatePayload.discordServer = normalizedDiscordServer;
-    if (normalizedDiscordSessionId) updatePayload.discordSessionId = normalizedDiscordSessionId;
-
-    // userHubAdmin has userId field; hubAdmin has role field
-    if ((req.admin as any).userId) {
-      await userHub.findByIdAndUpdate(req.admin.hub, updatePayload);
-    } else {
-      await hub.findByIdAndUpdate(req.admin.hub, updatePayload);
-    }
+      ...(normalizedDiscordServer ? { discordServer: normalizedDiscordServer } : {}),
+      ...(normalizedDiscordSessionId ? { discordSessionId: normalizedDiscordSessionId } : {}),
+    });
 
     res.status(OK).json({ message: "ids updated successfully" });
   } catch (error) {
