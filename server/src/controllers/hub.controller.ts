@@ -233,7 +233,7 @@ export const updateIds = async (req: GlobalRequest, res: GlobalResponse) => {
   } catch (error: any) {
     logger.error(error);
     if (error?.code === 11000 || error?.message?.includes("E11000")) {
-      res.status(FORBIDDEN).json({ error: "This Discord server is already linked to another hub. Disconnect it there first." });
+      res.status(CONFLICT).json({ error: "This Discord server is already linked to another hub. Disconnect it there first." });
       return;
     }
     res.status(INTERNAL_SERVER_ERROR).json({ error: "Error updating ids" });

@@ -1126,16 +1126,18 @@ export const validateAtlasTask = async (req: GlobalRequest, res: GlobalResponse)
       return;
     }
 
-    const query = `query GetAtomTriples($atomId: String!, $where: triples_bool_exp) {
+    const query = `query GetAtomRelationships($atomId: String!, $address: String!) {
       atom(term_id: $atomId) {
-        label
-        as_predicate_triples(where: $where) {
-          positions {
-            term {
-              triple {
-                term_id
-              }
+        term {
+          positions (where:  {
+            account_id:  {
+              _eq: $address
             }
+            shares:  {
+              _gt: 0
+            }
+          }) {
+            account_id
           }
         }
       }
@@ -1149,23 +1151,17 @@ export const validateAtlasTask = async (req: GlobalRequest, res: GlobalResponse)
 
     const response = await client.request(query, {
       atomId,
-      where: {
-        positions: {
-          account_id: {
-            _eq: formattedAddress,
-          },
-        },
-      },
+      address: formattedAddress,
     });
 
     const { atom } = response;
 
     if (!atom) {
-      res.status(NOT_FOUND).json({ error: "atom id is invalid" });
+      res.status(NOT_FOUND).json({ error: "atom id is invaid" });
       return;
     }
 
-    const positionExists = atom.as_predicate_triples?.length > 0;
+    const positionExists = atom.term.positions.length;
 
     if (page !== "campaign") {
       const miniQuestExists = await miniQuestCompleted.findOne({
