@@ -14,7 +14,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Edit2, Calendar, History } from "lucide-react";
+import { Edit2, Calendar } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
@@ -296,11 +296,11 @@ export default function Profile() {
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <h1 className="text-3xl sm:text-4xl font-extrabold bg-gradient-to-r from-white via-purple-200 to-purple-400 bg-clip-text text-transparent">My Profile</h1>
           <div className="flex items-center gap-3">
-            <Link href="/profile/xp-history">
+            {/* <Link href="/profile/xp-history">
               <Button variant="outline" className="rounded-full" data-testid="button-xp-history">
                 <History className="w-4 h-4 mr-2" />My XP History
               </Button>
-            </Link>
+            </Link> */}
             <Link href="/profile/edit">
               <Button data-testid="button-edit-profile">
                 <Edit2 className="w-4 h-4 mr-2" />Edit Profile
