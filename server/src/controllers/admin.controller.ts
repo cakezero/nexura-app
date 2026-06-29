@@ -14,6 +14,7 @@ import { submission } from "@/models/submission.model";
 import { user } from "@/models/user.model";
 import { hub, hubAdmin, userHub, userHubAdmin } from "@/models/hub.model";
 import { bannedUser } from "@/models/bannedUser.model";
+import { ecosystemQuest } from "@/models/quests.model";
 import { REDIS } from "@/utils/redis.utils";
 import { xpLog } from "@/models/xpLog.model";
 import { ADMIN_CAMPAIGN_SYSTEM_KEY } from "@/utils/adminCampaignHub";
@@ -1905,5 +1906,62 @@ export const publishAdminQuest = async (req: GlobalRequest, res: GlobalResponse)
   } catch (error: any) {
     logger.error("Error publishing quest: " + error);
     res.status(INTERNAL_SERVER_ERROR).json({ error: error?.message || "Error publishing quest" });
+  }
+};
+
+// Ecosystem Dapps
+export const createEcosystemDapp = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const { name, description, category, logo, websiteUrl, reward } = req.body;
+    if (!name || !logo || !websiteUrl) {
+      res.status(BAD_REQUEST).json({ error: "Name, logo URL, and website URL are required." });
+      return;
+    }
+    await ecosystemQuest.create({
+      name: String(name).trim(),
+      description: String(description || "").trim(),
+      logo: String(logo).trim(),
+      websiteUrl: String(websiteUrl).trim(),
+      reward: Number(reward) || 0,
+      category: category || "quests",
+    });
+    res.status(OK).json({ message: "Ecosystem dapp created." });
+  } catch (error: any) {
+    logger.error(error);
+    if (error?.code === 11000) {
+      res.status(BAD_REQUEST).json({ error: "A dapp with this name already exists." });
+      return;
+    }
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "Error creating ecosystem dapp" });
+  }
+};
+
+export const getEcosystemDapps = async (_req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const dapps = await ecosystemQuest.find().sort({ createdAt: -1 }).lean();
+    res.status(OK).json({ dapps });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "Error fetching ecosystem dapps" });
+  }
+};
+
+export const deleteEcosystemDapp = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const { id } = req.query as unknown as { id: string };
+    if (!id) {
+      res.status(BAD_REQUEST).json({ error: "Dapp id is required." });
+      return;
+    }
+    const exists = await ecosystemQuest.exists({ _id: id }).lean();
+    if (!exists) {
+      res.status(NOT_FOUND).json({ error: "Dapp not found." });
+      return;
+    }
+    await ecosystemQuest.findByIdAndDelete(id);
+    res.status(OK).json({ message: "Ecosystem dapp deleted." });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "Error deleting ecosystem dapp" });
   }
 };

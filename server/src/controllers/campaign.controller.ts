@@ -16,7 +16,7 @@ import {
 	UNAUTHORIZED,
   NO_CONTENT,
 } from "@/utils/status.utils";
-import { validateCampaignData, updateLevel, checkPayment } from "@/utils/utils";
+import { validateCampaignData, updateLevel, checkPayment, validateDiscordTaskConfig } from "@/utils/utils";
 import { campaignQuest } from "@/models/quests.model";
 import { ethers } from "ethers";
 import { xpLog } from "@/models/xpLog.model";
@@ -278,6 +278,17 @@ export const createCampaign = async (
 		const manyData: any[] = [];
 
 		if (campaignQuestsFromBody.length > 0) {
+			// Per-task Discord validation: refuses to persist quests that the
+			// verifier would immediately reject with "missing discord channel/role".
+			for (let i = 0; i < campaignQuestsFromBody.length; i++) {
+				const taskCheck = validateDiscordTaskConfig(campaignQuestsFromBody[i] as any);
+				if (!taskCheck.success) {
+					res.status(BAD_REQUEST).json({
+						error: `task #${i + 1}: ${taskCheck.error}`,
+					});
+					return;
+				}
+			}
 			for (const quest of campaignQuestsFromBody) {
 				quest.campaign = newCampaign._id;
 

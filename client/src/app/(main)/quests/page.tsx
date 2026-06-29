@@ -230,7 +230,7 @@ const handleAtlasTask = async (quest: Quest) => {
     // Make sure a quest-completion record exists so the reward can be claimed.
     await apiRequestV2("POST", "/api/quest/start-quest", { questId: quest._id }).catch(() => {});
 
-    await apiRequestV2("POST", "/api/quest/check-atlas-task", {
+    await apiRequestV2("POST", "/api/quest/validate-atlas-task", {
       tag: quest.taskType,
       id: quest.taskId,
       questId: quest._id,
@@ -530,7 +530,7 @@ const renderDefaultQuestCard = (quest: any, index: number = 0) => {
             />
           ) : pending ? (
             <HaloButton label="Pending Verification" disabled onClick={() => {}} />
-          ) : retry ? (
+          ) : retry && !retryOpened.includes(quest._id) ? (
             <HaloButton
               variant="amber"
               label="Retry"

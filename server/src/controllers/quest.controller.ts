@@ -739,6 +739,24 @@ export const claimMiniQuest = async (req: GlobalRequest, res: GlobalResponse) =>
 			return
 		}
 
+		// Daily quests reset each UTC day: a stale prior-day approval (or a stale
+		// done:true from a prior-day claim retry) must not block today's claim.
+		// Time source is server-only (startOfDayUTC()); see checkDiscordTask's
+		// parallel guard on the verify path. Mirrors the daily-reset logic that
+		// already lives in startQuest and fetchQuests' isStaleDailyTask merge.
+		if (mainQuest.category === "daily") {
+			const isStaleDailyTask =
+				!miniQuestExists.updatedAt ||
+				new Date(miniQuestExists.updatedAt) < startOfDayUTC();
+			if (isStaleDailyTask) {
+				await miniQuestCompleted.deleteOne({ _id: miniQuestExists._id });
+				res.status(BAD_REQUEST).json({
+					error: "task verification expired, please verify again today",
+				});
+				return;
+			}
+		}
+
 		if (miniQuestExists.done === true) {
 			res.status(FORBIDDEN).json({ error: "quest already claimed" });
 			return;
@@ -1224,6 +1242,12 @@ export const saveQuestWithMiniQuests = async (req: GlobalRequest, res: GlobalRes
 
       // Enforce Save status for new quests from Studio.
       req.body.status = "Save";
+
+      // Ensure the quest is always connected to the admin's hub so Discord
+      // verification (checkDiscordTask) and project lookups work end-to-end.
+      if (!req.body.hub) req.body.hub = req.admin.hub;
+      if (!req.body.creator) req.body.creator = req.admin.hub;
+      if (!req.body.creatorModel) req.body.creatorModel = req.body.page === "user" ? "user" : "admin";
 
       const savedQuest = await quest.create(req.body);
 

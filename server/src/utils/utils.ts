@@ -211,6 +211,58 @@ export const validateCampaignQuestData = (reqData: any) => {
 	return parseData;
 };
 
+const DISCORD_TASK_TAG_REQUIRES_CHANNEL = new Set([
+	"message",
+	"message-discord",
+	"send-message-discord",
+]);
+const DISCORD_TASK_TAG_REQUIRES_ROLE = new Set([
+	"acquire-role-discord",
+]);
+
+/**
+ * Validates a single sub-task has the per-tag Discord IDs it needs to be
+ * verifiable later. Returns { success: true } for non-Discord tasks, and
+ * { success: false, error } with a copy-pasteable message for Discord tasks
+ * whose guildId / channelId / roleId is missing. Call this before persisting
+ * any discord-tagged miniQuest or campaignQuest so verify-side complaints
+ * don't surface as "this quest is missing a discord channel to verify".
+ */
+export const validateDiscordTaskConfig = (task: Record<string, any>) => {
+	const tag = String(task?.tag ?? "").trim().toLowerCase();
+	const category = String(task?.category ?? "").trim().toLowerCase();
+	const isDiscord =
+		["join", "join-discord", "message", "message-discord", "send-message-discord", "acquire-role-discord"].includes(
+			tag,
+		) || category === "discord";
+
+	if (!isDiscord) return { success: true } as const;
+
+	const guildId = String(task?.guildId ?? "").trim();
+	const channelId = String(task?.channelId ?? "").trim();
+	const roleId = String(task?.roleId ?? "").trim();
+
+	if (!guildId) {
+		return {
+			success: false,
+			error: `discord task "${tag}" requires guildId. Connect the project's Discord in Studio, then set the channel/role in the task editor.`,
+		};
+	}
+	if (DISCORD_TASK_TAG_REQUIRES_CHANNEL.has(tag) && !channelId) {
+		return {
+			success: false,
+			error: `discord task "${tag}" requires channelId. Set the Discord channel where users must send the message in the task editor (Dashboard or Studio).`,
+		};
+	}
+	if (DISCORD_TASK_TAG_REQUIRES_ROLE.has(tag) && !roleId) {
+		return {
+			success: false,
+			error: `discord task "${tag}" requires roleId. Set the Discord role users must acquire in the task editor (Dashboard or Studio).`,
+		};
+	}
+	return { success: true } as const;
+};
+
 export const validateEcosystemQuestData = (reqData: any) => {
 	const ecosystemSchema = z.object({
 		title: z.string().trim(),

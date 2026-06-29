@@ -5,7 +5,7 @@ import { server } from '@/models/server.model';
 import { addHubAdminEmail } from '@/utils/sendMail';
 import { BAD_REQUEST, INTERNAL_SERVER_ERROR, CREATED, OK, NO_CONTENT, NOT_FOUND, FORBIDDEN } from '@/utils/status.utils';
 import { CLIENT_URL } from '@/utils/env.utils';
-import { generateOTP, validateHubData, getMissingFields, validateCampaignData, validateCampaignQuestData, validateSaveCampaignData, validateUserHubData } from '@/utils/utils';
+import { generateOTP, validateHubData, getMissingFields, validateCampaignData, validateCampaignQuestData, validateSaveCampaignData, validateUserHubData, validateDiscordTaskConfig } from '@/utils/utils';
 import logger from '@/config/logger';
 import { submission } from '@/models/submission.model';
 import { miniQuestCompleted, campaignQuestCompleted } from '@/models/questsCompleted.models';
@@ -204,26 +204,37 @@ export const updateIds = async (req: GlobalRequest, res: GlobalResponse) => {
     const normalizedGuildId = String(guildId ?? "").trim();
     const normalizedDiscordServer = String(discordServer ?? "").trim();
     const normalizedDiscordSessionId = String(discordSessionId ?? "").trim();
-    const requiredOngoingGuildId = await getRequiredOngoingDiscordGuildIdForHub(req.admin.hub);
 
-    if (requiredOngoingGuildId && normalizedGuildId && normalizedGuildId !== requiredOngoingGuildId) {
-      res.status(FORBIDDEN).json({
-        error: "An active campaign with Discord tasks is still tied to a different Discord server. Reconnect the same Discord server that was used to launch that campaign until it ends.",
-      });
-      return;
-    }
-
-    await hub.findByIdAndUpdate(req.admin.hub, {
+    const updatePayload: Record<string, any> = {
       verifiedId,
       guildId: normalizedGuildId,
       discordConnected: true,
-      ...(normalizedDiscordServer ? { discordServer: normalizedDiscordServer } : {}),
-      ...(normalizedDiscordSessionId ? { discordSessionId: normalizedDiscordSessionId } : {}),
-    });
+    };
+    if (normalizedDiscordServer) updatePayload.discordServer = normalizedDiscordServer;
+    if (normalizedDiscordSessionId) updatePayload.discordSessionId = normalizedDiscordSessionId;
+
+    // userHubAdmin has userId field; hubAdmin has role field
+    const isUserHub = !!(req.admin as any).userId;
+    const adminHubId = String((req.admin as any).hub ?? "");
+    console.log("[updateIds] isUserHub:", isUserHub, "hubId:", adminHubId, "payload:", JSON.stringify(updatePayload));
+
+    // Note: with the schema no longer enforcing guildId uniqueness, we no
+    // longer $unset other hubs' guildId here — multiple hubs may legitimately
+    // share a Discord server.
+
+    if (isUserHub) {
+      await userHub.findByIdAndUpdate(req.admin.hub, updatePayload);
+    } else {
+      await hub.findByIdAndUpdate(req.admin.hub, updatePayload);
+    }
 
     res.status(OK).json({ message: "ids updated successfully" });
-  } catch (error) {
+  } catch (error: any) {
     logger.error(error);
+    if (error?.code === 11000 || error?.message?.includes("E11000")) {
+      res.status(FORBIDDEN).json({ error: "This Discord server is already linked to another hub. Disconnect it there first." });
+      return;
+    }
     res.status(INTERNAL_SERVER_ERROR).json({ error: "Error updating ids" });
 	}
 }
@@ -243,6 +254,11 @@ export const completeHubDiscordConnect = async (req: GlobalRequest, res: GlobalR
     }
 
     const primaryGuild = serverDoc.servers[0]!;
+
+    // Multi-hub to one-server is allowed: guildId is no longer unique-indexed,
+    // so a disconnected hub doesn't block another hub from connecting either
+    // to the same Discord server or to a different one.
+
     await hub.findByIdAndUpdate(req.admin.hub, {
       guildId: primaryGuild.id,
       discordServer: primaryGuild.name,
@@ -251,15 +267,24 @@ export const completeHubDiscordConnect = async (req: GlobalRequest, res: GlobalR
     });
 
     res.status(OK).json({ message: "Discord connected successfully" });
-  } catch (error) {
+  } catch (error: any) {
     logger.error(error);
+    if (error?.code === 11000 || error?.message?.includes("E11000")) {
+      res.status(FORBIDDEN).json({
+        error: "This Discord server is already linked to another hub. Disconnect it there first.",
+      });
+      return;
+    }
     res.status(INTERNAL_SERVER_ERROR).json({ error: "Error connecting Discord" });
   }
 };
 
 export const disconnectHubDiscord = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
+    // Also $unset guildId and verifiedId so the unique-indexed slot is released
+    // — otherwise a future hub can no longer connect to the same Discord server.
     await hub.findByIdAndUpdate(req.admin.hub, {
+      $unset: { guildId: 1, verifiedId: 1 },
       discordConnected: false,
       discordServer: "",
       discordSessionId: "",
@@ -394,6 +419,7 @@ export const updateHub = async (req: GlobalRequest, res: GlobalResponse) => {
     if (safeBody.website !== undefined) safeBody.website = String(safeBody.website ?? "").trim();
     if (safeBody.xAccount !== undefined) safeBody.xAccount = String(safeBody.xAccount ?? "").trim();
     if (safeBody.discordServer !== undefined) safeBody.discordServer = String(safeBody.discordServer ?? "").trim();
+    if (safeBody.guildId !== undefined) safeBody.guildId = String(safeBody.guildId ?? "").trim();
     if (safeBody.document !== undefined) safeBody.document = String(safeBody.document ?? "").trim();
     const updatedHub = await hub.findByIdAndUpdate(req.admin.hub, safeBody, { new: true });
     res.status(OK).json(updatedHub);
@@ -754,6 +780,17 @@ export const saveCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
 
       // Save quests
       if (questsToSave !== null) {
+        // Per-task Discord validation: refuse to persist quests that the
+        // verifier will immediately reject with "missing discord channel/role".
+        for (let i = 0; i < questsToSave.length; i++) {
+          const taskCheck = validateDiscordTaskConfig(questsToSave[i] as any);
+          if (!taskCheck.success) {
+            res.status(BAD_REQUEST).json({
+              error: `task #${i + 1}: ${taskCheck.error}`,
+            });
+            return;
+          }
+        }
         await campaignQuest.deleteMany({ campaign: savedCampaignId });
         if (questsToSave.length > 0) {
           await campaignQuest.insertMany(
@@ -886,6 +923,19 @@ export const saveCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
       const questsToInsert = questsToSave.filter((q: any) => !q._id);
 
       if (questsToUpdate.length > 0) {
+        // Per-task Discord validation on the update path: refuse malformed
+        // tag flips/channels on existing quests as well (e.g. swapping a "like"
+        // task's tag to "send-message-discord" without channelId would have silently
+        // persisted before this guard).
+        for (let i = 0; i < questsToUpdate.length; i++) {
+          const taskCheck = validateDiscordTaskConfig(questsToUpdate[i] as any);
+          if (!taskCheck.success) {
+            res.status(BAD_REQUEST).json({
+              error: `task #${i + 1}: ${taskCheck.error}`,
+            });
+            return;
+          }
+        }
         await campaignQuest.bulkWrite(
           questsToUpdate.map((q: any) => {
             const { _id, ...rest } = q;
@@ -904,6 +954,17 @@ export const saveCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
       }
 
       if (questsToInsert.length > 0) {
+        // Newly inserted rows also go through the per-task Discord validation to
+        // keep behaviour consistent with the create-only branch above.
+        for (let i = 0; i < questsToInsert.length; i++) {
+          const taskCheck = validateDiscordTaskConfig(questsToInsert[i] as any);
+          if (!taskCheck.success) {
+            res.status(BAD_REQUEST).json({
+              error: `task #${i + 1}: ${taskCheck.error}`,
+            });
+            return;
+          }
+        }
         await campaignQuest.insertMany(
           questsToInsert.map((q: any) => (
             isDiscordCampaignTask(q)
@@ -988,6 +1049,11 @@ export const saveCampaignWithQuests = async (req: GlobalRequest, res: GlobalResp
     const newQuests = [];
 
     for (const qd of req.body.questData) {
+      const taskCheck = validateDiscordTaskConfig(qd as Record<string, any>);
+      if (!taskCheck.success) {
+        res.status(BAD_REQUEST).json({ error: taskCheck.error });
+        return;
+      }
       const questData = isDiscordCampaignTask(qd)
         ? { ...qd, guildId: hubFound.guildId }
         : { ...qd };

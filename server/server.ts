@@ -9,6 +9,7 @@ import appRoutes from "@/routes";
 import { firstMessage } from "@/models/msg.model";
 import { startAdminActivityCron } from "@/utils/adminActivityCron";
 import { startRelicHodlCron } from "@/utils/relicHodlCron";
+import { initRedis } from "@/config/redis";
 
 const server = express();
 
@@ -55,16 +56,17 @@ client.on(Events.MessageCreate, async (message) => {
 	const user_id = message.author.id;
 	const guild_id = message.guild.id;
 	const channel_id = message.channelId;
-	
-	const alreadySentMessage = await firstMessage.findOne({ user_id });
 
-	if (!alreadySentMessage) {
-		await firstMessage.create({
-			user_id,
-			guild_id,
-			channel_id,
-		});
-	}
+	// Upsert per {user_id, guild_id, channel_id} so each channel gets its
+	// own record. The verify-fallback queries try {user_id, guild_id, channel_id}
+	// first, then {user_id, guild_id} as a broader fallback. Previously the
+	// lookup was global (only {user_id}), so a user who had ever sent a message
+	// in ANY Discord server would never get a record for a different guild.
+	await firstMessage.findOneAndUpdate(
+		{ user_id, guild_id, channel_id },
+		{ user_id, guild_id, channel_id },
+		{ upsert: true, new: true },
+	);
 });
 
 server.listen(port, async () => {
@@ -80,6 +82,12 @@ server.listen(port, async () => {
 		await client.login(BOT_TOKEN);
 	} else {
 		logger.warn("BOT_TOKEN not set – Discord bot disabled");
-	}
-	logger.info(`Server is running on port ${port}`);
+	}  logger.info(`Server is running on port ${port}`);
+
+  // Fire-and-forget Redis init; initRedis() resolves once the connect either
+  // succeeds or hits REDIS_CONNECT_TIMEOUT_MS (default 5s). Never blocks the
+  // HTTP server so cache outages can never blackhole startup again.
+  initRedis().catch((error: any) =>
+    logger.error(`❌ initRedis crashed unexpectedly: ${error?.message}`),
+  );
 });

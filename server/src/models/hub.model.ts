@@ -15,15 +15,18 @@ const hubSchema = new Schema({
     type: Boolean,
     default: false
   },
+  // A Discord server may be linked to multiple hubs (different projects/studios
+  // can share the same community). Indices are kept sparse so disconnected
+  // hubs don't participate. NOT unique.
   guildId: {
     type: String,
-    unique: true,
     sparse: true,
+    index: true,
   },
   verifiedId: {
     type: String,
-    unique: true,
     sparse: true,
+    index: true,
   },
   logo: {
     type: String,

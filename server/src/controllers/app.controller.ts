@@ -1126,18 +1126,16 @@ export const validateAtlasTask = async (req: GlobalRequest, res: GlobalResponse)
       return;
     }
 
-    const query = `query GetAtomRelationships($atomId: String!, $address: String!) {
+    const query = `query GetAtomTriples($atomId: String!, $where: triples_bool_exp) {
       atom(term_id: $atomId) {
-        term {
-          positions (where:  {
-            account_id:  {
-              _eq: $address
+        label
+        as_predicate_triples(where: $where) {
+          positions {
+            term {
+              triple {
+                term_id
+              }
             }
-            shares:  {
-              _gt: 0
-            }
-          }) {
-            account_id
           }
         }
       }
@@ -1151,17 +1149,23 @@ export const validateAtlasTask = async (req: GlobalRequest, res: GlobalResponse)
 
     const response = await client.request(query, {
       atomId,
-      address: formattedAddress,
+      where: {
+        positions: {
+          account_id: {
+            _eq: formattedAddress,
+          },
+        },
+      },
     });
 
     const { atom } = response;
 
     if (!atom) {
-      res.status(NOT_FOUND).json({ error: "atom id is invaid" });
+      res.status(NOT_FOUND).json({ error: "atom id is invalid" });
       return;
     }
 
-    const positionExists = atom.term.positions.length;
+    const positionExists = atom.as_predicate_triples?.length > 0;
 
     if (page !== "campaign") {
       const miniQuestExists = await miniQuestCompleted.findOne({
@@ -1919,7 +1923,7 @@ export const claimStreakReward = async (req: GlobalRequest, res: GlobalResponse)
 
     let dayCount = userFromReq.dayCount || 0;
 
-    const dailyXpReward = await dailySignIn.findOne({ user: req.id, month });
+    let dailyXpReward = await dailySignIn.findOne({ user: req.id, month });
 
     if (userFromReq.streak >= 7 && userFromReq.streak < 15 && dayCount === 0) {
       streakReward = 500;
@@ -1964,13 +1968,25 @@ export const claimStreakReward = async (req: GlobalRequest, res: GlobalResponse)
       return;
     }
 
-    dailyXpReward!.xpClaimedThisMonth += streakReward;
+    // The dailySignIn record is keyed by {month, user}. When a streak
+    // spans a month boundary (e.g. day 7 lands on Feb 1), the new month
+    // may not have a record yet — create it instead of crashing.
+    if (!dailyXpReward) {
+      await dailySignIn.create({
+        month,
+        user: req.id,
+        xpClaimedThisMonth: streakReward,
+        date: formatDate(new Date(), "yyyy-MM-dd"),
+      });
+    } else {
+      dailyXpReward.xpClaimedThisMonth += streakReward;
+      await dailyXpReward.save();
+    }
 
     await user.findByIdAndUpdate(req.id, {
       $inc: { xp: streakReward },
       $set: { dayCount },
     });
-    await dailyXpReward!.save();
 
     await xpLog.create({
       amount: streakReward,
@@ -3227,17 +3243,27 @@ export const checkDiscordTask = async (
       return;
     }
 
-    const questInCampaign = await campaignQuest.findById(id).lean();
-    if (!questInCampaign) {
-      res.status(NOT_FOUND).json({ error: "campaign quest not found" });
+    // The same handler serves both campaign quests and main-app mini-quests.
+    // The id posted by the client can belong to either collection, so look
+    // both up and pick whichever matches. Mirrors the dual-lookup pattern
+    // already used by validateTrustNameTask above.
+    const campaignQuestData = await campaignQuest.findById(id).lean();
+    const miniQuestData = !campaignQuestData
+      ? await miniQuest.findById(id).lean()
+      : null;
+
+    if (!campaignQuestData && !miniQuestData) {
+      res.status(NOT_FOUND).json({ error: "task not found" });
       return;
     }
 
-    const questCampaignId = questInCampaign.campaign?.toString?.() ?? "";
+    const isCampaign = !!campaignQuestData;
+
     if (
+      isCampaign &&
       campaignIdFromBody &&
-      questCampaignId &&
-      questCampaignId !== String(campaignIdFromBody)
+      campaignQuestData!.campaign?.toString() &&
+      campaignQuestData!.campaign?.toString() !== String(campaignIdFromBody)
     ) {
       res.status(BAD_REQUEST).json({
         error: "campaign quest does not belong to the provided campaign",
@@ -3245,21 +3271,49 @@ export const checkDiscordTask = async (
       return;
     }
 
-    const campaignId = String(
-      campaignIdFromBody ?? questCampaignId ?? "",
+    const resolvedParentId = String(
+      isCampaign
+        ? campaignIdFromBody || campaignQuestData!.campaign?.toString() || ""
+        : (req.body.questId as string | undefined) ||
+          miniQuestData!.quest?.toString() ||
+          "",
     ).trim();
-    if (!campaignId) {
-      res
-        .status(BAD_REQUEST)
-        .json({ error: "campaign id is required for discord verification" });
+
+    if (!resolvedParentId) {
+      res.status(BAD_REQUEST).json({
+        error: isCampaign
+          ? "campaign id is required for discord verification"
+          : "quest id is required for discord verification",
+      });
       return;
     }
 
-    let completed = await campaignQuestCompleted.findOne({
-      user: req.id,
-      campaignQuest: id,
-      campaign: campaignId,
-    });
+    const CompletedModel = isCampaign
+      ? (campaignQuestCompleted as any)
+      : (miniQuestCompleted as any);
+    const completedFilter = isCampaign
+      ? { user: req.id, campaignQuest: id, campaign: resolvedParentId }
+      : { user: req.id, miniQuest: id, quest: resolvedParentId };
+
+    let completed: any = await CompletedModel.findOne(completedFilter);
+
+    // Daily quests reset each UTC day: a stale prior-day completion must not
+    // block today's re-verify. Time source is server-only (startOfDayUTC()).
+    // Mirrors startQuest's daily-reset so the verify button stays usable on a
+    // new day even when Start was never clicked explicitly.
+    if (completed && !isCampaign) {
+      const parentQuest = await quest.findById(resolvedParentId).lean();
+      if (parentQuest?.category === "daily") {
+        const isStaleDaily =
+          !completed.updatedAt ||
+          new Date(completed.updatedAt) < startOfDayUTC();
+        if (isStaleDaily) {
+          await CompletedModel.deleteOne({ _id: completed._id });
+          completed = null;
+        }
+      }
+    }
+
     if (completed?.done) {
       res
         .status(BAD_REQUEST)
@@ -3267,13 +3321,11 @@ export const checkDiscordTask = async (
       return;
     }
 
-    const setDiscordTaskStatus = async (status: "pending" | "retry") => {
+    const setDiscordTaskStatus = async (status: "pending" | "retry" | "approved") => {
       if (!completed) {
-        completed = await campaignQuestCompleted.create({
-          user: req.id,
+        completed = await CompletedModel.create({
+          ...completedFilter,
           status,
-          campaign: campaignId,
-          campaignQuest: id,
         });
         return;
       }
@@ -3291,22 +3343,31 @@ export const checkDiscordTask = async (
     };
 
     const passDiscordTask = async (message = "validated") => {
-      await setDiscordTaskStatus("pending");
+      await setDiscordTaskStatus(isCampaign ? "pending" : "approved");
+      // Main-app quest path: claim-mini-quest requires the overall quest-
+      // completion record to exist (otherwise claimQuest fails). Mirror
+      // what validateTrustNameTask does for non-campaign tasks.
+      if (!isCampaign && req.id) {
+        await ensureQuestStarted(resolvedParentId, req.id);
+      }
       res.status(OK).json({ message, success: true });
     };
 
-    const resolvedTag = String(questInCampaign.tag ?? tagFromBody ?? "")
+    const sourceDoc = (campaignQuestData ?? miniQuestData) as any;
+
+    // Verify uses the build-time Discord IDs from the persisted quest document,
+    // not whatever the client posts in the request body. A malicious / stale
+    // client cannot reroute the verify to a different channel or role if the
+    // studio's task editor set them at build time. Body fields are still used
+    // above purely for guild-mismatch diagnostics against the project's active
+    // Studio Discord connection. Time-based gating is server-only (Mongoose
+    // timestamps + startOfDayUTC()).
+    const resolvedTag = String(sourceDoc.tag ?? "")
       .trim()
       .toLowerCase();
-    const resolvedGuildId = String(
-      questInCampaign.guildId ?? guildIdFromBody ?? "",
-    ).trim();
-    const resolvedRoleId = String(
-      questInCampaign.roleId ?? roleIdFromBody ?? "",
-    ).trim();
-    const resolvedChannelId = String(
-      questInCampaign.channelId ?? channelIdFromBody ?? "",
-    ).trim();
+    const resolvedGuildId = String(sourceDoc.guildId ?? "").trim();
+    const resolvedRoleId = String(sourceDoc.roleId ?? "").trim();
+    const resolvedChannelId = String(sourceDoc.channelId ?? "").trim();
 
     if (!BOT_TOKEN) {
       await failDiscordTask(
@@ -3316,22 +3377,43 @@ export const checkDiscordTask = async (
       return;
     }
 
-    const relatedCampaign = await campaign
-      .findById(campaignId)
-      .select("hub")
-      .lean();
-    if (!relatedCampaign?.hub) {
-      await failDiscordTask(
-        "campaign project not found for this discord task",
-        NOT_FOUND,
-      );
-      return;
+    // Find the project's hub via the correct parent collection: campaign
+    // quests → campaign → .hub; mini quests → quest → .hub. The downstream
+    // studioHub check then behaves identically in both paths.
+    let studioHub: any;
+    if (isCampaign) {
+      const relatedCampaign = await campaign
+        .findById(resolvedParentId)
+        .select("hub")
+        .lean();
+      if (!relatedCampaign?.hub) {
+        await failDiscordTask(
+          "campaign project not found for this discord task",
+          NOT_FOUND,
+        );
+        return;
+      }
+      studioHub = await hub
+        .findById(relatedCampaign.hub)
+        .select("discordConnected guildId verifiedId")
+        .lean();
+    } else {
+      const relatedQuest = await quest
+        .findById(resolvedParentId)
+        .select("hub")
+        .lean();
+      if (!relatedQuest?.hub) {
+        await failDiscordTask(
+          "quest project not found for this discord task",
+          NOT_FOUND,
+        );
+        return;
+      }
+      studioHub = await hub
+        .findById(relatedQuest.hub)
+        .select("discordConnected guildId verifiedId")
+        .lean();
     }
-
-    const studioHub = await hub
-      .findById(relatedCampaign.hub)
-      .select("discordConnected guildId verifiedId")
-      .lean();
     const studioGuildId = String(studioHub?.guildId ?? "").trim();
     const verifiedRoleId = String(studioHub?.verifiedId ?? "").trim();
 

@@ -43,6 +43,9 @@ import {
   unbanCreator,
   deleteCampaignAdmin,
   getBannedCreators,
+  createEcosystemDapp,
+  getEcosystemDapps,
+  deleteEcosystemDapp,
 } from "@/controllers/admin.controller";
 import { deleteQuest, deleteSingleQuest, saveQuest, saveSingleQuest, publishSingleQuest, toggleQuestPublish } from "@/controllers/quest.controller";
 import { discordAdminCallback, adminConnectDiscord, fetchChannels, fetchRoles, fetchServers } from "@/controllers/hub.auth.controller";
@@ -98,6 +101,9 @@ router
   .patch("/update-hub", requireAdminSuperadmin, attachAdminCampaignHub, upload.fields([{ name: "logo", maxCount: 1 }, { name: "document", maxCount: 1 }]), updateHub)
   .patch("/disconnect-discord", requireAdminSuperadmin, attachAdminCampaignHub, disconnectHubDiscord)
   .post("/complete-discord-connect", requireAdminSuperadmin, attachAdminCampaignHub, completeHubDiscordConnect)
+  .post("/create-ecosystem-dapp", requireAdminSuperadmin, createEcosystemDapp)
+  .get("/get-ecosystem-dapps", attachAdminCampaignHub, getEcosystemDapps)
+  .delete("/delete-ecosystem-dapp", requireAdminSuperadmin, attachAdminCampaignHub, deleteEcosystemDapp)
   .get("/connect-discord", adminConnectDiscord)
   .get("/discord/callback", discordAdminCallback)
   .get("/get-campaigns", attachAdminCampaignHub, fetchHubCampaigns)
