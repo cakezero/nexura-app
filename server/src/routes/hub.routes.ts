@@ -14,7 +14,7 @@ import {
 import { authenticateHubAdmin, authenticateHubAdmin2 } from "@/middlewares/auth.middleware";
 import { fetchHubCampaigns, publishCampaign } from "@/controllers/campaign.controller";
 import { requireStudioPayment } from "@/controllers/studioPayment.controller";
-import { validateCampaignSubmissions, getCampaignSubmissions, getHub, getHubAdmins, updateIds } from "@/controllers/hub.controller";
+import { validateCampaignSubmissions, getCampaignSubmissions, getHub, getHubAdmins } from "@/controllers/hub.controller";
 import hubAppRoutes from "./hub.app.routes";
 
 const router = Router();
@@ -38,7 +38,6 @@ router
   .get("/get-channels", fetchChannels)
   .get("/get-servers", fetchServers)
   .post("/admin/sign-up", hubAdminSignUp)
-  .patch("/update-ids", authenticateHubAdmin2, updateIds)
   // --- Superadmin-only routes ---
   .use("/", authenticateHubAdmin, hubAppRoutes)
 
