@@ -217,12 +217,6 @@ export const updateIds = async (req: GlobalRequest, res: GlobalResponse) => {
     const isUserHub = !!(req.admin as any).userId;
     const adminHubId = String((req.admin as any).hub ?? "");
     console.log("[updateIds] isUserHub:", isUserHub, "hubId:", adminHubId, "payload:", JSON.stringify(updatePayload));
-
-    // Clear guildId from any other hub that currently has it (unique constraint)
-    if (normalizedGuildId) {
-      await hub.updateMany({ guildId: normalizedGuildId, _id: { $ne: req.admin.hub } }, { $unset: { guildId: 1 } });
-    }
-
     if (isUserHub) {
       await userHub.findByIdAndUpdate(req.admin.hub, updatePayload);
     } else {
