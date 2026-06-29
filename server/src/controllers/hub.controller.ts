@@ -214,10 +214,7 @@ export const updateIds = async (req: GlobalRequest, res: GlobalResponse) => {
     if (normalizedDiscordSessionId) updatePayload.discordSessionId = normalizedDiscordSessionId;
 
     // userHubAdmin has userId field; hubAdmin has role field
-    const isUserHub = !!(req.admin as any).userId;
-    const adminHubId = String((req.admin as any).hub ?? "");
-    console.log("[updateIds] isUserHub:", isUserHub, "hubId:", adminHubId, "payload:", JSON.stringify(updatePayload));
-    if (isUserHub) {
+    if ((req.admin as any).userId) {
       await userHub.findByIdAndUpdate(req.admin.hub, updatePayload);
     } else {
       await hub.findByIdAndUpdate(req.admin.hub, updatePayload);
