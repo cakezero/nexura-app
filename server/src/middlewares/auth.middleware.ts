@@ -158,7 +158,7 @@ export const authenticateHubAdmin2 = async (req: GlobalRequest, res: GlobalRespo
 
     let exists = await hubAdmin.findById(id).lean();
     if (!exists) {
-      exists = await userHubAdmin.findOne({ userId: id }).lean() as any;
+      exists = await userHubAdmin.findById(id).lean() as any;
     }
     if (!exists) {
       res.status(UNAUTHORIZED).json({ error: "route is available only to admins" });
