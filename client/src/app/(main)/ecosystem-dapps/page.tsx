@@ -36,11 +36,9 @@ export default function EcosystemDapps() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [dapps, setDapps] = useState<Dapp[]>([]);
   const [proofModalDapp, setProofModalDapp] = useState<Dapp | null>(null);
-  const [brokenLogos, setBrokenLogos] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     (async () => {
-      console.log("[ACTION] fetchEcosystemDapps");
       const { ecosystemQuests } = await apiRequestV2("GET", "/api/ecosystem-quests");
 
       setDapps(ecosystemQuests);
@@ -95,7 +93,6 @@ export default function EcosystemDapps() {
 
 
   const markVisited = async (dapp: Dapp) => {
-    console.log("[ACTION] markVisited", { dappId: dapp._id, websiteUrl: dapp.websiteUrl });
     if (!visitedDapps.includes(dapp._id)) setVisitedDapps(prev => [...prev, dapp._id]);
     window.open(dapp.websiteUrl, "_blank");
 
@@ -113,9 +110,8 @@ export default function EcosystemDapps() {
   };
 
   const handleClaim = async (dapp: Dapp) => {
-    console.log("[ACTION] handleClaim", { dappId: dapp._id, reward: dapp.reward });
     if (!getStoredAccessToken()) {
-      toast({ title: 'Sign in required', description: 'Please sign in to claim XP.', variant: 'destructive' });
+      toast({ title: 'Sign in required', description: 'Please sign in to claim XP', variant: 'destructive' });
       return;
     }
 
@@ -130,7 +126,6 @@ export default function EcosystemDapps() {
   const finalizeDappClaim = async (txHash: string) => {
     const dapp = proofModalDapp;
     if (!dapp) return;
-    console.log("[ACTION] finalizeDappClaim", { dappId: dapp._id, txHash });
 
     try {
       await apiRequestV2("POST", "/api/user/update-claims-created", { txHash });
@@ -143,9 +138,8 @@ export default function EcosystemDapps() {
       }
 
       markClaimed(dapp._id);
-      toast({ title: 'XP awarded', description: `+${dapp.reward} XP.` });
+      toast({ title: 'XP awarded', description: `+${dapp.reward} XP` });
     } catch (error: any) {
-      console.error("[ACTION] finalizeDappClaim ✗", error);
       console.error('claim error:', error.message);
       toast({ title: 'Claim failed', description: error.message, variant: 'destructive' });
       throw error;
@@ -217,6 +211,7 @@ export default function EcosystemDapps() {
           {filteredDapps.map((dapp, index) => (
             <motion.div
               key={dapp._id}
+              className="max-w-sm mx-auto w-full"
               initial={{ opacity: 0, y: 40 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{
@@ -228,20 +223,11 @@ export default function EcosystemDapps() {
               <Card className="h-full flex flex-col overflow-hidden hover:border-primary/50 transition-colors group bg-card/50 backdrop-blur-sm border-white/10">
                 <div className="h-48 overflow-hidden relative">
                   <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent z-10" />
-                  {brokenLogos.has(dapp._id) ? (
-                    <div className="absolute inset-0 z-20 flex items-center justify-center bg-purple-900/30">
-                      <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center">
-                        <span className="text-white/40 text-lg font-bold">{dapp.name.charAt(0)}</span>
-                      </div>
-                    </div>
-                  ) : (
-                    <img
-                      src={dapp.logo}
-                      alt={dapp.name}
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                      onError={() => setBrokenLogos(prev => new Set(prev).add(dapp._id))}
-                    />
-                  )}
+                  <img
+                    src={dapp.logo}
+                    alt={dapp.name}
+                    className="w-full h-full object-cover"
+                  />
                   {dapp.done && (
                     <div className="absolute top-3 right-3 z-20">
                       <div className="bg-green-500 text-white rounded-full p-1">
@@ -292,7 +278,7 @@ export default function EcosystemDapps() {
                     <Button
                       size="sm"
                       className={`
-                        w-full sm:w-40
+                        w-full
                         bg-gradient-to-r from-purple-700 via-purple-800 to-indigo-900
                         text-white
                         hover:from-purple-600 hover:via-purple-700 hover:to-indigo-800
