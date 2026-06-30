@@ -92,9 +92,14 @@ export default function EcosystemDapps() {
   }, [claimedDapps, userId]);
 
 
+  const normalizeUrl = (url: string) => {
+    if (!url) return "#";
+    return /^https?:\/\//i.test(url) ? url : `https://${url}`;
+  };
+
   const markVisited = async (dapp: Dapp) => {
     if (!visitedDapps.includes(dapp._id)) setVisitedDapps(prev => [...prev, dapp._id]);
-    window.open(dapp.websiteUrl, "_blank");
+    window.open(normalizeUrl(dapp.websiteUrl), "_blank");
 
     await apiRequestV2("POST", `/api/quest/set-timer?id=${dapp._id}`);
   };
@@ -264,7 +269,7 @@ export default function EcosystemDapps() {
 
                   <div className="flex flex-col gap-3 mt-auto">
                     <a
-                      href={dapp.websiteUrl}
+                      href={normalizeUrl(dapp.websiteUrl)}
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={(e) => { e.stopPropagation(); markVisited(dapp); }}
