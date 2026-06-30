@@ -43,7 +43,6 @@ export default function DailyCheckInModal({ open, onOpenChange, onCheckInSuccess
   const [viewMonth, setViewMonth] = useState(new Date().getMonth());
   const [viewYear, setViewYear] = useState(new Date().getFullYear());
   const { toast } = useToast();
-  const MOCK_TODAY = new Date("2026-05-25T00:00:00Z");
   const [xpThisMonth, setXpThisMonth] = useState(0);
   const [streakLost, setStreakLost] = useState(false);
   const [chestOpen, setChestOpen] = useState(false);

@@ -32,20 +32,23 @@ export function getStoredAdminInfo() {
   }
 }
 
-export const apiRequest = async <T = any>({ method, endpoint, data }: {
+export const apiRequest = async <T = any>({ method, endpoint, data, formData }: {
   method: string,
   endpoint: string,
-  data?: unknown | null
+  data?: unknown | null,
+  formData?: FormData
 }): Promise<T> => {
   const token = getStoredAccessToken();
 
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${token}`,
+  };
+  if (!formData) headers["Content-Type"] = "application/json";
+
   const res = await fetch(getApiUrl(endpoint), {
     method,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: data ? JSON.stringify(data) : undefined,
+    headers,
+    body: formData ?? (data ? JSON.stringify(data) : undefined),
   });
 
   await throwIfResNotOk(res);

@@ -36,6 +36,7 @@ export default function EcosystemDapps() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [dapps, setDapps] = useState<Dapp[]>([]);
   const [proofModalDapp, setProofModalDapp] = useState<Dapp | null>(null);
+  const [brokenLogos, setBrokenLogos] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     (async () => {
@@ -227,11 +228,20 @@ export default function EcosystemDapps() {
               <Card className="h-full flex flex-col overflow-hidden hover:border-primary/50 transition-colors group bg-card/50 backdrop-blur-sm border-white/10">
                 <div className="h-48 overflow-hidden relative">
                   <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent z-10" />
-                  <img
-                    src={dapp.logo}
-                    alt={dapp.name}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                  />
+                  {brokenLogos.has(dapp._id) ? (
+                    <div className="absolute inset-0 z-20 flex items-center justify-center bg-purple-900/30">
+                      <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center">
+                        <span className="text-white/40 text-lg font-bold">{dapp.name.charAt(0)}</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <img
+                      src={dapp.logo}
+                      alt={dapp.name}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                      onError={() => setBrokenLogos(prev => new Set(prev).add(dapp._id))}
+                    />
+                  )}
                   {dapp.done && (
                     <div className="absolute top-3 right-3 z-20">
                       <div className="bg-green-500 text-white rounded-full p-1">

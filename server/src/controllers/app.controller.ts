@@ -1925,38 +1925,24 @@ export const claimStreakReward = async (req: GlobalRequest, res: GlobalResponse)
 
     let dailyXpReward = await dailySignIn.findOne({ user: req.id, month });
 
-    if (userFromReq.streak >= 7 && userFromReq.streak < 15 && dayCount === 0) {
+    // Use dayCount < milestoneDay so users who skipped a milestone
+    // can still claim it later (e.g. hit 15 days without claiming 7-day first)
+    if (userFromReq.streak >= 7 && dayCount < 7) {
       streakReward = 500;
       dayCount = 7;
-    } else if (
-      userFromReq.streak >= 15 &&
-      userFromReq.streak < 30 &&
-      dayCount === 7
-    ) {
+    } else if (userFromReq.streak >= 15 && dayCount < 15) {
       streakReward = 1000;
       dayCount = 15;
-    } else if (
-      userFromReq.streak >= 30 &&
-      userFromReq.streak < 45 &&
-      dayCount === 15
-    ) {
+    } else if (userFromReq.streak >= 30 && dayCount < 30) {
       streakReward = 2500;
       dayCount = 30;
-    } else if (
-      userFromReq.streak >= 45 &&
-      userFromReq.streak < 60 &&
-      dayCount === 30
-    ) {
+    } else if (userFromReq.streak >= 45 && dayCount < 45) {
       streakReward = 5000;
       dayCount = 45;
-    } else if (
-      userFromReq.streak >= 60 &&
-      userFromReq.streak < 90 &&
-      dayCount === 45
-    ) {
+    } else if (userFromReq.streak >= 60 && dayCount < 60) {
       streakReward = 10000;
       dayCount = 60;
-    } else if (userFromReq.streak >= 90 && dayCount === 60) {
+    } else if (userFromReq.streak >= 90 && dayCount < 90) {
       streakReward = 20000;
       dayCount = 90;
     }

@@ -40,7 +40,7 @@ type BannedUser = {
   bannedAt: string;
 }
 
-type TabType = "hubProfile" | "campaignSubmissions" | "adminManagement" | "campaignsTab";
+type TabType = "hubProfile" | "campaignSubmissions" | "adminManagement" | "campaignsTab" | "ecosystemDapps";
 
 export default function StudioDashboard({ onLogout }: StudioDashboardProps) {
   const pathname = usePathname();
@@ -49,6 +49,7 @@ export default function StudioDashboard({ onLogout }: StudioDashboardProps) {
     if (pathname.includes("/studio-dashboard/dashboard")) return "campaignSubmissions";
     if (pathname.includes("hub-profile")) return "hubProfile";
     if (pathname.includes("admin-management")) return "adminManagement";
+    if (pathname.includes("ecosystem-dapps")) return "ecosystemDapps";
     if (pathname.includes("campaigns-tab") || pathname.includes("create-new-campaign") || pathname.includes("my-campaign")) {
       return "campaignsTab";
     }
@@ -216,6 +217,7 @@ const fetchBannedUsers = async () => {
       {activeTab === "hubProfile" && "Project Profile"}
       {activeTab === "campaignSubmissions" && "Nexura Studio"}
       {activeTab === "adminManagement" && "User Administration"}
+      {activeTab === "ecosystemDapps" && "Ecosystem Dapps"}
       {activeTab === "campaignsTab" && "Campaigns"}
     </h2>
   </div>
