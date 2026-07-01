@@ -9,7 +9,7 @@ import StudioSidebar from "./StudioSidebar";
 import { isProjectSignedIn, clearProjectSession, projectApiRequest } from "@/lib/projectApi";
 import { getStoredProjectToken } from "@/lib/projectApi";
 
-type TabType = "hubProfile" | "campaignSubmissions" | "adminManagement" | "campaignsTab";
+type TabType = "hubProfile" | "campaignSubmissions" | "adminManagement" | "campaignsTab" | "ecosystemDapps";
 
 interface StudioLayoutProps {
   children: React.ReactNode;

@@ -1,13 +1,13 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { Zap, Shield, Users, LogOut, User } from "lucide-react";
+import { Zap, Shield, Users, LogOut, User, Globe } from "lucide-react";
 import { useRouter } from "next/navigation";
 import StudioBackground from "@/components/StudioBackground";
 import { useEffect, useState } from "react";
 import { getStoredProjectInfo, clearProjectSession, projectApiRequest, getStoredProjectToken, storeProjectSession } from "@/lib/projectApi";
 
-type TabType = "hubProfile" | "campaignSubmissions" | "adminManagement" | "campaignsTab";
+type TabType = "hubProfile" | "campaignSubmissions" | "adminManagement" | "campaignsTab" | "ecosystemDapps";
 
 interface StudioSidebarProps {
   activeTab: TabType;
@@ -31,7 +31,10 @@ export default function StudioSidebar({
     { title: "Profile", icon: "/sidebar-icons/nexura-studio.png", id: "hubProfile" as TabType },
     { title: "Campaigns", icon: "/sidebar-icons/campaigns.png", id: "campaignsTab" as TabType },
     { title: "Dashboard", icon: "/sidebar-icons/analytics.png", id: "campaignSubmissions" as TabType },
-    ...(adminRole === "superadmin" ? [{ title: "Admin Management", icon: Shield, id: "adminManagement" as TabType }] : []),
+    ...(adminRole === "superadmin" ? [
+      { title: "Admin Management", icon: Shield, id: "adminManagement" as TabType },
+      { title: "Ecosystem Dapps", icon: Globe, id: "ecosystemDapps" as TabType },
+    ] : []),
   ];
 
   useEffect(() => {
@@ -74,6 +77,7 @@ export default function StudioSidebar({
     campaignSubmissions: "/studio-dashboard/dashboard",
     campaignsTab: "/studio-dashboard/campaigns-tab",
     adminManagement: "/studio-dashboard/admin-management",
+    ecosystemDapps: "/studio-dashboard/ecosystem-dapps",
   };
 
   const navigate = (id: TabType) => {

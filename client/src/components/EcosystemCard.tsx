@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 interface EcosystemCardProps {
@@ -38,6 +39,29 @@ const categoryStyles = [
   },
 ];
 
+function DappLogo({ dapp }: { dapp: { _id: string; name: string; logo: string } }) {
+  const [broken, setBroken] = useState(false);
+
+  if (broken) {
+    return (
+      <div className="absolute inset-0 z-10 flex items-center justify-center bg-purple-900/30">
+        <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
+          <span className="text-white/40 text-sm font-bold">{dapp.name.charAt(0)}</span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={dapp.logo}
+      alt={dapp.name}
+      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+      onError={() => setBroken(true)}
+    />
+  );
+}
+
 export default function EcosystemCard({
   dapp,
   index,
@@ -53,13 +77,7 @@ export default function EcosystemCard({
       className="group cursor-pointer overflow-hidden rounded-2xl border border-white/10 bg-[#080808] transition-all duration-300 hover:border-white/20 hover:bg-[#0d0d0d] h-[260px] flex flex-col"
     >
       {/* IMAGE */}
-      <div className="relative h-[120px] overflow-hidden flex-shrink-0">
-        <img
-          src={dapp.logo}
-          alt={dapp.name}
-          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-        />
-      </div>
+      <DappLogo dapp={dapp} />
 
       {/* CONTENT */}
       <div

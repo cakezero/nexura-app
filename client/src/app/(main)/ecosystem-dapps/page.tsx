@@ -39,7 +39,6 @@ export default function EcosystemDapps() {
 
   useEffect(() => {
     (async () => {
-      console.log("[ACTION] fetchEcosystemDapps");
       const { ecosystemQuests } = await apiRequestV2("GET", "/api/ecosystem-quests");
 
       setDapps(ecosystemQuests);
@@ -93,10 +92,14 @@ export default function EcosystemDapps() {
   }, [claimedDapps, userId]);
 
 
+  const normalizeUrl = (url: string) => {
+    if (!url) return "#";
+    return /^https?:\/\//i.test(url) ? url : `https://${url}`;
+  };
+
   const markVisited = async (dapp: Dapp) => {
-    console.log("[ACTION] markVisited", { dappId: dapp._id, websiteUrl: dapp.websiteUrl });
     if (!visitedDapps.includes(dapp._id)) setVisitedDapps(prev => [...prev, dapp._id]);
-    window.open(dapp.websiteUrl, "_blank");
+    window.open(normalizeUrl(dapp.websiteUrl), "_blank");
 
     await apiRequestV2("POST", `/api/quest/set-timer?id=${dapp._id}`);
   };
@@ -112,9 +115,8 @@ export default function EcosystemDapps() {
   };
 
   const handleClaim = async (dapp: Dapp) => {
-    console.log("[ACTION] handleClaim", { dappId: dapp._id, reward: dapp.reward });
     if (!getStoredAccessToken()) {
-      toast({ title: 'Sign in required', description: 'Please sign in to claim XP.', variant: 'destructive' });
+      toast({ title: 'Sign in required', description: 'Please sign in to claim XP', variant: 'destructive' });
       return;
     }
 
@@ -129,7 +131,6 @@ export default function EcosystemDapps() {
   const finalizeDappClaim = async (txHash: string) => {
     const dapp = proofModalDapp;
     if (!dapp) return;
-    console.log("[ACTION] finalizeDappClaim", { dappId: dapp._id, txHash });
 
     try {
       await apiRequestV2("POST", "/api/user/update-claims-created", { txHash });
@@ -142,9 +143,8 @@ export default function EcosystemDapps() {
       }
 
       markClaimed(dapp._id);
-      toast({ title: 'XP awarded', description: `+${dapp.reward} XP.` });
+      toast({ title: 'XP awarded', description: `+${dapp.reward} XP` });
     } catch (error: any) {
-      console.error("[ACTION] finalizeDappClaim ✗", error);
       console.error('claim error:', error.message);
       toast({ title: 'Claim failed', description: error.message, variant: 'destructive' });
       throw error;
@@ -216,6 +216,7 @@ export default function EcosystemDapps() {
           {filteredDapps.map((dapp, index) => (
             <motion.div
               key={dapp._id}
+              className="max-w-sm mx-auto w-full"
               initial={{ opacity: 0, y: 40 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{
@@ -230,7 +231,7 @@ export default function EcosystemDapps() {
                   <img
                     src={dapp.logo}
                     alt={dapp.name}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    className="w-full h-full object-cover"
                   />
                   {dapp.done && (
                     <div className="absolute top-3 right-3 z-20">
@@ -268,7 +269,7 @@ export default function EcosystemDapps() {
 
                   <div className="flex flex-col gap-3 mt-auto">
                     <a
-                      href={dapp.websiteUrl}
+                      href={normalizeUrl(dapp.websiteUrl)}
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={(e) => { e.stopPropagation(); markVisited(dapp); }}
@@ -282,7 +283,7 @@ export default function EcosystemDapps() {
                     <Button
                       size="sm"
                       className={`
-                        w-full sm:w-40
+                        w-full
                         bg-gradient-to-r from-purple-700 via-purple-800 to-indigo-900
                         text-white
                         hover:from-purple-600 hover:via-purple-700 hover:to-indigo-800
