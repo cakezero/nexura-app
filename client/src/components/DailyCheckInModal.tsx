@@ -31,7 +31,7 @@ const MONTH_NAMES = [
 ];
 
 export default function DailyCheckInModal({ open, onOpenChange, onCheckInSuccess }: DailyCheckInModalProps) {
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
   const [checkInDates, setCheckInDates] = useState<string[]>([]);
   const [streak, setStreak] = useState(0);
   const [longestStreak, setLongestStreak] = useState(0);
@@ -365,33 +365,22 @@ const handleRestoreStreak = async () => {
 };
 
 const handleClaimReward = async () => {
-  console.log("CLAIM REWARD CLICKED");
-
   try {
-    const res = await apiRequest(
-      "POST",
-      "/api/user/claim-streak-reward"
-    );
-
+    const res = await apiRequest("POST", "/api/user/claim-streak-reward");
     const data = await res.json();
-
-    console.log("CLAIM RESPONSE SUCCESS:", data);
-
-    if (!res.ok) {
-      throw new Error(data?.message || "Claim failed");
-    }
-
+    if (!res.ok) throw new Error(data?.error || data?.message || "Claim failed");
     setClaimed(true);
-
+    // refresh auth context with latest dayCount
+    try {
+      const pr = await apiRequest("GET", "/api/user/profile");
+      const pj = await pr.json();
+      if (pj?.user) setUser((prev) => ({ ...prev, ...pj.user }));
+    } catch {}
     await fetchHistory();
     await XPclaimed();
-
-    if (data?.claimed !== undefined) {
-      setClaimed(data.claimed);
-    }
-
+    toast({ title: "Streak reward claimed!", description: `+${data.streakReward} XP` });
   } catch (err) {
-    console.error("CLAIM ERROR:", err);
+    toast({ title: "Claim failed", description: err?.message || "Could not claim streak reward", variant: "destructive" });
   }
 };
 
