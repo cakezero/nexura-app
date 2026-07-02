@@ -374,13 +374,13 @@ const handleClaimReward = async () => {
     try {
       const pr = await apiRequest("GET", "/api/user/profile");
       const pj = await pr.json();
-      if (pj?.user) setUser((prev) => ({ ...prev, ...pj.user }));
+      if (pj?.user) setUser((prev: any) => ({ ...prev, ...pj.user }));
     } catch {}
     await fetchHistory();
     await XPclaimed();
     toast({ title: "Streak reward claimed!", description: `+${data.streakReward} XP` });
   } catch (err) {
-    toast({ title: "Claim failed", description: err?.message || "Could not claim streak reward", variant: "destructive" });
+    toast({ title: "Claim failed", description: (err as any)?.message || "Could not claim streak reward", variant: "destructive" });
   }
 };
 
