@@ -49,10 +49,15 @@ export default function DailyCheckInModal({ open, onOpenChange, onCheckInSuccess
   const [justHitMilestone, setJustHitMilestone] = useState(false);
   const [claimed, setClaimed] = useState(false);
   const [displayXp, setDisplayXp] = useState(0);
+  const [claimRewardXp, setClaimRewardXp] = useState(0);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const animFrameRef = useRef<number>(0);
   const animateXp = (target: number) => {
   const duration = 2000;
-  const start = 0;
   const startTime = performance.now();
+
+  // Cancel any in-flight animation (cancelAnimationFrame(0) is a safe no-op)
+  cancelAnimationFrame(animFrameRef.current);
 
   const update = (currentTime: number) => {
     const elapsed = currentTime - startTime;
@@ -62,11 +67,11 @@ export default function DailyCheckInModal({ open, onOpenChange, onCheckInSuccess
     setDisplayXp(value);
 
     if (progress < 1) {
-      requestAnimationFrame(update);
+      animFrameRef.current = requestAnimationFrame(update);
     }
   };
 
-  requestAnimationFrame(update);
+  animFrameRef.current = requestAnimationFrame(update);
 };
   
   useEffect(() => {
@@ -370,6 +375,9 @@ const handleClaimReward = async () => {
     const data = await res.json();
     if (!res.ok) throw new Error(data?.error || data?.message || "Claim failed");
     setClaimed(true);
+    // Store the server-returned XP for the animation (truth, not frontend guess)
+    const rewardXp = data?.streakReward || 0;
+    setClaimRewardXp(rewardXp);
     // refresh auth context with latest dayCount
     try {
       const pr = await apiRequest("GET", "/api/user/profile");
@@ -563,7 +571,7 @@ const handleClaimReward = async () => {
   {/* OPEN CHEST */}
   {canOpenChest && (
     <button
-      onClick={() => setChestOpen(true)}
+      onClick={() => { setClaimed(false); setDisplayXp(0); setClaimRewardXp(0); setChestOpen(true); }}
       className="px-2 py-[2px] rounded-full bg-[#8B3EFE] text-white text-[8px] leading-none hover:opacity-90 transition"
     >
       Open Chest
@@ -836,7 +844,7 @@ const isUpcoming = streak < m.day;
       {/* OUTSIDE CLICK LAYER */}
       <div
         className="absolute inset-0"
-        onClick={() => setChestOpen(false)}
+        onClick={() => { setClaimed(false); setDisplayXp(0); setClaimRewardXp(0); setChestOpen(false); }}
         style={{ pointerEvents: "auto" }}
       />
 
@@ -883,6 +891,7 @@ const isUpcoming = streak < m.day;
           {/* AFTER CLAIM → PLAY VIDEO */}
           {claimed && (
             <video
+              ref={videoRef}
               src="/reward-animation.mp4"
               muted
               playsInline
@@ -895,7 +904,18 @@ const isUpcoming = streak < m.day;
                   "radial-gradient(ellipse 72% 72% at 50% 48%, #000 55%, transparent 92%)",
               }}
               onEnded={() => {
-  animateXp(completedMilestone?.xp ?? 0);
+  animateXp(claimRewardXp);
+}}
+              onError={() => {
+  // Video failed to load — still animate the XP counter so user sees their reward
+  animateXp(claimRewardXp);
+}}
+              onLoadedMetadata={() => {
+  // Ensure the video actually starts playing (some browsers block autoPlay)
+  videoRef.current?.play().catch(() => {
+    // Autoplay blocked — fall back to animating XP immediately
+    animateXp(claimRewardXp);
+  });
 }}
             />
           )}
@@ -939,7 +959,7 @@ const isUpcoming = streak < m.day;
   </button>
 ) : (
   <button
-    onClick={() => setChestOpen(false)}
+    onClick={() => { setClaimed(false); setDisplayXp(0); setChestOpen(false); }}
     className="w-full py-1.5 rounded-2xl bg-[#8B3EFE] text-white text-xs font-medium transition hover:opacity-90"
   >
     View Progression
