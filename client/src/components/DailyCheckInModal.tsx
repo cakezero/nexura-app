@@ -15,7 +15,7 @@ import { Check, Flame, ChevronLeft, ChevronRight, Trophy, X } from "lucide-react
 import { useAuth } from "../lib/auth";
 import { payRestoreStreakFee } from "../lib/performOnchainAction";
 import { createPortal } from "react-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { modalBackdrop, modalPanel } from "../lib/motion";
 
 interface DailyCheckInModalProps {
@@ -31,7 +31,7 @@ const MONTH_NAMES = [
 ];
 
 export default function DailyCheckInModal({ open, onOpenChange, onCheckInSuccess }: DailyCheckInModalProps) {
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
   const [checkInDates, setCheckInDates] = useState<string[]>([]);
   const [streak, setStreak] = useState(0);
   const [longestStreak, setLongestStreak] = useState(0);
@@ -49,10 +49,17 @@ export default function DailyCheckInModal({ open, onOpenChange, onCheckInSuccess
   const [justHitMilestone, setJustHitMilestone] = useState(false);
   const [claimed, setClaimed] = useState(false);
   const [displayXp, setDisplayXp] = useState(0);
+  const [claimRewardXp, setClaimRewardXp] = useState(0);
+  const [claimedDayCount, setClaimedDayCount] = useState(0);
+  const [claimLoading, setClaimLoading] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const animFrameRef = useRef<number>(0);
   const animateXp = (target: number) => {
   const duration = 2000;
-  const start = 0;
   const startTime = performance.now();
+
+  // Cancel any in-flight animation (cancelAnimationFrame(0) is a safe no-op)
+  cancelAnimationFrame(animFrameRef.current);
 
   const update = (currentTime: number) => {
     const elapsed = currentTime - startTime;
@@ -62,11 +69,11 @@ export default function DailyCheckInModal({ open, onOpenChange, onCheckInSuccess
     setDisplayXp(value);
 
     if (progress < 1) {
-      requestAnimationFrame(update);
+      animFrameRef.current = requestAnimationFrame(update);
     }
   };
 
-  requestAnimationFrame(update);
+  animFrameRef.current = requestAnimationFrame(update);
 };
   
   useEffect(() => {
@@ -150,17 +157,20 @@ const fetchHistory = async () => {
 
     console.log(data)
 
-    const user = data.user;
-    setStreak(user?.streak || 0);
-    setLongestStreak(user?.longestStreak || 0);
+    const profileUser = data.user;
+    setStreak(profileUser?.streak || 0);
+    setLongestStreak(profileUser?.longestStreak || 0);
     setAlreadyCheckedIn(!data.openDailySignIn);
+    setClaimedDayCount(profileUser?.dayCount || 0);
+    // Sync auth context so user.dayCount stays fresh across components
+    setUser((prev: any) => ({ ...prev, ...profileUser }));
 
     const todayStr = new Date().toISOString().split("T")[0];
     setServerDate(todayStr);
-    setCheckInDates(user?.checkInDates || []);
+    setCheckInDates(profileUser?.checkInDates || []);
 
-  } catch {
-    // silently fail
+  } catch (err) {
+    console.error("[fetchHistory] FAILED:", err);
   } finally {
     setIsFetching(false);
   }
@@ -250,8 +260,7 @@ const MILESTONES = [
 const currentMilestone =
   [...MILESTONES].reverse().find(m => streak >= m.day) || null;
 
-  const claimedMilestone = user?.dayCount || 0;
-  
+  const claimedMilestone = claimedDayCount;
 
 // next milestone
 const nextMilestone =
@@ -365,33 +374,28 @@ const handleRestoreStreak = async () => {
 };
 
 const handleClaimReward = async () => {
-  console.log("CLAIM REWARD CLICKED");
-
+  if (claimLoading) return;
+  setClaimLoading(true);
   try {
-    const res = await apiRequest(
-      "POST",
-      "/api/user/claim-streak-reward"
-    );
-
+    const res = await apiRequest("POST", "/api/user/claim-streak-reward");
     const data = await res.json();
-
-    console.log("CLAIM RESPONSE SUCCESS:", data);
-
-    if (!res.ok) {
-      throw new Error(data?.message || "Claim failed");
-    }
-
+    if (!res.ok) throw new Error(data?.error || data?.message || "Claim failed");
+    const rewardXp = data?.streakReward || 0;
     setClaimed(true);
-
-    await fetchHistory();
-    await XPclaimed();
-
-    if (data?.claimed !== undefined) {
-      setClaimed(data.claimed);
-    }
-
+    setClaimRewardXp(rewardXp);
+    setClaimLoading(false);
+    // Fire-and-forget background refresh — don't await to avoid re-renders
+    // that swap the video's event handlers mid-playback
+    apiRequest("GET", "/api/user/profile")
+      .then(r => r.json())
+      .then(j => { if (j?.user) setUser((prev: any) => ({ ...prev, ...j.user })); })
+      .catch(() => {});
+    fetchHistory();
+    XPclaimed();
+    toast({ title: "Streak reward claimed!", description: `+${rewardXp} XP` });
   } catch (err) {
-    console.error("CLAIM ERROR:", err);
+    setClaimLoading(false);
+    toast({ title: "Claim failed", description: (err as any)?.message || "Could not claim streak reward", variant: "destructive" });
   }
 };
 
@@ -574,8 +578,9 @@ const handleClaimReward = async () => {
   {/* OPEN CHEST */}
   {canOpenChest && (
     <button
-      onClick={() => setChestOpen(true)}
-      className="px-2 py-[2px] rounded-full bg-[#8B3EFE] text-white text-[8px] leading-none hover:opacity-90 transition"
+      type="button"
+      onClick={() => { setClaimed(false); setDisplayXp(0); setClaimRewardXp(0); setChestOpen(true); }}
+      className="relative z-10 px-2 py-[2px] rounded-full bg-[#8B3EFE] text-white text-[8px] leading-none hover:opacity-90 transition"
     >
       Open Chest
     </button>
@@ -653,13 +658,11 @@ const handleClaimReward = async () => {
     {MILESTONES.map((m, i, arr) => {
       const isLast = i === arr.length - 1;
 
-const claimedMilestone = user?.dayCount || 0;
-
 // user has already redeemed this milestone
-const reached = claimedMilestone >= m.day;
+const reached = claimedDayCount >= m.day;
 
 // user is exactly at milestone but NOT claimed yet
-const isAtCheckpoint = streak >= m.day && claimedMilestone < m.day;
+const isAtCheckpoint = streak >= m.day && claimedDayCount < m.day;
 
 // future milestone
 const isUpcoming = streak < m.day;
@@ -796,7 +799,8 @@ const isUpcoming = streak < m.day;
     <div className="w-[30%] flex justify-end">
       <button
   onClick={handleRestoreStreak}
-  className="px-4 py-2 rounded-xl text-[10px] font-medium whitespace-nowrap"
+  disabled={isLoading}
+  className="px-4 py-2 rounded-xl text-[10px] font-medium whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
   style={{
     background: "transparent",
     border: "2px solid #8B5CF666",
@@ -832,7 +836,6 @@ const isUpcoming = streak < m.day;
       </DialogContent>
     </Dialog>
 
-<AnimatePresence>
 {chestOpen &&
   createPortal(
     <motion.div
@@ -840,14 +843,14 @@ const isUpcoming = streak < m.day;
       variants={modalBackdrop}
       initial="initial"
       animate="animate"
-      exit="exit"
       className="fixed inset-0 z-[99999] flex items-center justify-center bg-black"
+      style={{ pointerEvents: "auto" }}
     >
 
       {/* OUTSIDE CLICK LAYER */}
       <div
         className="absolute inset-0"
-        onClick={() => setChestOpen(false)}
+        onClick={() => { setClaimed(false); setDisplayXp(0); setClaimRewardXp(0); setChestOpen(false); }}
         style={{ pointerEvents: "auto" }}
       />
 
@@ -894,6 +897,7 @@ const isUpcoming = streak < m.day;
           {/* AFTER CLAIM → PLAY VIDEO */}
           {claimed && (
             <video
+              ref={videoRef}
               src="/reward-animation.mp4"
               muted
               playsInline
@@ -906,7 +910,18 @@ const isUpcoming = streak < m.day;
                   "radial-gradient(ellipse 72% 72% at 50% 48%, #000 55%, transparent 92%)",
               }}
               onEnded={() => {
-  animateXp(completedMilestone?.xp ?? 0);
+  animateXp(claimRewardXp);
+}}
+              onError={() => {
+  // Video failed to load — still animate the XP counter so user sees their reward
+  animateXp(claimRewardXp);
+}}
+              onLoadedMetadata={() => {
+  // Ensure the video actually starts playing (some browsers block autoPlay)
+  videoRef.current?.play().catch(() => {
+    // Autoplay blocked — fall back to animating XP immediately
+    animateXp(claimRewardXp);
+  });
 }}
             />
           )}
@@ -944,13 +959,14 @@ const isUpcoming = streak < m.day;
   {!claimed ? (
   <button
     onClick={handleClaimReward}
-    className="w-full py-1.5 rounded-2xl bg-[#8B3EFE] text-white text-xs font-medium transition hover:opacity-90"
+    disabled={claimLoading}
+    className="w-full py-1.5 rounded-2xl bg-[#8B3EFE] text-white text-xs font-medium transition hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
   >
-    Claim Rewards
+    {claimLoading ? "Claiming..." : "Claim Rewards"}
   </button>
 ) : (
   <button
-    onClick={() => setChestOpen(false)}
+    onClick={() => { setClaimed(false); setDisplayXp(0); setChestOpen(false); }}
     className="w-full py-1.5 rounded-2xl bg-[#8B3EFE] text-white text-xs font-medium transition hover:opacity-90"
   >
     View Progression
@@ -962,7 +978,6 @@ const isUpcoming = streak < m.day;
     document.body
   )
 }
-</AnimatePresence>
 </>
   );
 }

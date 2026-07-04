@@ -1915,36 +1915,43 @@ export const fetchDailyXpDetails = async (req: GlobalRequest, res: GlobalRespons
 
 export const claimStreakReward = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
-    const userFromReq = req.user;
+    // Fetch fresh user data from DB to avoid stale req.user values
+    const userFromReq = await user.findById(req.id);
+    if (!userFromReq) {
+      res.status(BAD_REQUEST).json({ error: "user not found" });
+      return;
+    }
 
     const month = formatDate(new Date(), "MMM, y");
 
     let streakReward = 0;
 
-    let dayCount = userFromReq.dayCount || 0;
+    const currentDayCount: number = userFromReq.dayCount || 0;
+    const currentStreak: number = userFromReq.streak || 0;
+    let dayCount = currentDayCount;
 
     let dailyXpReward = await dailySignIn.findOne({ user: req.id, month });
 
-    // Use dayCount < milestoneDay so users who skipped a milestone
-    // can still claim it later (e.g. hit 15 days without claiming 7-day first)
-    if (userFromReq.streak >= 7 && dayCount < 7) {
-      streakReward = 500;
-      dayCount = 7;
-    } else if (userFromReq.streak >= 15 && dayCount < 15) {
-      streakReward = 1000;
-      dayCount = 15;
-    } else if (userFromReq.streak >= 30 && dayCount < 30) {
-      streakReward = 2500;
-      dayCount = 30;
-    } else if (userFromReq.streak >= 45 && dayCount < 45) {
-      streakReward = 5000;
-      dayCount = 45;
-    } else if (userFromReq.streak >= 60 && dayCount < 60) {
-      streakReward = 10000;
-      dayCount = 60;
-    } else if (userFromReq.streak >= 90 && dayCount < 90) {
+    // Check milestones from HIGHEST to LOWEST so users at higher streaks
+    // (e.g. day 15 who never claimed day 7) get the correct reward on first claim.
+    if (currentStreak >= 90 && currentDayCount < 90) {
       streakReward = 20000;
       dayCount = 90;
+    } else if (currentStreak >= 60 && currentDayCount < 60) {
+      streakReward = 10000;
+      dayCount = 60;
+    } else if (currentStreak >= 45 && currentDayCount < 45) {
+      streakReward = 5000;
+      dayCount = 45;
+    } else if (currentStreak >= 30 && currentDayCount < 30) {
+      streakReward = 2500;
+      dayCount = 30;
+    } else if (currentStreak >= 15 && currentDayCount < 15) {
+      streakReward = 1000;
+      dayCount = 15;
+    } else if (currentStreak >= 7 && currentDayCount < 7) {
+      streakReward = 500;
+      dayCount = 7;
     }
 
     if (streakReward === 0) {
