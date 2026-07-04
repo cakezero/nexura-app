@@ -15,7 +15,7 @@ import { Check, Flame, ChevronLeft, ChevronRight, Trophy, X } from "lucide-react
 import { useAuth } from "../lib/auth";
 import { payRestoreStreakFee } from "../lib/performOnchainAction";
 import { createPortal } from "react-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { modalBackdrop, modalPanel } from "../lib/motion";
 
 interface DailyCheckInModalProps {
@@ -86,10 +86,6 @@ export default function DailyCheckInModal({ open, onOpenChange, onCheckInSuccess
   }, [open]);
 
   
-
-  useEffect(() => {
-    console.log("[DEBUG] chestOpen state changed to:", chestOpen);
-  }, [chestOpen]);
 
   useEffect(() => {
     if (justClaimed) {
@@ -579,16 +575,16 @@ const handleClaimReward = async () => {
     )}
   </div>
 
-  {/* OPEN CHEST — rendered as fixed-position button outside all stacking contexts */}
+  {/* OPEN CHEST */}
+  {canOpenChest && (
     <button
       type="button"
-      onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); console.log("=== OPEN CHEST mousedown ==="); setClaimed(false); setDisplayXp(0); setClaimRewardXp(0); setChestOpen(true); }}
-      onClick={(e) => { e.preventDefault(); e.stopPropagation(); console.log("=== OPEN CHEST click ==="); }}
-      style={{ position: "fixed", bottom: "40px", right: "20px", zIndex: 99999, pointerEvents: "auto" }}
-      className="px-4 py-3 rounded-full bg-[#8B3EFE] text-white text-sm font-bold hover:opacity-90 transition border-2 border-red-500 shadow-lg"
+      onClick={() => { setClaimed(false); setDisplayXp(0); setClaimRewardXp(0); setChestOpen(true); }}
+      className="relative z-10 px-2 py-[2px] rounded-full bg-[#8B3EFE] text-white text-[8px] leading-none hover:opacity-90 transition"
     >
-      🎁 Open Chest
+      Open Chest
     </button>
+  )}
 </div>
 
   </div>
@@ -842,7 +838,14 @@ const isUpcoming = streak < m.day;
 
 {chestOpen &&
   createPortal(
-    <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black" style={{ pointerEvents: "auto" }}>
+    <motion.div
+      key="chest-open-overlay"
+      variants={modalBackdrop}
+      initial="initial"
+      animate="animate"
+      className="fixed inset-0 z-[99999] flex items-center justify-center bg-black"
+      style={{ pointerEvents: "auto" }}
+    >
 
       {/* OUTSIDE CLICK LAYER */}
       <div
@@ -852,7 +855,8 @@ const isUpcoming = streak < m.day;
       />
 
       {/* MODAL */}
-      <div
+      <motion.div
+        variants={modalPanel}
         className="relative z-10 w-[85%] max-w-xs text-center"
         style={{ pointerEvents: "auto" }}
         onClick={(e) => e.stopPropagation()}
@@ -969,8 +973,8 @@ const isUpcoming = streak < m.day;
   </button>
 )}
 
-      </div>
-    </div>,
+      </motion.div>
+    </motion.div>,
     document.body
   )
 }
