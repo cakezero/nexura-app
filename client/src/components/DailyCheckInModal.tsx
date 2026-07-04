@@ -578,8 +578,9 @@ const handleClaimReward = async () => {
   {/* OPEN CHEST */}
   {canOpenChest && (
     <button
+      type="button"
       onClick={() => { setClaimed(false); setDisplayXp(0); setClaimRewardXp(0); setChestOpen(true); }}
-      className="px-2 py-[2px] rounded-full bg-[#8B3EFE] text-white text-[8px] leading-none hover:opacity-90 transition"
+      className="relative z-10 px-2 py-[2px] rounded-full bg-[#8B3EFE] text-white text-[8px] leading-none hover:opacity-90 transition"
     >
       Open Chest
     </button>
