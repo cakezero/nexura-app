@@ -169,8 +169,8 @@ const fetchHistory = async () => {
     setServerDate(todayStr);
     setCheckInDates(profileUser?.checkInDates || []);
 
-  } catch {
-    // silently fail
+  } catch (err) {
+    console.error("[fetchHistory] FAILED:", err);
   } finally {
     setIsFetching(false);
   }
@@ -576,15 +576,13 @@ const handleClaimReward = async () => {
   </div>
 
   {/* OPEN CHEST */}
-  {canOpenChest && (
     <button
       type="button"
-      onClick={() => { setClaimed(false); setDisplayXp(0); setClaimRewardXp(0); setChestOpen(true); }}
-      className="relative z-10 px-2 py-[2px] rounded-full bg-[#8B3EFE] text-white text-[8px] leading-none hover:opacity-90 transition"
+      onClick={() => { console.log("=== OPEN CHEST CLICKED ==="); console.log("canOpenChest:", canOpenChest, "streak:", streak, "claimedDayCount:", claimedDayCount, "completedMilestone:", completedMilestone); setClaimed(false); setDisplayXp(0); setClaimRewardXp(0); setChestOpen(true); console.log("chestOpen set to true, chestOpen will be:", true); }}
+      className="relative z-50 px-2 py-[2px] rounded-full bg-[#8B3EFE] text-white text-[8px] leading-none hover:opacity-90 transition border-2 border-red-500"
     >
       Open Chest
     </button>
-  )}
 </div>
 
   </div>
