@@ -34,7 +34,7 @@ if (COOLIFY_REDIS) {
 } else {
   redis = createClient({
     url: buildUrl(),
-    socket: { reconnectStrategy: false },
+    socket: { reconnectStrategy: false, connectTimeout: 3000 },
   });
 }
 

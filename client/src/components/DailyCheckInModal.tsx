@@ -50,6 +50,8 @@ export default function DailyCheckInModal({ open, onOpenChange, onCheckInSuccess
   const [claimed, setClaimed] = useState(false);
   const [displayXp, setDisplayXp] = useState(0);
   const [claimRewardXp, setClaimRewardXp] = useState(0);
+  const [claimedDayCount, setClaimedDayCount] = useState(0);
+  const [claimLoading, setClaimLoading] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const animFrameRef = useRef<number>(0);
   const animateXp = (target: number) => {
@@ -155,14 +157,17 @@ const fetchHistory = async () => {
 
     console.log(data)
 
-    const user = data.user;
-    setStreak(user?.streak || 0);
-    setLongestStreak(user?.longestStreak || 0);
+    const profileUser = data.user;
+    setStreak(profileUser?.streak || 0);
+    setLongestStreak(profileUser?.longestStreak || 0);
     setAlreadyCheckedIn(!data.openDailySignIn);
+    setClaimedDayCount(profileUser?.dayCount || 0);
+    // Sync auth context so user.dayCount stays fresh across components
+    setUser((prev: any) => ({ ...prev, ...profileUser }));
 
     const todayStr = new Date().toISOString().split("T")[0];
     setServerDate(todayStr);
-    setCheckInDates(user?.checkInDates || []);
+    setCheckInDates(profileUser?.checkInDates || []);
 
   } catch {
     // silently fail
@@ -255,8 +260,7 @@ const MILESTONES = [
 const currentMilestone =
   [...MILESTONES].reverse().find(m => streak >= m.day) || null;
 
-  const claimedMilestone = user?.dayCount || 0;
-  
+  const claimedMilestone = claimedDayCount;
 
 // next milestone
 const nextMilestone =
@@ -370,24 +374,27 @@ const handleRestoreStreak = async () => {
 };
 
 const handleClaimReward = async () => {
+  if (claimLoading) return;
+  setClaimLoading(true);
   try {
     const res = await apiRequest("POST", "/api/user/claim-streak-reward");
     const data = await res.json();
     if (!res.ok) throw new Error(data?.error || data?.message || "Claim failed");
-    setClaimed(true);
-    // Store the server-returned XP for the animation (truth, not frontend guess)
     const rewardXp = data?.streakReward || 0;
+    setClaimed(true);
     setClaimRewardXp(rewardXp);
-    // refresh auth context with latest dayCount
-    try {
-      const pr = await apiRequest("GET", "/api/user/profile");
-      const pj = await pr.json();
-      if (pj?.user) setUser((prev: any) => ({ ...prev, ...pj.user }));
-    } catch {}
-    await fetchHistory();
-    await XPclaimed();
-    toast({ title: "Streak reward claimed!", description: `+${data.streakReward} XP` });
+    setClaimLoading(false);
+    // Fire-and-forget background refresh — don't await to avoid re-renders
+    // that swap the video's event handlers mid-playback
+    apiRequest("GET", "/api/user/profile")
+      .then(r => r.json())
+      .then(j => { if (j?.user) setUser((prev: any) => ({ ...prev, ...j.user })); })
+      .catch(() => {});
+    fetchHistory();
+    XPclaimed();
+    toast({ title: "Streak reward claimed!", description: `+${rewardXp} XP` });
   } catch (err) {
+    setClaimLoading(false);
     toast({ title: "Claim failed", description: (err as any)?.message || "Could not claim streak reward", variant: "destructive" });
   }
 };
@@ -650,13 +657,11 @@ const handleClaimReward = async () => {
     {MILESTONES.map((m, i, arr) => {
       const isLast = i === arr.length - 1;
 
-const claimedMilestone = user?.dayCount || 0;
-
 // user has already redeemed this milestone
-const reached = claimedMilestone >= m.day;
+const reached = claimedDayCount >= m.day;
 
 // user is exactly at milestone but NOT claimed yet
-const isAtCheckpoint = streak >= m.day && claimedMilestone < m.day;
+const isAtCheckpoint = streak >= m.day && claimedDayCount < m.day;
 
 // future milestone
 const isUpcoming = streak < m.day;
@@ -793,7 +798,8 @@ const isUpcoming = streak < m.day;
     <div className="w-[30%] flex justify-end">
       <button
   onClick={handleRestoreStreak}
-  className="px-4 py-2 rounded-xl text-[10px] font-medium whitespace-nowrap"
+  disabled={isLoading}
+  className="px-4 py-2 rounded-xl text-[10px] font-medium whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
   style={{
     background: "transparent",
     border: "2px solid #8B5CF666",
@@ -953,9 +959,10 @@ const isUpcoming = streak < m.day;
   {!claimed ? (
   <button
     onClick={handleClaimReward}
-    className="w-full py-1.5 rounded-2xl bg-[#8B3EFE] text-white text-xs font-medium transition hover:opacity-90"
+    disabled={claimLoading}
+    className="w-full py-1.5 rounded-2xl bg-[#8B3EFE] text-white text-xs font-medium transition hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
   >
-    Claim Rewards
+    {claimLoading ? "Claiming..." : "Claim Rewards"}
   </button>
 ) : (
   <button

@@ -15,8 +15,9 @@ export const rateLimiter = rateLimit({
     retryAfter: '10 minutes'
   },
   keyGenerator: (req: Request, res: Response): string => {
-
-    return req.headers?.authorization ?? "";
+    // Use auth token when present; fall back to IP so unauthenticated
+    // users don't all share one rate-limit bucket.
+    return req.headers?.authorization ?? req.ip ?? req.socket?.remoteAddress ?? "unknown";
   },
   standardHeaders: true, // Return rate limit info in RateLimit-* headers
   legacyHeaders: false, // Disable X-RateLimit-* headers
