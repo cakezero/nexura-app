@@ -88,6 +88,10 @@ export default function DailyCheckInModal({ open, onOpenChange, onCheckInSuccess
   
 
   useEffect(() => {
+    console.log("[DEBUG] chestOpen state changed to:", chestOpen);
+  }, [chestOpen]);
+
+  useEffect(() => {
     if (justClaimed) {
       const timer = setTimeout(() => setJustClaimed(false), 1200);
       return () => clearTimeout(timer);
@@ -836,17 +840,9 @@ const isUpcoming = streak < m.day;
       </DialogContent>
     </Dialog>
 
-<AnimatePresence>
 {chestOpen &&
   createPortal(
-    <motion.div
-      key="chest-open-overlay"
-      variants={modalBackdrop}
-      initial="initial"
-      animate="animate"
-      exit="exit"
-      className="fixed inset-0 z-[99999] flex items-center justify-center bg-black"
-    >
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black" style={{ pointerEvents: "auto" }}>
 
       {/* OUTSIDE CLICK LAYER */}
       <div
@@ -856,8 +852,7 @@ const isUpcoming = streak < m.day;
       />
 
       {/* MODAL */}
-      <motion.div
-        variants={modalPanel}
+      <div
         className="relative z-10 w-[85%] max-w-xs text-center"
         style={{ pointerEvents: "auto" }}
         onClick={(e) => e.stopPropagation()}
@@ -974,12 +969,11 @@ const isUpcoming = streak < m.day;
   </button>
 )}
 
-      </motion.div>
-    </motion.div>,
+      </div>
+    </div>,
     document.body
   )
 }
-</AnimatePresence>
 </>
   );
 }
