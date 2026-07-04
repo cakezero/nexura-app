@@ -575,13 +575,15 @@ const handleClaimReward = async () => {
     )}
   </div>
 
-  {/* OPEN CHEST */}
+  {/* OPEN CHEST — rendered as fixed-position button outside all stacking contexts */}
     <button
       type="button"
-      onClick={() => { console.log("=== OPEN CHEST CLICKED ==="); console.log("canOpenChest:", canOpenChest, "streak:", streak, "claimedDayCount:", claimedDayCount, "completedMilestone:", completedMilestone); setClaimed(false); setDisplayXp(0); setClaimRewardXp(0); setChestOpen(true); console.log("chestOpen set to true, chestOpen will be:", true); }}
-      className="relative z-50 px-2 py-[2px] rounded-full bg-[#8B3EFE] text-white text-[8px] leading-none hover:opacity-90 transition border-2 border-red-500"
+      onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); console.log("=== OPEN CHEST mousedown ==="); setClaimed(false); setDisplayXp(0); setClaimRewardXp(0); setChestOpen(true); }}
+      onClick={(e) => { e.preventDefault(); e.stopPropagation(); console.log("=== OPEN CHEST click ==="); }}
+      style={{ position: "fixed", bottom: "40px", right: "20px", zIndex: 99999, pointerEvents: "auto" }}
+      className="px-4 py-3 rounded-full bg-[#8B3EFE] text-white text-sm font-bold hover:opacity-90 transition border-2 border-red-500 shadow-lg"
     >
-      Open Chest
+      🎁 Open Chest
     </button>
 </div>
 
