@@ -14,24 +14,6 @@ async function main() {
   const userSchema = new mongoose.Schema({}, { strict: false, collection: "users" });
   const User = mongoose.model("User", userSchema);
 
-  // Clean up stale XP history from previous test runs
-  const xpLogSchema = new mongoose.Schema({}, { strict: false, collection: "xplogs" });
-  const XpLog = mongoose.model("XpLog", xpLogSchema);
-  const xpDel = await XpLog.deleteMany({ address: { $regex: "^" + TEST_ADDRESS.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$", $options: "i" } });
-  console.log(`   🧹 Cleaned ${xpDel.deletedCount} xpLog entries`);
-
-  // Clean up daily sign-in history
-  const existingUser = await User.findOne({ address: { $regex: "^" + TEST_ADDRESS + "$", $options: "i" } });
-  if (existingUser) {
-    const dailySignInSchema = new mongoose.Schema({}, { strict: false, collection: "dailysignins" });
-    const DailySignIn = mongoose.model("DailySignIn", dailySignInSchema);
-    const dsDel = await DailySignIn.deleteMany({ user: existingUser._id.toString() });
-    console.log(`   🧹 Cleaned ${dsDel.deletedCount} dailySignIn entries`);
-  }
-
-  const userSchema = new mongoose.Schema({}, { strict: false, collection: "users" });
-  const User = mongoose.model("User", userSchema);
-
   // Upsert the test user
   const u = await User.findOneAndUpdate(
     { address: TEST_ADDRESS },
