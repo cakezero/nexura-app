@@ -30,6 +30,10 @@ const MONTH_NAMES = [
   "July", "August", "September", "October", "November", "December",
 ];
 
+// How long the chest reward GIF plays before the XP counter animates in.
+// Adjust this to match the actual GIF duration.
+const CHEST_GIF_DURATION_MS = 4000;
+
 export default function DailyCheckInModal({ open, onOpenChange, onCheckInSuccess }: DailyCheckInModalProps) {
   const { user, setUser } = useAuth();
   const [checkInDates, setCheckInDates] = useState<string[]>([]);
@@ -52,7 +56,8 @@ export default function DailyCheckInModal({ open, onOpenChange, onCheckInSuccess
   const [claimRewardXp, setClaimRewardXp] = useState(0);
   const [claimedDayCount, setClaimedDayCount] = useState(0);
   const [claimLoading, setClaimLoading] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const [gifLoaded, setGifLoaded] = useState(false);
+  const [gifDone, setGifDone] = useState(false);
   const animFrameRef = useRef<number>(0);
   const animateXp = (target: number) => {
   const duration = 2000;
@@ -93,6 +98,18 @@ export default function DailyCheckInModal({ open, onOpenChange, onCheckInSuccess
       return () => clearTimeout(timer);
     }
   }, [justClaimed]);
+
+  // Trigger XP counter animation after GIF finishes playing
+  useEffect(() => {
+    if (gifLoaded && claimRewardXp > 0) {
+      const timer = setTimeout(() => {
+        animateXp(claimRewardXp);
+        // Stop the GIF from looping by hiding it after one playthrough
+        setGifDone(true);
+      }, CHEST_GIF_DURATION_MS);
+      return () => clearTimeout(timer);
+    }
+  }, [gifLoaded, claimRewardXp]);
 
 
   ///////////// TEST
@@ -579,7 +596,7 @@ const handleClaimReward = async () => {
   {canOpenChest && (
     <button
       type="button"
-      onClick={() => { setClaimed(false); setDisplayXp(0); setClaimRewardXp(0); setChestOpen(true); }}
+      onClick={() => { setClaimed(false); setDisplayXp(0); setClaimRewardXp(0); setGifLoaded(false); setGifDone(false); setChestOpen(true); }}
       className="relative z-10 px-2 py-[2px] rounded-full bg-[#8B3EFE] text-white text-[8px] leading-none hover:opacity-90 transition"
     >
       Open Chest
@@ -894,35 +911,23 @@ const isUpcoming = streak < m.day;
             />
           )}
 
-          {/* AFTER CLAIM → PLAY VIDEO */}
-          {claimed && (
-            <video
-              ref={videoRef}
-              src="/reward-animation.mp4"
-              muted
-              playsInline
-              autoPlay
-              className="w-full h-auto object-cover mix-blend-screen"
+          {/* AFTER CLAIM → PLAY GIF (once) */}
+          {claimed && !gifDone && (
+            <img
+              src="/CHEST GIF.gif"
+              alt=""
+              className="w-full h-auto object-cover"
               style={{
                 WebkitMaskImage:
                   "radial-gradient(ellipse 72% 72% at 50% 48%, #000 55%, transparent 92%)",
                 maskImage:
                   "radial-gradient(ellipse 72% 72% at 50% 48%, #000 55%, transparent 92%)",
               }}
-              onEnded={() => {
-  animateXp(claimRewardXp);
-}}
+              onLoad={() => setGifLoaded(true)}
               onError={() => {
-  // Video failed to load — still animate the XP counter so user sees their reward
-  animateXp(claimRewardXp);
-}}
-              onLoadedMetadata={() => {
-  // Ensure the video actually starts playing (some browsers block autoPlay)
-  videoRef.current?.play().catch(() => {
-    // Autoplay blocked — fall back to animating XP immediately
-    animateXp(claimRewardXp);
-  });
-}}
+                setGifDone(true);
+                animateXp(claimRewardXp);
+              }}
             />
           )}
         </div>
