@@ -515,9 +515,32 @@ export const getClaims = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
     const appUser = await user.findById(req.id);
 
-    const filter = JSON.parse(req.query.filter as string) ?? {
-      total_market_cap: "desc",
-    };
+    let filter: any;
+    const filterQuery = req.query.filter as string;
+    try {
+      filter = JSON.parse(filterQuery || '{"total_market_cap":"desc"}');
+    } catch (e) {
+      if (filterQuery === "totalMarketCap_desc") {
+        filter = { total_market_cap: "desc" };
+      } else if (filterQuery === "totalMarketCap_asc") {
+        filter = { total_market_cap: "asc" };
+      } else if (filterQuery === "positions_desc") {
+        filter = { total_position_count: "desc" };
+      } else if (filterQuery === "positions_asc") {
+        filter = { total_position_count: "asc" };
+      } else if (filterQuery === "supportMarketCap_desc" || filterQuery === "opposeMarketCap_desc") {
+        filter = { total_assets: "desc" };
+      } else if (filterQuery === "supportMarketCap_asc" || filterQuery === "opposeMarketCap_asc") {
+        filter = { total_assets: "asc" };
+      } else if (filterQuery === "createdAt_desc") {
+        // Fallback to total_market_cap or default order for now
+        filter = { total_market_cap: "desc" };
+      } else if (filterQuery === "createdAt_asc") {
+        filter = { total_market_cap: "asc" };
+      } else {
+        filter = { total_market_cap: "desc" };
+      }
+    }
 
     const offset = parseInt(req.query.offset as unknown as string);
 
@@ -2559,7 +2582,9 @@ export const searchTriple = async (req: GlobalRequest, res: GlobalResponse) => {
           total_market_cap: "desc",
         },
       ],
-      userPositionAddress: userToFetch?.address ?? "...",
+      userPositionAddress: userToFetch?.address
+        ? checksumAddress(userToFetch.address as `0x${string}`)
+        : "...",
     });
 
     res.status(OK).json(response.triple_terms);

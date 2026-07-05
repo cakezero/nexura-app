@@ -120,11 +120,16 @@ async function main() {
       sub_title: "Proof of Action test quest",
       description: TEST_TAG + " — 2-step quest with no twitter/discord/onchain tasks.",
       tag: "Test",
-      status: "active",
+      status: "Active",
       questNumber: Math.floor(Math.random() * 900000) + 100000,
       reward: 150,
-      category: "one-time",
+      category: "seasonal",
       noOfQuests: 2,
+      projectCoverImage: "https://picsum.photos/seed/nexura-test-quest-cover/1200/400",
+      starts_at: new Date().toISOString(),
+      ends_at: new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString(),
+      creator: testAdmin._id,
+      creatorModel: "admin",
     });
     await miniQuest.create({
       text: "Visit nexura.intuition.box and scroll the homepage",
