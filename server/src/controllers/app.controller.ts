@@ -2055,6 +2055,7 @@ export const referralLeaderboard = async (req: GlobalRequest, res: GlobalRespons
       {
         $project: {
           username: "$user.username",
+          profilePic: "$user.profilePic",
           totalReferrals: 1,
           activeReferrals: 1,
         },

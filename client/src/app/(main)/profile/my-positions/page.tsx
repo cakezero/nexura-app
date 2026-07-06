@@ -804,10 +804,10 @@ useEffect(() => {
               onChange={(e) => setSortOption(e.target.value)}
               className="appearance-none bg-white/[0.05] border border-white/10 rounded-full pl-4 pr-10 py-2 focus:outline-none text-xs text-white cursor-pointer backdrop-blur-md"
             >
-              <option value="totalMarketCap_desc">Highest Value</option>
-              <option value="totalMarketCap_asc">Lowest Value</option>
-              <option value="positions_desc">Most Positions</option>
-              <option value="positions_asc">Fewest Positions</option>
+              <option value="totalMarketCap_desc" className="bg-[#170f1f] text-white">Highest Value</option>
+              <option value="totalMarketCap_asc" className="bg-[#170f1f] text-white">Lowest Value</option>
+              <option value="positions_desc" className="bg-[#170f1f] text-white">Most Positions</option>
+              <option value="positions_asc" className="bg-[#170f1f] text-white">Fewest Positions</option>
             </select>
             <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400" />
           </div>
@@ -836,38 +836,66 @@ useEffect(() => {
           <div className="border border-white/[0.08] bg-white/[0.05] rounded-3xl p-6 shadow-2xl backdrop-blur-xl">
             <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Direction</h3>
             <div className="flex flex-col gap-2">
-              {["All", "Support", "Oppose"].map((dir) => (
-                <button
-                  key={dir}
-                  onClick={() => setDirectionFilter(dir)}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-all ${
-                    directionFilter === dir 
-                      ? "bg-white/15 text-white shadow-inner font-bold" 
-                      : "text-gray-400 hover:bg-white/5 hover:text-white"
-                  }`}
-                >
-                  {dir}
-                </button>
-              ))}
+              {["All", "Support", "Oppose"].map((dir) => {
+                const isActive = directionFilter === dir;
+                return (
+                  <button
+                    key={dir}
+                    onClick={() => setDirectionFilter(isActive ? "All" : dir)}
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                      isActive 
+                        ? "bg-white/15 text-white shadow-inner font-bold" 
+                        : "text-gray-400 hover:bg-white/5 hover:text-white"
+                    }`}
+                  >
+                    <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-all ${
+                      isActive 
+                        ? "border-white bg-white/20" 
+                        : "border-white/30 bg-transparent"
+                    }`}>
+                      {isActive && (
+                        <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                        </svg>
+                      )}
+                    </div>
+                    <span>{dir}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
           <div className="border border-white/[0.08] bg-white/[0.05] rounded-3xl p-6 shadow-2xl backdrop-blur-xl">
             <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Curve Type</h3>
             <div className="flex flex-col gap-2">
-              {["All", "Linear", "Exponential"].map((curve) => (
-                <button
-                  key={curve}
-                  onClick={() => setCurveFilter(curve)}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-all ${
-                    curveFilter === curve 
-                      ? "bg-white/15 text-white shadow-inner font-bold" 
-                      : "text-gray-400 hover:bg-white/5 hover:text-white"
-                  }`}
-                >
-                  {curve}
-                </button>
-              ))}
+              {["All", "Linear", "Exponential"].map((curve) => {
+                const isActive = curveFilter === curve;
+                return (
+                  <button
+                    key={curve}
+                    onClick={() => setCurveFilter(isActive ? "All" : curve)}
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                      isActive 
+                        ? "bg-white/15 text-white shadow-inner font-bold" 
+                        : "text-gray-400 hover:bg-white/5 hover:text-white"
+                    }`}
+                  >
+                    <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-all ${
+                      isActive 
+                        ? "border-white bg-white/20" 
+                        : "border-white/30 bg-transparent"
+                    }`}>
+                      {isActive && (
+                        <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                        </svg>
+                      )}
+                    </div>
+                    <span>{curve}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
