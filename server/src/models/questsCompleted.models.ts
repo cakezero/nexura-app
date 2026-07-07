@@ -67,7 +67,7 @@ const campaignQuestCompletedSchema = new Schema({
 	},
 	status: {
 		type: String,
-		enum: ["pending", "retry", "done"],
+		enum: ["pending", "retry", "approved", "done"],
 		default: "pending"
 	},
 	campaign: {
