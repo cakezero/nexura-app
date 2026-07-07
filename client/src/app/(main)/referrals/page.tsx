@@ -175,7 +175,7 @@ export default function ReferralsPage() {
         <div className="rounded-[40px] px-[27px] py-[30px] border border-white/[0.08] bg-white/[0.04] backdrop-blur-xl shadow-2xl">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-[14px]">
             {/* Total Referrals */}
-            <div className="rounded-[26px] p-5 flex items-center justify-between min-h-[98px] border border-white/[0.08] bg-white/[0.02] backdrop-blur-md">
+            <div className="rounded-[26px] p-5 flex items-center justify-between min-h-[98px] border border-[#00E1A2]/30 bg-[#00E1A2]/10 backdrop-blur-md">
               <div>
                 <p className="text-[12px] font-semibold uppercase tracking-wider" style={{ color: "rgba(163,173,194,1)" }}>Total Referrals</p>
                 <p className="text-[24px] font-semibold text-white mt-1">{totalReferrals}</p>
@@ -195,7 +195,7 @@ export default function ReferralsPage() {
               </div>
             </div>
             {/* Pending Referrals */}
-            <div className="rounded-[26px] p-5 flex items-center justify-between min-h-[98px] border border-[#FF928A]/30 bg-[#FF928A]/10 backdrop-blur-md">
+            <div className="rounded-[26px] p-5 flex items-center justify-between min-h-[98px] border border-[#00E1A2]/30 bg-[#00E1A2]/10 backdrop-blur-md">
               <div>
                 <p className="text-[12px] font-semibold uppercase tracking-wider" style={{ color: "rgba(163,173,194,1)" }}>Pending Referrals</p>
                 <p className="text-[24px] font-semibold text-white mt-1">{totalReferrals - activeUsers}</p>
@@ -205,7 +205,7 @@ export default function ReferralsPage() {
               </div>
             </div>
             {/* XP Earned */}
-            <div className="rounded-[26px] p-5 flex items-center justify-between min-h-[98px] border border-[#8B3EFE]/40 bg-[#8B3EFE]/10 backdrop-blur-md">
+            <div className="rounded-[26px] p-5 flex items-center justify-between min-h-[98px] border border-[#00E1A2]/30 bg-[#00E1A2]/10 backdrop-blur-md">
               <div>
                 <p className="text-[12px] font-semibold uppercase tracking-wider" style={{ color: "rgba(163,173,194,1)" }}>XP Earned</p>
                 <p className="text-[24px] font-semibold text-white mt-1">{xpEarned.toLocaleString()}</p>

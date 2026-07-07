@@ -42,6 +42,8 @@ export default function PortalClaims() {
   const [pageTab, setPageTab] = useState<"positions" | "activity" | "claims" | "watchlist">("positions");
   const [directionFilter, setDirectionFilter] = useState("All");
   const [curveFilter, setCurveFilter] = useState("All");
+  const [isDirectionOpen, setIsDirectionOpen] = useState(true);
+  const [isCurveOpen, setIsCurveOpen] = useState(true);
   // const isSearching = searchTerm.trim().length >= 2;
   const [termId, setTermId] = useState("");
   const [activeTab, setActiveTab] = useState<"deposit" | "redeem">("deposit");
@@ -496,6 +498,24 @@ useEffect(() => {
         return sorted.sort(
           (a, b) => new Date(a.createdAt ?? 0).getTime() - new Date(b.createdAt ?? 0).getTime()
         );
+      case "pnl_desc":
+      case "roi_desc":
+        return sorted.sort((a, b) => Number(b.total_market_cap) - Number(a.total_market_cap));
+      case "pnl_asc":
+      case "roi_asc":
+        return sorted.sort((a, b) => Number(a.total_market_cap) - Number(b.total_market_cap));
+      case "alpha_asc":
+        return sorted.sort((a, b) => {
+          const labelA = (a.term?.triple?.subject?.label ?? "").toLowerCase();
+          const labelB = (b.term?.triple?.subject?.label ?? "").toLowerCase();
+          return labelA.localeCompare(labelB);
+        });
+      case "alpha_desc":
+        return sorted.sort((a, b) => {
+          const labelA = (a.term?.triple?.subject?.label ?? "").toLowerCase();
+          const labelB = (b.term?.triple?.subject?.label ?? "").toLowerCase();
+          return labelB.localeCompare(labelA);
+        });
       default:
         return claims;
     }
@@ -629,7 +649,7 @@ useEffect(() => {
   }, [visibleClaims, user]);
 
   const filteredPositions = useMemo(() => {
-    return allUserPositions.filter((pos) => {
+    const list = allUserPositions.filter((pos) => {
       if (searchTerm) {
         const termLabel = (
           (pos.claim.term?.triple?.subject?.label ?? "") +
@@ -644,7 +664,48 @@ useEffect(() => {
       if (curveFilter !== "All" && pos.curve !== curveFilter) return false;
       return true;
     });
-  }, [allUserPositions, searchTerm, directionFilter, curveFilter]);
+
+    switch (sortOption) {
+      case "totalMarketCap_desc":
+        return list.sort((a, b) => b.value - a.value);
+      case "totalMarketCap_asc":
+        return list.sort((a, b) => a.value - b.value);
+      case "positions_desc":
+        return list.sort((a, b) => (b.claim.total_position_count || 0) - (a.claim.total_position_count || 0));
+      case "positions_asc":
+        return list.sort((a, b) => (a.claim.total_position_count || 0) - (b.claim.total_position_count || 0));
+      case "pnl_desc":
+        return list.sort((a, b) => b.pnlValue - a.pnlValue);
+      case "pnl_asc":
+        return list.sort((a, b) => a.pnlValue - b.pnlValue);
+      case "roi_desc":
+        return list.sort((a, b) => b.pnlPercent - a.pnlPercent);
+      case "roi_asc":
+        return list.sort((a, b) => a.pnlPercent - b.pnlPercent);
+      case "alpha_asc":
+        return list.sort((a, b) => {
+          const labelA = (a.claim.term?.triple?.subject?.label ?? "").toLowerCase();
+          const labelB = (b.claim.term?.triple?.subject?.label ?? "").toLowerCase();
+          return labelA.localeCompare(labelB);
+        });
+      case "alpha_desc":
+        return list.sort((a, b) => {
+          const labelA = (a.claim.term?.triple?.subject?.label ?? "").toLowerCase();
+          const labelB = (b.claim.term?.triple?.subject?.label ?? "").toLowerCase();
+          return labelB.localeCompare(labelA);
+        });
+      case "createdAt_desc":
+        return list.sort(
+          (a, b) => new Date(b.claim.createdAt ?? 0).getTime() - new Date(a.claim.createdAt ?? 0).getTime()
+        );
+      case "createdAt_asc":
+        return list.sort(
+          (a, b) => new Date(a.claim.createdAt ?? 0).getTime() - new Date(b.claim.createdAt ?? 0).getTime()
+        );
+      default:
+        return list;
+    }
+  }, [allUserPositions, searchTerm, directionFilter, curveFilter, sortOption]);
 
   return (
     <div className="text-white font-geist font-light tracking-wide p-6 md:p-8 space-y-6 max-w-[1600px] mx-auto">
@@ -688,7 +749,6 @@ useEffect(() => {
           <div className={`mt-3 flex items-center gap-1.5 text-xs ${!computedMetrics.portfolioDiff.startsWith("-") ? "text-[#00E1A2]" : "text-red-400"}`}>
             {!computedMetrics.portfolioDiff.startsWith("-") ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
             <span>{computedMetrics.portfolioDiff}</span>
-            <span className="text-gray-500 font-normal">all time</span>
           </div>
         </div>
 
@@ -701,7 +761,6 @@ useEffect(() => {
           <div className={`mt-3 flex items-center gap-1.5 text-xs ${!computedMetrics.pnlDiff.startsWith("-") ? "text-[#00E1A2]" : "text-red-400"}`}>
             {!computedMetrics.pnlDiff.startsWith("-") ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
             <span>{computedMetrics.pnlDiff}</span>
-            <span className="text-gray-500 font-normal">all time</span>
           </div>
         </div>
 
@@ -713,7 +772,6 @@ useEffect(() => {
           <div className={`mt-3 flex items-center gap-1.5 text-xs ${!computedMetrics.roiDiff.startsWith("-") ? "text-[#00E1A2]" : "text-red-400"}`}>
             {!computedMetrics.roiDiff.startsWith("-") ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
             <span>{computedMetrics.roiDiff}</span>
-            <span className="text-gray-500 font-normal">all time</span>
           </div>
         </div>
 
@@ -723,7 +781,7 @@ useEffect(() => {
             <span className="text-2xl font-bold text-white">{computedMetrics.positionsCount}</span>
           </div>
           <div className="mt-3 flex items-center gap-1.5 text-xs text-gray-400">
-            <span className="text-gray-500 font-normal">all time active</span>
+            <span className="text-gray-500 font-normal">active</span>
           </div>
         </div>
       </div>
@@ -808,6 +866,14 @@ useEffect(() => {
               <option value="totalMarketCap_asc" className="bg-[#170f1f] text-white">Lowest Value</option>
               <option value="positions_desc" className="bg-[#170f1f] text-white">Most Positions</option>
               <option value="positions_asc" className="bg-[#170f1f] text-white">Fewest Positions</option>
+              <option value="pnl_desc" className="bg-[#170f1f] text-white">Best P&L</option>
+              <option value="pnl_asc" className="bg-[#170f1f] text-white">Worst P&L</option>
+              <option value="roi_desc" className="bg-[#170f1f] text-white">Best ROI</option>
+              <option value="roi_asc" className="bg-[#170f1f] text-white">Worst ROI</option>
+              <option value="alpha_asc" className="bg-[#170f1f] text-white">Alphabetically (A-Z)</option>
+              <option value="alpha_desc" className="bg-[#170f1f] text-white">Alphabetically (Z-A)</option>
+              <option value="createdAt_desc" className="bg-[#170f1f] text-white">Newest</option>
+              <option value="createdAt_asc" className="bg-[#170f1f] text-white">Oldest</option>
             </select>
             <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400" />
           </div>
@@ -832,70 +898,93 @@ useEffect(() => {
       {/* Split-Screen Sidebar Filters & Content */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 mt-6">
         {/* Left Filter Sidebar */}
-        <div className="lg:col-span-1 space-y-6">
-          <div className="border border-white/[0.08] bg-white/[0.05] rounded-3xl p-6 shadow-2xl backdrop-blur-xl">
-            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Direction</h3>
-            <div className="flex flex-col gap-2">
-              {["All", "Support", "Oppose"].map((dir) => {
-                const isActive = directionFilter === dir;
-                return (
-                  <button
-                    key={dir}
-                    onClick={() => setDirectionFilter(isActive ? "All" : dir)}
-                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
-                      isActive 
-                        ? "bg-white/15 text-white shadow-inner font-bold" 
-                        : "text-gray-400 hover:bg-white/5 hover:text-white"
-                    }`}
-                  >
-                    <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-all ${
-                      isActive 
-                        ? "border-white bg-white/20" 
-                        : "border-white/30 bg-transparent"
-                    }`}>
-                      {isActive && (
-                        <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                        </svg>
-                      )}
-                    </div>
-                    <span>{dir}</span>
-                  </button>
-                );
-              })}
+        <div className="lg:col-span-1">
+          <div className="border border-white/[0.08] bg-white/[0.05] rounded-3xl p-6 shadow-2xl backdrop-blur-xl space-y-6">
+            {/* Direction Section */}
+            <div>
+              <div
+                onClick={() => setIsDirectionOpen(!isDirectionOpen)}
+                className="flex items-center justify-between cursor-pointer select-none mb-3 text-xs font-semibold text-gray-400 uppercase tracking-wider hover:text-white transition-all"
+              >
+                <span>Direction</span>
+                <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isDirectionOpen ? "" : "-rotate-90"}`} />
+              </div>
+              {isDirectionOpen && (
+                <div className="flex flex-col gap-2">
+                  {["All", "Support", "Oppose"].map((dir) => {
+                    const isActive = directionFilter === dir;
+                    return (
+                      <button
+                        key={dir}
+                        onClick={() => setDirectionFilter(isActive ? "All" : dir)}
+                        className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                          isActive 
+                            ? "bg-white/15 text-white shadow-inner font-bold" 
+                            : "text-gray-400 hover:bg-white/5 hover:text-white"
+                        }`}
+                      >
+                        <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-all ${
+                          isActive 
+                            ? "border-white bg-white" 
+                            : "border-white/30 bg-transparent"
+                        }`}>
+                          {isActive && (
+                            <svg className="w-3 h-3 text-black" fill="none" stroke="currentColor" strokeWidth="3.5" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                            </svg>
+                          )}
+                        </div>
+                        <span>{dir}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
-          </div>
 
-          <div className="border border-white/[0.08] bg-white/[0.05] rounded-3xl p-6 shadow-2xl backdrop-blur-xl">
-            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Curve Type</h3>
-            <div className="flex flex-col gap-2">
-              {["All", "Linear", "Exponential"].map((curve) => {
-                const isActive = curveFilter === curve;
-                return (
-                  <button
-                    key={curve}
-                    onClick={() => setCurveFilter(isActive ? "All" : curve)}
-                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
-                      isActive 
-                        ? "bg-white/15 text-white shadow-inner font-bold" 
-                        : "text-gray-400 hover:bg-white/5 hover:text-white"
-                    }`}
-                  >
-                    <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-all ${
-                      isActive 
-                        ? "border-white bg-white/20" 
-                        : "border-white/30 bg-transparent"
-                    }`}>
-                      {isActive && (
-                        <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                        </svg>
-                      )}
-                    </div>
-                    <span>{curve}</span>
-                  </button>
-                );
-              })}
+            {/* Divider */}
+            <div className="border-t border-white/10" />
+
+            {/* Curve Type Section */}
+            <div>
+              <div
+                onClick={() => setIsCurveOpen(!isCurveOpen)}
+                className="flex items-center justify-between cursor-pointer select-none mb-3 text-xs font-semibold text-gray-400 uppercase tracking-wider hover:text-white transition-all"
+              >
+                <span>Curve Type</span>
+                <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isCurveOpen ? "" : "-rotate-90"}`} />
+              </div>
+              {isCurveOpen && (
+                <div className="flex flex-col gap-2">
+                  {["All", "Linear", "Exponential"].map((curve) => {
+                    const isActive = curveFilter === curve;
+                    return (
+                      <button
+                        key={curve}
+                        onClick={() => setCurveFilter(isActive ? "All" : curve)}
+                        className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                          isActive 
+                            ? "bg-white/15 text-white shadow-inner font-bold" 
+                            : "text-gray-400 hover:bg-white/5 hover:text-white"
+                        }`}
+                      >
+                        <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-all ${
+                          isActive 
+                            ? "border-white bg-white" 
+                            : "border-white/30 bg-transparent"
+                        }`}>
+                          {isActive && (
+                            <svg className="w-3 h-3 text-black" fill="none" stroke="currentColor" strokeWidth="3.5" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                            </svg>
+                          )}
+                        </div>
+                        <span>{curve}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         </div>
