@@ -491,16 +491,56 @@ export default function ReferralsPage() {
         <div className="space-y-5 pb-[40px]">
           <h3 className="text-[20px] font-semibold text-white">Referral Leaderboard</h3>
 
-          {/* Column headers - Desktop only */}
-          <div className="hidden sm:grid grid-cols-[40px_2fr_1fr_1fr_1fr_1.2fr] gap-2 font-bold text-[#FFFFFF99] text-sm relative z-10 px-1 mb-2">
-            <div className="ml-5">RANK</div>
-            <div className="ml-10">USER</div>
-            <div className="text-center">TOTAL REFERRALS</div>
-            <div className="text-center">ACTIVE REFERRALS</div>
-            <div className="text-center">INACTIVE REFERRALS</div>
-            <div className="flex items-center justify-center gap-1">
-              <span>XP</span>
-              <img src="/nexura-xp.png" alt="XP" className="w-5 h-5 shrink-0" />
+          {/* Table headers + border wrapper */}
+          <div className="relative pt-[20px] sm:pt-0">
+            {/* Custom border as image (slimmer and less opaque) */}
+            <div className="absolute inset-x-0 top-0 z-0 -translate-y-[45px] sm:-translate-y-[57px] opacity-35 scale-y-75 pointer-events-none">
+              {/* Desktop border */}
+              <img
+                src="/leaderboard-border.png"
+                alt="Podium border"
+                className="hidden sm:block w-max h-auto object-contain mx-auto"
+              />
+            </div>
+
+            {/* Column headers - Desktop only */}
+            <div
+              className="hidden sm:grid grid-cols-[40px_2fr_1fr_1fr_1fr_1.2fr] gap-2 font-bold text-[#FFFFFF99] text-sm relative z-10 px-1 mb-2"
+              style={{ transform: "translateY(-5px)" }}
+            >
+              <div className="ml-5">RANK</div>
+              <div className="ml-10">USER</div>
+              <div className="text-center">TOTAL REFERRALS</div>
+              <div className="text-center">ACTIVE REFERRALS</div>
+              <div className="text-center">INACTIVE REFERRALS</div>
+              <div className="flex items-center justify-center gap-1">
+                <span>XP</span>
+                <img src="/nexura-xp.png" alt="XP" className="w-5 h-5 shrink-0" />
+              </div>
+            </div>
+
+            {/* Mobile border + headers inside */}
+            <div className="block sm:hidden relative w-full flex justify-center min-w-0 px-2 h-[35px] mb-[25px]">
+              {/* Border image (slimmer and less opaque) */}
+              <img
+                src="/leaderboard-small-borderr.png"
+                alt="Podium border small"
+                className="absolute top-0 left-1/2 -translate-x-1/2 w-[103%] max-w-none h-auto object-contain opacity-35 pointer-events-none"
+                style={{ transform: "translate(-50%, -46px) scaleY(0.7)" }}
+              />
+
+              {/* Table headers inside the border container */}
+              <div
+                className="absolute top-0 left-0 z-10 grid w-full min-w-0 grid-cols-[42px_minmax(0,1fr)_48px] items-center px-2 text-[10px] font-bold text-[#FFFFFF99]"
+                style={{ transform: "translateY(-27px)" }}
+              >
+                <div className="text-left">RANK</div>
+                <div className="truncate pl-1 text-left">USER</div>
+                <div className="flex items-center justify-end gap-[2px] text-right">
+                  <span>XP</span>
+                  <img src="/nexura-xp.png" alt="XP" className="w-3 h-3 shrink-0" />
+                </div>
+              </div>
             </div>
           </div>
 
