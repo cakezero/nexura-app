@@ -470,7 +470,7 @@ export default function ReferralsPage() {
               <div>
                 <h4 className="text-[14px] font-semibold" style={{ color: "rgba(240,238,255,1)" }}>Reward eligibility</h4>
                 <p className="text-[12px] font-normal mt-1" style={{ color: "rgba(163,173,194,1)" }}>
-                  Milestone rewards are claimable immediately once the threshold is reached. TRUST tokens are distributed on-chain. XP is credited instantly to your account.
+                  Milestone rewards are claimable immediately once the threshold is reached. XP is credited instantly to your account.
                 </p>
               </div>
             </div>
@@ -480,7 +480,7 @@ export default function ReferralsPage() {
               <div>
                 <h4 className="text-[14px] font-semibold" style={{ color: "rgba(240,238,255,1)" }}>10 referral maximum</h4>
                 <p className="text-[12px] font-normal mt-1" style={{ color: "rgba(163,173,194,1)" }}>
-                  You can refer up to 10 people total. Only active referrals qualify for XP and TRUST rewards. Choose your invites wisely.
+                  You can refer up to 10 people total. Only active referrals qualify for XP rewards. Choose your invites wisely.
                 </p>
               </div>
             </div>
