@@ -493,16 +493,14 @@ export default function ReferralsPage() {
 
           {/* Table headers wrapper */}
           <div 
-            className="p-1 sm:p-2 mb-2"
+            className="rounded-2xl p-[1px] mb-2"
             style={{
-              border: "1px solid transparent",
-              borderRadius: "1rem",
-              background: `linear-gradient(transparent, transparent) padding-box,
-                           linear-gradient(to right, rgba(255,105,180,0.35), rgba(139,62,254,0.35), rgba(0,225,162,0.35), rgba(52,152,219,0.35), rgba(255,180,0,0.35), rgba(255,95,109,0.35)) border-box`
+              background: "linear-gradient(to right, rgba(255,105,180,0.35), rgba(139,62,254,0.35), rgba(0,225,162,0.35), rgba(52,152,219,0.35), rgba(255,180,0,0.35), rgba(255,95,109,0.35))"
             }}
           >
-            {/* Column headers - Desktop only */}
-            <div className="hidden sm:grid grid-cols-[40px_2fr_1fr_1fr_1fr_1.2fr] gap-2 font-bold text-[#FFFFFF99] text-xs px-2 py-1.5">
+            <div className="rounded-[calc(1rem-1px)] bg-transparent p-1 sm:p-2">
+              {/* Column headers - Desktop only */}
+              <div className="hidden sm:grid grid-cols-[40px_2fr_1fr_1fr_1fr_1.2fr] gap-2 font-bold text-[#FFFFFF99] text-xs px-2 py-1.5">
               <div className="ml-5">RANK</div>
               <div className="ml-10">USER</div>
               <div className="text-center">TOTAL REFERRALS</div>
@@ -524,6 +522,7 @@ export default function ReferralsPage() {
               </div>
             </div>
           </div>
+        </div>
 
           {/* Leaderboard rows */}
           <div className="space-y-2">
