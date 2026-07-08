@@ -492,9 +492,9 @@ export default function ReferralsPage() {
           <h3 className="text-[20px] font-semibold text-white">Referral Leaderboard</h3>
 
           {/* Table headers wrapper */}
-          <div className="space-y-2">
+          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] backdrop-blur-sm p-1 sm:p-2 mb-2">
             {/* Column headers - Desktop only */}
-            <div className="hidden sm:grid grid-cols-[40px_2fr_1fr_1fr_1fr_1.2fr] gap-2 font-bold text-[#FFFFFF99] text-sm px-1 mb-2">
+            <div className="hidden sm:grid grid-cols-[40px_2fr_1fr_1fr_1fr_1.2fr] gap-2 font-bold text-[#FFFFFF99] text-xs px-2 py-1.5">
               <div className="ml-5">RANK</div>
               <div className="ml-10">USER</div>
               <div className="text-center">TOTAL REFERRALS</div>
@@ -502,12 +502,12 @@ export default function ReferralsPage() {
               <div className="text-center">INACTIVE REFERRALS</div>
               <div className="flex items-center justify-center gap-1">
                 <span>XP</span>
-                <img src="/nexura-xp.png" alt="XP" className="w-5 h-5 shrink-0" />
+                <img src="/nexura-xp.png" alt="XP" className="w-4 h-4 shrink-0" />
               </div>
             </div>
 
             {/* Column headers - Mobile only */}
-            <div className="grid sm:hidden grid-cols-[42px_minmax(0,1fr)_48px] items-center px-3 mb-2 text-[10px] font-bold text-[#FFFFFF99]">
+            <div className="grid sm:hidden grid-cols-[42px_minmax(0,1fr)_48px] items-center px-2 py-1 text-[10px] font-bold text-[#FFFFFF99]">
               <div className="text-left">RANK</div>
               <div className="truncate pl-1 text-left">USER</div>
               <div className="flex items-center justify-end gap-[2px] text-right">
