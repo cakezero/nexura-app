@@ -1065,6 +1065,19 @@ export const submitQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 				res.status(BAD_REQUEST).json({ error: "campaign quest id is invalid" });
 				return;
 			}
+
+			// Resolve the hub from the parent campaign so submissions always land in the creator's dashboard
+			if (questExists.campaign) {
+				const parentCampaign = await campaign.findById(questExists.campaign).select("hub").lean();
+				if (!resolvedHub) resolvedHub = parentCampaign?.hub?.toString() || hubId;
+			}
+
+			// Fall back to the admin-campaign system hub if no hub is resolved
+			if (!resolvedHub) {
+				const adminCampaignHub = await resolveAdminCampaignHub();
+				resolvedHub = adminCampaignHub._id.toString();
+			}
+
 			notComplete = await campaignQuestCompleted.create({ campaign: questId, campaignQuest: id, user: userId });
 		}
 
@@ -1283,9 +1296,12 @@ export const saveQuestWithMiniQuests = async (req: GlobalRequest, res: GlobalRes
       const questData = { ...qd };
 
       if (qd.quest && qd._id) {
+        if (questData.quest) {
+          questData.quest = new mongoose.Types.ObjectId(questData.quest);
+        }
         createdMiniQuests.push({
           updateOne: {
-            filter: { _id: qd._id },
+            filter: { _id: new mongoose.Types.ObjectId(qd._id) },
             update: {
               $set: {
                 ...questData,
@@ -1537,11 +1553,14 @@ export const saveQuest = async (req: GlobalRequest, res: GlobalResponse) => {
             }
             delete rest.quest;
 
-            const updatePayload = { ...rest, quest: id };
+            const updatePayload = { ...rest, quest: new mongoose.Types.ObjectId(id) };
 
             return {
               updateOne: {
-                filter: { _id, quest: id as any },
+                filter: {
+                  _id: new mongoose.Types.ObjectId(_id),
+                  quest: new mongoose.Types.ObjectId(id)
+                },
                 update: { $set: updatePayload },
               }
             };

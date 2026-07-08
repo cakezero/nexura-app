@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { OTP } from '@/models/otp.model';
 import { hub, hubAdmin, userHub, userHubAdmin } from '@/models/hub.model';
 import { user } from '@/models/user.model';
@@ -940,12 +941,15 @@ export const saveCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
           questsToUpdate.map((q: any) => {
             const { _id, ...rest } = q;
             const updatePayload = isDiscordCampaignTask(q)
-              ? { ...rest, campaign: id, guildId: discordGuildIdForCampaign }
-              : { ...rest, campaign: id };
+              ? { ...rest, campaign: new mongoose.Types.ObjectId(id), guildId: discordGuildIdForCampaign }
+              : { ...rest, campaign: new mongoose.Types.ObjectId(id) };
 
             return {
               updateOne: {
-                filter: { _id, campaign: id as any },
+                filter: {
+                  _id: new mongoose.Types.ObjectId(_id),
+                  campaign: new mongoose.Types.ObjectId(id)
+                },
                 update: { $set: updatePayload },
               }
             };
@@ -1059,9 +1063,12 @@ export const saveCampaignWithQuests = async (req: GlobalRequest, res: GlobalResp
         : { ...qd };
 
       if (qd.campaign && qd._id) {
+        if (questData.campaign) {
+          questData.campaign = new mongoose.Types.ObjectId(questData.campaign);
+        }
         createdQuests.push({
           updateOne: {
-            filter: { _id: qd._id },
+            filter: { _id: new mongoose.Types.ObjectId(qd._id) },
             update: {
               $set: {
                 ...questData,
