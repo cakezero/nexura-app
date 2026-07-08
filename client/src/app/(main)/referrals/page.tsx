@@ -492,7 +492,15 @@ export default function ReferralsPage() {
           <h3 className="text-[20px] font-semibold text-white">Referral Leaderboard</h3>
 
           {/* Table headers wrapper */}
-          <div className="rounded-2xl border border-[#8B3EFE]/30 bg-white/[0.02] backdrop-blur-sm p-1 sm:p-2 mb-2">
+          <div 
+            className="backdrop-blur-sm p-1 sm:p-2 mb-2"
+            style={{
+              border: "1px solid transparent",
+              borderRadius: "1rem",
+              background: `linear-gradient(rgba(255,255,255,0.02), rgba(255,255,255,0.02)) padding-box,
+                           linear-gradient(to right, rgba(255,105,180,0.3), rgba(139,62,254,0.3), rgba(0,225,162,0.3), rgba(52,152,219,0.3), rgba(255,180,0,0.3), rgba(255,95,109,0.3)) border-box`
+            }}
+          >
             {/* Column headers - Desktop only */}
             <div className="hidden sm:grid grid-cols-[40px_2fr_1fr_1fr_1fr_1.2fr] gap-2 font-bold text-[#FFFFFF99] text-xs px-2 py-1.5">
               <div className="ml-5">RANK</div>
