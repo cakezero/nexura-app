@@ -493,12 +493,12 @@ export default function ReferralsPage() {
 
           {/* Table headers wrapper */}
           <div 
-            className="backdrop-blur-sm p-1 sm:p-2 mb-2"
+            className="p-1 sm:p-2 mb-2"
             style={{
               border: "1px solid transparent",
               borderRadius: "1rem",
-              background: `linear-gradient(rgba(255,255,255,0.02), rgba(255,255,255,0.02)) padding-box,
-                           linear-gradient(to right, rgba(255,105,180,0.3), rgba(139,62,254,0.3), rgba(0,225,162,0.3), rgba(52,152,219,0.3), rgba(255,180,0,0.3), rgba(255,95,109,0.3)) border-box`
+              background: `linear-gradient(transparent, transparent) padding-box,
+                           linear-gradient(to right, rgba(255,105,180,0.35), rgba(139,62,254,0.35), rgba(0,225,162,0.35), rgba(52,152,219,0.35), rgba(255,180,0,0.35), rgba(255,95,109,0.35)) border-box`
             }}
           >
             {/* Column headers - Desktop only */}
