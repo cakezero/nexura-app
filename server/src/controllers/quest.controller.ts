@@ -663,7 +663,7 @@ export const performCampaignQuest = async (req: GlobalRequest, res: GlobalRespon
 			return;
 		}
 
-		if (campaignDone.status !== "pending") {
+		if (campaignDone.status !== "pending" && campaignDone.status !== "approved") {
 			res.status(BAD_REQUEST).json({ error: "quest needs to be marked as pending before it can be claimed" });
 			return;
 		}

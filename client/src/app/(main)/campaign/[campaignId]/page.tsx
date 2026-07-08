@@ -638,12 +638,22 @@ export default function CampaignEnvironment() {
                         </button>
                       )}
                       {visited && !claimed && requiresProof && !pending && (
-                        <button
-                          onClick={() => setExpandedQuestId(isExpanded ? null : quest._id)}
-                          className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-sm sm:text-base font-semibold bg-purple-700 hover:bg-purple-800"
-                        >
-                          {isFeedback ? "Give Feedback" : isWalletAddress ? "Submit Address" : "Submit Proof"}
-                        </button>
+                        quest.status === "approved" ? (
+                          <button
+                            disabled={!joinedCampaign}
+                            onClick={() => claimQuest(quest)}
+                            className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-sm sm:text-base font-semibold bg-purple-700 hover:bg-purple-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Claim
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => setExpandedQuestId(isExpanded ? null : quest._id)}
+                            className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-sm sm:text-base font-semibold bg-purple-700 hover:bg-purple-800"
+                          >
+                            {isFeedback ? "Give Feedback" : isWalletAddress ? "Submit Address" : "Submit Proof"}
+                          </button>
+                        )
                       )}
 
                       {claimed && (
