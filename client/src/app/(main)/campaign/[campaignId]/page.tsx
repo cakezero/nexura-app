@@ -145,6 +145,24 @@ export default function CampaignEnvironment() {
       }));
 
       setQuests(safeQuests);
+      // Proof tasks already in-flight (pending / approved / retry) must stay
+      // actionable after reload — don't force users back through "Start Quest"
+      // just because local visited state was empty.
+      const inFlightIds = safeQuests
+        .filter((q: { status?: string; done?: boolean }) =>
+          q.done || ["pending", "approved", "retry"].includes(String(q.status || ""))
+        )
+        .map((q: { _id: string }) => q._id);
+      if (inFlightIds.length) {
+        setVisitedQuests((prev) => Array.from(new Set([...prev, ...inFlightIds])));
+        setPendingQuests((prev) =>
+          prev.filter((id) => {
+            const q = safeQuests.find((x: { _id: string }) => x._id === id);
+            // Drop stale local pending once server says approved/done/retry
+            return q && q.status === "pending" && !q.done;
+          })
+        );
+      }
       setJoinedCampaign(Boolean(res.joined));
       setProjectCoverImage(res.projectCoverImage);
       setCampaignCompleted(res.campaignCompleted?.campaignCompleted || false);
@@ -276,8 +294,11 @@ export default function CampaignEnvironment() {
       });
 
       setExpandedQuestId(null);
-      // mark quest as pending
-      setPendingQuests([...pendingQuests, quest._id]);
+      // mark quest as pending (server + local)
+      setPendingQuests((prev) => (prev.includes(quest._id) ? prev : [...prev, quest._id]));
+      setQuests((prev) =>
+        prev.map((q) => (q._id === quest._id ? { ...q, status: "pending" } : q))
+      );
     } catch (err: any) {
       console.error("[ACTION] submitCommentProof ✗", err);
       toast({
@@ -362,15 +383,20 @@ export default function CampaignEnvironment() {
         if (!res.ok) return;
       }
 
-      setClaimedQuests([...claimedQuests, quest._id]);
+      setClaimedQuests((prev) => (prev.includes(quest._id) ? prev : [...prev, quest._id]));
+      setPendingQuests((prev) => prev.filter((id) => id !== quest._id));
       setFailedQuests((prev) => prev.filter((id) => id !== quest._id));
       setQuests((prev) =>
-        prev.map((q) => (q._id === quest._id ? { ...q, done: true } : q))
+        prev.map((q) => (q._id === quest._id ? { ...q, done: true, status: "done" } : q))
       );
     } catch (error: any) {
       console.error("[ACTION] claimQuest ✗", error);
       console.error(error);
       toast({ title: "Error", description: error.message, variant: "destructive" });
+
+      // Don't stamp "retry" on approved proof tasks — claim failure there is
+      // usually join/network, not a rejected submission.
+      if (quest.status === "approved") return;
 
       if (!retryQuests.includes(quest._id)) {
         setRetryQuests((prev) => [...prev, quest._id]);
@@ -591,15 +617,24 @@ export default function CampaignEnvironment() {
               const isTns = quest.tag === "trust-name";
               const visited = visitedQuests.includes(quest._id);
               const claimed = quest.done || claimedQuests.includes(quest._id);
-              const pending = quest.status === "pending" || pendingQuests.includes(quest._id);
+              const isApproved = quest.status === "approved";
+              // Local pending state must not override a server "approved" status
+              // (that was the "stuck on pending after review" bug).
+              const pending =
+                !isApproved &&
+                !claimed &&
+                (quest.status === "pending" || pendingQuests.includes(quest._id));
               const failed = failedQuests.includes(quest._id);
               const retry = quest.status === "retry";
               const isPortalTask = quest.tag === "portal";
               const isExpanded = expandedQuestId === quest._id;
+              // Approved / pending / retry tasks are already past "Start"
+              const started = visited || isApproved || pending || retry;
 
               let buttonText = "Start Quest";
               if (claimed) buttonText = "Completed";
               else if (retry) buttonText = "Retry";
+              else if (isApproved) buttonText = "Claim";
               else if (pending) buttonText = "Pending";
               else if (visited) buttonText = "Claim";
 
@@ -619,7 +654,7 @@ export default function CampaignEnvironment() {
                     </div>
 
                     <div className="flex gap-2 w-full sm:w-auto">
-                      {!visited && !claimed && (
+                      {!started && !claimed && (
                         <button
                           disabled={!joinedCampaign}
                           onClick={() => markQuestAsVisited(quest)}
@@ -628,7 +663,7 @@ export default function CampaignEnvironment() {
                           {joinedCampaign ? "Start Quest" : "Join First"}
                         </button>
                       )}
-                      {visited && !claimed && !requiresProof && (
+                      {started && !claimed && !requiresProof && (
                         <button
                           disabled={!joinedCampaign}
                           onClick={() => claimQuest(quest)}
@@ -637,8 +672,8 @@ export default function CampaignEnvironment() {
                           {isTns ? "Verify" : "Claim"}
                         </button>
                       )}
-                      {visited && !claimed && requiresProof && !pending && (
-                        quest.status === "approved" ? (
+                      {started && !claimed && requiresProof && !pending && (
+                        isApproved ? (
                           <button
                             disabled={!joinedCampaign}
                             onClick={() => claimQuest(quest)}
@@ -658,6 +693,9 @@ export default function CampaignEnvironment() {
 
                       {claimed && (
                         <span className="text-sm text-green-400 font-semibold">Completed</span>
+                      )}
+                      {!claimed && isApproved && requiresProof && (
+                        <span className="text-sm text-green-400/90 font-semibold self-center">Approved</span>
                       )}
                       {!claimed && pending && requiresProof && (
                         <span className="text-sm text-white font-semibold">Pending Verification</span>
