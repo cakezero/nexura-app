@@ -1022,9 +1022,28 @@ export const submitQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 
 		let notComplete;
 
-		const submissionExists = await submission.findOne({ miniQuestId: id, user: userId, page, hub: hubId }).lean();
+		const submissionExists = await submission.findOne({ miniQuestId: id, user: userId, page, hub: hubId });
+
 		if (submissionExists) {
-			res.status(BAD_REQUEST).json({ error: "quest already submitted" });
+			// Allow resubmission only if admin rejected (status = "retry")
+			if (submissionExists.status !== "retry") {
+				res.status(BAD_REQUEST).json({ error: "quest already submitted" });
+				return;
+			}
+
+			// Update existing submission with new link and reset to pending
+			submissionExists.submissionLink = submissionLink;
+			submissionExists.status = "pending";
+			await submissionExists.save();
+
+			// Reset the linked completed model back to pending
+			if (page !== "campaign") {
+				await miniQuestCompleted.updateOne({ _id: submissionExists.questCompleted }, { status: "pending" });
+			} else {
+				await campaignQuestCompleted.updateOne({ _id: submissionExists.questCompleted }, { status: "pending" });
+			}
+
+			res.status(OK).json({ message: "quest resubmitted successfully" });
 			return;
 		}
 
