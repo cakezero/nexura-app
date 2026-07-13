@@ -153,12 +153,25 @@ const featuredQuests: Quest[] = data?.quests?.featuredQuests ?? [];
 const dailyQuests: Quest[] = data?.quests?.dailyQuests ?? [];
 const seasonalQuests: Quest[] = data?.quests?.seasonalQuests ?? [];
 
+const now = Date.now() + serverOffset;
+
+const isEndedQuest = (q: Quest) =>
+  q.status === "Ended" || (!!q.ends_at && new Date(q.ends_at).getTime() <= now);
+const isScheduledQuest = (q: Quest) =>
+  !isEndedQuest(q) && !!q.starts_at && new Date(q.starts_at).getTime() > now;
+const isActiveQuest = (q: Quest) => !isScheduledQuest(q) && !isEndedQuest(q);
+
 const filteredQuests =
   questFilter === "seasonal"
     ? seasonalQuests
     : questFilter === "daily"
     ? dailyQuests
     : featuredQuests;
+
+// Seasonal quests split into active/upcoming/ended for grouped display
+const activeSeasonalQuests = seasonalQuests.filter(isActiveQuest);
+const upcomingSeasonalQuests = seasonalQuests.filter(isScheduledQuest);
+const endedSeasonalQuests = seasonalQuests.filter(isEndedQuest);
 
 const [isStartingQuest, setIsStartingQuest] = useState<string | null>(null);
 
@@ -684,6 +697,23 @@ const renderSeasonalQuestCard = (quest: Quest, index: number = 0) => {
 
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
 
+      {/* Status Badge - show Ended/Scheduled for time-based state */}
+      <div className="absolute top-2 right-2">
+        {isEndedQuest(quest) ? (
+          <Badge className="bg-gray-500/20 text-gray-200 border border-gray-500/30 text-[0.65rem] sm:text-xs">
+            Ended
+          </Badge>
+        ) : isScheduledQuest(quest) ? (
+          <Badge className="bg-purple-500/20 text-purple-400 border border-purple-500/30 text-[0.65rem] sm:text-xs">
+            Upcoming
+          </Badge>
+        ) : (
+          <Badge className="bg-green-500/20 text-green-400 border border-green-500/30 text-[0.65rem] sm:text-xs">
+            Active
+          </Badge>
+        )}
+      </div>
+
       {quest.category && (
         <div className="absolute top-2 left-2 text-[0.65rem] sm:text-xs text-white/80 font-medium capitalize">
           {quest.category}
@@ -752,12 +782,28 @@ const renderSeasonalQuestCard = (quest: Quest, index: number = 0) => {
       </div>
 
       {/* BUTTON ALWAYS STICKS TO BOTTOM */}
-      <button
-        onClick={() => handleStartQuest(quest)}
-        className="w-full py-2 mb-2 mt-4 text-xs font-medium rounded-xl bg-[#8b3efe] hover:bg-[#7b35e6] text-white transition -translate-y-2"
-      >
-        Start Task
-      </button>
+      {isEndedQuest(quest) ? (
+        <button
+          disabled
+          className="w-full py-2 mb-2 mt-4 text-xs font-medium rounded-xl bg-gray-600 cursor-not-allowed text-gray-300 -translate-y-2"
+        >
+          Quest Ended
+        </button>
+      ) : isScheduledQuest(quest) ? (
+        <button
+          disabled
+          className="w-full py-2 mb-2 mt-4 text-xs font-medium rounded-xl bg-gray-600 cursor-not-allowed text-gray-300 -translate-y-2"
+        >
+          Coming Soon
+        </button>
+      ) : (
+        <button
+          onClick={() => handleStartQuest(quest)}
+          className="w-full py-2 mb-2 mt-4 text-xs font-medium rounded-xl bg-[#8b3efe] hover:bg-[#7b35e6] text-white transition -translate-y-2"
+        >
+          Start Task
+        </button>
+      )}
 
     </div>
   </Card>
@@ -843,10 +889,50 @@ const renderSeasonalQuestCard = (quest: Quest, index: number = 0) => {
             <p className="text-[14px]">No {questFilter} quests yet.</p>
           </div>
         ) : questFilter === "seasonal" ? (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {filteredQuests.map((quest: Quest, i: number) => (
-              <div key={quest._id}>{renderSeasonalQuestCard(quest, i)}</div>
-            ))}
+          <div className="space-y-6 sm:space-y-8">
+            {/* Active Seasonal Quests */}
+            <div className="space-y-3 sm:space-y-4">
+              <h3 className="text-[16px] sm:text-lg font-semibold text-white">Active Quests</h3>
+              {activeSeasonalQuests.length === 0 ? (
+                <Card className="glass glass-hover rounded-3xl p-6 text-center">
+                  <p className="text-white/60 text-sm">No active seasonal quests at the moment.</p>
+                </Card>
+              ) : (
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  {activeSeasonalQuests.map((quest: Quest, i: number) => (
+                    <div key={quest._id}>{renderSeasonalQuestCard(quest, i)}</div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Upcoming Seasonal Quests */}
+            {upcomingSeasonalQuests.length > 0 && (
+              <div className="space-y-3 sm:space-y-4">
+                <h3 className="text-[16px] sm:text-lg font-semibold text-white">Upcoming Quests</h3>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  {upcomingSeasonalQuests.map((quest: Quest, i: number) => (
+                    <div key={quest._id}>{renderSeasonalQuestCard(quest, i)}</div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Ended Seasonal Quests */}
+            <div className="space-y-3 sm:space-y-4">
+              <h3 className="text-[16px] sm:text-lg font-semibold text-white">Ended Quests</h3>
+              {endedSeasonalQuests.length === 0 ? (
+                <Card className="glass glass-hover rounded-3xl p-6 text-center">
+                  <p className="text-white/60 text-sm">No ended quests yet.</p>
+                </Card>
+              ) : (
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  {endedSeasonalQuests.map((quest: Quest, i: number) => (
+                    <div key={quest._id}>{renderSeasonalQuestCard(quest, i)}</div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         ) : (
           <div className="flex flex-col gap-4">
