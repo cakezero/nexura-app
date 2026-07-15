@@ -7,7 +7,7 @@ import { lesson, lessonCompleted, miniLesson, question, questionCompleted, video
 import { admin } from "@/models/admin.model";
 import { BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND, NO_CONTENT, OK, UNAUTHORIZED, FORBIDDEN } from "@/utils/status.utils";
 import { campaign as campaignModel, campaignCompleted, campaign } from "@/models/campaign.model";
-import { generateOTP, getRefreshToken, hashPassword, JWT, validateQuestData } from "@/utils/utils";
+import { generateOTP, getRefreshToken, hashPassword, JWT, startOfDayUTC, validateQuestData } from "@/utils/utils";
 import { sendAdminResetEmail, sendEmailToAdmin } from "@/utils/sendMail";
 import { campaignQuestCompleted, miniQuestCompleted, questCompleted } from "@/models/questsCompleted.models";
 import { submission } from "@/models/submission.model";
@@ -878,6 +878,42 @@ export const getXpHistory = async (req: GlobalRequest, res: GlobalResponse) => {
 		res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching xp history" });
 	}
 };
+
+export const restoreUserStreak = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const { address, streak } = req.body;
+    if (!address || !streak) {
+      res.status(BAD_REQUEST).json({ error: "address and streak is required" });
+      return;
+    }
+
+    const lowerAddress = address.toLowerCase();
+
+    const streakUser = await user.findOne({ address: lowerAddress });
+    if (!streakUser) {
+      res.status(NOT_FOUND).json({ error: "user not found" });
+      return;
+    }
+
+    const today = startOfDayUTC();
+
+    const todaysDate = today.toISOString().split("T")[0] as string;
+
+    streakUser.lastSignInDate = todaysDate;
+    streakUser.streak = streak;
+
+    if (streakUser.longestStreak < streakUser.streak) {
+      streakUser.longestStreak = streak;
+    }
+
+    await streakUser.save();
+
+    res.status(OK).json({ message: "streak restored" });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error restoring xp streak" });
+  }
+}
 
 export const searchUserXpHistory = async (req: GlobalRequest, res: GlobalResponse) => {
   try {

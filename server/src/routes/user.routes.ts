@@ -13,7 +13,10 @@ import {
   claimStreakReward,
   fetchDailyXpDetails,
   restoreStreak,
-  getUserXpHistory
+  getUserXpHistory,
+  getUserPNL,
+  getPositions,
+  getIntuitionAccountActivity
 } from "@/controllers/app.controller";
 import { logout } from "@/controllers/auth.controller";
 import { upload } from "@/config/multer";
@@ -22,6 +25,9 @@ const router = Router();
 
 router
   .get("/profile", fetchUser)
+  .get("/get-intuition-pnl", getUserPNL)
+  .get("/get-intuition-positions", getPositions)
+  .get("/get-intuition-activity", getIntuitionAccountActivity)
   .post("/claim-referral-reward", claimReferreralReward)
   .patch("/update-badge", updateBadge)
   .post("/claim-deposit-xp", claimDepositXp)
