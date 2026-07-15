@@ -15,6 +15,8 @@ yarn-error.log*
 pnpm-debug.log*
 *.log
 
+dummy.ts
+
 .env
 .env.local
 .env.example
