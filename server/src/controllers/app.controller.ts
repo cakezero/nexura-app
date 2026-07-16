@@ -45,7 +45,7 @@ import {
 } from "@/models/questsCompleted.models";
 import { atomIds, GRAPHQL_API_URL, RELIC_CONTRACT } from "@/utils/constants";
 import { GraphQLClient } from "graphql-request";
-import { checksumAddress, parseAbi, parseEther, type Address } from "viem";
+import { checksumAddress, formatEther, parseAbi, parseEther, type Address } from "viem";
 import { campaign, campaignCompleted } from "@/models/campaign.model";
 import { dailySignIn } from "@/models/dailySignIn.model";
 import {
@@ -90,6 +90,270 @@ const getTrustNameProvider = () => {
 
   return provider;
 };
+
+export const getUserPNL = async (req: GlobalRequest, res: GlobalResponse) => {
+  try { 
+    const formattedAddress = checksumAddress(req.user.address);
+
+    const query = `query GetAccountPnlCurrent($input: GetAccountPnlCurrentInput!) {
+      getAccountPnlCurrent(input: $input) {
+        account_id
+        timestamp
+        equity_value
+        total_assets_in
+        total_assets_out
+        net_invested
+        total_pnl
+        pnl_pct
+        unrealized_pnl
+      }
+    }`;
+
+    const { getAccountPnlCurrent } = await client.request(query, { userPositionAddress: formattedAddress });
+
+    const positionsQuery = `query GetAccountPositionCount($address: String!) {
+      positions_with_value_aggregate(
+        where: {account_id: {_eq: $address}, shares: {_gt: "0"}}
+      ) {
+        aggregate {
+          count
+        }
+      }
+    }`;
+
+    const { positions_with_value_aggregate: { aggregate: { count: positions } } } = await client.request(positionsQuery, { address: formattedAddress });
+
+    const data = {
+      portfolio_value: parseFloat(formatEther(getAccountPnlCurrent.equity_value)).toFixed(4),
+      pnl: parseFloat(formatEther(getAccountPnlCurrent.total_pnl)).toFixed(4),
+      roi: parseFloat(getAccountPnlCurrent.pnl_pct).toFixed(1),
+      positions
+    }
+
+
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching user intuition pnl" })
+  }
+};
+
+export const getPositions = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const formattedAddress = checksumAddress(req.user.address);
+
+    const query = `query GetPortfolioViewPositionsWithValue($limit: Int, $offset: Int, $orderBy: [positions_with_value_order_by!], $where: positions_with_value_bool_exp, $userPositionAddress: String) {
+      positions_with_value(
+        limit: $limit
+        offset: $offset
+        order_by: $orderBy
+        where: $where
+      ) {
+        id
+        created_at
+        updated_at
+        account_id
+        account {
+          id
+          atom_id
+          image
+          label
+        }
+        shares
+        term_id
+        curve_id
+        theoretical_value
+        total_deposit_assets_after_total_fees
+        total_redeem_assets_for_receiver
+        redeemable_assets
+        pnl
+        pnl_pct
+        vault {
+          curve_id
+          term_id
+          current_share_price
+          created_at
+          total_assets
+          total_shares
+          updated_at
+          market_cap
+          position_count
+        }
+        term {
+          type
+          defaultVault: vaults(where: {curve_id: {_eq: 1}}, limit: 1) {
+            curve_id
+            total_shares
+          }
+          triple {
+            term_id
+            counter_term_id
+            subject {
+              data
+              term_id
+              label
+              image
+              emoji
+              type
+            }
+            predicate {
+              data
+              term_id
+              label
+              image
+              emoji
+              type
+            }
+            object {
+              data
+              term_id
+              label
+              image
+              emoji
+              type
+            }
+            term {
+              vaults(order_by: {curve_id: asc}) {
+                curve_id
+                term_id
+                current_share_price
+                userPosition: positions(
+                  limit: 1
+                  where: {account_id: {_eq: $userPositionAddress}}
+                ) {
+                  shares
+                  account_id
+                }
+              }
+            }
+            counter_term {
+              vaults(order_by: {curve_id: asc}) {
+                curve_id
+                term_id
+                current_share_price
+                userPosition: positions(
+                  limit: 1
+                  where: {account_id: {_eq: $userPositionAddress}}
+                ) {
+                  shares
+                  account_id
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    `;
+
+    const { positions_with_value } = await client.request(query, {
+      limit: 21,
+      offset: 0,
+      orderBy: [{ id: "asc" }, { redeemable_assets: "desc" }],
+      where: { account_id: { _eq: formattedAddress }, shares: { _gt: "0" } },
+      userPositionAddress: formattedAddress
+    });
+
+    res.status(OK).json({ positions: positions_with_value });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching user postions" });
+  }
+}
+
+export const getIntuitionAccountActivity = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const formattedAddress = checksumAddress(req.user.address);
+
+    const query = `query MyIntuitionActivity($userAddress: String!, $limit: Int = 10, $offset: Int = 0) {
+      events(
+        limit: $limit
+        offset: $offset
+        order_by: {created_at: desc}
+        where: {_and: [{type: {_neq: "FeesTransfered"}}, {_not: {_and: [{type: {_eq: "Deposited"}}, {deposit: {assets_after_fees: {_eq: 0}}}]}}, {_or: [{_and: [{type: {_eq: "AtomCreated"}}, {atom: {creator: {id: {_eq: $userAddress}}}}]}, {_and: [{type: {_eq: "TripleCreated"}}, {triple: {creator: {id: {_eq: $userAddress}}}}]}, {_and: [{type: {_eq: "Deposited"}}, {deposit: {sender: {id: {_eq: $userAddress}}}}]}, {_and: [{type: {_eq: "Redeemed"}}, {redemption: {sender: {id: {_eq: $userAddress}}}}]}]}]}
+      ) {
+        id
+        block_number
+        created_at
+        type
+        transaction_hash
+        atom_id
+        triple_id
+        deposit_id
+        redemption_id
+        atom {
+          term_id
+          data
+          image
+          cached_image {
+            ...CachedImageFields
+          }
+          label
+          type
+          wallet_id
+          creator {
+            id
+            label
+            image
+            cached_image {
+              ...CachedImageFields
+            }
+          }
+        }
+        triple {
+          term_id
+          creator {
+            label
+            image
+            cached_image {
+              ...CachedImageFields
+            }
+            id
+            atom_id
+            type
+          }
+          subject {
+            term_id
+            data
+            image
+            cached_image {
+              ...CachedImageFields
+            }
+            label
+            type
+          }
+          predicate {
+            term_id
+            data
+            image
+            cached_image {
+              ...CachedImageFields
+            }
+            label
+            type
+          }
+          object {
+            term_id
+            data
+            image
+            cached_image {
+              ...CachedImageFields
+            }
+            label
+            type
+          }
+        }
+      }
+    }
+    `;
+
+    const { events } = await client.request(query, { userAddress: formattedAddress, limit: 50, offset: 0 });
+
+    res.status(OK).json({ events });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching user intuition activity" })
+  }
+}
 
 export const validateTrustNameTask = async (
   req: GlobalRequest,

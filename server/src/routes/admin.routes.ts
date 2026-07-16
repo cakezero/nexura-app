@@ -47,6 +47,7 @@ import {
   getEcosystemDapps,
   deleteEcosystemDapp,
   updateEcosystemDapp,
+  restoreUserStreak,
 } from "@/controllers/admin.controller";
 import { deleteQuest, deleteSingleQuest, saveQuest, saveSingleQuest, publishSingleQuest, toggleQuestPublish } from "@/controllers/quest.controller";
 import { discordAdminCallback, adminConnectDiscord, fetchChannels, fetchRoles, fetchServers } from "@/controllers/hub.auth.controller";
@@ -85,6 +86,7 @@ router
   .post("/create-quest", createQuest)
   .post("/validate-task", markTask)
   .post("/add-admin", addAdmin)
+  .post("/restore-streak", restoreUserStreak)
   .post("/resend-invite", resendAdminInvite)
   .delete("/delete-invite", deleteAdminInvite)
   .post("/logout", adminLogout)
