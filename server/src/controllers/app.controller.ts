@@ -92,7 +92,7 @@ const getTrustNameProvider = () => {
 };
 
 export const getUserPNL = async (req: GlobalRequest, res: GlobalResponse) => {
-  try { 
+  try {
     const formattedAddress = checksumAddress(req.user.address);
 
     const query = `query GetAccountPnlCurrent($input: GetAccountPnlCurrentInput!) {
@@ -245,10 +245,27 @@ export const getPositions = async (req: GlobalRequest, res: GlobalResponse) => {
     }
     `;
 
+    // FILTERS
+    // pnl (asc) - worst pnl
+    // pnl (desc) - best pnl
+    // updated_at (desc) - newest
+    // updated_at (asc) - oldest
+    // redeemable_assets (desc) - highest value
+    // redeemable_assets (asc) - lowest value
+
+    if (!req.query) {
+      res.status(BAD_REQUEST).json({ error: "filter parameters are required" });
+      return;
+    }
+
+    const entries = Object.entries(req.query) as [string, any][];
+
+    const [key, value] = entries[0]!;
+
     const { positions_with_value } = await client.request(query, {
       limit: 21,
       offset: 0,
-      orderBy: [{ id: "asc" }, { redeemable_assets: "desc" }],
+      orderBy: [{ id: "asc" }, { [key]: value }],
       where: { account_id: { _eq: formattedAddress }, shares: { _gt: "0" } },
       userPositionAddress: formattedAddress
     });
