@@ -107,10 +107,8 @@ export function useWallet() {
       _pendingPurpose = opts?.purpose;
 
       if (!isConnected) {
-        const hasExistingToken =
-          !!localStorage.getItem("nexura:token") ||
-          !!localStorage.getItem("nexura:proj-token");
-        if (hasExistingToken) return null;
+        // If the user isn't connected to Wagmi, always let them open the modal.
+        // We previously blocked this if they had a token, but that trapped them if their wallet disconnected.
         _pendingAuth = true;
         openConnectModal?.();
         return null;

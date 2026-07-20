@@ -7,12 +7,21 @@ const JWT_SECRET = process.env.JWT_SECRET as string;
 
 const TEST_ADDRESS = "0x3365b738b84b56510347748788e52e68b8643e3a";
 
+interface SeedUser {
+  _id: mongoose.Types.ObjectId;
+  address: string;
+  streak: number;
+  dayCount: number;
+  xp: number;
+  [key: string]: unknown;
+}
+
 async function main() {
   await mongoose.connect(DB_URI);
   console.log("Connected to:", mongoose.connection.name);
 
-  const userSchema = new mongoose.Schema({}, { strict: false, collection: "users" });
-  const User = mongoose.model("User", userSchema);
+  const userSchema = new mongoose.Schema<SeedUser>({}, { strict: false, collection: "users" });
+  const User = mongoose.model<SeedUser>("User", userSchema);
 
   // Upsert the test user
   const u = await User.findOneAndUpdate(
@@ -41,6 +50,8 @@ async function main() {
     },
     { upsert: true, new: true }
   );
+
+  if (!u) throw new Error("Failed to upsert test user");
 
   console.log("\n✅ Test user seeded:");
   console.log(`   ID:       ${u._id}`);
