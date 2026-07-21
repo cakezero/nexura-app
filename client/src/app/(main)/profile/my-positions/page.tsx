@@ -721,15 +721,7 @@ useEffect(() => {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => router.push("/portal-claims")}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-all text-xs font-bold shadow-lg shadow-purple-600/20"
-          >
-            <Plus className="w-4 h-4" />
-            Create Claim
-          </button>
-        </div>
+
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
