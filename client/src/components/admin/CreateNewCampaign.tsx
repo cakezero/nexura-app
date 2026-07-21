@@ -193,6 +193,17 @@ const [discordChannels, setDiscordChannels] = useState<DiscordChannelOption[]>([
 const [discordRolesError, setDiscordRolesError] = useState("");
 const [discordChannelsError, setDiscordChannelsError] = useState("");
 const [discordOptionsLoading, setDiscordOptionsLoading] = useState(false);
+
+useEffect(() => {
+  if (campaignId) {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("edit") !== campaignId) {
+      url.searchParams.set("edit", campaignId);
+      window.history.replaceState({}, "", url.toString());
+    }
+  }
+}, [campaignId]);
+
 const showViewOnlyToast = () => {
   toast({
     title: "Campaign closed",
@@ -1513,6 +1524,15 @@ const isActive =
   return (
           <main className="flex-1 overflow-y-auto p-4 md:p-8 pt-16 md:pt-8 pb-24 md:pb-8 text-white">
             <div className="max-w-5xl mx-auto space-y-8">
+
+              {/* Back Button */}
+              <button
+                onClick={() => router.push("/studio-dashboard/campaigns-tab")}
+                className="flex items-center text-sm text-white/60 hover:text-white transition w-fit"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                Back to Campaigns
+              </button>
 
               {/* Title */}
               <div>
