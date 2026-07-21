@@ -125,6 +125,28 @@ export default function PortalClaims() {
     })();
   }, []);
 
+  // ---- Intuition API data (new endpoints: pnl, positions, activity) ----
+  const [intuitionPnl, setIntuitionPnl] = useState<any>(null);
+  const [intuitionPositions, setIntuitionPositions] = useState<any[]>([]);
+  const [intuitionActivity, setIntuitionActivity] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!getStoredAccessToken()) return;
+    let cancelled = false;
+    (async () => {
+      const [pnlRes, posRes, actRes] = await Promise.allSettled([
+        apiRequestV2("GET", "/api/user/get-intuition-pnl"),
+        apiRequestV2("GET", "/api/user/get-intuition-positions?redeemable_assets=desc"),
+        apiRequestV2("GET", "/api/user/get-intuition-activity"),
+      ]);
+      if (cancelled) return;
+      if (pnlRes.status === "fulfilled" && pnlRes.value) setIntuitionPnl(pnlRes.value);
+      if (posRes.status === "fulfilled" && posRes.value?.positions) setIntuitionPositions(posRes.value.positions);
+      if (actRes.status === "fulfilled" && actRes.value?.events) setIntuitionActivity(actRes.value.events);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
 
 useEffect(() => {
   let cancelled = false;
@@ -565,6 +587,20 @@ useEffect(() => {
   };
 
   const computedMetrics = useMemo(() => {
+    if (intuitionPnl) {
+      const pv = parseFloat(intuitionPnl.portfolio_value ?? "0") || 0;
+      const pnl = parseFloat(intuitionPnl.pnl ?? "0") || 0;
+      const roi = parseFloat(intuitionPnl.roi ?? "0") || 0;
+      return {
+        portfolioValue: pv.toFixed(3),
+        portfolioDiff: (roi >= 0 ? "+" : "") + roi.toFixed(2) + "%",
+        pnl: (pnl >= 0 ? "+" : "") + pnl.toFixed(4),
+        pnlDiff: (roi >= 0 ? "+" : "") + roi.toFixed(2) + "%",
+        roi: roi.toFixed(2) + "%",
+        roiDiff: (roi >= 0 ? "+" : "") + roi.toFixed(2) + "%",
+        positionsCount: intuitionPnl.positions ?? 0,
+      };
+    }
     const userAddress = user?.address;
     if (!userAddress || !visibleClaims.length) {
       return {
@@ -620,9 +656,35 @@ useEffect(() => {
       roiDiff: (roiVal >= 0 ? "+" : "") + roiVal.toFixed(2) + "%",
       positionsCount: positionsCount || 8
     };
-  }, [visibleClaims, user]);
+  }, [visibleClaims, user, intuitionPnl]);
 
   const allUserPositions = useMemo(() => {
+    if (intuitionPositions.length > 0) {
+      return intuitionPositions.map((p: any) => {
+        const triple = p.term?.triple;
+        const curveId = String(p.curve_id ?? p.vault?.curve_id ?? "1");
+        const pnlPct = parseFloat(p.pnl_pct ?? "0") || 0;
+        const value = p.redeemable_assets ? parseFloat(formatEther(p.redeemable_assets)) : 0;
+        const direction = triple?.counter_term_id && p.term_id === triple.counter_term_id ? "Oppose" : "Support";
+        return {
+          id: p.id ?? `${p.term_id}-${curveId}-${direction}`,
+          claim: {
+            term_id: p.term_id,
+            counter_term_id: triple?.counter_term_id,
+            total_position_count: p.vault?.position_count ?? 0,
+            total_market_cap: "0",
+            total_assets: "0",
+            createdAt: p.created_at,
+            term: { triple },
+          },
+          curve: curveId === "2" ? "Exponential" : "Linear",
+          direction,
+          value,
+          pnlValue: p.pnl ? parseFloat(formatEther(p.pnl)) : 0,
+          pnlPercent: pnlPct,
+        };
+      });
+    }
     const list: any[] = [];
     const userAddress = user?.address;
     if (userAddress) {
@@ -646,7 +708,7 @@ useEffect(() => {
       });
     }
     return list;
-  }, [visibleClaims, user]);
+  }, [visibleClaims, user, intuitionPositions]);
 
   const filteredPositions = useMemo(() => {
     const list = allUserPositions.filter((pos) => {
@@ -738,7 +800,6 @@ useEffect(() => {
         </div>
       </div>
 
-      {/* Metrics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
         <div className="relative overflow-hidden rounded-3xl border border-white/[0.08] bg-white/[0.05] p-6 shadow-2xl backdrop-blur-xl transition-all duration-300 hover:border-white/20 hover:scale-[1.02] hover:shadow-purple-500/5">
           <div className="text-[10px] text-gray-400 font-semibold tracking-wider uppercase">PORTFOLIO VALUE</div>
@@ -786,7 +847,6 @@ useEffect(() => {
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="border-b border-white/10 mt-8">
         <div className="flex gap-8">
           <button
@@ -842,41 +902,45 @@ useEffect(() => {
         </div>
       </div>
 
-      {/* Toolbar / Search & Sorting */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6">
-        <div className="relative w-full sm:max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            type="text"
-            placeholder={pageTab === "positions" ? "Search positions..." : "Search claims by subject, predicate, or object..."}
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-white/[0.05] border border-white/10 rounded-full pl-9 pr-4 py-2 focus:outline-none focus:ring-1 focus:ring-purple-500/30 text-xs text-white backdrop-blur-md"
-          />
-        </div>
-
-        <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
-          <div className="relative">
-            <select
-              value={sortOption}
-              onChange={(e) => setSortOption(e.target.value)}
-              className="appearance-none bg-white/[0.05] border border-white/10 rounded-full pl-4 pr-10 py-2 focus:outline-none text-xs text-white cursor-pointer backdrop-blur-md"
-            >
-              <option value="totalMarketCap_desc" className="bg-[#170f1f] text-white">Highest Value</option>
-              <option value="totalMarketCap_asc" className="bg-[#170f1f] text-white">Lowest Value</option>
-              <option value="positions_desc" className="bg-[#170f1f] text-white">Most Positions</option>
-              <option value="positions_asc" className="bg-[#170f1f] text-white">Fewest Positions</option>
-              <option value="pnl_desc" className="bg-[#170f1f] text-white">Best P&L</option>
-              <option value="pnl_asc" className="bg-[#170f1f] text-white">Worst P&L</option>
-              <option value="roi_desc" className="bg-[#170f1f] text-white">Best ROI</option>
-              <option value="roi_asc" className="bg-[#170f1f] text-white">Worst ROI</option>
-              <option value="alpha_asc" className="bg-[#170f1f] text-white">Alphabetically (A-Z)</option>
-              <option value="alpha_desc" className="bg-[#170f1f] text-white">Alphabetically (Z-A)</option>
-              <option value="createdAt_desc" className="bg-[#170f1f] text-white">Newest</option>
-              <option value="createdAt_asc" className="bg-[#170f1f] text-white">Oldest</option>
-            </select>
-            <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400" />
+      {pageTab !== "activity" && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6">
+          <div className="relative w-full sm:max-w-xs">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder={pageTab === "positions" ? "Search positions..." : "Search claims by subject, predicate, or object..."}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full bg-white/[0.05] border border-white/10 rounded-full pl-9 pr-4 py-2 focus:outline-none focus:ring-1 focus:ring-purple-500/30 text-xs text-white backdrop-blur-md"
+            />
           </div>
+
+          <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+            <div className="relative">
+              <select
+                value={sortOption}
+                onChange={(e) => setSortOption(e.target.value)}
+                className="appearance-none bg-white/[0.05] border border-white/10 rounded-full pl-4 pr-10 py-2 focus:outline-none text-xs text-white cursor-pointer backdrop-blur-md"
+              >
+                <option value="totalMarketCap_desc" className="bg-[#170f1f] text-white">Highest Value</option>
+                <option value="totalMarketCap_asc" className="bg-[#170f1f] text-white">Lowest Value</option>
+                <option value="positions_desc" className="bg-[#170f1f] text-white">Most Positions</option>
+                <option value="positions_asc" className="bg-[#170f1f] text-white">Fewest Positions</option>
+                {pageTab === "positions" && (
+                  <>
+                    <option value="pnl_desc" className="bg-[#170f1f] text-white">Best P&L</option>
+                    <option value="pnl_asc" className="bg-[#170f1f] text-white">Worst P&L</option>
+                    <option value="roi_desc" className="bg-[#170f1f] text-white">Best ROI</option>
+                    <option value="roi_asc" className="bg-[#170f1f] text-white">Worst ROI</option>
+                  </>
+                )}
+                <option value="alpha_asc" className="bg-[#170f1f] text-white">Alphabetically (A-Z)</option>
+                <option value="alpha_desc" className="bg-[#170f1f] text-white">Alphabetically (Z-A)</option>
+                <option value="createdAt_desc" className="bg-[#170f1f] text-white">Newest</option>
+                <option value="createdAt_asc" className="bg-[#170f1f] text-white">Oldest</option>
+              </select>
+              <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400" />
+            </div>
 
           <div className="flex items-center border border-white/10 rounded-full overflow-hidden bg-white/[0.05] p-0.5 backdrop-blur-md">
             <button
@@ -894,103 +958,100 @@ useEffect(() => {
           </div>
         </div>
       </div>
+      )}
 
-      {/* Split-Screen Sidebar Filters & Content */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 mt-6">
-        {/* Left Filter Sidebar */}
-        <div className="lg:col-span-1">
-          <div className="border border-white/[0.08] bg-white/[0.05] rounded-3xl p-6 shadow-2xl backdrop-blur-xl space-y-6">
-            {/* Direction Section */}
-            <div>
-              <div
-                onClick={() => setIsDirectionOpen(!isDirectionOpen)}
-                className="flex items-center justify-between cursor-pointer select-none mb-3 text-xs font-semibold text-gray-400 uppercase tracking-wider hover:text-white transition-all"
-              >
-                <span>Direction</span>
-                <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isDirectionOpen ? "" : "-rotate-90"}`} />
-              </div>
-              {isDirectionOpen && (
-                <div className="flex flex-col gap-2">
-                  {["All", "Support", "Oppose"].map((dir) => {
-                    const isActive = directionFilter === dir;
-                    return (
-                      <button
-                        key={dir}
-                        onClick={() => setDirectionFilter(isActive ? "All" : dir)}
-                        className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
-                          isActive 
-                            ? "bg-white/15 text-white shadow-inner font-bold" 
-                            : "text-gray-400 hover:bg-white/5 hover:text-white"
-                        }`}
-                      >
-                        <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-all ${
-                          isActive 
-                            ? "border-white bg-white" 
-                            : "border-white/30 bg-transparent"
-                        }`}>
-                          {isActive && (
-                            <svg className="w-3 h-3 text-black" fill="none" stroke="currentColor" strokeWidth="3.5" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                            </svg>
-                          )}
-                        </div>
-                        <span>{dir}</span>
-                      </button>
-                    );
-                  })}
+        {pageTab === "positions" && (
+          <div className="lg:col-span-1">
+            <div className="border border-white/[0.08] bg-white/[0.05] rounded-3xl p-6 shadow-2xl backdrop-blur-xl space-y-6">
+              <div>
+                <div
+                  onClick={() => setIsDirectionOpen(!isDirectionOpen)}
+                  className="flex items-center justify-between cursor-pointer select-none mb-3 text-xs font-semibold text-gray-400 uppercase tracking-wider hover:text-white transition-all"
+                >
+                  <span>Direction</span>
+                  <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isDirectionOpen ? "" : "-rotate-90"}`} />
                 </div>
-              )}
-            </div>
-
-            {/* Divider */}
-            <div className="border-t border-white/10" />
-
-            {/* Curve Type Section */}
-            <div>
-              <div
-                onClick={() => setIsCurveOpen(!isCurveOpen)}
-                className="flex items-center justify-between cursor-pointer select-none mb-3 text-xs font-semibold text-gray-400 uppercase tracking-wider hover:text-white transition-all"
-              >
-                <span>Curve Type</span>
-                <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isCurveOpen ? "" : "-rotate-90"}`} />
+                {isDirectionOpen && (
+                  <div className="flex flex-col gap-2">
+                    {["All", "Support", "Oppose"].map((dir) => {
+                      const isActive = directionFilter === dir;
+                      return (
+                        <button
+                          key={dir}
+                          onClick={() => setDirectionFilter(isActive ? "All" : dir)}
+                          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                            isActive 
+                              ? "bg-white/15 text-white shadow-inner font-bold" 
+                              : "text-gray-400 hover:bg-white/5 hover:text-white"
+                          }`}
+                        >
+                          <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-all ${
+                            isActive 
+                              ? "border-white bg-white" 
+                              : "border-white/30 bg-transparent"
+                          }`}>
+                            {isActive && (
+                              <svg className="w-3 h-3 text-black" fill="none" stroke="currentColor" strokeWidth="3.5" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                              </svg>
+                            )}
+                          </div>
+                          <span>{dir}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-              {isCurveOpen && (
-                <div className="flex flex-col gap-2">
-                  {["All", "Linear", "Exponential"].map((curve) => {
-                    const isActive = curveFilter === curve;
-                    return (
-                      <button
-                        key={curve}
-                        onClick={() => setCurveFilter(isActive ? "All" : curve)}
-                        className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
-                          isActive 
-                            ? "bg-white/15 text-white shadow-inner font-bold" 
-                            : "text-gray-400 hover:bg-white/5 hover:text-white"
-                        }`}
-                      >
-                        <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-all ${
-                          isActive 
-                            ? "border-white bg-white" 
-                            : "border-white/30 bg-transparent"
-                        }`}>
-                          {isActive && (
-                            <svg className="w-3 h-3 text-black" fill="none" stroke="currentColor" strokeWidth="3.5" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                            </svg>
-                          )}
-                        </div>
-                        <span>{curve}</span>
-                      </button>
-                    );
-                  })}
+
+              <div className="border-t border-white/10" />
+
+              <div>
+                <div
+                  onClick={() => setIsCurveOpen(!isCurveOpen)}
+                  className="flex items-center justify-between cursor-pointer select-none mb-3 text-xs font-semibold text-gray-400 uppercase tracking-wider hover:text-white transition-all"
+                >
+                  <span>Curve Type</span>
+                  <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isCurveOpen ? "" : "-rotate-90"}`} />
                 </div>
-              )}
+                {isCurveOpen && (
+                  <div className="flex flex-col gap-2">
+                    {["All", "Linear", "Exponential"].map((curve) => {
+                      const isActive = curveFilter === curve;
+                      return (
+                        <button
+                          key={curve}
+                          onClick={() => setCurveFilter(isActive ? "All" : curve)}
+                          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                            isActive 
+                              ? "bg-white/15 text-white shadow-inner font-bold" 
+                              : "text-gray-400 hover:bg-white/5 hover:text-white"
+                          }`}
+                        >
+                          <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-all ${
+                            isActive 
+                              ? "border-white bg-white" 
+                              : "border-white/30 bg-transparent"
+                          }`}>
+                            {isActive && (
+                              <svg className="w-3 h-3 text-black" fill="none" stroke="currentColor" strokeWidth="3.5" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                              </svg>
+                            )}
+                          </div>
+                          <span>{curve}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
-        {/* Right Table/Grid Content */}
-        <div className="lg:col-span-3">
+        <div className={pageTab === "positions" ? "lg:col-span-3" : "lg:col-span-4"}>
           {pageTab === "positions" && (
             <>
               {filteredPositions.length === 0 ? (
@@ -999,19 +1060,19 @@ useEffect(() => {
                 </div>
               ) : view === "list" ? (
                 /* Desktop Table View */
-                <div className="hidden md:block border border-white/[0.08] bg-white/[0.05] rounded-3xl overflow-hidden shadow-2xl backdrop-blur-xl w-full">
-                  <table className="w-full text-left border-collapse font-geist font-light tracking-wide">
-                    <thead>
-                      <tr className="border-b border-white/10 bg-white/5 text-[10px] uppercase tracking-wider text-gray-400 font-semibold">
-                        <th className="px-6 py-4 font-semibold">Identity / Claim</th>
-                        <th className="px-6 py-4 font-semibold">Curve</th>
-                        <th className="px-6 py-4 font-semibold">Direction</th>
-                        <th className="px-6 py-4 font-semibold">Current Value</th>
-                        <th className="px-6 py-4 font-semibold">P&L</th>
-                        <th className="px-6 py-4 text-center font-semibold">Action</th>
+                <div className="hidden md:block overflow-x-auto w-full text-xs">
+                  <table className="min-w-full text-left border-collapse font-geist font-light tracking-wide">
+                    <thead className="text-sm font-light tracking-wide">
+                      <tr className="bg-gray-800 text-gray-300">
+                        <th className="px-6 py-2 font-light tracking-wide">Identity / Claim</th>
+                        <th className="px-6 py-2 font-light tracking-wide">Curve</th>
+                        <th className="px-6 py-2 font-light tracking-wide">Direction</th>
+                        <th className="px-6 py-2 font-light tracking-wide">Current Value</th>
+                        <th className="px-6 py-2 font-light tracking-wide">P&L</th>
+                        <th className="px-6 py-2 font-light tracking-wide text-center">Action</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-white/5 text-xs">
+                    <tbody className="text-xs">
                       {filteredPositions.map((pos) => {
                         const isPos = pos.pnlPercent >= 0;
                         return (
@@ -1021,26 +1082,36 @@ useEffect(() => {
                               console.log("[ACTION] openClaim", { termId: pos.claim.term_id });
                               router.push(`/portal-claims/${pos.claim.term_id}`);
                             }}
-                            className="hover:bg-white/5 transition-colors cursor-pointer"
+                            className="bg-[#060210] hover:bg-[#1a0f2e] cursor-pointer"
                           >
                             <td className="px-6 py-4 max-w-md">
                               <div className="flex flex-wrap items-center gap-2">
-                                <span className="bg-[#22193A] border border-white/5 px-2.5 py-1 rounded-lg flex items-center gap-2 text-white font-semibold">
+                                <span
+                                  className="bg-[#22193A] px-2.5 py-1 rounded flex items-center gap-2 max-w-[240px] truncate cursor-pointer hover:bg-[#2f2350] transition-colors duration-200 text-sm sm:text-base"
+                                >
                                   <img
                                     src={pos.claim.term?.triple?.subject?.image || "https://s3-alpha.figma.com/profile/35b9f72a-8ce9-433f-8a7d-0281d31cc704"}
-                                    className="w-5 h-5 rounded-full object-cover"
+                                    className="w-7 h-7 flex-shrink-0"
                                     onError={(e) => {
                                       e.currentTarget.src = "/user.png";
                                     }}
                                     alt=""
                                   />
-                                  <span>{pos.claim.term?.triple?.subject?.label}</span>
+                                  <span className="truncate">
+                                    {highlightMatch(pos.claim.term?.triple?.subject?.label ?? "", searchTerm)}
+                                  </span>
                                 </span>
-                                <span className="text-[10px] text-gray-400 font-medium">
-                                  {pos.claim.term?.triple?.predicate?.label}
+
+                                <span
+                                  className="text-xs px-1 cursor-pointer hover:text-white transition-colors duration-200"
+                                >
+                                  {highlightMatch(pos.claim.term?.triple?.predicate?.label ?? "", searchTerm)}
                                 </span>
-                                <span className="bg-[#22193A] border border-white/5 px-2.5 py-1 rounded-lg text-white font-semibold">
-                                  {pos.claim.term?.triple?.object?.label}
+
+                                <span
+                                  className="bg-[#22193A] px-2.5 py-1 rounded max-w-[280px] truncate cursor-pointer hover:bg-[#2f2350] transition-colors duration-200 text-sm sm:text-base"
+                                >
+                                  {highlightMatch(pos.claim.term?.triple?.object?.label ?? "", searchTerm)}
                                 </span>
                               </div>
                             </td>
@@ -1110,11 +1181,31 @@ useEffect(() => {
                         className="border border-white/[0.08] bg-white/[0.05] rounded-3xl p-5 hover:border-white/20 hover:scale-[1.02] hover:bg-black/50 transition-all duration-300 cursor-pointer backdrop-blur-xl flex flex-col justify-between gap-4 shadow-xl"
                       >
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="bg-[#22193A] border border-white/5 px-2 py-0.5 rounded text-xs text-white font-semibold">
-                            {pos.claim.term?.triple?.subject?.label}
+                          <span
+                            className="bg-[#22193A] px-2.5 py-1 rounded flex items-center gap-2 max-w-[240px] truncate cursor-pointer hover:bg-[#2f2350] transition-colors duration-200 text-sm sm:text-base"
+                          >
+                            <img
+                              src={pos.claim.term?.triple?.subject?.image || "https://s3-alpha.figma.com/profile/35b9f72a-8ce9-433f-8a7d-0281d31cc704"}
+                              className="w-7 h-7 flex-shrink-0"
+                              onError={(e) => {
+                                e.currentTarget.src = "/user.png";
+                              }}
+                              alt=""
+                            />
+                            <span className="truncate">
+                              {pos.claim.term?.triple?.subject?.label}
+                            </span>
                           </span>
-                          <span className="text-[10px] text-gray-400">{pos.claim.term?.triple?.predicate?.label}</span>
-                          <span className="bg-[#22193A] border border-white/5 px-2 py-0.5 rounded text-xs text-white font-semibold">
+
+                          <span
+                            className="text-xs px-1 cursor-pointer hover:text-white transition-colors duration-200"
+                          >
+                            {pos.claim.term?.triple?.predicate?.label}
+                          </span>
+
+                          <span
+                            className="bg-[#22193A] px-2.5 py-1 rounded max-w-[280px] truncate cursor-pointer hover:bg-[#2f2350] transition-colors duration-200 text-sm sm:text-base"
+                          >
                             {pos.claim.term?.triple?.object?.label}
                           </span>
                         </div>
@@ -1167,7 +1258,6 @@ useEffect(() => {
                 </div>
               )}
 
-              {/* Mobile stacked layout (always active on mobile regardless of view option) */}
               <div className="md:hidden flex flex-col gap-4">
                 {filteredPositions.map((pos) => {
                   const isPos = pos.pnlPercent >= 0;
@@ -1178,11 +1268,31 @@ useEffect(() => {
                       className="border border-white/[0.08] bg-white/[0.05] rounded-3xl p-4 flex flex-col gap-3 shadow-xl hover:scale-[1.01] transition-all duration-300 cursor-pointer backdrop-blur-xl"
                     >
                       <div className="flex flex-wrap items-center gap-2 text-xs">
-                        <span className="bg-[#1c122e] px-2 py-0.5 rounded text-white font-semibold">
-                          {pos.claim.term?.triple?.subject?.label}
+                        <span
+                          className="bg-[#22193A] px-2.5 py-1 rounded flex items-center gap-2 max-w-[240px] truncate cursor-pointer hover:bg-[#2f2350] transition-colors duration-200 text-sm sm:text-base"
+                        >
+                          <img
+                            src={pos.claim.term?.triple?.subject?.image || "https://s3-alpha.figma.com/profile/35b9f72a-8ce9-433f-8a7d-0281d31cc704"}
+                            className="w-7 h-7 flex-shrink-0"
+                            onError={(e) => {
+                              e.currentTarget.src = "/user.png";
+                            }}
+                            alt=""
+                          />
+                          <span className="truncate">
+                            {pos.claim.term?.triple?.subject?.label}
+                          </span>
                         </span>
-                        <span className="text-gray-400">{pos.claim.term?.triple?.predicate?.label}</span>
-                        <span className="bg-[#1c122e] px-2 py-0.5 rounded text-white font-semibold">
+
+                        <span
+                          className="text-xs px-1 cursor-pointer hover:text-white transition-colors duration-200"
+                        >
+                          {pos.claim.term?.triple?.predicate?.label}
+                        </span>
+
+                        <span
+                          className="bg-[#22193A] px-2.5 py-1 rounded max-w-[280px] truncate cursor-pointer hover:bg-[#2f2350] transition-colors duration-200 text-sm sm:text-base"
+                        >
                           {pos.claim.term?.triple?.object?.label}
                         </span>
                       </div>
@@ -1232,6 +1342,34 @@ useEffect(() => {
             </>
           )}
 
+          {pageTab === "activity" && (
+            <div className="border border-white/[0.08] bg-white/[0.05] rounded-3xl overflow-hidden shadow-2xl backdrop-blur-xl">
+              {intuitionActivity.length === 0 ? (
+                <div className="flex flex-col items-center justify-center p-12 text-center text-gray-400">
+                  <p className="text-sm">No activity yet</p>
+                </div>
+              ) : (
+                <ul className="divide-y divide-white/5">
+                  {intuitionActivity.map((ev: any) => {
+                    const triple = ev.triple;
+                    const label = triple ? `${triple.subject?.label ?? ""} ${triple.predicate?.label ?? ""} ${triple.object?.label ?? ""}`.trim() : (ev.atom?.label ?? "an atom");
+                    const typeMeta = ({ Deposited: { text: "Deposited", color: "text-[#00E1A2]" }, Redeemed: { text: "Redeemed", color: "text-red-400" }, AtomCreated: { text: "Created atom", color: "text-blue-400" }, TripleCreated: { text: "Created claim", color: "text-purple-400" } } as Record<string, { text: string; color: string }>)[ev.type as string] ?? { text: ev.type, color: "text-gray-300" };
+                    const img = triple?.subject?.image || ev.atom?.image || "/user.png";
+                    return (
+                      <li key={ev.id} className="flex items-center gap-4 px-6 py-4 hover:bg-white/5 transition-colors">
+                        <img src={img} onError={(e) => { e.currentTarget.src = "/user.png"; }} className="w-9 h-9 rounded-full object-cover border border-white/10" alt="" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-white truncate"><span className={`font-semibold ${typeMeta.color}`}>{typeMeta.text}</span>{" "}<span className="text-gray-300">{label}</span></p>
+                          <p className="text-[11px] text-gray-500">{ev.created_at ? new Date(ev.created_at).toLocaleString() : ""}</p>
+                        </div>
+                        {ev.transaction_hash && (<a href={`${getExplorer()}/tx/${ev.transaction_hash}`} target="_blank" rel="noreferrer" className="text-[11px] text-purple-400 hover:underline shrink-0">View tx</a>)}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          )}
           {pageTab === "claims" && (
             <>
               {sortedClaims.length === 0 ? (
@@ -1240,42 +1378,52 @@ useEffect(() => {
                 </div>
               ) : view === "list" ? (
                 /* Desktop Table View for Claims */
-                <div className="hidden md:block border border-white/[0.08] bg-white/[0.05] rounded-3xl overflow-hidden shadow-2xl backdrop-blur-xl w-full">
-                  <table className="w-full text-left border-collapse font-geist font-light tracking-wide">
-                    <thead>
-                      <tr className="border-b border-white/10 bg-white/5 text-[10px] uppercase tracking-wider text-gray-400 font-semibold">
-                        <th className="px-6 py-4 font-semibold">Claims</th>
-                        <th className="px-6 py-4 font-semibold">Market Cap</th>
-                        <th className="px-6 py-4 font-semibold">Support</th>
-                        <th className="px-6 py-4 font-semibold">Oppose</th>
-                        <th className="px-6 py-4 text-center font-semibold">Actions</th>
+                <div className="hidden md:block overflow-x-auto w-full text-xs">
+                  <table className="min-w-full text-left border-collapse font-geist font-light tracking-wide">
+                    <thead className="text-sm font-light tracking-wide">
+                      <tr className="bg-gray-800 text-gray-300">
+                        <th className="px-6 py-2 font-light tracking-wide">Claims</th>
+                        <th className="px-6 py-2 font-light tracking-wide">Market Cap</th>
+                        <th className="px-6 py-2 font-light tracking-wide">Support</th>
+                        <th className="px-6 py-2 font-light tracking-wide">Oppose</th>
+                        <th className="px-6 py-2 font-light tracking-wide text-center">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-white/5 text-xs">
+                    <tbody className="text-xs">
                       {sortedClaims.map((claim, index) => (
                         <tr 
                           key={index} 
                           onClick={() => router.push(`/portal-claims/${claim.term_id}`)}
-                          className="hover:bg-white/5 transition-colors cursor-pointer"
+                          className="bg-[#060210] hover:bg-[#1a0f2e] cursor-pointer"
                         >
                           <td className="px-6 py-4 max-w-md">
                             <div className="flex flex-wrap items-center gap-2">
-                              <span className="bg-[#22193A] border border-white/5 px-2.5 py-1 rounded-lg flex items-center gap-2 text-white font-semibold">
+                              <span
+                                className="bg-[#22193A] px-2.5 py-1 rounded flex items-center gap-2 max-w-[240px] truncate cursor-pointer hover:bg-[#2f2350] transition-colors duration-200 text-sm sm:text-base"
+                              >
                                 <img
-                                  src={claim.term.triple.subject.image || "https://s3-alpha.figma.com/profile/35b9f72a-8ce9-433f-8a7d-0281d31cc704"}
-                                  className="w-5 h-5 rounded-full object-cover"
+                                  src={claim.term?.triple?.subject?.image || "https://s3-alpha.figma.com/profile/35b9f72a-8ce9-433f-8a7d-0281d31cc704"}
+                                  className="w-7 h-7 flex-shrink-0"
                                   onError={(e) => {
                                     e.currentTarget.src = "/user.png";
                                   }}
                                   alt=""
                                 />
-                                <span>{highlightMatch(claim.term.triple.subject.label, searchTerm)}</span>
+                                <span className="truncate">
+                                  {highlightMatch(claim.term?.triple?.subject?.label ?? "", searchTerm)}
+                                </span>
                               </span>
-                              <span className="text-[10px] text-gray-400 font-medium">
+
+                              <span
+                                className="text-xs px-1 cursor-pointer hover:text-white transition-colors duration-200"
+                              >
                                 {highlightMatch(claim?.term?.triple?.predicate?.label ?? "", searchTerm)}
                               </span>
-                              <span className="bg-[#22193A] border border-white/5 px-2.5 py-1 rounded-lg text-white font-semibold">
-                                {highlightMatch(claim.term.triple.object.label, searchTerm)}
+
+                              <span
+                                className="bg-[#22193A] px-2.5 py-1 rounded max-w-[280px] truncate cursor-pointer hover:bg-[#2f2350] transition-colors duration-200 text-sm sm:text-base"
+                              >
+                                {highlightMatch(claim.term?.triple?.object?.label ?? "", searchTerm)}
                               </span>
                             </div>
                           </td>
@@ -1336,11 +1484,31 @@ useEffect(() => {
                         className="border border-white/[0.08] bg-white/[0.05] rounded-3xl p-5 hover:border-white/20 hover:scale-[1.02] hover:bg-black/50 transition-all duration-300 cursor-pointer backdrop-blur-xl flex flex-col gap-4 justify-between shadow-xl"
                       >
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="bg-[#22193A] border border-white/5 px-2 py-0.5 rounded text-xs text-white font-semibold">
-                            {claim.term.triple.subject.label}
+                          <span
+                            className="bg-[#22193A] px-2.5 py-1 rounded flex items-center gap-2 max-w-[240px] truncate cursor-pointer hover:bg-[#2f2350] transition-colors duration-200 text-sm sm:text-base"
+                          >
+                            <img
+                              src={claim.term?.triple?.subject?.image || "https://s3-alpha.figma.com/profile/35b9f72a-8ce9-433f-8a7d-0281d31cc704"}
+                              className="w-7 h-7 flex-shrink-0"
+                              onError={(e) => {
+                                e.currentTarget.src = "/user.png";
+                              }}
+                              alt=""
+                            />
+                            <span className="truncate">
+                              {claim.term.triple.subject.label}
+                            </span>
                           </span>
-                          <span className="text-[10px] text-gray-400">{claim.term.triple.predicate.label}</span>
-                          <span className="bg-[#22193A] border border-white/5 px-2 py-0.5 rounded text-xs text-white font-semibold">
+
+                          <span
+                            className="text-xs px-1 cursor-pointer hover:text-white transition-colors duration-200"
+                          >
+                            {claim.term.triple.predicate.label}
+                          </span>
+
+                          <span
+                            className="bg-[#22193A] px-2.5 py-1 rounded max-w-[280px] truncate cursor-pointer hover:bg-[#2f2350] transition-colors duration-200 text-sm sm:text-base"
+                          >
                             {claim.term.triple.object.label}
                           </span>
                         </div>
@@ -1382,7 +1550,6 @@ useEffect(() => {
                 </div>
               )}
 
-              {/* Mobile stacked layout for Claims */}
               <div className="md:hidden flex flex-col gap-4">
                 {sortedClaims.map((claim, index) => {
                   const supportCount = claim.term.positions_aggregate.aggregate.count;
@@ -1398,11 +1565,31 @@ useEffect(() => {
                       className="border border-white/[0.08] bg-white/[0.05] rounded-3xl p-4 flex flex-col gap-3 shadow-xl hover:scale-[1.01] transition-all duration-300 cursor-pointer backdrop-blur-xl"
                     >
                       <div className="flex flex-wrap items-center gap-2 text-xs">
-                        <span className="bg-[#1c122e] px-2 py-0.5 rounded text-white font-semibold">
-                          {claim.term.triple.subject.label}
+                        <span
+                          className="bg-[#22193A] px-2.5 py-1 rounded flex items-center gap-2 max-w-[240px] truncate cursor-pointer hover:bg-[#2f2350] transition-colors duration-200 text-sm sm:text-base"
+                        >
+                          <img
+                            src={claim.term?.triple?.subject?.image || "https://s3-alpha.figma.com/profile/35b9f72a-8ce9-433f-8a7d-0281d31cc704"}
+                            className="w-7 h-7 flex-shrink-0"
+                            onError={(e) => {
+                              e.currentTarget.src = "/user.png";
+                            }}
+                            alt=""
+                          />
+                          <span className="truncate">
+                            {claim.term.triple.subject.label}
+                          </span>
                         </span>
-                        <span className="text-gray-400">{claim.term.triple.predicate.label}</span>
-                        <span className="bg-[#1c122e] px-2 py-0.5 rounded text-white font-semibold">
+
+                        <span
+                          className="text-xs px-1 cursor-pointer hover:text-white transition-colors duration-200"
+                        >
+                          {claim.term.triple.predicate.label}
+                        </span>
+
+                        <span
+                          className="bg-[#22193A] px-2.5 py-1 rounded max-w-[280px] truncate cursor-pointer hover:bg-[#2f2350] transition-colors duration-200 text-sm sm:text-base"
+                        >
                           {claim.term.triple.object.label}
                         </span>
                       </div>
@@ -1448,12 +1635,10 @@ useEffect(() => {
         </div>
       </div>
 
-          {/* Modal */}
           {showModal && activeClaim && (
             <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
               <div className="bg-[#0c081e]/80 max-w-2xl w-full mx-4 p-6 rounded-3xl relative border border-white/10 h-[calc(100vh-8rem)] overflow-y-auto backdrop-blur-2xl shadow-2xl shadow-purple-500/10">
 
-                {/* Title + Support Tag */}
                 <div className="flex items-center gap-2 mb-1 p-2 pb-1">
                   <h2 className="text-white font text-base">Stake</h2>
                   <div className="flex items-center gap-1 group relative">
@@ -1467,19 +1652,16 @@ useEffect(() => {
                       ?
                     </span>
 
-                    {/* Tooltip */}
                     <div className="absolute left-0 top-5 w-56 text-[10px] bg-black text-white p-2 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
                       Staking on a Triple signifies a belief in the relevancy of the respective Triple and enhances its discoverability in the Intuition system.
                     </div>
                   </div>
                 </div>
 
-                {/* Subtitle */}
                 <p className="text-gray-400 text-xs mb-12 -pt-2">
                   Staking on a Triple enhances its discoverability in the Intuition system.
                 </p>
 
-                {/* Statement */}
                 <div className="text-gray-300 mb-6 px-6 flex flex-wrap items-center justify-center gap-2 text-sm">
                   <span className="bg-[#1a1230] hover:bg-[#241744] cursor-pointer transition-colors duration-200 px-3 py-1.5 rounded inline-flex items-center gap-2 max-w-[200px] truncate">
                     <img
@@ -1497,11 +1679,9 @@ useEffect(() => {
                   </span>
                 </div>
 
-                {/* Tabs */}
                 <div className="flex justify-center mb-5">
                   <div className="flex gap-12 relative">
 
-                    {/* Deposit Tab */}
                     <button
                       className={`relative px-6 py-3 text-base font-medium ${activeTab === "deposit" ? "text-white" : "text-gray-400"
                         }`}
@@ -1515,7 +1695,6 @@ useEffect(() => {
                       )}
                     </button>
 
-                    {/* Redeem Tab */}
                     <button
                       className={`relative px-6 py-3 text-base font-medium transition-colors duration-200
     ${hasAnyPosition
@@ -1538,10 +1717,8 @@ useEffect(() => {
                 </div>
 
 
-                {/* Tab Content */}
                 {activeTab === "deposit" && (
                   <div className="px-4 md:px-12">
-                    {/* Main Card: Active Position */}
                     <div className="flex justify-center mb-4">
                       <div className="bg-[#110A2B] border-2 border-[#393B60] p-2 rounded-lg flex items-center justify-between gap-6 mt-4 w-[380px]">
 
@@ -1566,11 +1743,9 @@ useEffect(() => {
                       </div>
                     </div>
 
-                    {/* Wallet + Curve Row */}
                     <div className="flex justify-center">
-                      <div className="flex items-center gap-6 mb-3 w-[380px]"> {/* fixed width matching tabs/card */}
+                      <div className="flex items-center gap-6 mb-3 w-[380px]"> 
 
-                        {/* LEFT: Wallet */}
                         <div className="flex flex-col">
                           <div className="bg-[#110A2B] border border-[#393B60] rounded-2xl px-3 py-1.5 flex items-center gap-2 text-xs">
                             <img src="/wallet.png" alt="Wallet Icon" className="w-4 h-4" />
@@ -1581,7 +1756,6 @@ useEffect(() => {
                             </span>
                           </div>
 
-                          {/* Insufficient Funds Warning */}
                           {transactionAmount &&
                             Number(transactionAmount) > Number(tTrustBalance) / 10 ** 18 && (
                               <span className="text-red-500 text-xs mt-1">
@@ -1590,11 +1764,9 @@ useEffect(() => {
                             )}
                         </div>
 
-                        {/* Right-aligned Cluster: Curve Info + Toggle + Info */}
-                        <div className="flex items-center gap-1 ml-auto"> {/* ml-auto pushes the whole cluster to far right, gap-1 keeps them tight */}
+                        <div className="flex items-center gap-1 ml-auto"> 
 
-                          {/* Curve Info Text */}
-                          <div className="flex flex-col justify-center text-right"> {/* text-right aligns text toward toggle */}
+                          <div className="flex flex-col justify-center text-right"> 
                             <span className="text-white text-xs">
                               {isToggled ? "Exponential Curve" : "Linear Curve"}
                             </span>
@@ -1603,7 +1775,6 @@ useEffect(() => {
                             </span>
                           </div>
 
-                          {/* Toggle */}
                           <label className="relative inline-block w-10 h-5 cursor-pointer">
                             <input
                               type="checkbox"
@@ -1612,14 +1783,11 @@ useEffect(() => {
                               onChange={() => setIsToggled(!isToggled)}
                             />
 
-                            {/* Track */}
                             <span className="block w-full h-full bg-gray-400 peer-checked:bg-white rounded-full transition-colors duration-200"></span>
 
-                            {/* Knob */}
                             <span className="absolute left-0.5 top-0.5 w-4 h-4 bg-black rounded-full shadow-md transition-transform duration-200 peer-checked:translate-x-[1.25rem]"></span>
                           </label>
 
-                          {/* Info Button */}
                           <button
                             onClick={() => setShowCurveInfo(true)}
                             className="w-8 h-8 flex items-center justify-center rounded-full border border-[#393B60] text-gray-300 text-sm hover:bg-[#1a133d] hover:text-white transition-colors"
@@ -1627,11 +1795,9 @@ useEffect(() => {
                             i
                           </button>
 
-                          {/* Slide-in Modal (Fixed Right) */}
                           {showCurveInfo && (
                             <div className="fixed top-0 right-0 h-full w-96 bg-[#110A2B] border-l-2 border-[#393B60] p-4 z-50 animate-slideIn overflow-y-auto">
 
-                              {/* Close Button */}
                               <button
                                 onClick={() => setShowCurveInfo(false)}
                                 className="absolute top-3 right-3 text-gray-400 hover:text-white"
@@ -1639,7 +1805,6 @@ useEffect(() => {
                                 ✕
                               </button>
 
-                              {/* Main Heading */}
                               <h2 className="text-white text-lg text-center mb-2">
                                 How Bonding Curves Work
                               </h2>
@@ -1647,7 +1812,6 @@ useEffect(() => {
                                 Intuition uses bonding curves to automatically set identity and claim prices based on supply and demand, rewarding early curation of valuable information.
                               </p>
 
-                              {/* Linear Curve Section */}
                               <img
                                 src="/linear-curve.svg"
                                 alt="Linear Curve"
@@ -1663,7 +1827,6 @@ useEffect(() => {
                                 </p>
                               </div>
 
-                              {/* Exponential Curve Section */}
                               <img
                                 src="/exponential.svg"
                                 alt="Exponential Curve"
@@ -1684,8 +1847,6 @@ useEffect(() => {
                       </div>
                     </div>
 
-                    {/* Center Big Zero */}
-                    {/* <div className="flex flex-col items-center mt-2"> */}
                     <div className="flex flex-col items-center mt-2 w-full px-4">
                       <input
                         type="number"
@@ -1704,7 +1865,6 @@ useEffect(() => {
 
                       <span className="text-gray-300 text-xs font-normal mt-1">TRUST</span>
 
-                      {/* Min Button */}
                       <button
                         type="button"
                         onClick={() => setTransactionAmount("0.1")}
@@ -1715,7 +1875,6 @@ useEffect(() => {
                     </div>
 
 
-                    {/* Review Deposit Button */}
                     <button
                       className={`mx-auto block px-6 py-2.5 rounded-3xl mt-4 text-sm transition-colors ${transactionAmount &&
                         Number(transactionAmount) > 0 &&
@@ -1738,7 +1897,6 @@ useEffect(() => {
                           : "Enter an Amount"}
                     </button>
 
-                    {/* Optional small red warning below button */}
                     {transactionAmount &&
                       Number(transactionAmount) > Number(tTrustBalance) / 10 ** 18 && (
                         <span className="text-red-500 text-xs mt-1 block text-center">
@@ -1749,10 +1907,8 @@ useEffect(() => {
                 )}
 
 
-                {/* Tab Content */}
                 {activeTab === "redeem" && (
                   <div className="px-4 md:px-12">
-                    {/* Main Card: Active Position */}
                     <div className="flex justify-center mb-4">
                       <div className="bg-[#110A2B] border-2 border-[#393B60] p-2 rounded-lg flex items-center justify-between gap-6 mt-4 w-[380px]">
 
@@ -1767,7 +1923,6 @@ useEffect(() => {
                             {opposeMode ? "Oppose" : "Support"}
                           </span>
 
-                          {/* Active Curve Amount */}
                           <span className="text-xs whitespace-nowrap">
                             {displayedShares > 0n
                               ? `${formatTrust(displayedShares)} TRUST`
@@ -1778,11 +1933,9 @@ useEffect(() => {
                       </div>
                     </div>
 
-                    {/* Wallet + Curve Row */}
                     <div className="flex justify-center">
-                      <div className="flex items-center gap-6 mb-3 w-[380px]"> {/* fixed width matching tabs/card */}
+                      <div className="flex items-center gap-6 mb-3 w-[380px]"> 
 
-                        {/* LEFT: Wallet */}
                         <div className="flex flex-col">
                           <div className="bg-[#110A2B] border border-[#393B60] rounded-2xl px-3 py-1.5 flex items-center gap-2 text-xs">
                             <img src="/wallet.png" alt="Wallet Icon" className="w-4 h-4" />
@@ -1794,11 +1947,9 @@ useEffect(() => {
                           </div>
                         </div>
 
-                        {/* Right-aligned Cluster: Curve Info + Toggle + Info */}
-                        <div className="flex items-center gap-1 ml-auto"> {/* ml-auto pushes the whole cluster to far right, gap-1 keeps them tight */}
+                        <div className="flex items-center gap-1 ml-auto"> 
 
-                          {/* Curve Info Text */}
-                          <div className="flex flex-col justify-center text-right"> {/* text-right aligns text toward toggle */}
+                          <div className="flex flex-col justify-center text-right"> 
                             <span className="text-white text-xs">
                               {isToggled ? "Exponential Curve" : "Linear Curve"}
                             </span>
@@ -1807,7 +1958,6 @@ useEffect(() => {
                             </span>
                           </div>
 
-                          {/* Toggle */}
                           <label className="relative inline-block w-10 h-5 cursor-pointer">
                             <input
                               type="checkbox"
@@ -1816,14 +1966,11 @@ useEffect(() => {
                               onChange={() => setIsToggled(!isToggled)}
                             />
 
-                            {/* Track */}
                             <span className="block w-full h-full bg-gray-400 peer-checked:bg-white rounded-full transition-colors duration-200"></span>
 
-                            {/* Knob */}
                             <span className="absolute left-0.5 top-0.5 w-4 h-4 bg-black rounded-full shadow-md transition-transform duration-200 peer-checked:translate-x-[1.25rem]"></span>
                           </label>
 
-                          {/* Info Button */}
                           <button
                             onClick={() => setShowCurveInfo(true)}
                             className="w-8 h-8 flex items-center justify-center rounded-full border border-[#393B60] text-gray-300 text-sm hover:bg-[#1a133d] hover:text-white transition-colors"
@@ -1831,11 +1978,9 @@ useEffect(() => {
                             i
                           </button>
 
-                          {/* Slide-in Modal (Fixed Right) */}
                           {showCurveInfo && (
                             <div className="fixed top-0 right-0 h-full w-96 bg-[#110A2B] border-l-2 border-[#393B60] p-4 z-50 animate-slideIn overflow-y-auto">
 
-                              {/* Close Button */}
                               <button
                                 onClick={() => setShowCurveInfo(false)}
                                 className="absolute top-3 right-3 text-gray-400 hover:text-white"
@@ -1843,7 +1988,6 @@ useEffect(() => {
                                 ✕
                               </button>
 
-                              {/* Main Heading */}
                               <h2 className="text-white text-lg text-center mb-2">
                                 How Bonding Curves Work
                               </h2>
@@ -1851,7 +1995,6 @@ useEffect(() => {
                                 Intuition uses bonding curves to automatically set identity and claim prices based on supply and demand, rewarding early curation of valuable information.
                               </p>
 
-                              {/* Linear Curve Section */}
                               <img
                                 src="/linear-curve.svg"
                                 alt="Linear Curve"
@@ -1867,7 +2010,6 @@ useEffect(() => {
                                 </p>
                               </div>
 
-                              {/* Exponential Curve Section */}
                               <img
                                 src="/exponential.svg"
                                 alt="Exponential Curve"
@@ -1888,8 +2030,6 @@ useEffect(() => {
                       </div>
                     </div>
 
-                    {/* Center Big Zero */}
-                    {/* <div className="flex flex-col items-center mt-2"> */}
                     <div className="flex flex-col items-center mt-2 w-full px-4">
                       <input
                         type="number"
@@ -1907,7 +2047,6 @@ useEffect(() => {
                       />
                       <span className="text-gray-300 text-xs font-normal mt-1">TRUST</span>
 
-                      {/* Max Button */}
                       <button
                         type="button"
                         onClick={() => {
@@ -1920,7 +2059,6 @@ useEffect(() => {
                       </button>
                     </div>
 
-                    {/* Review Deposit Button */}
                     <button
                       className={`mx-auto block px-5 py-1.5 rounded-3xl mt-4 text-sm transition-colors ${transactionAmount &&
                         Number(transactionAmount) > 0 &&
@@ -1942,7 +2080,6 @@ useEffect(() => {
                         : "Enter an Amount"}
                     </button>
 
-                    {/* Optional small red warning below button */}
                     {transactionAmount &&
                       Number(transactionAmount) > maxRedeemable && (
                         <span className="text-red-500 text-xs mt-1 block text-center">
@@ -1951,7 +2088,6 @@ useEffect(() => {
                       )}
                   </div>
                 )}
-                {/* Close Button */}
                 <button
                   className="absolute top-2 right-2 text-gray-400 hover:text-white"
                   onClick={handleCloseModal}
@@ -1966,7 +2102,6 @@ useEffect(() => {
             <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
               <div className="bg-[#0c081e]/80 w-full max-w-md mx-4 p-6 rounded-3xl relative border border-white/10 backdrop-blur-2xl shadow-2xl shadow-purple-500/10">
 
-                {/* Back Button */}
                 <button
                   className="absolute -top-1 pb-2 left-2 text-white text-2xl px-2 py-1 rounded hover:bg-gray-700/50 transition-colors"
                   onClick={() => {
@@ -1977,7 +2112,6 @@ useEffect(() => {
                   ←
                 </button>
 
-                {/* Title + Support Tag */}
                 <div className="flex items-center gap-2 mb-4">
                   <h2 className="text-white text-base mt-2">Stake</h2>
                   <span
@@ -1991,7 +2125,6 @@ useEffect(() => {
                   Staking on a Triple enhances its discoverability in the Intuition system.
                 </p>
 
-                {/* REVIEW */}
                 {modalStep === "review" && (
                   <>
                     <div className="flex flex-col items-center my-6">
@@ -2012,7 +2145,6 @@ useEffect(() => {
                   </>
                 )}
 
-                {/* AWAITING */}
                 {modalStep === "awaiting" && (
                   <>
                     <div className="flex flex-col items-center my-6">
@@ -2037,7 +2169,6 @@ useEffect(() => {
                   </>
                 )}
 
-                {/* SUCCESS */}
 {modalStep === "success" && (
   <div className="flex flex-col items-center my-8">
     <div className="w-16 h-16 rounded-full bg-green-500 flex items-center justify-center mb-4">
@@ -2048,7 +2179,6 @@ useEffect(() => {
       Successfully {opposeMode ? "opposed" : "supported"}!
     </span>
 
-    {/* Explorer link */}
     <a
       href={transactionLink} // this is where you will add the explorer link stuff
       target="_blank"
@@ -2056,7 +2186,6 @@ useEffect(() => {
       className="text-blue-500 flex items-center gap-1 mb-6 hover:underline"
     >
       View Transaction on Explorer
-      {/*<img src="/share.png" alt="share icon" className="w-4 h-4" />*/}
     </a>
 
     <button
@@ -2071,7 +2200,6 @@ useEffect(() => {
   </div>
 )}
 
-                {/* FAILED */}
                 {modalStep === "failed" && (
                   <div className="flex flex-col items-center my-8">
                     <div className="w-16 h-16 rounded-full bg-red-500 flex items-center justify-center mb-4">
@@ -2099,7 +2227,6 @@ useEffect(() => {
             <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
               <div className="bg-[#0c081e]/80 w-full max-w-md mx-4 p-6 rounded-3xl relative border border-white/10 backdrop-blur-2xl shadow-2xl shadow-purple-500/10">
 
-                {/* Close Button */}
                 <button
                   className="absolute top-2 right-2 text-gray-400 hover:text-white text-xl"
                   onClick={() => setShowReviewRedeemModal(false)}
@@ -2107,7 +2234,6 @@ useEffect(() => {
                   ×
                 </button>
 
-                {/* Title + Support Tag */}
                 <div className="flex items-center gap-2 mb-4">
                   <h2 className="text-white text-base">Stake</h2>
                   <span
@@ -2117,12 +2243,10 @@ useEffect(() => {
                           </span>
                 </div>
 
-                {/* Subtitle */}
                 <p className="text-gray-400 text-sm mb-6">
                   Staking on a Triple enhances its discoverability in the Intuition system.
                 </p>
 
-                {/* REVIEW */}
                 {modalStep === "review" && (
                   <>
                     <div className="flex flex-col items-center my-6">
@@ -2143,7 +2267,6 @@ useEffect(() => {
                   </>
                 )}
 
-                {/* AWAITING */}
                 {modalStep === "awaiting" && (
                   <>
                     <div className="flex flex-col items-center my-6">
@@ -2168,7 +2291,6 @@ useEffect(() => {
                   </>
                 )}
 
-                {/* SUCCESS */}
                 {modalStep === "success" && (
                   <div className="flex flex-col items-center my-8">
                     <div className="w-16 h-16 rounded-full bg-green-500 flex items-center justify-center mb-4">
@@ -2186,7 +2308,6 @@ useEffect(() => {
                       className="text-blue-500 flex items-center gap-1 mb-6 hover:underline"
                     >
                       View Transaction on Explorer
-                      {/*<img src="/share.png" alt="share icon" className="w-4 h-4" />*/}
                     </a>
 
                     <button
@@ -2201,7 +2322,6 @@ useEffect(() => {
                   </div>
                 )}
 
-                {/* FAILED */}
                 {modalStep === "failed" && (
                   <div className="flex flex-col items-center my-8">
                     <div className="w-16 h-16 rounded-full bg-red-500 flex items-center justify-center mb-4">

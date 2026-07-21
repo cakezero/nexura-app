@@ -490,17 +490,14 @@ useEffect(() => {
 
   return (
     <div className="text-white font-geist font-light tracking-wide">
-      {/* Header */}
       <h1 className="text-base">Claims</h1>
 
       <p className="text-gray-400 mt-2 max-w-xl text-xs">
         Semantic statements, allowing anyone to claim anything about anything.
       </p>
 
-      {/* Controls Section */}
       <div className="mt-4 flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-4 mb-2">
 
-        {/* Search */}
         <div className="flex-1 min-w-[250px]">
           <input
             type="text"
@@ -511,7 +508,6 @@ useEffect(() => {
           />
         </div>
 
-        {/* Grid/List Toggle */}
         <div className="hidden md:flex items-center bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
           <button
             onClick={() => setView("list")}
@@ -528,7 +524,6 @@ useEffect(() => {
           </button>
         </div>
 
-        {/* Market Cap Dropdown */}
         <div className="relative w-full sm:w-auto">
           <select
             value={sortOption}
@@ -559,12 +554,10 @@ useEffect(() => {
         </div>
       </div>
 
-      {/* Claims Table */}
       <div className="mt-4 overflow-x-auto text-xs">
         <div className="mt-8 text-xs">
           {view === "list" && (
             <>
-              {/* ================= DESKTOP TABLE ================= */}
               <div className="hidden md:block overflow-x-auto w-full text-xs">
                 <table className="min-w-full text-left border-collapse font-geist font-light tracking-wide">
                   <thead className="text-sm font-light tracking-wide">
@@ -583,13 +576,11 @@ useEffect(() => {
                         key={index}
                         className="bg-[#060210] hover:bg-[#1a0f2e] cursor-pointer"
                       >
-                        {/* Claim cell: clickable to navigate */}
                         <td
                           className="px-4 py-3"
                           onClick={() => { console.log("[ACTION] openClaim", { termId: claim.term_id }); router.push(`/portal-claims/${claim.term_id}`); }}
                         >
                           <div className="flex flex-wrap items-center gap-2">
-                            {/* Subject */}
                             <span
                               className="bg-[#22193A] px-2.5 py-1 rounded flex items-center gap-2 max-w-[240px] truncate cursor-pointer hover:bg-[#2f2350] transition-colors duration-200 text-sm sm:text-base"
                             >
@@ -602,14 +593,12 @@ useEffect(() => {
                               </span>
                             </span>
 
-                            {/* Predicate */}
                             <span
                               className="text-xs px-1 cursor-pointer hover:text-white transition-colors duration-200"
                             >
                               {highlightMatch(claim?.term?.triple?.predicate?.label ?? "", searchTerm)}
                             </span>
 
-                            {/* Object */}
                             <span
                               className="bg-[#22193A] px-2.5 py-1 rounded max-w-[280px] truncate cursor-pointer hover:bg-[#2f2350] transition-colors duration-200 text-sm sm:text-base"
                             >
@@ -618,12 +607,10 @@ useEffect(() => {
                           </div>
                         </td>
 
-                        {/* Market Cap */}
                         <td className="px-4 py-3">
                           {formatNumber(parseFloat(formatEther(BigInt(claim.total_market_cap))))} TRUST
                         </td>
 
-                        {/* Support / Oppose Stats */}
                         <td className="px-4 py-3 text-blue-400">
                           <div className="flex items-center gap-2">
                             <img src="/user.png" className="w-4 h-4" />
@@ -637,10 +624,8 @@ useEffect(() => {
                           </div>
                         </td>
 
-{/* Actions: buttons only */}
 <td className="px-4 py-3 text-center text-xs">
   <div className="flex justify-center gap-2">
-    {/* Support Button */}
     <button
       className="px-4 py-2 rounded-lg text-xs bg-blue-600 text-white hover:brightness-110 transition-all"
       onClick={(e) => {
@@ -651,7 +636,6 @@ useEffect(() => {
       Support
     </button>
 
-    {/* Oppose Button */}
     <button
       className="px-4 py-2 rounded-lg text-xs bg-[#F19C03] text-white hover:brightness-110 transition-all"
       onClick={(e) => {
@@ -669,7 +653,6 @@ useEffect(() => {
                 </table>
               </div>
 
-              {/* ================= MOBILE STACKED CARDS ================= */}
               <div className="md:hidden flex flex-col gap-3 px-1">
                 {sortedClaims.map((claim, index) => {
                   const supportCount = claim.term.positions_aggregate.aggregate.count;
@@ -684,19 +667,16 @@ useEffect(() => {
                       className="bg-[#060210] border border-gray-700 rounded-xl p-3 shadow-md hover:shadow-lg hover:scale-[1.01] transition-all cursor-pointer mx-auto w-full max-w-[95vw]"
                       onClick={() => { console.log("[ACTION] openClaim", { termId: claim.term_id }); router.push(`/portal-claims/${claim.term_id}`); }}
                     >
-                      {/* Claim Statement */}
-                      {/* Claim Statement */}
                       <div
                         className="mb-2 flex items-center gap-1 text-xs sm:text-sm w-full whitespace-nowrap overflow-hidden"
                         style={{ cursor: 'pointer' }}
                       >
-                        {/* Subject */}
                         <span
                           className="px-2 py-0.5 rounded truncate transition-colors duration-200"
                           style={{
                             flex: '0 0 20%',
                             minWidth: 0,
-                            backgroundColor: '#1c122e', // slightly lighter than original
+                            backgroundColor: '#1c122e',
                           }}
                           onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#2b1f45')}
                           onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#1c122e')}
@@ -704,7 +684,6 @@ useEffect(() => {
                           {claim.term.triple.subject.label}
                         </span>
 
-                        {/* Predicate */}
                         <span
                           className="truncate text-center"
                           style={{ flex: '0 0 10%', minWidth: 0 }}
@@ -712,13 +691,12 @@ useEffect(() => {
                           {claim.term.triple.predicate.label}
                         </span>
 
-                        {/* Object */}
                         <span
                           className="px-2 py-0.5 rounded truncate transition-colors duration-200"
                           style={{
                             flex: '0 0 20%',
                             minWidth: 0,
-                            backgroundColor: '#1c122e', // match subject
+                            backgroundColor: '#1c122e',
                           }}
                           onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#2b1f45')}
                           onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#1c122e')}
@@ -727,7 +705,6 @@ useEffect(() => {
                         </span>
                       </div>
 
-                      {/* Support / Oppose Stats */}
                       <div className="flex justify-between items-center text-xs sm:text-sm mb-3 w-full">
                         <div className="flex flex-col" style={{ flex: '0 0 45%' }}>
                           <span className="text-blue-400">Support: {supportCount}</span>
@@ -739,7 +716,6 @@ useEffect(() => {
                         </div>
                       </div>
 
-                      {/* Action Buttons & Market Cap */}
                       <div className="flex justify-between items-center gap-2 w-full flex-wrap">
                         <div className="flex gap-2" style={{ flex: '0 0 45%' }}>
                           <button
@@ -780,7 +756,6 @@ useEffect(() => {
                     className="bg-[#060210] border border-gray-700 rounded-xl p-3 hover:bg-[#2c0738] transition cursor-pointer"
                     onClick={() => { console.log("[ACTION] openClaim", { termId: claim.term_id }); router.push(`/portal-claims/${claim.term_id}`); }}
                   >
-                    {/* Statement */}
                     <div className="text-gray-300 mb-2 flex flex-wrap items-center gap-1 text-sm">
                       <span className="bg-[#0b0618] px-2 py-0.5 rounded max-w-[40%] truncate text-xs">
                         {claim.term.triple.subject.label}
@@ -791,9 +766,7 @@ useEffect(() => {
                       </span>
                     </div>
 
-                    {/* Stats Section */}
                     <div className="flex overflow-hidden rounded-md text-xs">
-                      {/* Support */}
                       <div className="flex-1 flex flex-col p-1 gap-0.5">
                         <span className="text-blue-400">Support</span>
                         <div className="flex items-center justify-between">
@@ -805,10 +778,8 @@ useEffect(() => {
                         </div>
                       </div>
 
-                      {/* Vertical Separator */}
                       <div className="w-px bg-white"></div>
 
-                      {/* Oppose */}
                       <div className="flex-1 flex flex-col p-1 gap-0.5">
                         <span className="text-[#F19C03]">Oppose</span>
                         <div className="flex items-center gap-1">
@@ -826,7 +797,6 @@ useEffect(() => {
                       </div>
                     </div>
 
-                    {/* Percent Bar */}
                     <div className="w-full h-3 bg-gray-700 rounded-lg overflow-hidden mt-1 relative">
                       <div className="flex h-full text-white text-xs">
                         {supportPercent > 0 && (
@@ -848,7 +818,6 @@ useEffect(() => {
                       </div>
                     </div>
 
-                    {/* Actions */}
                     <div className="flex items-center justify-between mt-3 pt-2 border-t border-gray-700 text-xs">
                       <div className="flex justify-center gap-2">
                         <button
@@ -884,12 +853,10 @@ useEffect(() => {
             </div>
           )}
 
-          {/* Modal */}
           {showModal && activeClaim && (
             <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
               <div className="bg-[#070315] max-w-2xl w-full mx-4 p-6 rounded-lg relative border h-[calc(100vh-8rem)] overflow-y-auto">
 
-                {/* Title + Support Tag */}
                 <div className="flex items-center gap-2 mb-1 p-2 pb-1">
                   <h2 className="text-white font text-base">Stake</h2>
                   <div className="flex items-center gap-1 group relative">
@@ -903,19 +870,16 @@ useEffect(() => {
                       ?
                     </span>
 
-                    {/* Tooltip */}
                     <div className="absolute left-0 top-5 w-56 text-[10px] bg-black text-white p-2 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
                       Staking on a Triple signifies a belief in the relevancy of the respective Triple and enhances its discoverability in the Intuition system.
                     </div>
                   </div>
                 </div>
 
-                {/* Subtitle */}
                 <p className="text-gray-400 text-xs mb-12 -pt-2">
                   Staking on a Triple enhances its discoverability in the Intuition system.
                 </p>
 
-                {/* Statement */}
                 <div className="text-gray-300 mb-6 px-6 flex flex-wrap items-center justify-center gap-2 text-sm">
                   <span className="bg-[#1a1230] hover:bg-[#241744] cursor-pointer transition-colors duration-200 px-3 py-1.5 rounded inline-flex items-center gap-2 max-w-[200px] truncate">
                     <img
@@ -933,11 +897,9 @@ useEffect(() => {
                   </span>
                 </div>
 
-                {/* Tabs */}
                 <div className="flex justify-center mb-5">
                   <div className="flex gap-12 relative">
 
-                    {/* Deposit Tab */}
                     <button
                       className={`relative px-6 py-3 text-base font-medium ${activeTab === "deposit" ? "text-white" : "text-gray-400"
                         }`}
@@ -951,7 +913,6 @@ useEffect(() => {
                       )}
                     </button>
 
-                    {/* Redeem Tab */}
                     <button
                       className={`relative px-6 py-3 text-base font-medium transition-colors duration-200
     ${hasAnyPosition
@@ -974,10 +935,8 @@ useEffect(() => {
                 </div>
 
 
-                {/* Tab Content */}
                 {activeTab === "deposit" && (
                   <div className="px-4 md:px-12">
-                    {/* Main Card: Active Position */}
                     <div className="flex justify-center mb-4">
                       <div className="bg-[#110A2B] border-2 border-[#393B60] p-2 rounded-lg flex items-center justify-between gap-6 mt-4 w-[380px]">
 
@@ -1002,11 +961,9 @@ useEffect(() => {
                       </div>
                     </div>
 
-                    {/* Wallet + Curve Row */}
                     <div className="flex justify-center">
-                      <div className="flex items-center gap-6 mb-3 w-[380px]"> {/* fixed width matching tabs/card */}
+                      <div className="flex items-center gap-6 mb-3 w-[380px]"> 
 
-                        {/* LEFT: Wallet */}
                         <div className="flex flex-col">
                           <div className="bg-[#110A2B] border border-[#393B60] rounded-2xl px-3 py-1.5 flex items-center gap-2 text-xs">
                             <img src="/wallet.png" alt="Wallet Icon" className="w-4 h-4" />
@@ -1017,7 +974,6 @@ useEffect(() => {
                             </span>
                           </div>
 
-                          {/* Insufficient Funds Warning */}
                           {transactionAmount &&
                             Number(transactionAmount) > Number(tTrustBalance) / 10 ** 18 && (
                               <span className="text-red-500 text-xs mt-1">
@@ -1026,11 +982,9 @@ useEffect(() => {
                             )}
                         </div>
 
-                        {/* Right-aligned Cluster: Curve Info + Toggle + Info */}
-                        <div className="flex items-center gap-1 ml-auto"> {/* ml-auto pushes the whole cluster to far right, gap-1 keeps them tight */}
+                        <div className="flex items-center gap-1 ml-auto"> 
 
-                          {/* Curve Info Text */}
-                          <div className="flex flex-col justify-center text-right"> {/* text-right aligns text toward toggle */}
+                          <div className="flex flex-col justify-center text-right"> 
                             <span className="text-white text-xs">
                               {isToggled ? "Exponential Curve" : "Linear Curve"}
                             </span>
@@ -1039,7 +993,6 @@ useEffect(() => {
                             </span>
                           </div>
 
-                          {/* Toggle */}
                           <label className="relative inline-block w-10 h-5 cursor-pointer">
                             <input
                               type="checkbox"
@@ -1048,14 +1001,11 @@ useEffect(() => {
                               onChange={() => setIsToggled(!isToggled)}
                             />
 
-                            {/* Track */}
                             <span className="block w-full h-full bg-gray-400 peer-checked:bg-white rounded-full transition-colors duration-200"></span>
 
-                            {/* Knob */}
                             <span className="absolute left-0.5 top-0.5 w-4 h-4 bg-black rounded-full shadow-md transition-transform duration-200 peer-checked:translate-x-[1.25rem]"></span>
                           </label>
 
-                          {/* Info Button */}
                           <button
                             onClick={() => setShowCurveInfo(true)}
                             className="w-8 h-8 flex items-center justify-center rounded-full border border-[#393B60] text-gray-300 text-sm hover:bg-[#1a133d] hover:text-white transition-colors"
@@ -1063,11 +1013,9 @@ useEffect(() => {
                             i
                           </button>
 
-                          {/* Slide-in Modal (Fixed Right) */}
                           {showCurveInfo && (
                             <div className="fixed top-0 right-0 h-full w-96 bg-[#110A2B] border-l-2 border-[#393B60] p-4 z-50 animate-slideIn overflow-y-auto">
 
-                              {/* Close Button */}
                               <button
                                 onClick={() => setShowCurveInfo(false)}
                                 className="absolute top-3 right-3 text-gray-400 hover:text-white"
@@ -1075,7 +1023,6 @@ useEffect(() => {
                                 ✕
                               </button>
 
-                              {/* Main Heading */}
                               <h2 className="text-white text-lg text-center mb-2">
                                 How Bonding Curves Work
                               </h2>
@@ -1083,7 +1030,6 @@ useEffect(() => {
                                 Intuition uses bonding curves to automatically set identity and claim prices based on supply and demand, rewarding early curation of valuable information.
                               </p>
 
-                              {/* Linear Curve Section */}
                               <img
                                 src="/linear-curve.svg"
                                 alt="Linear Curve"
@@ -1099,7 +1045,6 @@ useEffect(() => {
                                 </p>
                               </div>
 
-                              {/* Exponential Curve Section */}
                               <img
                                 src="/exponential.svg"
                                 alt="Exponential Curve"
@@ -1120,8 +1065,6 @@ useEffect(() => {
                       </div>
                     </div>
 
-                    {/* Center Big Zero */}
-                    {/* <div className="flex flex-col items-center mt-2"> */}
                     <div className="flex flex-col items-center mt-2 w-full px-4">
                       <input
                         type="number"
@@ -1140,7 +1083,6 @@ useEffect(() => {
 
                       <span className="text-gray-300 text-xs font-normal mt-1">TRUST</span>
 
-                      {/* Min Button */}
                       <button
                         type="button"
                         onClick={() => setTransactionAmount("0.1")}
@@ -1151,7 +1093,6 @@ useEffect(() => {
                     </div>
 
 
-                    {/* Review Deposit Button */}
                     <button
                       className={`mx-auto block px-6 py-2.5 rounded-3xl mt-4 text-sm transition-colors ${transactionAmount &&
                         Number(transactionAmount) > 0 &&
@@ -1174,7 +1115,6 @@ useEffect(() => {
                           : "Enter an Amount"}
                     </button>
 
-                    {/* Optional small red warning below button */}
                     {transactionAmount &&
                       Number(transactionAmount) > Number(tTrustBalance) / 10 ** 18 && (
                         <span className="text-red-500 text-xs mt-1 block text-center">
@@ -1185,10 +1125,8 @@ useEffect(() => {
                 )}
 
 
-                {/* Tab Content */}
                 {activeTab === "redeem" && (
                   <div className="px-4 md:px-12">
-                    {/* Main Card: Active Position */}
                     <div className="flex justify-center mb-4">
                       <div className="bg-[#110A2B] border-2 border-[#393B60] p-2 rounded-lg flex items-center justify-between gap-6 mt-4 w-[380px]">
 
@@ -1203,7 +1141,6 @@ useEffect(() => {
                             {opposeMode ? "Oppose" : "Support"}
                           </span>
 
-                          {/* Active Curve Amount */}
                           <span className="text-xs whitespace-nowrap">
                             {displayedShares > 0n
                               ? `${formatTrust(displayedShares)} TRUST`
@@ -1214,11 +1151,9 @@ useEffect(() => {
                       </div>
                     </div>
 
-                    {/* Wallet + Curve Row */}
                     <div className="flex justify-center">
-                      <div className="flex items-center gap-6 mb-3 w-[380px]"> {/* fixed width matching tabs/card */}
+                      <div className="flex items-center gap-6 mb-3 w-[380px]"> 
 
-                        {/* LEFT: Wallet */}
                         <div className="flex flex-col">
                           <div className="bg-[#110A2B] border border-[#393B60] rounded-2xl px-3 py-1.5 flex items-center gap-2 text-xs">
                             <img src="/wallet.png" alt="Wallet Icon" className="w-4 h-4" />
@@ -1230,11 +1165,9 @@ useEffect(() => {
                           </div>
                         </div>
 
-                        {/* Right-aligned Cluster: Curve Info + Toggle + Info */}
-                        <div className="flex items-center gap-1 ml-auto"> {/* ml-auto pushes the whole cluster to far right, gap-1 keeps them tight */}
+                        <div className="flex items-center gap-1 ml-auto"> 
 
-                          {/* Curve Info Text */}
-                          <div className="flex flex-col justify-center text-right"> {/* text-right aligns text toward toggle */}
+                          <div className="flex flex-col justify-center text-right"> 
                             <span className="text-white text-xs">
                               {isToggled ? "Exponential Curve" : "Linear Curve"}
                             </span>
@@ -1243,7 +1176,6 @@ useEffect(() => {
                             </span>
                           </div>
 
-                          {/* Toggle */}
                           <label className="relative inline-block w-10 h-5 cursor-pointer">
                             <input
                               type="checkbox"
@@ -1252,14 +1184,11 @@ useEffect(() => {
                               onChange={() => setIsToggled(!isToggled)}
                             />
 
-                            {/* Track */}
                             <span className="block w-full h-full bg-gray-400 peer-checked:bg-white rounded-full transition-colors duration-200"></span>
 
-                            {/* Knob */}
                             <span className="absolute left-0.5 top-0.5 w-4 h-4 bg-black rounded-full shadow-md transition-transform duration-200 peer-checked:translate-x-[1.25rem]"></span>
                           </label>
 
-                          {/* Info Button */}
                           <button
                             onClick={() => setShowCurveInfo(true)}
                             className="w-8 h-8 flex items-center justify-center rounded-full border border-[#393B60] text-gray-300 text-sm hover:bg-[#1a133d] hover:text-white transition-colors"
@@ -1267,11 +1196,9 @@ useEffect(() => {
                             i
                           </button>
 
-                          {/* Slide-in Modal (Fixed Right) */}
                           {showCurveInfo && (
                             <div className="fixed top-0 right-0 h-full w-96 bg-[#110A2B] border-l-2 border-[#393B60] p-4 z-50 animate-slideIn overflow-y-auto">
 
-                              {/* Close Button */}
                               <button
                                 onClick={() => setShowCurveInfo(false)}
                                 className="absolute top-3 right-3 text-gray-400 hover:text-white"
@@ -1279,7 +1206,6 @@ useEffect(() => {
                                 ✕
                               </button>
 
-                              {/* Main Heading */}
                               <h2 className="text-white text-lg text-center mb-2">
                                 How Bonding Curves Work
                               </h2>
@@ -1287,7 +1213,6 @@ useEffect(() => {
                                 Intuition uses bonding curves to automatically set identity and claim prices based on supply and demand, rewarding early curation of valuable information.
                               </p>
 
-                              {/* Linear Curve Section */}
                               <img
                                 src="/linear-curve.svg"
                                 alt="Linear Curve"
@@ -1303,7 +1228,6 @@ useEffect(() => {
                                 </p>
                               </div>
 
-                              {/* Exponential Curve Section */}
                               <img
                                 src="/exponential.svg"
                                 alt="Exponential Curve"
@@ -1324,8 +1248,6 @@ useEffect(() => {
                       </div>
                     </div>
 
-                    {/* Center Big Zero */}
-                    {/* <div className="flex flex-col items-center mt-2"> */}
                     <div className="flex flex-col items-center mt-2 w-full px-4">
                       <input
                         type="number"
@@ -1343,7 +1265,6 @@ useEffect(() => {
                       />
                       <span className="text-gray-300 text-xs font-normal mt-1">TRUST</span>
 
-                      {/* Max Button */}
                       <button
                         type="button"
                         onClick={() => {
@@ -1356,7 +1277,6 @@ useEffect(() => {
                       </button>
                     </div>
 
-                    {/* Review Deposit Button */}
                     <button
                       className={`mx-auto block px-5 py-1.5 rounded-3xl mt-4 text-sm transition-colors ${transactionAmount &&
                         Number(transactionAmount) > 0 &&
@@ -1378,7 +1298,6 @@ useEffect(() => {
                         : "Enter an Amount"}
                     </button>
 
-                    {/* Optional small red warning below button */}
                     {transactionAmount &&
                       Number(transactionAmount) > maxRedeemable && (
                         <span className="text-red-500 text-xs mt-1 block text-center">
@@ -1387,7 +1306,6 @@ useEffect(() => {
                       )}
                   </div>
                 )}
-                {/* Close Button */}
                 <button
                   className="absolute top-2 right-2 text-gray-400 hover:text-white"
                   onClick={handleCloseModal}
@@ -1402,7 +1320,6 @@ useEffect(() => {
             <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
               <div className="bg-[#070315] w-full max-w-md mx-4 p-3 rounded-xl relative border-2 border-[#8B3EFE]">
 
-                {/* Back Button */}
                 <button
                   className="absolute -top-1 pb-2 left-2 text-white text-2xl px-2 py-1 rounded hover:bg-gray-700/50 transition-colors"
                   onClick={() => {
@@ -1413,7 +1330,6 @@ useEffect(() => {
                   ←
                 </button>
 
-                {/* Title + Support Tag */}
                 <div className="flex items-center gap-2 mb-4">
                   <h2 className="text-white text-base mt-2">Stake</h2>
                   <span
@@ -1427,7 +1343,6 @@ useEffect(() => {
                   Staking on a Triple enhances its discoverability in the Intuition system.
                 </p>
 
-                {/* REVIEW */}
                 {modalStep === "review" && (
                   <>
                     <div className="flex flex-col items-center my-6">
@@ -1448,7 +1363,6 @@ useEffect(() => {
                   </>
                 )}
 
-                {/* AWAITING */}
                 {modalStep === "awaiting" && (
                   <>
                     <div className="flex flex-col items-center my-6">
@@ -1473,7 +1387,6 @@ useEffect(() => {
                   </>
                 )}
 
-                {/* SUCCESS */}
 {modalStep === "success" && (
   <div className="flex flex-col items-center my-8">
     <div className="w-16 h-16 rounded-full bg-green-500 flex items-center justify-center mb-4">
@@ -1484,7 +1397,6 @@ useEffect(() => {
       Successfully {opposeMode ? "opposed" : "supported"}!
     </span>
 
-    {/* Explorer link */}
     <a
       href={transactionLink} // this is where you will add the explorer link stuff
       target="_blank"
@@ -1492,7 +1404,6 @@ useEffect(() => {
       className="text-blue-500 flex items-center gap-1 mb-6 hover:underline"
     >
       View Transaction on Explorer
-      {/*<img src="/share.png" alt="share icon" className="w-4 h-4" />*/}
     </a>
 
     <button
@@ -1507,7 +1418,6 @@ useEffect(() => {
   </div>
 )}
 
-                {/* FAILED */}
                 {modalStep === "failed" && (
                   <div className="flex flex-col items-center my-8">
                     <div className="w-16 h-16 rounded-full bg-red-500 flex items-center justify-center mb-4">
@@ -1535,7 +1445,6 @@ useEffect(() => {
             <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
               <div className="bg-[#070315] w-full max-w-md mx-4 p-3 rounded-xl relative border-2 border-[#8B3EFE]">
 
-                {/* Close Button */}
                 <button
                   className="absolute top-2 right-2 text-gray-400 hover:text-white text-xl"
                   onClick={() => setShowReviewRedeemModal(false)}
@@ -1543,7 +1452,6 @@ useEffect(() => {
                   ×
                 </button>
 
-                {/* Title + Support Tag */}
                 <div className="flex items-center gap-2 mb-4">
                   <h2 className="text-white text-base">Stake</h2>
                   <span
@@ -1553,12 +1461,10 @@ useEffect(() => {
                           </span>
                 </div>
 
-                {/* Subtitle */}
                 <p className="text-gray-400 text-sm mb-6">
                   Staking on a Triple enhances its discoverability in the Intuition system.
                 </p>
 
-                {/* REVIEW */}
                 {modalStep === "review" && (
                   <>
                     <div className="flex flex-col items-center my-6">
@@ -1579,7 +1485,6 @@ useEffect(() => {
                   </>
                 )}
 
-                {/* AWAITING */}
                 {modalStep === "awaiting" && (
                   <>
                     <div className="flex flex-col items-center my-6">
@@ -1604,7 +1509,6 @@ useEffect(() => {
                   </>
                 )}
 
-                {/* SUCCESS */}
                 {modalStep === "success" && (
                   <div className="flex flex-col items-center my-8">
                     <div className="w-16 h-16 rounded-full bg-green-500 flex items-center justify-center mb-4">
@@ -1622,7 +1526,6 @@ useEffect(() => {
                       className="text-blue-500 flex items-center gap-1 mb-6 hover:underline"
                     >
                       View Transaction on Explorer
-                      {/*<img src="/share.png" alt="share icon" className="w-4 h-4" />*/}
                     </a>
 
                     <button
@@ -1637,7 +1540,6 @@ useEffect(() => {
                   </div>
                 )}
 
-                {/* FAILED */}
                 {modalStep === "failed" && (
                   <div className="flex flex-col items-center my-8">
                     <div className="w-16 h-16 rounded-full bg-red-500 flex items-center justify-center mb-4">

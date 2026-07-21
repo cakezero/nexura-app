@@ -109,7 +109,10 @@ export const getUserPNL = async (req: GlobalRequest, res: GlobalResponse) => {
       }
     }`;
 
-    const { getAccountPnlCurrent } = await client.request(query, { userPositionAddress: formattedAddress });
+    let getAccountPnlCurrent: any = null;
+    try {
+      ({ getAccountPnlCurrent } = await client.request(query, { input: { account_id: formattedAddress } }));
+    } catch { /* NO_DATA for this account -> return zeros */ }
 
     const positionsQuery = `query GetAccountPositionCount($address: String!) {
       positions_with_value_aggregate(
@@ -123,14 +126,16 @@ export const getUserPNL = async (req: GlobalRequest, res: GlobalResponse) => {
 
     const { positions_with_value_aggregate: { aggregate: { count: positions } } } = await client.request(positionsQuery, { address: formattedAddress });
 
+    const pnlData = getAccountPnlCurrent ?? {};
     const data = {
-      portfolio_value: parseFloat(formatEther(getAccountPnlCurrent.equity_value)).toFixed(4),
-      pnl: parseFloat(formatEther(getAccountPnlCurrent.total_pnl)).toFixed(4),
-      roi: parseFloat(getAccountPnlCurrent.pnl_pct).toFixed(1),
-      positions
+      portfolio_value: pnlData.equity_value ? parseFloat(formatEther(pnlData.equity_value)).toFixed(4) : "0",
+      pnl: pnlData.total_pnl ? parseFloat(formatEther(pnlData.total_pnl)).toFixed(4) : "0",
+      roi: pnlData.pnl_pct ? parseFloat(pnlData.pnl_pct).toFixed(1) : "0",
+      positions: positions ?? 0
     }
 
 
+    res.status(OK).json(data);
   } catch (error) {
     logger.error(error);
     res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching user intuition pnl" })
@@ -253,14 +258,12 @@ export const getPositions = async (req: GlobalRequest, res: GlobalResponse) => {
     // redeemable_assets (desc) - highest value
     // redeemable_assets (asc) - lowest value
 
-    if (!req.query) {
-      res.status(BAD_REQUEST).json({ error: "filter parameters are required" });
-      return;
-    }
-
-    const entries = Object.entries(req.query) as [string, any][];
-
-    const [key, value] = entries[0]!;
+    // FILTERS (optional). Defaults to highest value first when no valid sort is given.
+    const ALLOWED_SORT_FIELDS = new Set(["pnl", "updated_at", "redeemable_assets"]);
+    const entries = Object.entries(req.query || {}) as [string, any][];
+    const [rawKey, rawValue] = entries[0] ?? [];
+    const key = rawKey && ALLOWED_SORT_FIELDS.has(rawKey) ? rawKey : "redeemable_assets";
+    const value = rawValue === "asc" || rawValue === "desc" ? rawValue : "desc";
 
     const { positions_with_value } = await client.request(query, {
       limit: 21,
@@ -361,6 +364,11 @@ export const getIntuitionAccountActivity = async (req: GlobalRequest, res: Globa
         }
       }
     }
+
+      fragment CachedImageFields on cached_images_cached_image {
+        url
+        safe
+      }
     `;
 
     const { events } = await client.request(query, { userAddress: formattedAddress, limit: 50, offset: 0 });
