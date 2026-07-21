@@ -686,8 +686,9 @@ const getDraftRewardsPublishError = () => {
   return null;
 };
 
-const buildCampaignFormData = (isDraft: boolean): FormData => {
+const buildCampaignFormData = (isDraft: boolean, customTasks?: Task[]): FormData => {
   const fd = new FormData();
+  const activeTasks = customTasks ?? tasks;
   const normalizedRewardPool = hasRewards ? (Number(rewardPool) || 0) : 0;
   let perParticipantTrust = 0;
   if (hasRewards && rewardPool && participants && Number(participants) > 0) {
@@ -712,7 +713,7 @@ const buildCampaignFormData = (isDraft: boolean): FormData => {
   if (coverImage instanceof File) fd.append("coverImage", coverImage);
   if (isDraft) fd.append("isDraft", "true");
   fd.append("campaignQuests", JSON.stringify(
-    tasks.map(t => {
+    activeTasks.map(t => {
       const taskTag = typeToTag(t.type);
       const taskGuildId = t.guildId || hubGuildId || "";
       const payload: Record<string, unknown> = {
@@ -748,7 +749,7 @@ const buildCampaignFormData = (isDraft: boolean): FormData => {
 
 const handleSaveDraft = async (
   thenNavigate?: string,
-  options?: { skipPublishedRewardsGuard?: boolean }
+  options?: { skipPublishedRewardsGuard?: boolean; customTasks?: Task[] }
 ): Promise<string | null> => {
   if (isEnded) {
     showViewOnlyToast();
@@ -767,7 +768,7 @@ const handleSaveDraft = async (
 
   setSaveLoading(true);
   try {
-    const fd = buildCampaignFormData(true);
+    const fd = buildCampaignFormData(true, options?.customTasks);
     const params: Record<string, string> = {};
     if (campaignId) params.id = campaignId;
     const res = await projectApiRequest<{ campaignId?: string; message?: string }>({
@@ -879,19 +880,29 @@ const handleSaveTask = () => {
     return setError("Please select a Discord channel for this task.");
   }
 
+  let updatedTasks: Task[];
   if (editingIndex !== null) {
-    const updatedTasks = [...tasks];
+    updatedTasks = [...tasks];
     updatedTasks[editingIndex] = finalTask;
     setTasks(updatedTasks);
     setEditingIndex(null);
   } else {
-    setTasks([...tasks, finalTask]);
+    updatedTasks = [...tasks, finalTask];
+    setTasks(updatedTasks);
   }
 
   setNewTask({ _id: undefined, type: "", platform: "", handleOrUrl: "", description: "", evidence: "", validation: "Manual Validation", verificationMode: "", roleId: "", channelId: "", guildId: "" });
   setShowModal(false);
   setError("");
   setUrlError("");
+  
+  handleSaveDraft(undefined, { customTasks: updatedTasks });
+};
+
+const handleDeleteTask = async (index: number) => {
+  const updatedTasks = tasks.filter((_, i) => i !== index);
+  setTasks(updatedTasks);
+  await handleSaveDraft(undefined, { customTasks: updatedTasks });
 };
 
 
@@ -1955,10 +1966,7 @@ const isActive =
 
               <button
                 className="px-3 py-1 bg-gray-800 rounded-lg text-white hover:bg-gray-700 transition"
-                onClick={() => {
-                  const updatedTasks = tasks.filter((_, i) => i !== index);
-                  setTasks(updatedTasks);
-                }}
+                onClick={() => handleDeleteTask(index)}
               >
                 <img src="/delete.png" alt="Delete" className="w-4 h-4" />
               </button>
@@ -2542,7 +2550,7 @@ const isActive =
 
               <button
                 className="px-3 py-1 bg-gray-800 rounded-lg text-white hover:bg-red-800 transition"
-                onClick={() => setTasks(tasks.filter((_, i) => i !== index))}
+                onClick={() => handleDeleteTask(index)}
               >
                 <img src="/delete.png" alt="Delete" className="w-4 h-4" />
               </button>
