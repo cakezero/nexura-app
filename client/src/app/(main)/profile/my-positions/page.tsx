@@ -601,60 +601,14 @@ useEffect(() => {
         positionsCount: intuitionPnl.positions ?? 0,
       };
     }
-    const userAddress = user?.address;
-    if (!userAddress || !visibleClaims.length) {
-      return {
-        portfolioValue: "0.000",
-        portfolioDiff: "0.00%",
-        pnl: "0.0000",
-        pnlDiff: "0.00%",
-        roi: "0.00%",
-        roiDiff: "0.00%",
-        positionsCount: 0
-      };
-    }
-
-    let portfolioValue = 0;
-    let totalPnl = 0;
-    let positionsSet = new Set<string>();
-
-    visibleClaims.forEach((claim) => {
-      const claimPositions = getPositionsForClaim(claim, userAddress);
-      claimPositions.forEach((pos) => {
-        portfolioValue += pos.value;
-        const hashInt = parseInt(pos.claim.term_id.slice(2, 10), 16);
-        const pnlPercent = ((hashInt % 30) - 15);
-        const pnlValue = pos.value * (pnlPercent / 100);
-        totalPnl += pnlValue;
-        positionsSet.add(pos.claim.term_id);
-      });
-    });
-
-    const positionsCount = positionsSet.size;
-
-    if (portfolioValue === 0) {
-      return {
-        portfolioValue: "0.000",
-        portfolioDiff: "0.00%",
-        pnl: "0.0000",
-        pnlDiff: "0.00%",
-        roi: "0.00%",
-        roiDiff: "0.00%",
-        positionsCount: 0
-      };
-    }
-
-    const pnlPercent = (totalPnl / portfolioValue) * 100;
-    const roiVal = (totalPnl / (portfolioValue - totalPnl)) * 100;
-
     return {
-      portfolioValue: portfolioValue.toFixed(3),
-      portfolioDiff: (pnlPercent >= 0 ? "+" : "") + pnlPercent.toFixed(2) + "%",
-      pnl: (totalPnl >= 0 ? "+" : "") + totalPnl.toFixed(4),
-      pnlDiff: (pnlPercent >= 0 ? "+" : "") + pnlPercent.toFixed(2) + "%",
-      roi: roiVal.toFixed(2) + "%",
-      roiDiff: (roiVal >= 0 ? "+" : "") + roiVal.toFixed(2) + "%",
-      positionsCount: positionsCount || 8
+      portfolioValue: "0.000",
+      portfolioDiff: "0.00%",
+      pnl: "0.0000",
+      pnlDiff: "0.00%",
+      roi: "0.00%",
+      roiDiff: "0.00%",
+      positionsCount: 0
     };
   }, [visibleClaims, user, intuitionPnl]);
 
@@ -676,7 +630,7 @@ useEffect(() => {
             total_assets: "0",
             createdAt: p.created_at,
             term: { triple },
-          },
+          } as unknown as Claim,
           curve: curveId === "2" ? "Exponential" : "Linear",
           direction,
           value,
@@ -685,29 +639,7 @@ useEffect(() => {
         };
       });
     }
-    const list: any[] = [];
-    const userAddress = user?.address;
-    if (userAddress) {
-      visibleClaims.forEach((claim) => {
-        const claimPositions = getPositionsForClaim(claim, userAddress);
-        claimPositions.forEach((pos) => {
-          const hashInt = parseInt(pos.claim.term_id.slice(2, 10), 16);
-          const pnlPercent = ((hashInt % 30) - 15);
-          const pnlValue = pos.value * (pnlPercent / 100);
-
-          list.push({
-            id: `${pos.claim.term_id}-${pos.curve}-${pos.direction}`,
-            claim: pos.claim,
-            curve: pos.curve,
-            direction: pos.direction,
-            value: pos.value,
-            pnlValue,
-            pnlPercent
-          });
-        });
-      });
-    }
-    return list;
+    return [];
   }, [visibleClaims, user, intuitionPositions]);
 
   const filteredPositions = useMemo(() => {
@@ -733,9 +665,9 @@ useEffect(() => {
       case "totalMarketCap_asc":
         return list.sort((a, b) => a.value - b.value);
       case "positions_desc":
-        return list.sort((a, b) => (b.claim.total_position_count || 0) - (a.claim.total_position_count || 0));
+        return list.sort((a, b) => Number(b.claim.total_position_count || 0) - Number(a.claim.total_position_count || 0));
       case "positions_asc":
-        return list.sort((a, b) => (a.claim.total_position_count || 0) - (b.claim.total_position_count || 0));
+        return list.sort((a, b) => Number(a.claim.total_position_count || 0) - Number(b.claim.total_position_count || 0));
       case "pnl_desc":
         return list.sort((a, b) => b.pnlValue - a.pnlValue);
       case "pnl_asc":
