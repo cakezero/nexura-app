@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
-import { User, Trophy, LogOut, TrendingUp } from "lucide-react";
+import { User, Trophy, LogOut } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useToast } from "../hooks/use-toast";
@@ -231,12 +231,6 @@ useEffect(() => {
                 <span>My Profile</span>
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href="/profile/my-positions" className="w-full cursor-pointer p-3 text-base">
-                <TrendingUp className="mr-3 h-5 w-5" />
-                <span>My Positions</span>
-              </Link>
-            </DropdownMenuItem>
             {/* <DropdownMenuItem asChild>
               <Link href="/achievements" className="w-full cursor-pointer p-3 text-base">
                 <Trophy className="mr-3 h-5 w-5" />
@@ -266,12 +260,6 @@ useEffect(() => {
               <Link href="/profile" className="w-full cursor-pointer p-2 text-base">
                 <User className="mr-3 h-4 w-4" />
                 <span>Profile</span>
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href="/profile/my-positions" className="w-full cursor-pointer p-2 text-base">
-                <TrendingUp className="mr-3 h-4 w-4" />
-                <span>My Positions</span>
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
