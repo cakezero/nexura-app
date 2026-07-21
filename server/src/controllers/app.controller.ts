@@ -260,14 +260,17 @@ export const getPositions = async (req: GlobalRequest, res: GlobalResponse) => {
 
     // FILTERS (optional). Defaults to highest value first when no valid sort is given.
     const ALLOWED_SORT_FIELDS = new Set(["pnl", "updated_at", "redeemable_assets"]);
-    const entries = Object.entries(req.query || {}) as [string, any][];
+    const entries = Object.entries(req.query || {}).filter(([k]) => k !== 'limit' && k !== 'offset') as [string, any][];
     const [rawKey, rawValue] = entries[0] ?? [];
     const key = rawKey && ALLOWED_SORT_FIELDS.has(rawKey) ? rawKey : "redeemable_assets";
     const value = rawValue === "asc" || rawValue === "desc" ? rawValue : "desc";
+    
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : 21;
+    const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
 
     const { positions_with_value } = await client.request(query, {
-      limit: 21,
-      offset: 0,
+      limit,
+      offset,
       orderBy: [{ id: "asc" }, { [key]: value }],
       where: { account_id: { _eq: formattedAddress }, shares: { _gt: "0" } },
       userPositionAddress: formattedAddress

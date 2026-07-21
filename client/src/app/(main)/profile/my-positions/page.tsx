@@ -134,18 +134,33 @@ export default function PortalClaims() {
     if (!getStoredAccessToken()) return;
     let cancelled = false;
     (async () => {
+      // Map sortOption to API parameter
+      let sortParam = "redeemable_assets=desc"; // default
+      if (sortOption === "totalMarketCap_desc") sortParam = "redeemable_assets=desc";
+      if (sortOption === "totalMarketCap_asc") sortParam = "redeemable_assets=asc";
+      if (sortOption === "pnl_desc") sortParam = "pnl=desc";
+      if (sortOption === "pnl_asc") sortParam = "pnl=asc";
+      if (sortOption === "createdAt_desc") sortParam = "updated_at=desc";
+      if (sortOption === "createdAt_asc") sortParam = "updated_at=asc";
+
+      setLoading(true);
       const [pnlRes, posRes, actRes] = await Promise.allSettled([
         apiRequestV2("GET", "/api/user/get-intuition-pnl"),
-        apiRequestV2("GET", "/api/user/get-intuition-positions?redeemable_assets=desc"),
+        apiRequestV2("GET", `/api/user/get-intuition-positions?${sortParam}&offset=0`),
         apiRequestV2("GET", "/api/user/get-intuition-activity"),
       ]);
       if (cancelled) return;
       if (pnlRes.status === "fulfilled" && pnlRes.value) setIntuitionPnl(pnlRes.value);
-      if (posRes.status === "fulfilled" && posRes.value?.positions) setIntuitionPositions(posRes.value.positions);
+      if (posRes.status === "fulfilled" && posRes.value?.positions) {
+        setIntuitionPositions(posRes.value.positions);
+        offsetRef.current = posRes.value.positions.length;
+        setHasMore(posRes.value.positions.length >= LIMIT);
+      }
       if (actRes.status === "fulfilled" && actRes.value?.events) setIntuitionActivity(actRes.value.events);
+      setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, [sortOption]);
 
 
 useEffect(() => {
@@ -227,21 +242,33 @@ const loadMore = async () => {
   setLoading(true);
 
   try {
-    const { claims } = await apiRequestV2(
+    let sortParam = "redeemable_assets=desc";
+    if (sortOption === "totalMarketCap_desc") sortParam = "redeemable_assets=desc";
+    if (sortOption === "totalMarketCap_asc") sortParam = "redeemable_assets=asc";
+    if (sortOption === "pnl_desc") sortParam = "pnl=desc";
+    if (sortOption === "pnl_asc") sortParam = "pnl=asc";
+    if (sortOption === "createdAt_desc") sortParam = "updated_at=desc";
+    if (sortOption === "createdAt_asc") sortParam = "updated_at=asc";
+
+    const { positions } = await apiRequestV2(
       "GET",
-      `/api/get-claims?filter=${sortOption}&offset=${offsetRef.current}`
+      `/api/user/get-intuition-positions?${sortParam}&offset=${offsetRef.current}&limit=${LIMIT}`
     );
 
-    if (!claims?.length) {
+    if (!positions?.length) {
       setHasMore(false);
       return;
     }
 
-    setVisibleClaims(prev => [...prev, ...claims]);
+    setIntuitionPositions(prev => {
+      const existingIds = new Set(prev.map(p => p.id));
+      const newPos = positions.filter((p: any) => !existingIds.has(p.id));
+      return [...prev, ...newPos];
+    });
 
-    offsetRef.current += claims.length;
+    offsetRef.current += positions.length;
 
-    if (claims.length < LIMIT) setHasMore(false);
+    if (positions.length < LIMIT) setHasMore(false);
 
   } catch (err) {
     console.error("[ACTION] loadMore ✗", err);
@@ -800,29 +827,6 @@ useEffect(() => {
             )}
           </button>
 
-          <button
-            onClick={() => setPageTab("claims")}
-            className={`pb-4 text-sm font-semibold tracking-wide relative transition-all ${
-              pageTab === "claims" ? "text-white font-bold" : "text-gray-400 hover:text-white"
-            }`}
-          >
-            Claims
-            {pageTab === "claims" && (
-              <span className="absolute bottom-0 left-0 w-full h-[2px] bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]" />
-            )}
-          </button>
-
-          <button
-            onClick={() => setPageTab("watchlist")}
-            className={`pb-4 text-sm font-semibold tracking-wide relative transition-all ${
-              pageTab === "watchlist" ? "text-white font-bold" : "text-gray-400 hover:text-white"
-            }`}
-          >
-            Watchlist
-            {pageTab === "watchlist" && (
-              <span className="absolute bottom-0 left-0 w-full h-[2px] bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]" />
-            )}
-          </button>
         </div>
       </div>
 
@@ -884,7 +888,7 @@ useEffect(() => {
       </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 mt-6">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 mt-6">
         {pageTab === "positions" && (
           <div className="lg:col-span-1">
             <div className="border border-white/[0.08] bg-white/[0.05] rounded-3xl p-6 shadow-2xl backdrop-blur-xl space-y-6">
@@ -975,7 +979,7 @@ useEffect(() => {
           </div>
         )}
 
-        <div className={pageTab === "positions" ? "lg:col-span-3" : "lg:col-span-4"}>
+        <div className={pageTab === "positions" ? "lg:col-span-4" : "lg:col-span-5"}>
           {pageTab === "positions" && (
             <>
               {filteredPositions.length === 0 ? (
