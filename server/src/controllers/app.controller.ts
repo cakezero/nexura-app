@@ -259,8 +259,8 @@ export const getPositions = async (req: GlobalRequest, res: GlobalResponse) => {
     // redeemable_assets (asc) - lowest value
 
     // FILTERS (optional). Defaults to highest value first when no valid sort is given.
-    const ALLOWED_SORT_FIELDS = new Set(["pnl", "updated_at", "redeemable_assets"]);
-    const entries = Object.entries(req.query || {}).filter(([k]) => k !== 'limit' && k !== 'offset') as [string, any][];
+    const ALLOWED_SORT_FIELDS = new Set(["pnl", "pnl_pct", "updated_at", "redeemable_assets"]);
+    const entries = Object.entries(req.query || {}).filter(([k]) => k !== 'limit' && k !== 'offset' && k !== 'curve') as [string, any][];
     const [rawKey, rawValue] = entries[0] ?? [];
     const key = rawKey && ALLOWED_SORT_FIELDS.has(rawKey) ? rawKey : "redeemable_assets";
     const value = rawValue === "asc" || rawValue === "desc" ? rawValue : "desc";
@@ -268,11 +268,18 @@ export const getPositions = async (req: GlobalRequest, res: GlobalResponse) => {
     const limit = req.query.limit ? parseInt(req.query.limit as string) : 21;
     const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
 
+    // Optional curve filter (Linear=1, Exponential=2)
+    const curveParam = req.query.curve as string | undefined;
+    const where: Record<string, unknown> = { account_id: { _eq: formattedAddress }, shares: { _gt: "0" } };
+    if (curveParam === "1" || curveParam === "2") {
+      where.curve_id = { _eq: curveParam };
+    }
+
     const { positions_with_value } = await client.request(query, {
       limit,
       offset,
-      orderBy: [{ id: "asc" }, { [key]: value }],
-      where: { account_id: { _eq: formattedAddress }, shares: { _gt: "0" } },
+      orderBy: [{ [key]: value }, { id: "asc" }],
+      where,
       userPositionAddress: formattedAddress
     });
 

@@ -35,7 +35,7 @@ export default function PortalClaims() {
   const router = useRouter();
   const [showPopup, setShowPopup] = useState(false);
   const [view, setView] = useState("list");
-  const [sortOption, setSortOption] = useState('{"total_market_cap":"desc"}');
+  const [sortOption, setSortOption] = useState("totalMarketCap_desc");
   const [sortDirection, setSortDirection] = useState("desc");
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<Claim[]>([]);
@@ -140,13 +140,20 @@ export default function PortalClaims() {
       if (sortOption === "totalMarketCap_asc") sortParam = "redeemable_assets=asc";
       if (sortOption === "pnl_desc") sortParam = "pnl=desc";
       if (sortOption === "pnl_asc") sortParam = "pnl=asc";
+      if (sortOption === "roi_desc") sortParam = "pnl_pct=desc";
+      if (sortOption === "roi_asc") sortParam = "pnl_pct=asc";
+
       if (sortOption === "createdAt_desc") sortParam = "updated_at=desc";
       if (sortOption === "createdAt_asc") sortParam = "updated_at=asc";
+
+      const curveQ = curveFilter === "Linear" ? "1" : curveFilter === "Exponential" ? "2" : "";
+      const curveParam = curveQ ? `&curve=${curveQ}` : "";
+
 
       setLoading(true);
       const [pnlRes, posRes, actRes] = await Promise.allSettled([
         apiRequestV2("GET", "/api/user/get-intuition-pnl"),
-        apiRequestV2("GET", `/api/user/get-intuition-positions?${sortParam}&offset=0`),
+        apiRequestV2("GET", `/api/user/get-intuition-positions?${sortParam}${curveParam}&offset=0&limit=${LIMIT}`),
         apiRequestV2("GET", "/api/user/get-intuition-activity"),
       ]);
       if (cancelled) return;
@@ -160,7 +167,7 @@ export default function PortalClaims() {
       setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [sortOption]);
+  }, [sortOption, curveFilter]);
 
 
 useEffect(() => {
@@ -247,12 +254,19 @@ const loadMore = async () => {
     if (sortOption === "totalMarketCap_asc") sortParam = "redeemable_assets=asc";
     if (sortOption === "pnl_desc") sortParam = "pnl=desc";
     if (sortOption === "pnl_asc") sortParam = "pnl=asc";
+    if (sortOption === "roi_desc") sortParam = "pnl_pct=desc";
+    if (sortOption === "roi_asc") sortParam = "pnl_pct=asc";
+
     if (sortOption === "createdAt_desc") sortParam = "updated_at=desc";
     if (sortOption === "createdAt_asc") sortParam = "updated_at=asc";
 
+    const curveQ = curveFilter === "Linear" ? "1" : curveFilter === "Exponential" ? "2" : "";
+    const curveParam = curveQ ? `&curve=${curveQ}` : "";
+
+
     const { positions } = await apiRequestV2(
       "GET",
-      `/api/user/get-intuition-positions?${sortParam}&offset=${offsetRef.current}&limit=${LIMIT}`
+      `/api/user/get-intuition-positions?${sortParam}${curveParam}&offset=${offsetRef.current}&limit=${LIMIT}`
     );
 
     if (!positions?.length) {
@@ -323,7 +337,7 @@ useEffect(() => {
   observer.observe(el);
 
   return () => observer.disconnect();
-}, [hasMore, isSearching]);
+}, [hasMore, isSearching, sortOption, curveFilter]);
 
   const formatTrust = (shares: bigint, decimals = 18, precision = 4) => {
     const divisor = 10n ** BigInt(decimals);
