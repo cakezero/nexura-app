@@ -129,6 +129,11 @@ export default function PortalClaims() {
   const [intuitionPnl, setIntuitionPnl] = useState<any>(null);
   const [intuitionPositions, setIntuitionPositions] = useState<any[]>([]);
   const [intuitionActivity, setIntuitionActivity] = useState<any[]>([]);
+  const [hasMoreActivity, setHasMoreActivity] = useState(true);
+  const activityOffsetRef = useRef(0);
+  const activityObserverRef = useRef<HTMLDivElement | null>(null);
+  const activityLockRef = useRef(false);
+
 
   useEffect(() => {
     if (!getStoredAccessToken()) return;
@@ -151,10 +156,10 @@ export default function PortalClaims() {
 
 
       setLoading(true);
-      const [pnlRes, posRes, actRes] = await Promise.allSettled([
+      const [pnlRes, posRes] = await Promise.allSettled([
         apiRequestV2("GET", "/api/user/get-intuition-pnl"),
         apiRequestV2("GET", `/api/user/get-intuition-positions?${sortParam}${curveParam}&offset=0&limit=${LIMIT}`),
-        apiRequestV2("GET", "/api/user/get-intuition-activity"),
+        // activity fetched in its own effect below
       ]);
       if (cancelled) return;
       if (pnlRes.status === "fulfilled" && pnlRes.value) setIntuitionPnl(pnlRes.value);
@@ -163,11 +168,28 @@ export default function PortalClaims() {
         offsetRef.current = posRes.value.positions.length;
         setHasMore(posRes.value.positions.length >= LIMIT);
       }
-      if (actRes.status === "fulfilled" && actRes.value?.events) setIntuitionActivity(actRes.value.events);
+      // activity handled in its own effect below
       setLoading(false);
     })();
     return () => { cancelled = true; };
   }, [sortOption, curveFilter]);
+
+  // ---- Activity: own mount-only fetch + infinite scroll ----
+  useEffect(() => {
+    if (!getStoredAccessToken()) return;
+    let cancelled = false;
+    (async () => {
+      const res = await apiRequestV2("GET", "/api/user/get-intuition-activity?limit=50&offset=0");
+      if (cancelled) return;
+      if (res?.events) {
+        setIntuitionActivity(res.events);
+        activityOffsetRef.current = res.events.length;
+        setHasMoreActivity(res.events.length >= 50);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
 
 
 useEffect(() => {
@@ -244,6 +266,8 @@ const loadMore = async () => {
   console.log("[ACTION] loadMore", { offset: offsetRef.current, sortOption });
   if (requestLockRef.current || isSearching) return;
   if (!hasMore) return;
+  if (!intuitionPositions.length) return;
+
 
   requestLockRef.current = true;
   setLoading(true);
@@ -293,6 +317,25 @@ const loadMore = async () => {
   }
 };
 
+  const loadMoreActivity = async () => {
+    if (activityLockRef.current) return;
+    if (!hasMoreActivity) return;
+    if (!intuitionActivity.length) return;
+    activityLockRef.current = true;
+    try {
+      const res = await apiRequestV2("GET", `/api/user/get-intuition-activity?limit=50&offset=${activityOffsetRef.current}`);
+      if (!res?.events?.length) { setHasMoreActivity(false); return; }
+      setIntuitionActivity(prev => {
+        const existing = new Set(prev.map((e: any) => e.id));
+        const newEv = res.events.filter((e: any) => !existing.has(e.id));
+        return [...prev, ...newEv];
+      });
+      activityOffsetRef.current += res.events.length;
+      if (res.events.length < 50) setHasMoreActivity(false);
+    } catch (err) { console.error("[ACTION] loadMoreActivity x", err); }
+    finally { activityLockRef.current = false; }
+  };
+
 useEffect(() => {
   const source = isSearching ? searchResults : visibleClaims;
   setSortedClaims(sortClaims(source, sortOption));
@@ -336,8 +379,20 @@ useEffect(() => {
 
   observer.observe(el);
 
+
+  useEffect(() => {
+    if (!hasMoreActivity) return;
+    const el = activityObserverRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting) loadMoreActivity();
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasMoreActivity, intuitionActivity.length, pageTab]);
+
   return () => observer.disconnect();
-}, [hasMore, isSearching, sortOption, curveFilter]);
+}, [hasMore, isSearching, sortOption, curveFilter, intuitionPositions.length, view]);
 
   const formatTrust = (shares: bigint, decimals = 18, precision = 4) => {
     const divisor = 10n ** BigInt(decimals);
@@ -1002,7 +1057,7 @@ useEffect(() => {
                 </div>
               ) : view === "list" ? (
                 /* Desktop Table View */
-                <div className="hidden md:block overflow-x-auto w-full text-xs">
+                <div className="hidden md:block max-h-[70vh] overflow-auto w-full text-xs">
                   <table className="min-w-full text-left border-collapse font-geist font-light tracking-wide">
                     <thead className="text-sm font-light tracking-wide">
                       <tr className="bg-gray-800 text-gray-300">
@@ -1108,6 +1163,8 @@ useEffect(() => {
                           </tr>
                         );
                       })}
+                  <div ref={observerRef} className="h-10 w-full"></div>
+
                     </tbody>
                   </table>
                 </div>
@@ -1291,23 +1348,67 @@ useEffect(() => {
                   <p className="text-sm">No activity yet</p>
                 </div>
               ) : (
-                <ul className="divide-y divide-white/5">
+                <ul className="divide-y divide-white/5 max-h-[60vh] overflow-y-auto">
                   {intuitionActivity.map((ev: any) => {
                     const triple = ev.triple;
-                    const label = triple ? `${triple.subject?.label ?? ""} ${triple.predicate?.label ?? ""} ${triple.object?.label ?? ""}`.trim() : (ev.atom?.label ?? "an atom");
-                    const typeMeta = ({ Deposited: { text: "Deposited", color: "text-[#00E1A2]" }, Redeemed: { text: "Redeemed", color: "text-red-400" }, AtomCreated: { text: "Created atom", color: "text-blue-400" }, TripleCreated: { text: "Created claim", color: "text-purple-400" } } as Record<string, { text: string; color: string }>)[ev.type as string] ?? { text: ev.type, color: "text-gray-300" };
+                    const isDeposit = ev.type === "Deposited";
+                    const isRedeem = ev.type === "Redeemed";
+                    const isTxn = isDeposit || isRedeem;
+                    const rel = isDeposit ? ev.deposit : isRedeem ? ev.redemption : null;
+                    const actor = rel?.sender?.label ?? ev.atom?.creator?.label ?? ev.triple?.creator?.label ?? user?.username ?? "you";
+                    const actionText = isDeposit ? "deposited" : isRedeem ? "redeemed" : ev.type === "AtomCreated" ? "created atom" : ev.type === "TripleCreated" ? "created claim" : (ev.type ?? "").toLowerCase();
+                    const actionColor = isDeposit ? "text-[#00E1A2]" : isRedeem ? "text-red-400" : ev.type === "AtomCreated" ? "text-blue-400" : ev.type === "TripleCreated" ? "text-purple-400" : "text-gray-300";
+                    const amountRaw = isTxn && rel ? (isDeposit ? rel.assets_after_fees : rel.assets) : null;
+                    const amountStr = amountRaw ? parseFloat(formatEther(BigInt(amountRaw))).toFixed(3) : null;
+                    const curveId = rel?.curve_id != null ? String(rel.curve_id) : null;
+                    const curve = curveId === "2" ? "Exponential" : curveId === "1" ? "Linear" : null;
+                    let direction: string | null = null;
+                    if (isTxn && rel?.term_id && triple?.counter_term_id) {
+                      direction = rel.term_id === triple.counter_term_id ? "Oppose" : "Support";
+                    }
+                    const subjectLabel = triple?.subject?.label ?? "";
+                    const predicateLabel = triple?.predicate?.label ?? "";
+                    const objectLabel = triple?.object?.label ?? "";
+                    const tripleLabel = [subjectLabel, predicateLabel, objectLabel].filter(Boolean).join(" ");
+                    const atomLabel = ev.atom?.label ?? "";
+                    // action text/color now computed as actionText/actionColor above
                     const img = triple?.subject?.image || ev.atom?.image || "/user.png";
                     return (
                       <li key={ev.id} className="flex items-center gap-4 px-6 py-4 hover:bg-white/5 transition-colors">
                         <img src={img} onError={(e) => { e.currentTarget.src = "/user.png"; }} className="w-9 h-9 rounded-full object-cover border border-white/10" alt="" />
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm text-white truncate"><span className={`font-semibold ${typeMeta.color}`}>{typeMeta.text}</span>{" "}<span className="text-gray-300">{label}</span></p>
+                          <p className="text-sm text-white flex flex-wrap items-center gap-x-1.5 gap-y-1">
+                            <span className="font-semibold text-white">{actor}</span>
+                            <span className={`font-semibold ${actionColor}`}>{actionText}</span>
+                            {amountStr && (<><span className="font-semibold text-white">{amountStr}</span><span className="text-gray-400 font-normal text-[10px]">TRUST</span></>)}
+                            {subjectLabel && (
+                              <span className="bg-[#22193A] px-2.5 py-1 rounded flex items-center gap-2 max-w-[240px] truncate text-sm sm:text-base">
+                                <img src={triple?.subject?.image || "/user.png"} className="w-5 h-5 flex-shrink-0 rounded-full object-cover" onError={(e) => { e.currentTarget.src = "/user.png"; }} alt="" />
+                                <span className="truncate">{subjectLabel}</span>
+                              </span>
+                            )}
+                            {predicateLabel && (<span className="text-xs px-1 text-gray-500">{predicateLabel}</span>)}
+                            {objectLabel && (
+                              <span className="bg-[#22193A] px-2.5 py-1 rounded max-w-[280px] truncate text-sm sm:text-base">
+                                {objectLabel}
+                              </span>
+                            )}
+                            {!tripleLabel && atomLabel && (
+                              <span className="bg-[#22193A] px-2.5 py-1 rounded max-w-[280px] truncate text-sm sm:text-base">
+                                {atomLabel}
+                              </span>
+                            )}
+                            {direction && (<span className={direction === "Support" ? "text-blue-400 font-semibold" : "text-[#F19C03] font-semibold"}>{direction}</span>)}
+                            {curve && (<span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${curve === "Linear" ? "border border-white/15 text-gray-300 bg-white/5" : "border border-[#8b3efe]/30 bg-[#8b3efe]/10 text-[#a855f7]"}`}>{curve}</span>)}
+                          </p>
                           <p className="text-[11px] text-gray-500">{ev.created_at ? new Date(ev.created_at).toLocaleString() : ""}</p>
                         </div>
                         {ev.transaction_hash && (<a href={`${getExplorer()}/tx/${ev.transaction_hash}`} target="_blank" rel="noreferrer" className="text-[11px] text-purple-400 hover:underline shrink-0">View tx</a>)}
                       </li>
                     );
                   })}
+                  <div ref={activityObserverRef} className="h-10 w-full"></div>
+
                 </ul>
               )}
             </div>
@@ -2306,7 +2407,7 @@ useEffect(() => {
 )}
 
 
-          <div ref={observerRef} className="h-10"></div>
+          {/* observer sentinel moved into positions table */}
           <XPRewardPopup forceShow={showPopup} onClose={() => setShowPopup(false)} />
     </div>
   );

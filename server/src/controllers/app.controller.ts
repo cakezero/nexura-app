@@ -372,6 +372,24 @@ export const getIntuitionAccountActivity = async (req: GlobalRequest, res: Globa
             type
           }
         }
+        deposit {
+          assets_after_fees
+          curve_id
+          term_id
+          sender {
+            id
+            label
+          }
+        }
+        redemption {
+          assets
+          curve_id
+          term_id
+          sender {
+            id
+            label
+          }
+        }
       }
     }
 
@@ -381,7 +399,9 @@ export const getIntuitionAccountActivity = async (req: GlobalRequest, res: Globa
       }
     `;
 
-    const { events } = await client.request(query, { userAddress: formattedAddress, limit: 50, offset: 0 });
+    const actLimit = req.query.limit ? parseInt(req.query.limit as string) : 100;
+    const actOffset = req.query.offset ? parseInt(req.query.offset as string) : 0;
+    const { events } = await client.request(query, { userAddress: formattedAddress, limit: actLimit, offset: actOffset });
 
     res.status(OK).json({ events });
   } catch (error) {
