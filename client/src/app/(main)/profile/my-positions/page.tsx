@@ -309,7 +309,7 @@ const loadMore = async () => {
     if (positions.length < LIMIT) setHasMore(false);
 
   } catch (err) {
-    console.error("[ACTION] loadMore ✗", err);
+    console.error("[ACTION] loadMore âœ—", err);
     console.error(err);
   } finally {
     requestLockRef.current = false;
@@ -379,20 +379,20 @@ useEffect(() => {
 
   observer.observe(el);
 
-
-  useEffect(() => {
-    if (!hasMoreActivity) return;
-    const el = activityObserverRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting) loadMoreActivity();
-    });
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [hasMoreActivity, intuitionActivity.length, pageTab]);
-
   return () => observer.disconnect();
 }, [hasMore, isSearching, sortOption, curveFilter, intuitionPositions.length, view]);
+
+useEffect(() => {
+  if (!hasMoreActivity) return;
+  const el = activityObserverRef.current;
+  if (!el) return;
+  const observer = new IntersectionObserver(entries => {
+    if (entries[0].isIntersecting) loadMoreActivity();
+  });
+  observer.observe(el);
+  return () => observer.disconnect();
+}, [hasMoreActivity, intuitionActivity.length, pageTab]);
+
 
   const formatTrust = (shares: bigint, decimals = 18, precision = 4) => {
     const divisor = 10n ** BigInt(decimals);
@@ -561,7 +561,7 @@ useEffect(() => {
       setModalStep("success");
 
     } catch (err: any) {
-      console.error("[ACTION] handleClaimAction ✗", err);
+      console.error("[ACTION] handleClaimAction âœ—", err);
       console.error(err);
 
       setModalStep("failed");
@@ -812,7 +812,7 @@ useEffect(() => {
               {user?.displayName || user?.display_name || user?.username || "RChris.trust"}
             </h1>
             <p className="text-sm text-gray-400">
-              {computedMetrics.positionsCount} active positions · Member since {user?.dateJoined || (user?.created_at ? new Date(user.created_at).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : "Mar 2026")}
+              {computedMetrics.positionsCount} active positions Â· Member since {user?.dateJoined || (user?.created_at ? new Date(user.created_at).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : "Mar 2026")}
             </p>
           </div>
         </div>
@@ -1845,7 +1845,7 @@ useEffect(() => {
                                 onClick={() => setShowCurveInfo(false)}
                                 className="absolute top-3 right-3 text-gray-400 hover:text-white"
                               >
-                                ✕
+                                âœ•
                               </button>
 
                               <h2 className="text-white text-lg text-center mb-2">
@@ -1863,7 +1863,7 @@ useEffect(() => {
                               <div className="text-left mb-6">
                                 <h4 className="text-white mb-1">Linear Curve (Safe)</h4>
                                 <p className="text-gray-300 text-sm mb-2">
-                                  The Linear curve keeps pricing stable with gradual increases—your stake value increases or decreases proportionally as more people stake or redeem, making it predictable and lower-risk.
+                                  The Linear curve keeps pricing stable with gradual increasesâ€”your stake value increases or decreases proportionally as more people stake or redeem, making it predictable and lower-risk.
                                 </p>
                                 <p className="text-gray-400 text-sm">
                                   In other words, minus the fees, you will get back your original deposit value, plus any portion of the fees collected.
@@ -2028,7 +2028,7 @@ useEffect(() => {
                                 onClick={() => setShowCurveInfo(false)}
                                 className="absolute top-3 right-3 text-gray-400 hover:text-white"
                               >
-                                ✕
+                                âœ•
                               </button>
 
                               <h2 className="text-white text-lg text-center mb-2">
@@ -2046,7 +2046,7 @@ useEffect(() => {
                               <div className="text-left mb-6">
                                 <h4 className="text-white mb-1">Linear Curve (Safe)</h4>
                                 <p className="text-gray-300 text-sm mb-2">
-                                  The Linear curve keeps pricing stable with gradual increases—your stake value increases or decreases proportionally as more people stake or redeem, making it predictable and lower-risk.
+                                  The Linear curve keeps pricing stable with gradual increasesâ€”your stake value increases or decreases proportionally as more people stake or redeem, making it predictable and lower-risk.
                                 </p>
                                 <p className="text-gray-400 text-sm">
                                   In other words, minus the fees, you will get back your original deposit value, plus any portion of the fees collected.
@@ -2135,7 +2135,7 @@ useEffect(() => {
                   className="absolute top-2 right-2 text-gray-400 hover:text-white"
                   onClick={handleCloseModal}
                 >
-                  ×
+                  Ã—
                 </button>
               </div>
             </div>
@@ -2152,7 +2152,7 @@ useEffect(() => {
                     setModalStep("review");
                   }}
                 >
-                  ←
+                  â†
                 </button>
 
                 <div className="flex items-center gap-2 mb-4">
@@ -2215,7 +2215,7 @@ useEffect(() => {
 {modalStep === "success" && (
   <div className="flex flex-col items-center my-8">
     <div className="w-16 h-16 rounded-full bg-green-500 flex items-center justify-center mb-4">
-      <span className="text-white text-2xl">✓</span>
+      <span className="text-white text-2xl">âœ“</span>
     </div>
 
     <span className="text-white mb-2">
@@ -2246,7 +2246,7 @@ useEffect(() => {
                 {modalStep === "failed" && (
                   <div className="flex flex-col items-center my-8">
                     <div className="w-16 h-16 rounded-full bg-red-500 flex items-center justify-center mb-4">
-                      <span className="text-white text-2xl">✕</span>
+                      <span className="text-white text-2xl">âœ•</span>
                     </div>
 
                     <span className="text-white mb-6">
@@ -2274,7 +2274,7 @@ useEffect(() => {
                   className="absolute top-2 right-2 text-gray-400 hover:text-white text-xl"
                   onClick={() => setShowReviewRedeemModal(false)}
                 >
-                  ×
+                  Ã—
                 </button>
 
                 <div className="flex items-center gap-2 mb-4">
@@ -2337,7 +2337,7 @@ useEffect(() => {
                 {modalStep === "success" && (
                   <div className="flex flex-col items-center my-8">
                     <div className="w-16 h-16 rounded-full bg-green-500 flex items-center justify-center mb-4">
-                      <span className="text-white text-2xl">✓</span>
+                      <span className="text-white text-2xl">âœ“</span>
                     </div>
 
                     <span className="text-white mb-6">
@@ -2368,7 +2368,7 @@ useEffect(() => {
                 {modalStep === "failed" && (
                   <div className="flex flex-col items-center my-8">
                     <div className="w-16 h-16 rounded-full bg-red-500 flex items-center justify-center mb-4">
-                      <span className="text-white text-2xl">✕</span>
+                      <span className="text-white text-2xl">âœ•</span>
                     </div>
 
                     <span className="text-white mb-6">
