@@ -8,6 +8,7 @@ import bcrypt from "bcrypt";
 import crypto from "crypto";
 import chain from "./chain.utils";
 import { checksumAddress, formatEther, parseAbi, type Address } from "viem";
+import { announceMilestone } from "./announce";
 
 export const padNumber = (numberToBePadded: number) => {
 	return numberToBePadded.toString().padStart(3, "0");
@@ -26,9 +27,12 @@ export const startOfDayUTC = (date = new Date()): Date => {
 	));
 };
 
-async function updateLevel (xp: number, badges: number[], userId: string) {
+async function updateLevel (data: any) {
 	let address: `0x${string}` | undefined = undefined;
 	let level: string = "1";
+	let milestone = 1000;
+
+	const { xp, badges, level: userLevel } = data;
 
 	try {
 		if (xp >= 1000 && xp < 3000) {
@@ -41,46 +45,68 @@ async function updateLevel (xp: number, badges: number[], userId: string) {
 			if (!badges.includes(parseInt(level))) {
 				address = NexonsAddress[level]
 			}
+			milestone = 3000;
 		} else if (xp >= 6000 && xp < 10000) {
 			level = "3";
 			if (!badges.includes(parseInt(level))) {
 				address = NexonsAddress[level]
 			}
+			milestone = 6000;
 		} else if (xp >= 10000 && xp < 15000) {
 			level = "4";
 			if (!badges.includes(parseInt(level))) {
 				address = NexonsAddress[level]
 			}
+			milestone = 10000;
 		} else if (xp >= 15000 && xp < 20000) {
 			level = "5";
 			if (!badges.includes(parseInt(level))) {
 				address = NexonsAddress[level]
 			}
+			milestone = 15000;
 		} else if (xp >= 20000 && xp < 30000) {
 			level = "6";
 			if (!badges.includes(parseInt(level))) {
 				address = NexonsAddress[level]
 			}
+			milestone = 20000;
 		} else if (xp >= 30000 && xp < 40000) {
 			level = "7";
 			if (!badges.includes(parseInt(level))) {
 				address = NexonsAddress[level]
 			}
+			milestone = 30000;
 		} else if (xp >= 40000 && xp < 50000) {
 			level = "8";
 			if (!badges.includes(parseInt(level))) {
 				address = NexonsAddress[level]
 			}
+			milestone =40000;
 		} else if (xp >= 50000 && xp < 65000) {
 			level = "9";
 			if (!badges.includes(parseInt(level))) {
 				address = NexonsAddress[level]
 			}
+			milestone = 50000;
 		} else if (xp >= 65000) {
 			level = "10";
 			if (!badges.includes(parseInt(level))) {
 				address = NexonsAddress[level]
 			}
+			milestone = 65000;
+		}
+
+		if (level !== userLevel) { 
+			announceMilestone({
+				discordId: data.socialProfiles.discord.id,
+				id: data._id,
+				xp,
+				milestone,
+				streak: data.streak,
+				questsCompleted: data.questsCompleted,
+				campaignsCompleted: data.campaignsCompleted,
+				lessonsCompleted: data.lessonsCompleted
+			});
 		}
 
 		return level;
