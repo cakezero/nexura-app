@@ -847,7 +847,7 @@ export const claimQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 			}
 		}
 
-		const level = await updateLevel(questUser.xp, questUser.badges, questUser._id.toString());
+		const level = await updateLevel(questUser);
 
 		questUser.level = level;
 
@@ -919,7 +919,7 @@ export const claimEcosystemQuest = async (req: GlobalRequest, res: GlobalRespons
 
 		ecosystemQuestToClaim.done = true;
 
-		const level = await updateLevel(ecosystemQuestUser.xp, ecosystemQuestUser.badges, ecosystemQuestUser._id.toString());
+		const level = await updateLevel(ecosystemQuestUser);
 
 		ecosystemQuestUser.level = level;
 

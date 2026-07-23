@@ -1352,9 +1352,7 @@ export const runRelicHodlCheck = async () => {
         claimUser.xp = Math.max(0, claimUser.xp - reward);
         claimUser.hasRelic = false;
         claimUser.level = await updateLevel(
-          claimUser.xp,
-          claimUser.badges,
-          claimUser._id.toString(),
+          claimUser
         );
         await claimUser.save();
 
@@ -1418,9 +1416,7 @@ export const claimRelicReward = async (req: GlobalRequest, res: GlobalResponse) 
 
     // Recalculate level based on the new XP and badges
     const level = await updateLevel(
-      questUser.xp,
-      questUser.badges,
-      questUser._id.toString(),
+      questUser
     );
 
     questUser.level = level;
@@ -2477,9 +2473,7 @@ export const performDailySignIn = async (
     }
 
     const level = await updateLevel(
-      userExists.xp,
-      userExists.badges,
-      userExists._id.toString(),
+      userExists
     );
 
     userExists.level = level;
