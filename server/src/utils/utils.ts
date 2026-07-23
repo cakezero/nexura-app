@@ -38,62 +38,110 @@ async function updateLevel (data: any) {
 		if (xp >= 1000 && xp < 3000) {
 			level = "1";
 			if (!badges.includes(parseInt(level))) {
-				address = NexonsAddress[level]
+				address = NexonsAddress[level];
 			}
 		} else if (xp >= 3000 && xp < 6000) {
 			level = "2";
 			if (!badges.includes(parseInt(level))) {
-				address = NexonsAddress[level]
+				address = NexonsAddress[level];
 			}
 			milestone = 3000;
 		} else if (xp >= 6000 && xp < 10000) {
 			level = "3";
 			if (!badges.includes(parseInt(level))) {
-				address = NexonsAddress[level]
+				address = NexonsAddress[level];
 			}
 			milestone = 6000;
 		} else if (xp >= 10000 && xp < 15000) {
 			level = "4";
 			if (!badges.includes(parseInt(level))) {
-				address = NexonsAddress[level]
+				address = NexonsAddress[level];
 			}
 			milestone = 10000;
 		} else if (xp >= 15000 && xp < 20000) {
 			level = "5";
 			if (!badges.includes(parseInt(level))) {
-				address = NexonsAddress[level]
+				address = NexonsAddress[level];
 			}
 			milestone = 15000;
 		} else if (xp >= 20000 && xp < 30000) {
 			level = "6";
 			if (!badges.includes(parseInt(level))) {
-				address = NexonsAddress[level]
+				address = NexonsAddress[level];
 			}
 			milestone = 20000;
 		} else if (xp >= 30000 && xp < 40000) {
 			level = "7";
 			if (!badges.includes(parseInt(level))) {
-				address = NexonsAddress[level]
+				address = NexonsAddress[level];
 			}
 			milestone = 30000;
 		} else if (xp >= 40000 && xp < 50000) {
 			level = "8";
 			if (!badges.includes(parseInt(level))) {
-				address = NexonsAddress[level]
+				address = NexonsAddress[level];
 			}
-			milestone =40000;
+			milestone = 40000;
 		} else if (xp >= 50000 && xp < 65000) {
 			level = "9";
 			if (!badges.includes(parseInt(level))) {
-				address = NexonsAddress[level]
+				address = NexonsAddress[level];
 			}
 			milestone = 50000;
-		} else if (xp >= 65000) {
+		} else if (xp >= 65000 && xp < 75000) {
 			level = "10";
 			if (!badges.includes(parseInt(level))) {
-				address = NexonsAddress[level]
+				address = NexonsAddress[level];
 			}
 			milestone = 65000;
+		} else if (xp >= 75000 && xp < 100000) {
+			level = "11";
+			if (!badges.includes(parseInt(level))) {
+				address = NexonsAddress[level];
+			}
+			milestone = 75000;
+		} else if (xp >= 100000 && xp < 150000) {
+			level = "12";
+			if (!badges.includes(parseInt(level))) {
+				address = NexonsAddress[level];
+			}
+			milestone = 100000;
+		} else if (xp >= 150000 && xp < 200000) {
+			level = "13";
+			if (!badges.includes(parseInt(level))) {
+				address = NexonsAddress[level];
+			}
+			milestone = 150000;
+		} else if (xp >= 200000 && xp < 300000) {
+			level = "14";
+			if (!badges.includes(parseInt(level))) {
+				address = NexonsAddress[level];
+			}
+			milestone = 200000;
+		} else if (xp >= 300000 && xp < 350000) {
+			level = "15";
+			if (!badges.includes(parseInt(level))) {
+				address = NexonsAddress[level];
+			}
+			milestone = 300000;
+		} else if (xp >= 350000 && xp < 400000) {
+			level = "16";
+			if (!badges.includes(parseInt(level))) {
+				address = NexonsAddress[level];
+			}
+			milestone = 350000;
+		} else if (xp >= 400000 && xp < 500000) {
+			level = "17";
+			if (!badges.includes(parseInt(level))) {
+				address = NexonsAddress[level];
+			}
+			milestone = 400000;
+		} else if (xp >= 500000) {
+			level = "18";
+			if (!badges.includes(parseInt(level))) {
+				address = NexonsAddress[level];
+			}
+			milestone = 500000;
 		}
 
 		if (level !== userLevel) { 
