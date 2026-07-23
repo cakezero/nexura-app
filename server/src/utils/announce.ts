@@ -2,110 +2,140 @@ import { alreadyAnnounced } from "@/models/alreadyAnnounced.model";
 
 const { EmbedBuilder } = require("discord.js");
 
-import client from "../../client.ts";
+import client from "../../client";
 
 function getNextMilestone(currentXP: number) {
-    const sorted = [1000, 3000, 6000, 10000, 15000, 20000, 30000, 40000, 50000, 65000].sort((a, b) => a - b);
-    return sorted.find(m => m > currentXP) ?? null;
+	const milestones = [
+		1000, 3000, 6000, 10000, 15000, 20000, 30000, 40000, 50000, 65000, 75000,
+		100000, 150000, 200000, 300000, 350000, 400000, 500000
+	].sort((a, b) => a - b);
+	return milestones.find((m) => m > currentXP) ?? null;
 }
 
 export const announceMilestone = async (data: any) => {
-    try {
-        if (
-            !data ||
-            !data.id ||
-            !data.discordId ||
-            data.xp == null ||
-            data.milestone == null ||
-            data.streak == null ||
-            data.questsCompleted == null ||
-            data.campaignsCompleted == null ||
-            data.lessonsCompleted == null
-        ) {
-            console.error("[milestone] Invalid or incomplete data object:", data);
-            return false;
-        }
+	try {
+		if (
+			!data ||
+			!data.id ||
+			!data.discordId ||
+			data.xp == null ||
+			data.milestone == null ||
+			data.streak == null ||
+			data.questsCompleted == null ||
+			data.campaignsCompleted == null ||
+			data.lessonsCompleted == null
+		) {
+			console.error("[milestone] Invalid or incomplete data object:", data);
+			return false;
+		}
 
-        if (!/^\d+$/.test(data.discordId)) {
-            console.error("[milestone] Invalid discordId:", data.discordId);
-            return false;
-        }
+		if (!/^\d+$/.test(data.discordId)) {
+			console.error("[milestone] Invalid discordId:", data.discordId);
+			return false;
+		}
 
-        // Prevent the same milestone from being announced twice
-        const announced = await alreadyAnnounced.findOne({ user: data.id, milestone: data.milestone, discordId: data.discordId }).lean();
-        if (announced) { 
-            return false;
-        }
- 
-        if (!process.env.MILESTONE_CHANNEL_ID) {
-            console.error("[milestone] MILESTONE_CHANNEL_ID is not set.");
-            return false;
-        }
+		// Prevent the same milestone from being announced twice
+		const announced = await alreadyAnnounced
+			.findOne({
+				user: data.id,
+				milestone: data.milestone,
+				discordId: data.discordId,
+			})
+			.lean();
+		if (announced) {
+			return false;
+		}
 
-        if (!client.isReady()) {
-            console.error("[milestone] Discord client is not ready.");
-            return false;
-        }
+		if (!process.env.MILESTONE_CHANNEL_ID) {
+			console.error("[milestone] MILESTONE_CHANNEL_ID is not set.");
+			return false;
+		}
 
-        const channel = await client.channels.fetch(process.env.MILESTONE_CHANNEL_ID);
-        if (!channel || !channel.isTextBased()) {
-            console.error("[milestone] Channel not found or is not a text channel.");
-            return false;
-        }
+		if (!client.isReady()) {
+			console.error("[milestone] Discord client is not ready.");
+			return false;
+		}
 
-        const next = getNextMilestone(data.xp);
+		const channel = await client.channels.fetch(
+			process.env.MILESTONE_CHANNEL_ID,
+		);
+		if (!channel || !channel.isTextBased()) {
+			console.error("[milestone] Channel not found or is not a text channel.");
+			return false;
+		}
 
-        const embed = new EmbedBuilder()
-            .setColor("#8B5CF6")
-            .setTitle("XP Milestone Unlocked! 🎉")
-            .setDescription(
-                `Congratulations <@${data.discordId}> on reaching **${data.milestone.toLocaleString()} XP!**`
-            )
-            .addFields(
-                {
-                    name: "Current XP",
-                    value: data.xp.toLocaleString(),
-                    inline: true
-                },
-                {
-                    name: "Next Milestone",
-                    value: next ? `${next.toLocaleString()} XP` : "Maximum milestone reached",
-                    inline: true
-                },
-                {
-                    name: "Check-in Streak",
-                    value: data.streak != null ? `${data.streak} Days` : "N/A",
-                    inline: true
-                },
-                {
-                    name: "Quests Completed",
-                    value: data.questsCompleted != null ? data.questsCompleted.toLocaleString() : "N/A",
-                    inline: true
-                },
-                {
-                    name: "Campaigns Completed",
-                    value: data.campaignsCompleted != null ? data.campaignsCompleted.toLocaleString() : "N/A",
-                    inline: true
-                },
-                {
-                    name: "Lessons Completed",
-                    value: data.lessonsCompleted != null ? data.lessonsCompleted.toLocaleString() : "N/A",
-                    inline: true
-                },
-            )
-            .setFooter({ text: "Powered by Nexura 💜" })
-            .setTimestamp();
+		const next = getNextMilestone(data.xp);
 
-        await channel.send({ embeds: [embed] });
+		const embed = new EmbedBuilder()
+			.setColor("#8B5CF6")
+			.setTitle("XP Milestone Unlocked! 🎉")
+			.setDescription(
+				`Congratulations <@${data.discordId}> on reaching **${data.milestone.toLocaleString()} XP!**`,
+			)
+			.addFields(
+				{
+					name: "Current XP",
+					value: data.xp.toLocaleString(),
+					inline: true,
+				},
+				{
+					name: "Next Milestone",
+					value: next
+						? `${next.toLocaleString()} XP`
+						: "Maximum milestone reached",
+					inline: true,
+				},
+				{
+					name: "Check-in Streak",
+					value: data.streak != null ? `${data.streak} Days` : "N/A",
+					inline: true,
+				},
+				{
+					name: "Quests Completed",
+					value:
+						data.questsCompleted != null
+							? data.questsCompleted.toLocaleString()
+							: "N/A",
+					inline: true,
+				},
+				{
+					name: "Campaigns Completed",
+					value:
+						data.campaignsCompleted != null
+							? data.campaignsCompleted.toLocaleString()
+							: "N/A",
+					inline: true,
+				},
+				{
+					name: "Lessons Completed",
+					value:
+						data.lessonsCompleted != null
+							? data.lessonsCompleted.toLocaleString()
+							: "N/A",
+					inline: true,
+				},
+			)
+			.setFooter({ text: "Powered by Nexura 💜" })
+			.setTimestamp();
 
-        await alreadyAnnounced.create({ discordId: data.discordId, milestone: data.milestone, user: data.id });
+		await channel.send({ embeds: [embed] });
 
-        console.log(`[milestone] Announcement sent for Discord ID: ${data.discordId} — ${data.milestone} XP`);
+		await alreadyAnnounced.create({
+			discordId: data.discordId,
+			milestone: data.milestone,
+			user: data.id,
+		});
 
-        return true;
+		console.log(
+			`[milestone] Announcement sent for Discord ID: ${data.discordId} — ${data.milestone} XP`,
+		);
 
-    } catch (err) {
-        console.error("[milestone] Error:", err instanceof Error ? err.message : String(err));
-        return false;
-    }
-}
+		return true;
+	} catch (err) {
+		console.error(
+			"[milestone] Error:",
+			err instanceof Error ? err.message : String(err),
+		);
+		return false;
+	}
+};

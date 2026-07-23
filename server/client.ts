@@ -1,5 +1,4 @@
 const { Client, GatewayIntentBits, Events } = require("discord.js");
-import logger from "@/config/logger";
 import { firstMessage } from "@/models/msg.model";
 
 const client = new Client({
@@ -33,25 +32,25 @@ client.on(Events.MessageCreate, async (message: any) => {
 
 // Catches Discord API and WebSocket errors — prevents process crash
 client.on("error", (error: any) => {
-    console.error("[client] Discord client error:", error.message);
+	console.error("[client] Discord client error:", error.message);
 });
 
 // Logs Discord.js internal warnings
 client.on("warn", (message: any) => {
-    console.warn("[client] Warning:", message);
+	console.warn("[client] Warning:", message);
 });
 
 // Logs disconnection, reconnection, and resume events
 client.on("shardDisconnect", (event: any) => {
-    console.warn("[client] Bot disconnected. Code:", event.code);
+	console.warn("[client] Bot disconnected. Code:", event.code);
 });
 
 client.on("shardReconnecting", () => {
-    console.log("[client] Reconnecting to Discord...");
+	console.log("[client] Reconnecting to Discord...");
 });
 
 client.on("shardResume", () => {
-    console.log("[client] Connection resumed.");
+	console.log("[client] Connection resumed.");
 });
 
 export default client;
