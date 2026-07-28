@@ -1,6 +1,6 @@
 import express from "express";
 import cors from "cors";
-import { Client, Events, GatewayIntentBits } from "discord.js";
+import { Events } from "discord.js";
 import helmet from "helmet";
 import { port, BOT_TOKEN, SERVER_ENV } from "@/utils/env.utils";
 import DB from "@/config/db";
