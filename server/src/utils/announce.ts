@@ -37,8 +37,8 @@ export const announceMilestone = async (data: any) => {
 			return false;
 		}
 
-		const isMember = await isMemberOfGuild("1419336727302111367", data.discordId);
-		if (!isMember) { 
+		const member = await isMemberOfGuild("1419336727302111367", data.discordId);
+		if (!member) { 
 			logger.error("[milestone] user not on discord server:", data.discordId);
 			return false;
 		}
@@ -72,7 +72,7 @@ export const announceMilestone = async (data: any) => {
 			.setColor("#8B5CF6")
 			.setTitle("XP Milestone Unlocked! 🎉")
 			.setDescription(
-				`Congratulations <@${data.discordId}> on reaching **${data.milestone.toLocaleString()} XP!**`,
+				`Congratulations ${member.toString()} on reaching **${data.milestone.toLocaleString()} XP!**`,
 			)
 			.addFields(
 				{

@@ -171,9 +171,9 @@ export async function isMemberOfGuild(guildId: string, userId: string) {
 	try {
 		const guild = await client.guilds.fetch(guildId);
 
-		await guild.members.fetch(userId);
+		const member = await guild.members.fetch(userId);
 
-		return true;
+		return member;
 	} catch {
 		return false;
 	}
