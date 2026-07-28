@@ -9,6 +9,8 @@ import crypto from "crypto";
 import chain from "./chain.utils";
 import { checksumAddress, formatEther, parseAbi, type Address } from "viem";
 import { announceMilestone } from "./announce";
+import { GuildMember } from "discord.js";
+import client from "../../client";
 
 export const padNumber = (numberToBePadded: number) => {
 	return numberToBePadded.toString().padStart(3, "0");
@@ -164,6 +166,18 @@ async function updateLevel (data: any) {
 }
 
 export { updateLevel };
+
+export async function isMemberOfGuild(guildId: string, userId: string) {
+	try {
+		const guild = await client.guilds.fetch(guildId);
+
+		await guild.members.fetch(userId);
+
+		return true;
+	} catch {
+		return false;
+	}
+}
 
 export const validateCampaignData = (reqData: any) => {
 	const campaignSchema = z.object({

@@ -3,6 +3,9 @@ import { alreadyAnnounced } from "@/models/alreadyAnnounced.model";
 const { EmbedBuilder } = require("discord.js");
 
 import client from "../../client";
+import { isMemberOfGuild } from "./utils";
+import logger from "@/config/logger";
+import { environment } from "./env.utils";
 
 function getNextMilestone(currentXP: number) {
 	const milestones = [
@@ -25,12 +28,18 @@ export const announceMilestone = async (data: any) => {
 			data.campaignsCompleted == null ||
 			data.lessonsCompleted == null
 		) {
-			console.error("[milestone] Invalid or incomplete data object:", data);
+			logger.error("[milestone] Invalid or incomplete data object:", data);
 			return false;
 		}
 
 		if (!/^\d+$/.test(data.discordId)) {
-			console.error("[milestone] Invalid discordId:", data.discordId);
+			logger.error("[milestone] Invalid discordId:", data.discordId);
+			return false;
+		}
+
+		const isMember = await isMemberOfGuild("1419336727302111367", data.discordId);
+		if (!isMember) { 
+			logger.error("[milestone] user not on discord server:", data.discordId);
 			return false;
 		}
 
@@ -46,21 +55,14 @@ export const announceMilestone = async (data: any) => {
 			return false;
 		}
 
-		if (!process.env.MILESTONE_CHANNEL_ID) {
-			console.error("[milestone] MILESTONE_CHANNEL_ID is not set.");
-			return false;
-		}
-
 		if (!client.isReady()) {
-			console.error("[milestone] Discord client is not ready.");
+			logger.error("[milestone] Discord client is not ready.");
 			return false;
 		}
 
-		const channel = await client.channels.fetch(
-			process.env.MILESTONE_CHANNEL_ID,
-		);
+		const channel = await client.channels.fetch("1525262853097914438");
 		if (!channel || !channel.isTextBased()) {
-			console.error("[milestone] Channel not found or is not a text channel.");
+			logger.error("[milestone] Channel not found or is not a text channel.");
 			return false;
 		}
 
@@ -132,7 +134,7 @@ export const announceMilestone = async (data: any) => {
 
 		return true;
 	} catch (err) {
-		console.error(
+		logger.error(
 			"[milestone] Error:",
 			err instanceof Error ? err.message : String(err),
 		);
