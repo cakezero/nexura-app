@@ -71,6 +71,33 @@ const deriveBanTimestamp = (record: { _id: unknown; createdAt?: Date | string })
   return null;
 };
 
+export const publishEcosystemDapp = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const { dappId, action }: { dappId: string, action?: "paused" | "active" } = req.body;
+
+    if (!dappId) { 
+      res.status(BAD_REQUEST).json({ error: "send the id for the dapp to be published" });
+      return;
+    }
+
+    const dappToUpdate = await ecosystemQuest.findById(dappId);
+    if (!dappToUpdate) { 
+      res.status(NOT_FOUND).json({ error: "dapp id sent is invalid" });
+      return;
+    }
+
+    dappToUpdate.status = action ?? "paused";
+    dappToUpdate.published = action === "active" ? true : false;
+
+    await dappToUpdate.save();
+
+    res.status(OK).json({ message: "dapp has been updated" });
+  } catch (error) { 
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error setting ecosystem dapp as active or paused" });
+  }
+}
+
 const buildAdminAuthPayload = (record: {
   _id: unknown;
   username?: string | null;

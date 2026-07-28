@@ -103,7 +103,7 @@ export const withSubmissionCategory = async (submissions: any[]): Promise<any[]>
 // todo: add ecosystem completed to eco quests
 export const fetchEcosystemDapps = async (req: GlobalRequest, res: GlobalResponse) => {
 	try {
-		const ecosystemQuests = await ecosystemQuest.find().lean();
+		const ecosystemQuests = await ecosystemQuest.find({ status: "active" }).lean();
 		const ecosystemQuestsCompleted = await ecosystemQuestCompleted.find({
 			user: req.id,
 		}).lean();
