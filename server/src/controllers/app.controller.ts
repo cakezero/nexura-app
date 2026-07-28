@@ -92,7 +92,7 @@ const getTrustNameProvider = () => {
 };
 
 export const getUserPNL = async (req: GlobalRequest, res: GlobalResponse) => {
-  try { 
+  try {
     const formattedAddress = checksumAddress(req.user.address);
 
     const query = `query GetAccountPnlCurrent($input: GetAccountPnlCurrentInput!) {
@@ -109,11 +109,14 @@ export const getUserPNL = async (req: GlobalRequest, res: GlobalResponse) => {
       }
     }`;
 
-    const { getAccountPnlCurrent } = await client.request(query, { userPositionAddress: formattedAddress });
+    let getAccountPnlCurrent: any = null;
+    try {
+      ({ getAccountPnlCurrent } = await client.request(query, { input: { account_id: formattedAddress } }));
+    } catch { /* NO_DATA for this account -> return zeros */ }
 
     const positionsQuery = `query GetAccountPositionCount($address: String!) {
       positions_with_value_aggregate(
-        where: {account_id: {_eq: $address}, shares: {_gt: "0"}}
+        where: {account_id: {_eq: $address}, shares: {_gt: "0"}, term: { type: { _eq: "Triple" } }}
       ) {
         aggregate {
           count
@@ -123,14 +126,16 @@ export const getUserPNL = async (req: GlobalRequest, res: GlobalResponse) => {
 
     const { positions_with_value_aggregate: { aggregate: { count: positions } } } = await client.request(positionsQuery, { address: formattedAddress });
 
+    const pnlData = getAccountPnlCurrent ?? {};
     const data = {
-      portfolio_value: parseFloat(formatEther(getAccountPnlCurrent.equity_value)).toFixed(4),
-      pnl: parseFloat(formatEther(getAccountPnlCurrent.total_pnl)).toFixed(4),
-      roi: parseFloat(getAccountPnlCurrent.pnl_pct).toFixed(1),
-      positions
+      portfolio_value: pnlData.equity_value ? parseFloat(formatEther(pnlData.equity_value)).toFixed(4) : "0",
+      pnl: pnlData.total_pnl ? parseFloat(formatEther(pnlData.total_pnl)).toFixed(4) : "0",
+      roi: pnlData.pnl_pct ? parseFloat(pnlData.pnl_pct).toFixed(1) : "0",
+      positions: positions ?? 0
     }
 
 
+    res.status(OK).json(data);
   } catch (error) {
     logger.error(error);
     res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching user intuition pnl" })
@@ -245,15 +250,48 @@ export const getPositions = async (req: GlobalRequest, res: GlobalResponse) => {
     }
     `;
 
+    // FILTERS
+    // pnl (asc) - worst pnl
+    // pnl (desc) - best pnl
+    // updated_at (desc) - newest
+    // updated_at (asc) - oldest
+    // redeemable_assets (desc) - highest value
+    // redeemable_assets (asc) - lowest value
+
+    // FILTERS (optional). Defaults to highest value first when no valid sort is given.
+    const ALLOWED_SORT_FIELDS = new Set(["pnl", "pnl_pct", "updated_at", "redeemable_assets"]);
+    const entries = Object.entries(req.query || {}).filter(([k]) => k !== 'limit' && k !== 'offset' && k !== 'curve') as [string, any][];
+    const [rawKey, rawValue] = entries[0] ?? [];
+    const key = rawKey && ALLOWED_SORT_FIELDS.has(rawKey) ? rawKey : "redeemable_assets";
+    const value = rawValue === "asc" || rawValue === "desc" ? rawValue : "desc";
+    
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : 30;
+    const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
+
+    // Optional curve filter (Linear=1, Exponential=2)
+    const curveParam = req.query.curve as string | undefined;
+    const where: Record<string, unknown> = { account_id: { _eq: formattedAddress }, shares: { _gt: "0" } };
+    if (curveParam === "1" || curveParam === "2") {
+      where.curve_id = { _eq: curveParam };
+    }
+
     const { positions_with_value } = await client.request(query, {
-      limit: 21,
-      offset: 0,
-      orderBy: [{ id: "asc" }, { redeemable_assets: "desc" }],
-      where: { account_id: { _eq: formattedAddress }, shares: { _gt: "0" } },
+      limit,
+      offset,
+      orderBy: [{ [key]: value }, { id: "asc" }],
+      where,
       userPositionAddress: formattedAddress
     });
 
-    res.status(OK).json({ positions: positions_with_value });
+    const updatedPostions = [];
+
+    for (const positions of positions_with_value) { 
+      if (!positions.term.triple) continue;
+
+      updatedPostions.push(positions);
+    }
+
+    res.status(OK).json({ positions: updatedPostions });
   } catch (error) {
     logger.error(error);
     res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching user postions" });
@@ -342,11 +380,36 @@ export const getIntuitionAccountActivity = async (req: GlobalRequest, res: Globa
             type
           }
         }
+        deposit {
+          assets_after_fees
+          curve_id
+          term_id
+          sender {
+            id
+            label
+          }
+        }
+        redemption {
+          assets
+          curve_id
+          term_id
+          sender {
+            id
+            label
+          }
+        }
       }
     }
+
+      fragment CachedImageFields on cached_images_cached_image {
+        url
+        safe
+      }
     `;
 
-    const { events } = await client.request(query, { userAddress: formattedAddress, limit: 50, offset: 0 });
+    const actLimit = req.query.limit ? parseInt(req.query.limit as string) : 100;
+    const actOffset = req.query.offset ? parseInt(req.query.offset as string) : 0;
+    const { events } = await client.request(query, { userAddress: formattedAddress, limit: actLimit, offset: actOffset });
 
     res.status(OK).json({ events });
   } catch (error) {
@@ -1297,9 +1360,7 @@ export const runRelicHodlCheck = async () => {
         claimUser.xp = Math.max(0, claimUser.xp - reward);
         claimUser.hasRelic = false;
         claimUser.level = await updateLevel(
-          claimUser.xp,
-          claimUser.badges,
-          claimUser._id.toString(),
+          claimUser
         );
         await claimUser.save();
 
@@ -1363,9 +1424,7 @@ export const claimRelicReward = async (req: GlobalRequest, res: GlobalResponse) 
 
     // Recalculate level based on the new XP and badges
     const level = await updateLevel(
-      questUser.xp,
-      questUser.badges,
-      questUser._id.toString(),
+      questUser
     );
 
     questUser.level = level;
@@ -2422,9 +2481,7 @@ export const performDailySignIn = async (
     }
 
     const level = await updateLevel(
-      userExists.xp,
-      userExists.badges,
-      userExists._id.toString(),
+      userExists
     );
 
     userExists.level = level;

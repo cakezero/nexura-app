@@ -103,7 +103,7 @@ export const withSubmissionCategory = async (submissions: any[]): Promise<any[]>
 // todo: add ecosystem completed to eco quests
 export const fetchEcosystemDapps = async (req: GlobalRequest, res: GlobalResponse) => {
 	try {
-		const ecosystemQuests = await ecosystemQuest.find().lean();
+		const ecosystemQuests = await ecosystemQuest.find({ status: "active" }).lean();
 		const ecosystemQuestsCompleted = await ecosystemQuestCompleted.find({
 			user: req.id,
 		}).lean();
@@ -847,7 +847,7 @@ export const claimQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 			}
 		}
 
-		const level = await updateLevel(questUser.xp, questUser.badges, questUser._id.toString());
+		const level = await updateLevel(questUser);
 
 		questUser.level = level;
 
@@ -919,7 +919,7 @@ export const claimEcosystemQuest = async (req: GlobalRequest, res: GlobalRespons
 
 		ecosystemQuestToClaim.done = true;
 
-		const level = await updateLevel(ecosystemQuestUser.xp, ecosystemQuestUser.badges, ecosystemQuestUser._id.toString());
+		const level = await updateLevel(ecosystemQuestUser);
 
 		ecosystemQuestUser.level = level;
 
@@ -2031,7 +2031,26 @@ export const getAdminHubQuests = async (req: GlobalRequest, res: GlobalResponse)
       return;
     }
     const quests = await quest.find({ hub: hubId, status: { $ne: "Deleted" } }).sort({ createdAt: -1 }).lean();
-    res.status(OK).json({ message: "Admin quests fetched!", quests });
+
+    const statusUpdates: any[] = [];
+    const normalizedQuests = quests.map((q: any) => {
+      const temporal = getTemporalQuestStatus(q);
+      if (temporal && temporal !== q.status && q.status !== "Save" && q.status !== "Ended") {
+        statusUpdates.push({ _id: q._id, status: temporal });
+        return { ...q, status: temporal };
+      }
+      return q;
+    });
+
+    if (statusUpdates.length > 0) {
+      await quest.bulkWrite(
+        statusUpdates.map(({ _id, status }) => ({
+          updateOne: { filter: { _id }, update: { $set: { status } } },
+        }))
+      );
+    }
+
+    res.status(OK).json({ message: "Admin quests fetched!", quests: normalizedQuests });
   } catch (error) {
     logger.error("Error fetching admin hub quests: " + error);
     res.status(INTERNAL_SERVER_ERROR).json({ error: "Error fetching admin hub quests" });
@@ -2050,6 +2069,13 @@ export const getAdminQuestDetail = async (req: GlobalRequest, res: GlobalRespons
       res.status(NOT_FOUND).json({ error: "Quest not found" });
       return;
     }
+
+    const temporal = getTemporalQuestStatus(q);
+    if (temporal && temporal !== q.status && q.status !== "Save" && q.status !== "Ended") {
+      await quest.updateOne({ _id: q._id }, { $set: { status: temporal } });
+      (q as any).status = temporal;
+    }
+
     res.status(OK).json({ message: "Quest detail fetched!", quest: q });
   } catch (error) {
     logger.error("Error fetching admin quest detail: " + error);

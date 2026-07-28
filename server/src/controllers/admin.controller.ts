@@ -7,7 +7,7 @@ import { lesson, lessonCompleted, miniLesson, question, questionCompleted, video
 import { admin } from "@/models/admin.model";
 import { BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND, NO_CONTENT, OK, UNAUTHORIZED, FORBIDDEN } from "@/utils/status.utils";
 import { campaign as campaignModel, campaignCompleted, campaign } from "@/models/campaign.model";
-import { generateOTP, getRefreshToken, hashPassword, JWT, startOfDayUTC, validateQuestData } from "@/utils/utils";
+import { generateOTP, getRefreshToken, hashPassword, JWT, startOfDayUTC, updateLevel, validateQuestData } from "@/utils/utils";
 import { sendAdminResetEmail, sendEmailToAdmin } from "@/utils/sendMail";
 import { campaignQuestCompleted, miniQuestCompleted, questCompleted } from "@/models/questsCompleted.models";
 import { submission } from "@/models/submission.model";
@@ -70,6 +70,33 @@ const deriveBanTimestamp = (record: { _id: unknown; createdAt?: Date | string })
 
   return null;
 };
+
+export const publishEcosystemDapp = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const { dappId, action }: { dappId: string, action?: "paused" | "active" } = req.body;
+
+    if (!dappId) { 
+      res.status(BAD_REQUEST).json({ error: "send the id for the dapp to be published" });
+      return;
+    }
+
+    const dappToUpdate = await ecosystemQuest.findById(dappId);
+    if (!dappToUpdate) { 
+      res.status(NOT_FOUND).json({ error: "dapp id sent is invalid" });
+      return;
+    }
+
+    dappToUpdate.status = action ?? "paused";
+    dappToUpdate.published = action === "active" ? true : false;
+
+    await dappToUpdate.save();
+
+    res.status(OK).json({ message: "dapp has been updated" });
+  } catch (error) { 
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error setting ecosystem dapp as active or paused" });
+  }
+}
 
 const buildAdminAuthPayload = (record: {
   _id: unknown;
@@ -251,8 +278,10 @@ export const rewardXp = async (req: GlobalRequest, res: GlobalResponse) => {
 		const xpAmount = parseInt(xp, 10);
 		const userExists = await user.findOne({ address: lowerAddress });
 
-		if (userExists) {
-			await user.updateOne({ address: lowerAddress }, { $inc: { xp: xpAmount, eventsWon: 1 } });
+    if (userExists) {
+      const level = await updateLevel(userExists);
+
+      await user.updateOne({ address: lowerAddress }, { $inc: { xp: xpAmount, eventsWon: 1 }, $set: { level } });
 			await xpLog.create({
 				address: lowerAddress,
 				amount: xpAmount,
@@ -260,7 +289,8 @@ export const rewardXp = async (req: GlobalRequest, res: GlobalResponse) => {
         type,
 				username: userExists.username,
 				adminId: req.id ? new mongoose.Types.ObjectId(req.id) : undefined
-			});
+      });
+
 		} else {
 			await xpLog.create({
 				address: lowerAddress,

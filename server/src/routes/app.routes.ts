@@ -1,5 +1,5 @@
 import { authenticateUser, authenticateUser2 } from "@/middlewares/auth.middleware";
-import { rateLimiter } from "@/middlewares/ratelimiter";
+// import { rateLimiter } from "@/middlewares/ratelimiter";
 import { Router } from "express";
 import {
 	checkXTask,
@@ -29,9 +29,9 @@ router
   .get("/", home)
   .get("/studio-payment-config", getStudioPaymentConfig)
   .post("/allow-mint", authenticateUser, allowNexonsMint)
-  .get("/get-claims", rateLimiter, authenticateUser2, getClaims)
+  .get("/get-claims", authenticateUser2, getClaims)
   .post("/search-for-claim", authenticateUser2, searchTriple)
-  .get("/get-triple", rateLimiter, authenticateUser2, getTriple)
+  .get("/get-triple", authenticateUser2, getTriple)
   .get("/get-analytics", getAnalytics)
   .post("/check-x", authenticateUser, checkXTask)
   .post("/check-discord", authenticateUser, checkDiscordTask)
