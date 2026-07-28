@@ -7,7 +7,7 @@ import { lesson, lessonCompleted, miniLesson, question, questionCompleted, video
 import { admin } from "@/models/admin.model";
 import { BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND, NO_CONTENT, OK, UNAUTHORIZED, FORBIDDEN } from "@/utils/status.utils";
 import { campaign as campaignModel, campaignCompleted, campaign } from "@/models/campaign.model";
-import { generateOTP, getRefreshToken, hashPassword, JWT, startOfDayUTC, validateQuestData } from "@/utils/utils";
+import { generateOTP, getRefreshToken, hashPassword, JWT, startOfDayUTC, updateLevel, validateQuestData } from "@/utils/utils";
 import { sendAdminResetEmail, sendEmailToAdmin } from "@/utils/sendMail";
 import { campaignQuestCompleted, miniQuestCompleted, questCompleted } from "@/models/questsCompleted.models";
 import { submission } from "@/models/submission.model";
@@ -278,8 +278,10 @@ export const rewardXp = async (req: GlobalRequest, res: GlobalResponse) => {
 		const xpAmount = parseInt(xp, 10);
 		const userExists = await user.findOne({ address: lowerAddress });
 
-		if (userExists) {
-			await user.updateOne({ address: lowerAddress }, { $inc: { xp: xpAmount, eventsWon: 1 } });
+    if (userExists) {
+      const level = await updateLevel(userExists);
+
+      await user.updateOne({ address: lowerAddress }, { $inc: { xp: xpAmount, eventsWon: 1 }, $set: { level } });
 			await xpLog.create({
 				address: lowerAddress,
 				amount: xpAmount,
@@ -287,7 +289,8 @@ export const rewardXp = async (req: GlobalRequest, res: GlobalResponse) => {
         type,
 				username: userExists.username,
 				adminId: req.id ? new mongoose.Types.ObjectId(req.id) : undefined
-			});
+      });
+
 		} else {
 			await xpLog.create({
 				address: lowerAddress,
