@@ -116,7 +116,7 @@ export const getUserPNL = async (req: GlobalRequest, res: GlobalResponse) => {
 
     const positionsQuery = `query GetAccountPositionCount($address: String!) {
       positions_with_value_aggregate(
-        where: {account_id: {_eq: $address}, shares: {_gt: "0"}}
+        where: {account_id: {_eq: $address}, shares: {_gt: "0"}, term: { type: { _eq: "Triple" } }}
       ) {
         aggregate {
           count
@@ -265,7 +265,7 @@ export const getPositions = async (req: GlobalRequest, res: GlobalResponse) => {
     const key = rawKey && ALLOWED_SORT_FIELDS.has(rawKey) ? rawKey : "redeemable_assets";
     const value = rawValue === "asc" || rawValue === "desc" ? rawValue : "desc";
     
-    const limit = req.query.limit ? parseInt(req.query.limit as string) : 21;
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : 30;
     const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
 
     // Optional curve filter (Linear=1, Exponential=2)
@@ -283,7 +283,15 @@ export const getPositions = async (req: GlobalRequest, res: GlobalResponse) => {
       userPositionAddress: formattedAddress
     });
 
-    res.status(OK).json({ positions: positions_with_value });
+    const updatedPostions = [];
+
+    for (const positions of positions_with_value) { 
+      if (!positions.term.triple) continue;
+
+      updatedPostions.push(positions);
+    }
+
+    res.status(OK).json({ positions: updatedPostions });
   } catch (error) {
     logger.error(error);
     res.status(INTERNAL_SERVER_ERROR).json({ error: "error fetching user postions" });
