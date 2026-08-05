@@ -60,7 +60,7 @@ export const announceMilestone = async (data: any) => {
 			return false;
 		}
 
-		const channel = await client.channels.fetch("1525262853097914438");
+		const channel = await client.channels.fetch(process.env.MILESTONE_CHANNEL_ID);
 		if (!channel || !channel.isTextBased()) {
 			logger.error("[milestone] Channel not found or is not a text channel.");
 			return false;
