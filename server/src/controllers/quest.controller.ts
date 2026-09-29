@@ -40,6 +40,19 @@ import { consumePaymentHash } from "./studioPayment.controller";
 import { environment } from "@/utils/env.utils";
 import { resolveAdminCampaignHub } from "@/utils/adminCampaignHub";
 
+// Image fields may hold empty strings or the literal "pending" (draft
+// placeholder). Both must read as "no image" so the UI falls back gracefully
+// instead of rendering a broken <img>.
+const resolveImageUrl = (...candidates: unknown[]): string => {
+	for (const candidate of candidates) {
+		if (typeof candidate !== "string") continue;
+		const value = candidate.trim();
+		if (!value || value.toLowerCase() === "pending") continue;
+		return value;
+	}
+	return "";
+};
+
 const DISCORD_CAMPAIGN_TAGS = new Set([
 	"join",
 	"message",
@@ -212,19 +225,33 @@ export const fetchQuests = async (req: GlobalRequest, res: GlobalResponse) => {
 				(mergedQuest as any)._needsStatusUpdate = temporalStatus;
 			}
 
-			// Set project_name and project_image based on hub
+			// Resolve the creator hub so project_name and the creator icon stay in
+			// sync with what the studio shows. Quests made by user admins reference
+			// a `user-hubs` doc, so the collection must be picked by creatorModel —
+			// looking only in the `hubs` collection silently misses user-hub quests.
+			let creatorHub: any;
 			if (singleQuest.hub) {
-				const hub = await Hub.findById(singleQuest.hub).select('name logo systemKey').lean();
-				if (hub) {
+				creatorHub = singleQuest.creatorModel === "user"
+					? await userHub.findById(singleQuest.hub).select('name logo systemKey').lean()
+					: await Hub.findById(singleQuest.hub).select('name logo systemKey').lean();
+				if (creatorHub) {
 					// If it's a system hub (Nexura), show "Nexura" as creator
-					if (hub.systemKey === 'nexura-admin-campaigns') {
+					if (creatorHub.systemKey === 'nexura-admin-campaigns') {
 						mergedQuest.project_name = 'Nexura';
 					} else {
-						mergedQuest.project_name = hub.name;
+						mergedQuest.project_name = creatorHub.name;
 					}
-					mergedQuest.project_image = hub.logo;
 				}
 			}
+
+			// Show the image actually uploaded for the quest when present; only fall
+			// back to the hub logo (then the quest cover) otherwise. Never clobber a
+			// stored image with an empty hub logo.
+			mergedQuest.project_image =
+				resolveImageUrl(singleQuest.project_image) ||
+				resolveImageUrl(creatorHub?.logo) ||
+				resolveImageUrl(singleQuest.projectCoverImage) ||
+				"";
 
 			quests.push(mergedQuest);
 		}
@@ -321,7 +348,9 @@ export const fetchMiniQuests = async (req: GlobalRequest, res: GlobalResponse) =
 			id: currentHub?._id?.toString?.() ?? "",
 			name: currentHub?.name ?? mainQuest.project_name ?? "",
 			description: currentHub?.description ?? "",
-			logo: currentHub?.logo ?? mainQuest.project_image ?? "",
+			// User hubs may have an empty logo — fall back to the quest's own stored
+			// images so the creator icon shows what was uploaded.
+			logo: resolveImageUrl(currentHub?.logo, mainQuest.project_image, mainQuest.projectCoverImage),
 			website: (currentHub as any)?.website ?? "",
 			xAccount: (currentHub as any)?.xAccount ?? "",
 			discordServer: (currentHub as any)?.discordServer ?? "",
@@ -339,6 +368,9 @@ export const fetchMiniQuests = async (req: GlobalRequest, res: GlobalResponse) =
 			title: mainQuest.title, 
 			description: mainQuest.description,
 			hubInfo,
+			// The quest detail page reads `creatorCoverImage` for the banner; keep
+			// `projectCoverImage` as well for backwards compatibility.
+			creatorCoverImage: resolveImageUrl(mainQuest.projectCoverImage, mainQuest.project_image),
 			projectCoverImage: mainQuest.projectCoverImage,
 			hub: mainQuest.hub,
 		});
@@ -1166,7 +1198,9 @@ export const createQuest = async (req: GlobalRequest, res: GlobalResponse) => {
 
 		requestData.projectCoverImage = projectCoverImageUrl;
 
-		requestData.project_image = createdHub.logo;
+		// Creator icon: hub logo when set, otherwise the uploaded cover so the
+		// quest never stores an empty icon (user hubs may have no logo yet).
+		requestData.project_image = createdHub.logo || requestData.projectCoverImage || "";
     if (!requestData.project_name) {
       requestData.project_name = createdHub.name || "";
     }
@@ -1441,11 +1475,11 @@ export const saveQuest = async (req: GlobalRequest, res: GlobalResponse) => {
       const body = {
         ...req.body,
         description: req.body.description || hubFound.description || "Untitled Quest",
-        project_image: hubFound.logo ?? "pending",
+        project_image: hubFound.logo || req.body.coverImage || "pending",
         project_name: hubFound.name ?? req.body.nameOfProject ?? "",
         sub_title: req.body.description || hubFound.description || "",
         questNumber: questCount + 1,
-        projectCoverImage: req.body.coverImage ?? "pending",
+        projectCoverImage: req.body.coverImage || hubFound.logo || "pending",
         creator: req.admin.hub,
         hub: req.admin.hub,
         creatorModel: page === "user" ? "user" : "admin",
@@ -1478,11 +1512,11 @@ export const saveQuest = async (req: GlobalRequest, res: GlobalResponse) => {
       const questCount = await quest.countDocuments({ creator: req.id });
       const body = {
         ...req.body,
-        project_image: hubFound.logo ?? "pending",
+        project_image: hubFound.logo || req.body.coverImage || "pending",
         project_name: hubFound.name ?? req.body.nameOfProject ?? "",
         sub_title: req.body.description || hubFound.description || "",
         questNumber: questCount + 1,
-        projectCoverImage: req.body.coverImage ?? "pending",
+        projectCoverImage: req.body.coverImage || hubFound.logo || "pending",
         creator: req.admin.hub,
         hub: req.admin.hub,
         creatorModel: page === "user" ? "user" : "admin",
@@ -1504,7 +1538,14 @@ export const saveQuest = async (req: GlobalRequest, res: GlobalResponse) => {
       return;
     }
 
-    const { miniQuests: _mq, isDraft: _d, existingCoverImage: _e, hubCoverImage: _h, nameOfProject: _n, ...updateFields } = req.body;
+    const { miniQuests: _mq, isDraft: _d, existingCoverImage: _e, hubCoverImage: _h, nameOfProject: _n, coverImage: _c, ...updateFields } = req.body;
+
+    // The quest model has no `coverImage` field: a freshly uploaded cover must
+    // be written to `projectCoverImage`, otherwise edit-mode uploads are
+    // silently dropped and the old/placeholder image keeps showing.
+    if (typeof _c === "string" && _c.trim() && _c.trim().toLowerCase() !== "pending") {
+      updateFields.projectCoverImage = _c.trim();
+    }
 
     // If it's a draft, don't allow status update via this endpoint.
     if (questFound.status === "Save") {
@@ -1701,9 +1742,9 @@ export const saveSingleQuest = async (req: GlobalRequest, res: GlobalResponse) =
         page,
         nameOfProject,
         sub_title: description,
-        project_image: uploadedIconUrl ?? hubFound.logo ?? "pending",
+        project_image: uploadedIconUrl || hubFound.logo || "pending",
         project_name: hubFound.name ?? nameOfProject,
-        projectCoverImage: uploadedIconUrl ?? "pending",
+        projectCoverImage: uploadedIconUrl || hubFound.logo || "pending",
         questNumber: questCount + 1,
         starts_at,
         ends_at,
