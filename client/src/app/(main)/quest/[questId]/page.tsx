@@ -623,7 +623,7 @@ export default function QuestEnvironment() {
                   <div className="w-1 h-1 rounded-full bg-white/20 group-hover:bg-purple-400/50 transition-colors" />
                 </div>
                 <p className="text-lg sm:text-xl font-semibold truncate max-w-[250px] sm:max-w-md">
-                  {sub_title || title}
+                  {title || sub_title}
                 </p>
               </div>
             </div>
@@ -660,7 +660,10 @@ export default function QuestEnvironment() {
             <div className="p-5 md:p-6 flex flex-col justify-between">
               <div>
                 <p className="text-xs opacity-50 uppercase mb-1">{creatorName || "Nexura"}</p>
-                <p className="text-lg md:text-xl font-bold leading-tight">Quest {questNumber}:<br />{sub_title}</p>
+                {/* Studio quests store sub_title = description, so the title slot
+                    must prefer the real quest title — otherwise the heading
+                    shows the description and the Description block repeats it. */}
+                <p className="text-lg md:text-xl font-bold leading-tight">Quest {questNumber}:<br />{title || sub_title}</p>
 
                 {questDescription && (
                   <div className="mt-4">
@@ -674,7 +677,7 @@ export default function QuestEnvironment() {
                 <div className="mt-4">
                   <p className="uppercase text-xs opacity-50">Start Quest</p>
                   <p className="text-sm opacity-80 leading-relaxed mt-1">
-                    {title || sub_title || "Complete simple quests in the Nexura ecosystem and earn rewards."}
+                    {sub_title || title || "Complete simple quests in the Nexura ecosystem and earn rewards."}
                   </p>
                 </div>
                 <div className="mt-3 space-y-1">
