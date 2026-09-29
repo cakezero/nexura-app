@@ -395,20 +395,27 @@ const handleClaimQuest = async (quest: Quest) => {
   }
 };
 
+const toDisplayImage = (value?: string | null): string => {
+  if (typeof value !== "string") return "";
+  const trimmed = value.trim();
+  // "pending" is the draft placeholder the studio stores before an upload —
+  // treat it (and empty strings) as "no image" so the UI fallback renders.
+  if (!trimmed || trimmed.toLowerCase() === "pending") return "";
+  return trimmed;
+};
+
 const getTaskIcon = (quest: any) => {
   if (quest.isRelicQuest || quest.taskType === "relic") return "/relic.png";
   if (quest.taskType === "discord") return "/discordd.png";
   if (quest.taskType === "twitter") return "/x-icon.png";
   if (quest.taskType === "social") return "/explore-icon.png";
-  return quest.project_image || "/x-icon.png";
+  return toDisplayImage(quest.project_image) || "/x-icon.png";
 };
 
 const getCustomIcon = (quest: any): string | null => {
   // i-* (atlas) tasks keep their dedicated icons via getTaskIcon.
   if (typeof quest.taskType === "string" && quest.taskType.startsWith("i-")) return null;
-  const candidate = quest.projectCoverImage || quest.image;
-  if (!candidate || candidate === "pending") return null;
-  return candidate;
+  return toDisplayImage(quest.projectCoverImage) || toDisplayImage(quest.image) || null;
 };
 
 const HaloButton = ({
@@ -683,13 +690,11 @@ const renderSeasonalQuestCard = (quest: Quest, index: number = 0) => {
   }}
   className="h-[360px] w-full"
 >
-  <Card className="h-full w-full bg-[#170f1f] border border-white/5 rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition flex flex-col">
-
-    {/* QUEST BANNER */}
+  <Card className="h-full w-full bg-[#170f1f] border border-white/5 rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition flex flex-col">      {/* QUEST BANNER */}
     <div className="relative h-[140px] w-full shrink-0 bg-black">
-      {quest.projectCoverImage && (
+      {toDisplayImage(quest.projectCoverImage) && (
         <img
-          src={quest.projectCoverImage}
+          src={toDisplayImage(quest.projectCoverImage)}
           alt={quest.title}
           className="w-full h-full object-cover"
         />
@@ -723,7 +728,7 @@ const renderSeasonalQuestCard = (quest: Quest, index: number = 0) => {
       <div className="absolute bottom-3 left-3">
         <div className="w-10 h-10 rounded-lg overflow-hidden border border-white/10 bg-[#1D1526] backdrop-blur-md shadow-lg">
           <img
-            src={(quest as any).project_image || "/quest-1.png"}
+            src={toDisplayImage((quest as any).project_image) || "/quest-1.png"}
             alt={quest.project_name || "Project"}
             className="w-full h-full object-cover"
           />

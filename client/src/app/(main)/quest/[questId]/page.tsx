@@ -65,6 +65,15 @@ export default function QuestEnvironment() {
   const [creatorCoverImage, setCreatorCoverImage] = useState<string>("");
   const [creatorName, setCreatorName] = useState("");
   const [creatorImage, setCreatorImage] = useState("");
+
+  // "pending" is the draft placeholder stored before an upload — treat it as
+  // "no image" so the UI fallback renders instead of a broken <img>.
+  const toDisplayImage = (value?: string | null): string => {
+    if (typeof value !== "string") return "";
+    const trimmed = value.trim();
+    if (!trimmed || trimmed.toLowerCase() === "pending") return "";
+    return trimmed;
+  };
   const [hubInfo, setHubInfo] = useState<HubInfo | null>(null);
   const [showHubModal, setShowHubModal] = useState(false);
 
@@ -128,7 +137,7 @@ export default function QuestEnvironment() {
       setTitle(t);
       setSubTitle(st);
       setQuestDescription(questDescription || "");
-      setCreatorCoverImage(pci || "/quest.png");
+      setCreatorCoverImage(toDisplayImage(pci) || "/quest.png");
       if (hub) setHubId(hub);
 
       const nextHubInfo: HubInfo = fetchedHubInfo ?? {
@@ -138,7 +147,7 @@ export default function QuestEnvironment() {
       };
       setHubInfo(nextHubInfo);
       setCreatorName(nextHubInfo.name || "");
-      setCreatorImage(nextHubInfo.logo || "");
+      setCreatorImage(toDisplayImage(nextHubInfo.logo));
     })();
   }, []);
 
