@@ -46,6 +46,11 @@ const ATLAS_TAGS = ["i-trust", "i-collaborated", "i-interact", "i-follow"];
 
 const MANUAL_PROOF_TAGS = ["comment", "comment-x", "follow", "follow-x", "feedback", "create-post", "twitter", "social"];
 
+// Helper text for the inline proof box, per task type. Feedback tasks collect
+// written feedback, not a link — don't show the generic Twitter/comment text.
+const getProofPlaceholder = (taskType?: string) =>
+  taskType === "feedback" ? "Enter Feedback" : "Paste your comment link or Twitter username here";
+
 const DISCORD_TAGS = ["join", "join-discord", "message", "message-discord", "send-message-discord", "acquire-role-discord", "discord"];
 
 export default function Quests() {
@@ -646,7 +651,7 @@ const renderDefaultQuestCard = (quest: any, index: number = 0) => {
             <input
               value={proofInput}
               onChange={(e) => setProofInput(e.target.value)}
-              placeholder="Paste your comment link or Twitter username here"
+              placeholder={getProofPlaceholder(quest.taskType)}
               className="h-9 w-full rounded-[10px] border border-[rgba(138,62,254,0.3)] bg-[#060210] px-3 text-[11px] font-bold text-white outline-none placeholder:text-[11px] placeholder:font-bold placeholder:text-[rgba(255,255,255,0.4)]"
             />
 

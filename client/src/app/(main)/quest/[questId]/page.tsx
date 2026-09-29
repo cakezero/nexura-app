@@ -563,7 +563,7 @@ export default function QuestEnvironment() {
             </p>
             <input
               type="url"
-              placeholder="Paste your comment link or Twitter username here"
+              placeholder={quest.tag === "feedback" ? "Enter Feedback" : "Paste your comment link or Twitter username here"}
               value={proofLinks[quest._id] || ""}
               onChange={(e) =>
                 setProofLinks({
