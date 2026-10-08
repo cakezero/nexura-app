@@ -237,7 +237,11 @@ export const signIn = async (req: GlobalRequest, res: GlobalResponse) => {
   let location = undefined;
 
   if (ip) {
-		location = await getLocation(ip!);
+    try {
+      location = await getLocation(ip!);
+    } catch (error) {
+      console.log("error fetching loation data");
+		}
   }
 
 	try {
