@@ -7,7 +7,15 @@ import StudioBackground from "@/components/StudioBackground";
 import { useEffect, useState } from "react";
 import { getStoredProjectInfo, clearProjectSession, projectApiRequest, getStoredProjectToken, storeProjectSession } from "@/lib/projectApi";
 
-type TabType = "hubProfile" | "campaignSubmissions" | "adminManagement" | "campaignsTab";
+type TabType = "hubProfile" | "campaignSubmissions" | "adminManagement" | "campaignsTab" | "campaignsFlow";
+
+type NavItem = {
+  title: string;
+  short?: string;
+  icon: string | typeof Shield;
+  id: TabType;
+  badge?: string;
+};
 
 interface StudioSidebarProps {
   activeTab: TabType;
@@ -27,12 +35,13 @@ export default function StudioSidebar({
   const [adminRole, setAdminRole] = useState<string>("");
   const [adminName, setAdminName] = useState<string>("Administrator");
 
-  const sidebarItems = [
-    { title: "Profile", icon: "/sidebar-icons/nexura-studio.png", id: "hubProfile" as TabType },
-    { title: "Campaigns", icon: "/sidebar-icons/campaigns.png", id: "campaignsTab" as TabType },
-    { title: "Dashboard", icon: "/sidebar-icons/analytics.png", id: "campaignSubmissions" as TabType },
+  const sidebarItems: NavItem[] = [
+    { title: "Profile", icon: "/sidebar-icons/nexura-studio.png", id: "hubProfile" },
+    { title: "Campaigns", short: "Campaigns", icon: "/sidebar-icons/campaigns.png", id: "campaignsTab" },
+    { title: "New Campaigns", short: "New", icon: "/sidebar-icons/campaigns.png", id: "campaignsFlow", badge: "New" },
+    { title: "Dashboard", short: "Dashboard", icon: "/sidebar-icons/analytics.png", id: "campaignSubmissions" },
     ...(adminRole === "superadmin" ? [
-      { title: "Admin Management", icon: Shield, id: "adminManagement" as TabType },
+      { title: "Admin Management", short: "Admins", icon: Shield, id: "adminManagement" as TabType },
     ] : []),
   ];
 
@@ -75,6 +84,7 @@ export default function StudioSidebar({
     hubProfile: "/studio-dashboard/hub-profile",
     campaignSubmissions: "/studio-dashboard/dashboard",
     campaignsTab: "/studio-dashboard/campaigns-tab",
+    campaignsFlow: "/studio-dashboard/campaigns-flow",
     adminManagement: "/studio-dashboard/admin-management",
   };
 
@@ -158,6 +168,11 @@ export default function StudioSidebar({
                 />
               )}
               {item.title}
+              {item.badge && (
+                <span className="ml-auto rounded-full bg-[#8A3FFC] px-2 py-0.5 text-[10px] font-semibold leading-none text-white">
+                  {item.badge}
+                </span>
+              )}
             </button>
           ))}
         </nav>
@@ -209,7 +224,7 @@ export default function StudioSidebar({
             ) : (
               <item.icon className="w-5 h-5" />
             )}
-            <span>{item.title === "Admin Management" ? "Admins" : item.title}</span>
+            <span>{item.short ?? item.title}</span>
           </button>
         ))}
         <button
