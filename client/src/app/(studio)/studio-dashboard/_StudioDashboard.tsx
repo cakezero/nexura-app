@@ -40,7 +40,7 @@ type BannedUser = {
   bannedAt: string;
 }
 
-type TabType = "hubProfile" | "campaignSubmissions" | "adminManagement" | "campaignsTab";
+type TabType = "hubProfile" | "campaignSubmissions" | "adminManagement" | "campaignsTab" | "campaignsFlow";
 
 export default function StudioDashboard({ onLogout }: StudioDashboardProps) {
   const pathname = usePathname();
@@ -49,6 +49,7 @@ export default function StudioDashboard({ onLogout }: StudioDashboardProps) {
     if (pathname.includes("/studio-dashboard/dashboard")) return "campaignSubmissions";
     if (pathname.includes("hub-profile")) return "hubProfile";
     if (pathname.includes("admin-management")) return "adminManagement";
+    if (pathname.includes("campaigns-flow")) return "campaignsFlow";
     if (pathname.includes("campaigns-tab") || pathname.includes("create-new-campaign") || pathname.includes("my-campaign")) {
       return "campaignsTab";
     }
@@ -217,6 +218,7 @@ const fetchBannedUsers = async () => {
       {activeTab === "campaignSubmissions" && "Nexura Studio"}
       {activeTab === "adminManagement" && "User Administration"}
       {activeTab === "campaignsTab" && "Campaigns"}
+      {activeTab === "campaignsFlow" && "New Campaigns"}
     </h2>
   </div>
 
@@ -244,7 +246,7 @@ const fetchBannedUsers = async () => {
 
           <main className="flex-1 overflow-y-auto pt-4 pb-8 px-4 md:pt-8 md:pb-8 md:px-8 relative bg-black/20">
             <div className="max-w-7xl mx-auto">
-              {activeTab !== "adminManagement" && activeTab !== "campaignsTab" && (
+              {activeTab !== "adminManagement" && activeTab !== "campaignsTab" && activeTab !== "campaignsFlow" && (
                 <StatsOverview key={activeTab} tasks={activeTab === "campaignSubmissions" ? campaignTasks : []} />
               )}
               {activeTab === "campaignsTab" && <CampaignsTab />}

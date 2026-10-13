@@ -8,20 +8,23 @@ import StudioBackground from "@/components/StudioBackground";
 import StudioSidebar from "./StudioSidebar";
 import { isProjectSignedIn, clearProjectSession, projectApiRequest } from "@/lib/projectApi";
 import { getStoredProjectToken } from "@/lib/projectApi";
+import { useWallet } from "@/hooks/use-wallet";
 
-type TabType = "hubProfile" | "campaignSubmissions" | "adminManagement" | "campaignsTab";
+type TabType = "hubProfile" | "campaignSubmissions" | "adminManagement" | "campaignsTab" | "campaignsFlow";
 
 interface StudioLayoutProps {
   children: React.ReactNode;
   title?: string;
   onLogout?: () => void;
+  /** Light canvas that fills the content column. Used by the new campaigns flow only. */
+  bleed?: boolean;
 }
 
 /**
  * Shared layout wrapper for all /studio-dashboard/* pages.
  * Renders the StudioSidebar + header chrome around the given children.
  */
-export default function StudioLayout({ children, title = "Nexura Studio", onLogout }: StudioLayoutProps) {
+export default function StudioLayout({ children, title = "Nexura Studio", onLogout, bleed = false }: StudioLayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -30,6 +33,7 @@ export default function StudioLayout({ children, title = "Nexura Studio", onLogo
     if (pathname.includes("hub-profile")) return "hubProfile";
     if (pathname.includes("admin-management")) return "adminManagement";
     if (pathname === "/studio-dashboard") return "campaignSubmissions";
+    if (pathname.includes("campaigns-flow")) return "campaignsFlow";
     if (pathname.includes("campaigns-tab") || pathname.includes("create-new-campaign") || pathname.includes("my-campaign"))
       return "campaignsTab";
     return "campaignSubmissions";
@@ -71,6 +75,7 @@ export default function StudioLayout({ children, title = "Nexura Studio", onLogo
               <h2 className="text-lg font-semibold text-white whitespace-nowrap min-w-[200px]">{title}</h2>
             </div>
             <div className="flex items-center gap-4">
+              <StudioWalletButton />
               <Button variant="ghost" size="icon" className="text-white/70 hover:text-white hover:bg-white/5">
                 <Bell className="w-5 h-5" />
               </Button>
@@ -86,12 +91,33 @@ export default function StudioLayout({ children, title = "Nexura Studio", onLogo
             </div>
           </header>
 
-          <main className="flex-1 overflow-y-auto pt-4 pb-8 px-4 md:pt-8 md:pb-8 md:px-8 relative bg-black/20">
-            <div className="max-w-7xl mx-auto">{children}</div>
+          <main className={bleed
+            ? "flex-1 overflow-y-auto relative bg-[#F7F5FF] pb-24 text-[#1C2533] md:pb-0"
+            : "flex-1 overflow-y-auto pt-4 pb-8 px-4 md:pt-8 md:pb-8 md:px-8 relative bg-black/20"
+          }>
+            {bleed ? children : <div className="max-w-7xl mx-auto">{children}</div>}
           </main>
         </div>
       </div>
     </div>
+  );
+}
+
+function StudioWalletButton() {
+  const { isConnected, address, connectWallet } = useWallet();
+  const label = address ? `${address.slice(0, 6)}…${address.slice(-4)}` : "Connect wallet";
+
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        if (!isConnected) connectWallet({ purpose: "org-signin" });
+      }}
+      className="inline-flex h-9 items-center gap-2 rounded-full bg-[#8A3FFC] px-3 text-[13px] font-medium text-white"
+    >
+      <span className={`h-2 w-2 rounded-full ${isConnected ? "bg-[#3DDC97]" : "bg-white/50"}`} />
+      {label}
+    </button>
   );
 }
 
