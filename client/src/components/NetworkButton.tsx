@@ -15,8 +15,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
 
@@ -148,12 +146,6 @@ export default function NetworkButton({ className }: { className?: string }) {
     }
   };
 
-  const groups: { label: string; key: WalletNetwork["group"] }[] = [
-    { label: "Intuition", key: "intuition" },
-    { label: "Ethereum", key: "ethereum" },
-    { label: "Layer 2", key: "l2" },
-  ];
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -180,35 +172,27 @@ export default function NetworkButton({ className }: { className?: string }) {
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
-        className="w-64 max-h-[min(70vh,440px)] overflow-y-auto p-1.5 glass rounded-2xl border-white/10"
+        className="w-64 p-1.5 glass rounded-2xl border-white/10"
       >
-        {groups.map((group, index) => (
-          <div key={group.key}>
-            {index > 0 && <DropdownMenuSeparator className="bg-white/10" />}
-            <DropdownMenuLabel className="px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-white/45">
-              {group.label}
-            </DropdownMenuLabel>
-            {WALLET_NETWORKS.filter((net) => net.group === group.key).map((net) => {
-              const active = net.id === chainId;
-              return (
-                <DropdownMenuItem
-                  key={net.id}
-                  disabled={pending}
-                  onSelect={() => {
-                    void switchTo(net);
-                  }}
-                  className={`cursor-pointer rounded-xl px-2 py-2 text-sm text-white focus:bg-white/10 focus:text-white ${
-                    active ? "bg-white/10" : ""
-                  }`}
-                >
-                  <ChainMark icon={net.icon} name={net.name} iconBg={net.iconBg} />
-                  <span className="flex-1 truncate">{net.name}</span>
-                  {active && <Check className="h-4 w-4 text-white/80" />}
-                </DropdownMenuItem>
-              );
-            })}
-          </div>
-        ))}
+        {WALLET_NETWORKS.map((net) => {
+          const active = net.id === chainId;
+          return (
+            <DropdownMenuItem
+              key={net.id}
+              disabled={pending}
+              onSelect={() => {
+                void switchTo(net);
+              }}
+              className={`cursor-pointer rounded-xl px-2 py-2 text-sm text-white focus:bg-white/10 focus:text-white ${
+                active ? "bg-white/10" : ""
+              }`}
+            >
+              <ChainMark icon={net.icon} name={net.name} iconBg={net.iconBg} />
+              <span className="flex-1 truncate">{net.name}</span>
+              {active && <Check className="h-4 w-4 text-white/80" />}
+            </DropdownMenuItem>
+          );
+        })}
       </DropdownMenuContent>
     </DropdownMenu>
   );
