@@ -45,11 +45,13 @@ import {
   type ActivityCategory,
   type ActivityKind,
   type Details,
+  type RetentionDraft,
   type Stage,
   type Template,
   type Timing,
   type Unit,
 } from "./model";
+import { useRetentionAutosave } from "@/lib/retentionDraft";
 
 type StepId = "templates" | "details" | "journey" | "rewards" | "review";
 
@@ -129,7 +131,6 @@ export default function CampaignStudio() {
   const [step, setStepState] = useState<StepId>("templates");
   const [rewardsOn, setRewardsOn] = useState(true);
   const [templateId, setTemplateId] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
   const [details, setDetails] = useState<Details>(() => emptyDetails());
   const [detailError, setDetailError] = useState("");
   const [stages, setStages] = useState<Stage[]>([]);
@@ -144,6 +145,43 @@ export default function CampaignStudio() {
   const [paid, setPaid] = useState(false);
   const [published, setPublished] = useState(false);
   const [modal, setModal] = useState<Modal>(null);
+
+  const draft = useMemo<RetentionDraft>(
+    () => ({
+      step,
+      rewardsOn,
+      templateId,
+      details,
+      stages,
+      budget,
+      validationOn,
+      curatorOn,
+      splits,
+      recipients,
+      retentionReq,
+      paid,
+      published,
+    }),
+    [step, rewardsOn, templateId, details, stages, budget, validationOn, curatorOn, splits, recipients, retentionReq, paid, published],
+  );
+
+  function restoreDraft(next: RetentionDraft) {
+    setStepState(next.rewardsOn || next.step !== "rewards" ? next.step : "review");
+    setRewardsOn(next.rewardsOn);
+    setTemplateId(next.templateId);
+    setDetails(next.details);
+    setStages(next.stages);
+    setBudget(next.budget);
+    setValidationOn(next.validationOn);
+    setCuratorOn(next.curatorOn);
+    setSplits(next.splits);
+    setRecipients(next.recipients);
+    setRetentionReq(next.retentionReq);
+    setPaid(next.paid);
+    setPublished(next.published);
+  }
+
+  const { hydrated, status } = useRetentionAutosave(draft, restoreDraft);
 
   const template = TEMPLATES.find((t) => t.id === templateId) ?? null;
   const visibleSteps = rewardsOn ? STEPS : STEPS.filter((s) => s.id !== "rewards");
@@ -169,10 +207,6 @@ export default function CampaignStudio() {
     return issues;
   }, [splitSum, underfunded, recipients, capacity, stages.length]);
 
-  function markSaved() {
-    setSaved(true);
-  }
-
   function go(next: StepId) {
     if (next !== "review") setPublished(false);
     setStepState(next);
@@ -188,7 +222,6 @@ export default function CampaignStudio() {
       const start = parseIso(d.start) ?? addDays(today(), 7);
       return { ...d, end: isoDate(addMonths(start, t.months)) };
     });
-    markSaved();
   }
 
   function goDetails(scratch: boolean) {
@@ -204,7 +237,6 @@ export default function CampaignStudio() {
     }
     setDetailError("");
     go("details");
-    markSaved();
   }
 
   function continueDetails() {
@@ -221,7 +253,6 @@ export default function CampaignStudio() {
     }
     setDetailError("");
     go("journey");
-    markSaved();
   }
 
   function openFirstStage() {
@@ -250,7 +281,6 @@ export default function CampaignStudio() {
     }
     setStageError("");
     setEditingId(null);
-    markSaved();
   }
 
   function addNextStage() {
@@ -311,7 +341,6 @@ export default function CampaignStudio() {
       }),
     );
     setStageError("");
-    markSaved();
   }
 
   function removeActivity(stageId: string, activityId: string) {
@@ -334,19 +363,33 @@ export default function CampaignStudio() {
     } else {
       go("review");
     }
-    markSaved();
   }
 
   const displayName = details.name.trim() || "Untitled campaign";
   const breakdown = durationBreakdown(details.start, details.end);
 
+  if (!hydrated) {
+    return (
+      <div className="min-h-full bg-[#F7F5FF] px-8 py-16 font-sans text-[14px] text-[#667085]">
+        Restoring your draft…
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-full bg-[#F7F5FF] font-sans text-[#1C2533]">
       <div className="mx-auto w-full max-w-[1120px] px-4 py-5 md:px-8 md:py-6">
-        {saved && step !== "templates" && (
+        {status !== "idle" && (
           <div className="mb-3 flex justify-end">
-            <span className="inline-flex items-center gap-1 rounded-full border border-[#B7E7D4] bg-[#F3FBF7] px-2.5 py-1 text-[12px] font-medium text-[#0F9F6E]">
-              <Check className="h-3.5 w-3.5" /> Saved just now
+            <span
+              className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[12px] font-medium ${
+                status === "error"
+                  ? "border-[#F3C1C4] bg-[#FFF6F6] text-[#E4545B]"
+                  : "border-[#B7E7D4] bg-[#F3FBF7] text-[#0F9F6E]"
+              }`}
+            >
+              <Check className="h-3.5 w-3.5" />
+              {status === "saving" ? "Saving…" : status === "saved" ? "Saved just now" : "Couldn’t save"}
             </span>
           </div>
         )}
@@ -468,13 +511,11 @@ export default function CampaignStudio() {
                 onPay={() => {
                   if (!allocOk) return;
                   setPaid(true);
-                  markSaved();
                 }}
                 onBack={() => go("journey")}
                 onNext={() => {
                   if (!(allocOk && paid)) return;
                   go("review");
-                  markSaved();
                 }}
               />
             )}
@@ -531,7 +572,6 @@ export default function CampaignStudio() {
           onConfirm={() => {
             setPublished(true);
             setModal(null);
-            markSaved();
           }}
         />
       )}
@@ -616,7 +656,7 @@ function Templates({ rewardsOn, onToggle, onUse, onScratch }: { rewardsOn: boole
       </div>
       <div className="mt-2 grid gap-4 lg:grid-cols-3">
         {TEMPLATES.map((t) => (
-          <TemplateCard key={t.id} template={t} onUse={() => onUse(t)} />
+          <TemplateCard key={t.id} template={t} showRewards={rewardsOn} onUse={() => onUse(t)} />
         ))}
       </div>
       <div className="my-8 flex items-center gap-4">
@@ -638,7 +678,7 @@ function Templates({ rewardsOn, onToggle, onUse, onScratch }: { rewardsOn: boole
   );
 }
 
-function TemplateCard({ template, onUse }: { template: Template; onUse: () => void }) {
+function TemplateCard({ template, showRewards, onUse }: { template: Template; showRewards: boolean; onUse: () => void }) {
   const colors = ["#5B21B6", "#7C3AED", "#8B5CF6", "#C4B5FD", "#34D399"];
   return (
     <article className="flex flex-col rounded-[24px] border border-[#F0ECF8] bg-white p-5 shadow-[0_10px_30px_rgba(80,60,140,0.04)]">
@@ -651,25 +691,19 @@ function TemplateCard({ template, onUse }: { template: Template; onUse: () => vo
         <Row k="Stages" v={`${template.splits.length} stages`} />
         <Row k="Retention rate" v={`${template.retention}%`} />
       </dl>
-      <div className="mt-4">
-        <div className="flex items-center justify-between text-[13px]">
-          <span className="font-medium text-[#3C4254]">Reward structure - {template.splits.length} Stages</span>
-          <span className="font-medium text-[#12B981]">100% of pool</span>
+      {showRewards && (
+        <div className="mt-4">
+          <p className="text-[13px] font-medium text-[#3C4254]">Reward structure - {template.splits.length} Stages</p>
+          <div className="mt-3 flex gap-1">
+            {template.splits.map((n, i) => (
+              <div key={i} className="flex min-w-0 flex-col items-center" style={{ flex: `${n} 1 0` }}>
+                <div className="h-2.5 w-full rounded-full" style={{ background: colors[i] ?? colors[0] }} />
+                <span className="mt-2 text-center text-[11px] leading-none text-[#4B5168]">{n}%</span>
+              </div>
+            ))}
+          </div>
         </div>
-        <div className="mt-3 flex h-2.5 gap-1">
-          {template.splits.map((n, i) => (
-            <div key={i} className="h-full rounded-full" style={{ width: `${n}%`, background: colors[i] ?? colors[0] }} />
-          ))}
-        </div>
-        <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-[12px] text-[#4B5168]">
-          {template.splits.map((n, i) => (
-            <span key={i} className="inline-flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full" style={{ background: colors[i] ?? colors[0] }} />
-              {n}%
-            </span>
-          ))}
-        </div>
-      </div>
+      )}
       <button type="button" onClick={onUse} className="mt-5 h-11 rounded-full bg-[#8A3FFC] text-[14px] font-semibold text-white">
         Use template
       </button>
@@ -744,7 +778,12 @@ function DetailsStep({
             onChange={(e) => {
               const file = e.target.files?.[0];
               if (!file) return;
-              onChange({ ...details, coverUrl: URL.createObjectURL(file), coverName: file.name });
+              const reader = new FileReader();
+              reader.onload = () => {
+                const url = typeof reader.result === "string" ? reader.result : "";
+                onChange({ ...details, coverUrl: url, coverName: file.name });
+              };
+              reader.readAsDataURL(file);
             }}
           />
         </label>
@@ -976,8 +1015,8 @@ function StageEditor({
   const preset = timingMenuLabel(stage.timing);
 
   return (
-    <div className="relative mb-4 rounded-[24px] border border-[#E7E1F4] bg-white p-4 md:p-5">
-      <span className="absolute -left-12 top-6 grid h-7 w-7 place-items-center rounded-full bg-[#F3EEFF] text-[12px] font-semibold text-[#6D28D9]">{index + 1}</span>
+    <div className="relative mb-4 rounded-[24px] border border-[#C4B5FD] bg-white p-4 shadow-[0_8px_24px_rgba(138,63,252,0.08)] md:p-5">
+      <span className="absolute -left-12 top-6 grid h-7 w-7 place-items-center rounded-full bg-[#8A3FFC] text-[12px] font-semibold text-white ring-4 ring-[#EDE4FF]">{index + 1}</span>
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-[11px] font-semibold tracking-[0.14em] text-[#8A3FFC]">STAGE {index + 1}</p>
@@ -1111,7 +1150,7 @@ function SavedStage({ index, stage, onEdit, onAddTask, onDelete }: { index: numb
   const extra = stage.activities.length - preview.length;
   return (
     <div className="relative mb-3 rounded-[24px] border border-[#EFEAF8] bg-white p-4">
-      <span className="absolute -left-12 top-5 grid h-7 w-7 place-items-center rounded-full bg-[#8A3FFC] text-[12px] font-semibold text-white">{index + 1}</span>
+      <span className="absolute -left-12 top-5 grid h-7 w-7 place-items-center rounded-full border border-[#E4DDF5] bg-white text-[12px] font-semibold text-[#8A3FFC]">{index + 1}</span>
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-[12px] text-[#8B90A3]">Stage {index + 1}</p>

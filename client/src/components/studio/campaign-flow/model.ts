@@ -69,6 +69,22 @@ export type Details = {
   end: string;
 };
 
+export type RetentionDraft = {
+  step: "templates" | "details" | "journey" | "rewards" | "review";
+  rewardsOn: boolean;
+  templateId: string | null;
+  details: Details;
+  stages: Stage[];
+  budget: number;
+  validationOn: boolean;
+  curatorOn: boolean;
+  splits: number[];
+  recipients: number;
+  retentionReq: number;
+  paid: boolean;
+  published: boolean;
+};
+
 export const MAX_STAGES = 6;
 export const MAX_ACTIVITIES = 10;
 export const SERVICE_FEE = 10;
