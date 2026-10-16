@@ -1,0 +1,44 @@
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
+import { getStoredProjectToken } from "@/lib/projectApi";
+import { GOVERNANCE_EVENT, awaitingMyVote, fetchGovernance, isGovernanceUnavailable, type Proposal } from "@/lib/adminGovernance";
+
+const POLL_MS = 30_000;
+
+/** Proposals waiting for the signed-in signer's approval or rejection, for the header notification bell. */
+export function useProposalNotifications() {
+  const [items, setItems] = useState<Proposal[]>([]);
+  // Stops polling when the connected API doesn't have the governance endpoints
+  const unavailable = useRef(false);
+
+  const refresh = useCallback(async () => {
+    // Only project hub admins have governance (studio user hubs don't)
+    if (!getStoredProjectToken() || unavailable.current) return;
+    try {
+      setItems(awaitingMyVote(await fetchGovernance()));
+    } catch (err) {
+      if (isGovernanceUnavailable(err)) { unavailable.current = true; setItems([]); }
+      // otherwise keep the last known list; the next poll retries
+    }
+  }, []);
+
+  useEffect(() => {
+    refresh();
+    const timer = setInterval(refresh, POLL_MS);
+    const onChange = () => { refresh(); };
+    const onFocus = () => { if (document.visibilityState === "visible") refresh(); };
+    window.addEventListener(GOVERNANCE_EVENT, onChange);
+    document.addEventListener("visibilitychange", onFocus);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener(GOVERNANCE_EVENT, onChange);
+      document.removeEventListener("visibilitychange", onFocus);
+    };
+  }, [refresh]);
+
+  return items;
+}
+
+/** Event the bell fires to switch an already-open Admin Management page to its Proposals tab. */
+export const OPEN_PROPOSALS_EVENT = "nexura-open-proposals";

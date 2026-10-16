@@ -2,26 +2,25 @@
 
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Bell } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import StudioBackground from "@/components/StudioBackground";
 import StudioSidebar from "./StudioSidebar";
-import { isProjectSignedIn, clearProjectSession, projectApiRequest } from "@/lib/projectApi";
-import { getStoredProjectToken } from "@/lib/projectApi";
+import StudioHeader from "./StudioHeader";
+import { isProjectSignedIn } from "@/lib/projectApi";
 
 type TabType = "hubProfile" | "campaignSubmissions" | "adminManagement" | "campaignsTab";
 
 interface StudioLayoutProps {
   children: React.ReactNode;
   title?: string;
-  onLogout?: () => void;
+  /** Hide the studio header (title, bell, wallet, back to main app) and render children edge-to-edge, for pages that bring their own header. */
+  hideHeader?: boolean;
 }
 
 /**
  * Shared layout wrapper for all /studio-dashboard/* pages.
  * Renders the StudioSidebar + header chrome around the given children.
  */
-export default function StudioLayout({ children, title = "Nexura Studio", onLogout }: StudioLayoutProps) {
+export default function StudioLayout({ children, title = "Nexura Studio", hideHeader = false }: StudioLayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -48,16 +47,6 @@ export default function StudioLayout({ children, title = "Nexura Studio", onLogo
     }
   }, []);
 
-  const handleLogout = () => {
-    console.log("[ACTION] StudioLayout.handleLogout — project/hub sign-out");
-    if (getStoredProjectToken()) {
-      projectApiRequest({ method: "POST", endpoint: "/hub/logout" }).catch(() => {});
-    }
-    clearProjectSession();
-    onLogout?.();
-    router.push("/discover");
-  };
-
   return (
     <div className="relative min-h-screen overflow-hidden">
       <StudioBackground />
@@ -66,33 +55,21 @@ export default function StudioLayout({ children, title = "Nexura Studio", onLogo
         <StudioSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
 
         <div className="flex-1 flex flex-col overflow-hidden">
-          <header className="hidden md:flex h-16 border-b border-white/10 items-center justify-between px-6 backdrop-blur-sm bg-black/30">
-            <div className="flex items-center gap-4 flex-1">
-              <h2 className="text-lg font-semibold text-white whitespace-nowrap min-w-[200px]">{title}</h2>
+          {!hideHeader && (
+            <div className="hidden md:block">
+              <StudioHeader title={title} />
             </div>
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" className="text-white/70 hover:text-white hover:bg-white/5">
-                <Bell className="w-5 h-5" />
-              </Button>
-              <div className="h-6 w-px bg-white/10 mx-2" />
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleLogout}
-                className="text-white/70 hover:text-white hover:text-red-400"
-              >
-                Logout
-              </Button>
-            </div>
-          </header>
+          )}
 
-          <main className="flex-1 overflow-y-auto pt-4 pb-8 px-4 md:pt-8 md:pb-8 md:px-8 relative bg-black/20">
-            <div className="max-w-7xl mx-auto">{children}</div>
-          </main>
+          {hideHeader ? (
+            <main className="flex-1 overflow-y-auto relative bg-[#f7f5ff]">{children}</main>
+          ) : (
+            <main className="flex-1 overflow-y-auto pt-16 pb-24 px-4 md:pt-8 md:pb-8 md:px-9 relative bg-[#f7f5ff] text-[#1c2533]" style={{ fontFamily: "'Geist', 'Inter', sans-serif" }}>
+              <div className="max-w-7xl mx-auto">{children}</div>
+            </main>
+          )}
         </div>
       </div>
     </div>
   );
 }
-
-

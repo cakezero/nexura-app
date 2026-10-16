@@ -154,11 +154,11 @@ function ResetHubPasswordForm() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white overflow-auto p-4 sm:p-6 relative flex items-center justify-center font-[family-name:var(--font-geist-sans)]">
+    <div className="min-h-screen bg-[#f7f5ff] text-[#1c2533] overflow-auto p-4 sm:p-6 relative flex items-center justify-center font-[family-name:var(--font-geist-sans)]">
       <AnimatedBackground />
 
       <div className="relative z-10 w-full max-w-[600px] mx-auto py-6">
-        <div className="bg-[#27134e] rounded-[20px] shadow-[-12px_-10px_18px_5px_rgba(0,0,0,0.25),12px_10px_18px_5px_rgba(0,0,0,0.25)] px-6 sm:px-[36px] py-[40px] flex flex-col items-center">
+        <div className="bg-white rounded-[20px] shadow-[-12px_-10px_18px_5px_rgba(0,0,0,0.25),12px_10px_18px_5px_rgba(0,0,0,0.25)] px-6 sm:px-[36px] py-[40px] flex flex-col items-center">
           {/* Top Icon Badge */}
           <div className="flex items-center justify-center size-[120px] rounded-[100px] bg-[rgba(139,62,254,0.1)] shadow-[0px_6px_67px_-10px_#7f3ae8]">
             <Image
@@ -172,19 +172,19 @@ function ResetHubPasswordForm() {
           </div>
 
           {/* Heading */}
-          <h1 className="mt-[16px] text-[24px] font-bold text-white text-center">
+          <h1 className="mt-[16px] text-[24px] font-bold text-[#1c2533] text-center">
             OTP Confirmed
           </h1>
 
           {/* Subtitle */}
-          <p className="mt-[10px] max-w-[404px] text-[16px] font-light text-white text-center leading-snug">
+          <p className="mt-[10px] max-w-[404px] text-[16px] font-light text-[#1c2533] text-center leading-snug">
             Your verification code was confirmed successfully.
             <br />
             Create a new password for your account.
           </p>
 
           {pageError ? (
-            <div className="mt-4 w-full rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+            <div className="mt-4 w-full rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-[#e4545b]">
               {pageError}
             </div>
           ) : null}
@@ -198,7 +198,7 @@ function ResetHubPasswordForm() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Enter your email..."
-                  className="w-full h-[44px] px-4 bg-[rgba(6,2,16,0.5)] border border-[#8a3efe] rounded-[16px] text-white text-[16px] placeholder:text-[rgba(255,255,255,0.4)] focus:outline-none"
+                  className="w-full h-[44px] px-4 bg-[rgba(6,2,16,0.5)] border border-[#8a3efe] rounded-[16px] text-[#1c2533] text-[16px] placeholder:text-[#69728a] focus:outline-none"
                 />
               )}
               {!hasCode && (
@@ -208,7 +208,7 @@ function ResetHubPasswordForm() {
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
                   placeholder="Enter the reset code..."
-                  className="w-full h-[44px] px-4 bg-[rgba(6,2,16,0.5)] border border-[#8a3efe] rounded-[16px] text-white text-[16px] tracking-widest placeholder:text-[rgba(255,255,255,0.4)] focus:outline-none"
+                  className="w-full h-[44px] px-4 bg-[rgba(6,2,16,0.5)] border border-[#8a3efe] rounded-[16px] text-[#1c2533] text-[16px] tracking-widest placeholder:text-[#69728a] focus:outline-none"
                 />
               )}
             </div>
@@ -216,19 +216,19 @@ function ResetHubPasswordForm() {
 
           {/* New Password */}
           <div className="mt-[28px] w-full">
-            <label className="block text-[18px] font-bold text-white mb-[12px]">New Password</label>
+            <label className="block text-[18px] font-bold text-[#1c2533] mb-[12px]">New Password</label>
             <div className="relative w-full">
               <input
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter your new password..."
-                className="w-full h-[44px] pl-4 pr-[48px] bg-[rgba(6,2,16,0.5)] border border-[#8a3efe] rounded-[16px] text-white text-[16px] font-bold placeholder:text-[rgba(255,255,255,0.4)] placeholder:font-bold focus:outline-none"
+                className="w-full h-[44px] pl-4 pr-[48px] bg-[rgba(6,2,16,0.5)] border border-[#8a3efe] rounded-[16px] text-[#1c2533] text-[16px] font-bold placeholder:text-[#69728a] placeholder:font-bold focus:outline-none"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword((current) => !current)}
-                className="absolute right-[18px] top-1/2 -translate-y-1/2 text-[rgba(255,255,255,0.6)] hover:text-white transition-colors"
+                className="absolute right-[18px] top-1/2 -translate-y-1/2 text-[#69728a] hover:text-[#1c2533] transition-colors"
               >
                 {showPassword ? <EyeOff className="size-[18px]" /> : <Eye className="size-[18px]" />}
               </button>
@@ -242,30 +242,30 @@ function ResetHubPasswordForm() {
                 {ok ? (
                   <Check className="size-[20px] text-[#00e1a2]" strokeWidth={2.5} />
                 ) : (
-                  <span className="flex size-[20px] items-center justify-center text-[rgba(255,255,255,0.6)]">
+                  <span className="flex size-[20px] items-center justify-center text-[#69728a]">
                     <span className="size-[4px] rounded-full bg-current" />
                   </span>
                 )}
-                <span className={ok ? "text-[#00e1a2]" : "text-[rgba(255,255,255,0.6)]"}>{label}</span>
+                <span className={ok ? "text-[#00e1a2]" : "text-[#69728a]"}>{label}</span>
               </div>
             ))}
           </div>
 
           {/* Confirm New Password */}
           <div className="mt-[24px] w-full">
-            <label className="block text-[18px] font-bold text-white mb-[12px]">Confirm New Password</label>
+            <label className="block text-[18px] font-bold text-[#1c2533] mb-[12px]">Confirm New Password</label>
             <div className="relative w-full">
               <input
                 type={showConfirmPassword ? "text" : "password"}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Confirm your new password..."
-                className="w-full h-[44px] pl-4 pr-[48px] bg-[rgba(6,2,16,0.5)] border border-[#8a3efe] rounded-[16px] text-white text-[16px] font-bold placeholder:text-[rgba(255,255,255,0.4)] placeholder:font-bold focus:outline-none"
+                className="w-full h-[44px] pl-4 pr-[48px] bg-[rgba(6,2,16,0.5)] border border-[#8a3efe] rounded-[16px] text-[#1c2533] text-[16px] font-bold placeholder:text-[#69728a] placeholder:font-bold focus:outline-none"
               />
               <button
                 type="button"
                 onClick={() => setShowConfirmPassword((current) => !current)}
-                className="absolute right-[18px] top-1/2 -translate-y-1/2 text-[rgba(255,255,255,0.6)] hover:text-white transition-colors"
+                className="absolute right-[18px] top-1/2 -translate-y-1/2 text-[#69728a] hover:text-[#1c2533] transition-colors"
               >
                 {showConfirmPassword ? <EyeOff className="size-[18px]" /> : <Eye className="size-[18px]" />}
               </button>
@@ -284,7 +284,7 @@ function ResetHubPasswordForm() {
           <button
             type="button"
             onClick={() => router.push(isUserHub ? "/studio/users/user-signin" : "/projects/create/signin-to-hub")}
-            className="mt-[16px] text-[14px] text-[rgba(255,255,255,0.6)] hover:text-white transition-colors"
+            className="mt-[16px] text-[14px] text-[#69728a] hover:text-[#1c2533] transition-colors"
           >
             Back to {isUserHub ? "user" : "studio"} sign in
           </button>
@@ -296,7 +296,7 @@ function ResetHubPasswordForm() {
 
 export default function ResetHubPassword() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-black" />}>
+    <Suspense fallback={<div className="min-h-screen bg-[#f7f5ff]" />}>
       <ResetHubPasswordForm />
     </Suspense>
   );

@@ -337,17 +337,17 @@ export default function CampaignsTab() {
     const hasRewardsContract = !!campaign.contractAddress && Number(campaign.reward?.pool ?? 0) > 0;
     const hasWithdrawableRemainder = completed && hasRewardsContract && rewardBalanceKnown && rewardBalance > 0n;
     let status = "Published";
-    let statusColor = "bg-green-500";
+    let statusColor = "bg-[rgba(0,225,162,0.16)] border-[rgba(0,168,124,0.3)] text-[#00a87c]";
 
     if (draft) {
       status = "Draft";
-      statusColor = "bg-yellow-500";
+      statusColor = "bg-[rgba(245,158,11,0.14)] border-[rgba(194,124,0,0.3)] text-[#c27c00]";
     } else if (scheduled) {
       status = "Upcoming";
-      statusColor = "bg-blue-500";
+      statusColor = "bg-[rgba(90,168,255,0.14)] border-[rgba(90,168,255,0.35)] text-[#2f7fe0]";
     } else if (completed) {
       status = rewardsContractSettled ? "Completed" : "Closed";
-      statusColor = "bg-gray-500";
+      statusColor = "bg-[#f7f4fe] border-[rgba(28,37,51,0.15)] text-[#3d485c]";
     }
 
     const formatDate = (dateStr: string) => {
@@ -356,27 +356,27 @@ export default function CampaignsTab() {
     };
 
     return (
-      <Card className="w-full h-full bg-gray-900 text-white rounded-xl overflow-hidden shadow-lg flex flex-col">
+      <Card className="w-full h-full bg-white text-[#1c2533] border-[0.833px] border-[rgba(28,37,51,0.09)] rounded-[40px] overflow-hidden shadow-none flex flex-col">
         {campaign.projectCoverImage ? (
           <img src={campaign.projectCoverImage} alt={campaign.title || campaign.description} className="w-full h-28 object-cover" />
         ) : (
-          <div className="w-full h-28 bg-gray-700 flex items-center justify-center">
-            <span className="text-white/50 text-xs">No Image</span>
+          <div className="w-full h-28 bg-[#f4f1fc] flex items-center justify-center">
+            <span className="text-[#98a0b4] text-xs">No Image</span>
           </div>
         )}
 
         <div className="p-3 flex flex-1 flex-col gap-1.5">
-          <h3 className="font-bold text-sm truncate" title={campaign.title || campaign.description}>
+          <h3 className="font-semibold text-sm text-[#1c2533] truncate" title={campaign.title || campaign.description}>
             {campaign.title || campaign.description}
           </h3>
-          <p className="text-white/70 text-xs">
+          <p className="text-[#69728a] text-xs">
             {formatDate(campaign.starts_at)} - {formatDate(campaign.ends_at)}
           </p>
           {Number(campaign.reward?.pool ?? 0) > 0 && (
-            <p className="text-purple-400 text-xs font-medium">Reward Pool: {campaign.reward?.pool} TRUST</p>
+            <p className="text-[#8a3ffc] text-xs font-semibold">Reward Pool: {campaign.reward?.pool} TRUST</p>
           )}
           {completed && hasRewardsContract && (
-            <p className="text-emerald-300 text-xs font-medium">
+            <p className="text-[#00a87c] text-xs font-semibold">
               {rewardBalanceKnown
                 ? rewardBalance! > 0n
                   ? `Contract remainder: ${formatTrustAmount(rewardBalance!)} TRUST`
@@ -388,7 +388,7 @@ export default function CampaignsTab() {
           <div className="mt-auto flex flex-col gap-2 pt-3">
             <div className="flex gap-1.5 flex-wrap">
               <button
-                className="flex-1 px-2 py-1.5 text-xs bg-[#8B3EFE] rounded-lg hover:bg-[#7b35e6] transition"
+                className="flex-1 px-3 py-1.5 text-xs font-semibold text-white bg-[#8B3EFE] rounded-[40px] hover:bg-[#7b35e6] transition"
                 onClick={() => router.push(`/studio-dashboard/create-new-campaign?edit=${campaign._id}`)}
               >
                 {isSuperAdmin ? "View Details" : "View"}
@@ -397,7 +397,7 @@ export default function CampaignsTab() {
               {isSuperAdmin && !draft && !completed && (
                 <button
                   title="Close campaign"
-                  className="px-2 py-1.5 text-xs bg-yellow-600/20 text-yellow-400 rounded-lg hover:bg-yellow-600/30 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-2 py-1.5 text-xs bg-[rgba(245,158,11,0.14)] text-[#c27c00] rounded-[40px] hover:bg-[rgba(245,158,11,0.22)] transition disabled:opacity-50 disabled:cursor-not-allowed"
                   onClick={() => setPendingAction({ type: "close", id: campaign._id, title: campaign.title || campaign.description || "" })}
                   disabled={closingId === campaign._id || deletingId === campaign._id}
                 >
@@ -408,7 +408,7 @@ export default function CampaignsTab() {
               {isHubAdmin && completed && hasRewardsContract && !rewardsContractSettled && (
                 <button
                   title="Withdraw contract remainder"
-                  className="px-3 py-1.5 text-xs bg-emerald-600/20 text-emerald-300 rounded-lg hover:bg-emerald-600/30 transition disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1.5"
+                  className="px-3 py-1.5 text-xs font-semibold bg-[rgba(0,225,162,0.16)] text-[#00a87c] rounded-[40px] hover:bg-[rgba(0,225,162,0.24)] transition disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1.5"
                   onClick={() => void handleWithdrawRemainder(campaign)}
                   disabled={
                     withdrawingId === campaign._id ||
@@ -424,7 +424,7 @@ export default function CampaignsTab() {
               {isSuperAdmin && (draft || completed) && (
                 <button
                   title="Delete campaign"
-                  className="px-2 py-1.5 text-xs bg-red-600/20 text-red-400 rounded-lg hover:bg-red-600/30 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-2 py-1.5 text-xs bg-[rgba(248,113,113,0.16)] text-[#e4545b] rounded-[40px] hover:bg-[rgba(248,113,113,0.24)] transition disabled:opacity-50 disabled:cursor-not-allowed"
                   onClick={() => setPendingAction({ type: "delete", id: campaign._id, title: campaign.title || campaign.description || "" })}
                   disabled={deletingId === campaign._id || closingId === campaign._id}
                 >
@@ -434,12 +434,12 @@ export default function CampaignsTab() {
             </div>
 
             {scheduled ? (
-              <div className="flex items-center gap-1 px-2 py-0.5 text-[10px] rounded self-start bg-black/40 border border-purple-500/30">
-                <Clock className="w-3 h-3 text-purple-400 animate-pulse" />
-                <span className="text-purple-300 font-mono font-semibold">{countdowns[campaign._id] || "Loading..."}</span>
+              <div className="flex items-center gap-1 px-2 py-0.5 text-[10px] rounded-[20px] self-start bg-[rgba(138,63,252,0.1)] border-[0.833px] border-[rgba(138,63,252,0.28)]">
+                <Clock className="w-3 h-3 text-[#8a3ffc] animate-pulse" />
+                <span className="text-[#6e2bd8] font-mono font-semibold">{countdowns[campaign._id] || "Loading..."}</span>
               </div>
             ) : (
-              <span className={`px-2 py-0.5 text-[10px] rounded self-start ${statusColor}`}>{status}</span>
+              <span className={`px-2 py-0.5 text-[10px] font-semibold rounded-[20px] border-[0.833px] self-start ${statusColor}`}>{status}</span>
             )}
           </div>
         </div>
@@ -452,13 +452,13 @@ export default function CampaignsTab() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div className="space-y-1">
-            <h1 className="text-2xl md:text-3xl font-bold text-white">Nexura Studio</h1>
-            <p className="text-white/60 text-lg">Track and manage your community engagement campaigns</p>
+            <h1 className="text-[26px] font-semibold leading-[40.3px] tracking-[-0.65px] text-[#1c2533]">Nexura Studio</h1>
+            <p className="text-[#69728a] text-[14px]">Track and manage your community engagement campaigns</p>
           </div>
           <Button
             variant="ghost"
             size="icon"
-            className="text-white/60 hover:text-white"
+            className="text-[#69728a] hover:text-[#1c2533] hover:bg-[rgba(138,63,252,0.06)]"
             onClick={fetchCampaigns}
             disabled={loading}
           >
@@ -466,13 +466,13 @@ export default function CampaignsTab() {
           </Button>
         </div>
 
-        <div className="flex border-b border-white/20 gap-4 pb-2 overflow-x-auto">
+        <div className="flex border-b-[0.833px] border-[rgba(28,37,51,0.09)] gap-[2px] overflow-x-auto">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as typeof activeTab)}
-              className={`font-medium transition-colors whitespace-nowrap ${
-                activeTab === tab.id ? "border-b-2 border-purple-500 text-white" : "text-white/60 hover:text-white"
+              className={`px-[18px] py-[12px] text-[14px] font-semibold transition-colors whitespace-nowrap border-b-[1.667px] ${
+                activeTab === tab.id ? "border-[#8a3ffc] text-[#1c2533]" : "border-transparent text-[#69728a] hover:text-[#1c2533]"
               }`}
             >
               {tab.label} ({tab.count})
@@ -481,7 +481,7 @@ export default function CampaignsTab() {
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center py-20 text-white/60">
+          <div className="flex items-center justify-center py-20 text-[#69728a]">
             <RefreshCw className="w-6 h-6 animate-spin mr-2" />
             Loading campaigns...
           </div>
@@ -490,16 +490,16 @@ export default function CampaignsTab() {
             {activeTab === "all" && isSuperAdmin && (
               <Link
                 href="/studio-dashboard/create-new-campaign"
-                className="w-full p-6 flex flex-col items-center justify-center gap-3 border-2 border-dashed border-purple-500 rounded-2xl bg-black hover:bg-black/80 hover:border-[#8B3EFE] transition cursor-pointer no-underline"
+                className="w-full p-6 flex flex-col items-center justify-center gap-3 border-2 border-dashed border-[rgba(138,63,252,0.4)] rounded-[40px] bg-white hover:bg-[#f4f1fc] hover:border-[#8B3EFE] transition cursor-pointer no-underline"
               >
-                <div className="w-12 h-12 flex items-center justify-center rounded-full bg-purple-500/20 text-purple-400 text-2xl font-bold">+</div>
-                <p className="font-semibold text-white text-center text-lg">Create New Campaign</p>
-                <p className="text-white/60 text-center text-sm">Launch a New Campaign now</p>
+                <div className="w-12 h-12 flex items-center justify-center rounded-[16px] bg-[rgba(138,63,252,0.1)] text-[#8a3ffc] text-2xl font-bold">+</div>
+                <p className="font-semibold text-[#1c2533] text-center text-lg">Create New Campaign</p>
+                <p className="text-[#69728a] text-center text-sm">Launch a New Campaign now</p>
               </Link>
             )}
 
             {filteredCampaigns.length === 0 ? (
-              <p className="text-white/60 col-span-full">No campaigns found.</p>
+              <p className="text-[#69728a] col-span-full">No campaigns found.</p>
             ) : (
               filteredCampaigns.map((c) => <CampaignCard key={c._id} campaign={c} />)
             )}
@@ -508,33 +508,33 @@ export default function CampaignsTab() {
       </div>
 
       <Dialog open={!!pendingAction} onOpenChange={(open) => { if (!open) setPendingAction(null); }}>
-        <DialogContent className="bg-gray-900 border border-white/10 text-white rounded-2xl max-w-md">
+        <DialogContent className="bg-white border-[0.833px] border-[rgba(28,37,51,0.15)] text-[#1c2533] rounded-[40px] max-w-md">
           <DialogHeader>
             <DialogTitle
               className={
                 pendingAction?.type === "delete"
-                  ? "text-red-400"
-                  : "text-yellow-400"
+                  ? "text-[#e4545b]"
+                  : "text-[#c27c00]"
               }
             >
               {pendingAction?.type === "delete" ? "Delete Campaign" : "Close Campaign"}
             </DialogTitle>
-            <DialogDescription className="text-white/60 pt-1">
+            <DialogDescription className="text-[#69728a] pt-1">
               {pendingAction?.type === "delete"
-                ? (<>This will <span className="text-red-400 font-semibold">permanently delete</span> <span className="text-white font-medium">"{pendingAction?.title}"</span>. This action cannot be undone.</>)
-                : (<>This will close <span className="text-white font-medium">\"{pendingAction?.title}\"</span>. It will no longer accept submissions.</>)
+                ? (<>This will <span className="text-[#e4545b] font-semibold">permanently delete</span> <span className="text-[#1c2533] font-medium">"{pendingAction?.title}"</span>. This action cannot be undone.</>)
+                : (<>This will close <span className="text-[#1c2533] font-medium">\"{pendingAction?.title}\"</span>. It will no longer accept submissions.</>)
               }
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 mt-2">
-            <Button variant="ghost" className="text-white/60 hover:text-white" onClick={() => setPendingAction(null)}>
+            <Button variant="ghost" className="rounded-[40px] bg-[#f7f4fe] border-[0.833px] border-[rgba(28,37,51,0.15)] text-[#1c2533] hover:bg-[#efeafb]" onClick={() => setPendingAction(null)}>
               Cancel
             </Button>
             <Button
               className={
                 pendingAction?.type === "delete"
-                  ? "bg-red-600 hover:bg-red-700 text-white"
-                  : "bg-yellow-600 hover:bg-yellow-700 text-white"
+                  ? "rounded-[40px] bg-[#e4545b] hover:bg-[#d4444b] text-white"
+                  : "rounded-[40px] bg-[#c27c00] hover:bg-[#a86b00] text-white"
               }
               onClick={confirmAction}
             >

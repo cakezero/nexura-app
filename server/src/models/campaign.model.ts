@@ -124,6 +124,38 @@ const campaignSchema = new Schema({
     ref: "hubs",
 		required: true
 	},
+	// ── Retention campaign builder (Create Campaign) ──
+	templateId: {
+		type: String,
+		default: null,
+	},
+	// Journey stages, in order. Each campaign quest points at a stage by `key`.
+	stages: [{
+		_id: false,
+		key: { type: String, required: true },
+		name: { type: String, required: true },
+		order: { type: Number, default: 0 },
+		returnDays: { type: Number, default: 0 },
+		allocationPct: { type: Number, default: null },
+	}],
+	rewardsEnabled: {
+		type: Boolean,
+		default: false,
+	},
+	// What the project set on the Rewards & Funding step
+	rewardsConfig: {
+		budget: { type: Number },
+		token: { type: String },
+		network: { type: String },
+		recipients: { type: Number },
+		retentionRequirementPct: { type: Number },
+		participantPool: { type: Number },
+		validationRewardsOn: { type: Boolean },
+		curatorRewardsOn: { type: Boolean },
+		curatorAddress: { type: String },
+		totalPaid: { type: Number },
+		paymentTxHash: { type: String },
+	},
 }, { timestamps: true });
 
 export const campaign = mongoose.model("campaigns", campaignSchema);

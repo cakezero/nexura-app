@@ -88,16 +88,16 @@ export default function AdminSignUp() {
     <div className="relative min-h-screen flex items-center justify-center px-4">
       <AnimatedBackground />
 
-      <Card className="relative z-10 w-full max-w-md bg-black/60 border border-white/10 backdrop-blur-xl p-8 rounded-2xl shadow-2xl">
+      <Card className="relative z-10 w-full max-w-md bg-white border border-[rgba(28,37,51,0.12)] backdrop-blur-xl p-8 rounded-2xl shadow-2xl">
         {/* Icon + heading */}
         <div className="flex flex-col items-center mb-8">
           <div className="flex h-14 w-14 items-center justify-center rounded-full bg-purple-600/20 border border-purple-500/30 mb-4">
-            <ShieldCheck className="h-7 w-7 text-purple-400" />
+            <ShieldCheck className="h-7 w-7 text-[#8a3ffc]" />
           </div>
-          <CardTitle className="text-2xl font-bold text-white text-center">
+          <CardTitle className="text-2xl font-bold text-[#1c2533] text-center">
             Admin Account Setup
           </CardTitle>
-          <p className="mt-2 text-sm text-white/50 text-center">
+          <p className="mt-2 text-sm text-[#69728a] text-center">
             You've been invited to manage a project on Nexura Studio.
             <br />
             Enter the OTP from your invitation email to complete setup.
@@ -108,48 +108,48 @@ export default function AdminSignUp() {
         <div className="space-y-4">
           {/* Name */}
           <div>
-            <label className="block text-xs text-white/50 mb-1 ml-1">Full Name</label>
+            <label className="block text-xs text-[#69728a] mb-1 ml-1">Full Name</label>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Your full name"
-              className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-purple-500"
+              className="bg-[#f4f1fc] border-[rgba(28,37,51,0.12)] text-[#1c2533] placeholder:text-[#98a0b4] focus:border-purple-500"
             />
           </div>
 
           {/* Email */}
           <div>
-            <label className="block text-xs text-white/50 mb-1 ml-1">Email Address</label>
+            <label className="block text-xs text-[#69728a] mb-1 ml-1">Email Address</label>
             <Input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
               readOnly={!!emailFromUrl}
-              className={`bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-purple-500 ${
+              className={`bg-[#f4f1fc] border-[rgba(28,37,51,0.12)] text-[#1c2533] placeholder:text-[#98a0b4] focus:border-purple-500 ${
                 emailFromUrl ? "opacity-60 cursor-not-allowed select-none" : ""
               }`}
             />
             {emailFromUrl && (
-              <p className="mt-1 ml-1 text-xs text-white/30">Pre-filled from your invitation link</p>
+              <p className="mt-1 ml-1 text-xs text-[#98a0b4]">Pre-filled from your invitation link</p>
             )}
           </div>
 
           {/* Password */}
           <div>
-            <label className="block text-xs text-white/50 mb-1 ml-1">Password</label>
+            <label className="block text-xs text-[#69728a] mb-1 ml-1">Password</label>
             <div className="relative">
               <Input
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Create a password"
-                className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-purple-500 pr-10"
+                className="bg-[#f4f1fc] border-[rgba(28,37,51,0.12)] text-[#1c2533] placeholder:text-[#98a0b4] focus:border-purple-500 pr-10"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#69728a] hover:text-[#3d485c] transition-colors"
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
@@ -163,7 +163,7 @@ export default function AdminSignUp() {
                   [pwdChecks.number,  "At least one number"],
                   [pwdChecks.special, "At least one special character"],
                 ] as [boolean, string][]).map(([ok, label]) => (
-                  <li key={label} className={`flex items-center gap-1.5 text-xs ${ok ? "text-emerald-400" : "text-white/40"}`}>
+                  <li key={label} className={`flex items-center gap-1.5 text-xs ${ok ? "text-[#00a87c]" : "text-[#69728a]"}`}>
                     {ok ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
                     {label}
                   </li>
@@ -174,13 +174,13 @@ export default function AdminSignUp() {
 
           {/* OTP */}
           <div>
-            <label className="block text-xs text-white/50 mb-1 ml-1">Invitation Code (OTP)</label>
+            <label className="block text-xs text-[#69728a] mb-1 ml-1">Invitation Code (OTP)</label>
             <Input
               value={code}
               onChange={(e) => setCode(e.target.value.trim())}
               placeholder="6-character code from your email"
               maxLength={6}
-              className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-purple-500 tracking-widest text-center text-lg font-mono"
+              className="bg-[#f4f1fc] border-[rgba(28,37,51,0.12)] text-[#1c2533] placeholder:text-[#98a0b4] focus:border-purple-500 tracking-widest text-center text-lg font-mono"
             />
           </div>
         </div>
@@ -189,10 +189,10 @@ export default function AdminSignUp() {
         <Button
           onClick={handleSignUp}
           disabled={!canSubmit}
-          className="mt-6 w-full border border-white/80 text-white bg-transparent hover:bg-[#8B3EFE] hover:border-[#8B3EFE] transition-all py-2.5 rounded-xl flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:border-white/80"
+          className="mt-6 w-full border border-[rgba(28,37,51,0.12)] text-white bg-transparent hover:bg-[#8B3EFE] hover:border-[#8B3EFE] transition-all py-2.5 rounded-xl flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:border-[rgba(28,37,51,0.25)]"
         >
           {loading ? (
-            <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-[rgba(28,37,51,0.12)] border-t-white" />
           ) : (
             <>
               Complete Setup
@@ -201,9 +201,9 @@ export default function AdminSignUp() {
           )}
         </Button>
 
-        <p className="mt-4 text-center text-xs text-white/30">
+        <p className="mt-4 text-center text-xs text-[#98a0b4]">
           Already have access?{" "}
-          <Link href="/projects/create/signin-to-hub" className="text-purple-400 hover:underline">
+          <Link href="/projects/create/signin-to-hub" className="text-[#8a3ffc] hover:underline">
             Sign in
           </Link>
         </p>

@@ -83,7 +83,17 @@ async function throwIfNotOk(res: Response): Promise<void> {
       setTimeout(() => { window.location.href = "/projects/create/signin-to-hub"; }, 100);
     }
 
-    throw new Error(toUserFriendlyErrorMessage(String(msg)));
+    throw new ApiError(toUserFriendlyErrorMessage(String(msg)), res.status);
+  }
+}
+
+/** Error from a project API call that also carries the HTTP status. */
+export class ApiError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
   }
 }
 

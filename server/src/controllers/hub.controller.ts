@@ -4,6 +4,7 @@ import { hub, hubAdmin, userHub, userHubAdmin } from '@/models/hub.model';
 import { user } from '@/models/user.model';
 import { server } from '@/models/server.model';
 import { addHubAdminEmail } from '@/utils/sendMail';
+import { createHubInvite, InviteError } from '@/utils/hubInvite';
 import { BAD_REQUEST, INTERNAL_SERVER_ERROR, CREATED, OK, NO_CONTENT, NOT_FOUND, FORBIDDEN } from '@/utils/status.utils';
 import { CLIENT_URL } from '@/utils/env.utils';
 import { generateOTP, validateHubData, getMissingFields, validateCampaignData, validateCampaignQuestData, validateSaveCampaignData, validateUserHubData, validateDiscordTaskConfig } from '@/utils/utils';
@@ -301,76 +302,13 @@ export const disconnectHubDiscord = async (req: GlobalRequest, res: GlobalRespon
 export const addHubAdmin = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
     const { email, role, clientUrl } = req.body;
-    if (!email) {
-      res.status(BAD_REQUEST).json({ error: "admin email is required" });
-      return;
-    }
-
-    if (!req.admin.hub) {
-      res.status(BAD_REQUEST).json({ error: "create a hub to continue" });
-      return;
-    }
-
-    const validRole = role === "superadmin" ? "superadmin" : "admin";
-    const normalizedEmail = String(email).trim().toLowerCase();
-
-    const existingAdmin = await hubAdmin.findOne({ email: normalizedEmail }).lean();
-    if (existingAdmin) {
-      res.status(BAD_REQUEST).json({ error: "email is already in use" });
-      return;
-    }
-
-    let code = "";
-    for (let attempt = 0; attempt < 5; attempt++) {
-      const candidate = generateOTP();
-      const codeExists = await OTP.exists({ code: candidate });
-      if (!codeExists) {
-        code = candidate;
-        break;
-      }
-    }
-
-    if (!code) {
-      res.status(INTERNAL_SERVER_ERROR).json({ error: "Failed to generate invite code" });
-      return;
-    }
-
-    const existingInvite = await OTP.findOne({ email: normalizedEmail, hubId: String(req.admin.hub) }).lean();
-
-    await OTP.findOneAndUpdate(
-      { email: normalizedEmail, hubId: String(req.admin.hub) },
-      {
-        email: normalizedEmail,
-        code,
-        hubId: String(req.admin.hub),
-        role: validRole,
-        expiresAt: new Date(Date.now() + 5 * 60 * 1000),
-      },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
-    );
-
-    // Use the client's origin for the invite link so it works in dev/prod
-    const origin = clientUrl || CLIENT_URL;
-    try {
-      await addHubAdminEmail(normalizedEmail, code, origin);
-    } catch (error) {
-      if (existingInvite) {
-        await OTP.findOneAndUpdate(
-          { email: normalizedEmail, hubId: String(req.admin.hub) },
-          {
-            code: existingInvite.code,
-            role: existingInvite.role,
-            expiresAt: existingInvite.expiresAt,
-          }
-        );
-      } else {
-        await OTP.deleteOne({ email: normalizedEmail, hubId: String(req.admin.hub) });
-      }
-      throw error;
-    }
-
+    await createHubInvite({ hubId: req.admin.hub ? String(req.admin.hub) : "", email, role, clientUrl });
     res.status(OK).json({ message: "otp sent" });
   } catch (error: any) {
+    if (error instanceof InviteError) {
+      res.status(error.status).json({ error: error.message });
+      return;
+    }
     logger.error("addHubAdmin failed:", error);
     const msg = error?.message || 'Failed to add hub admin';
     res.status(INTERNAL_SERVER_ERROR).json({ error: msg });
@@ -698,12 +636,61 @@ export const getCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
   }
 }
 
+/**
+ * Retention campaign builder fields (stages, reward settings, template) arrive as FormData strings.
+ * Parse and sanitize them in place; anything malformed is dropped rather than stored.
+ */
+function parseRetentionBuilderFields(body: Record<string, any>) {
+  const parse = (v: unknown) => { if (typeof v !== "string") return v; try { return JSON.parse(v); } catch { return undefined; } };
+  const num = (v: unknown) => { const n = Number(v); return Number.isFinite(n) ? n : undefined; };
+
+  if (body.stages !== undefined) {
+    const stages = parse(body.stages);
+    if (Array.isArray(stages)) {
+      body.stages = stages
+        .filter((s: any) => s && typeof s.key === "string" && typeof s.name === "string")
+        .slice(0, 50)
+        .map((s: any, i: number) => ({
+          key: String(s.key).slice(0, 64),
+          name: String(s.name).trim().slice(0, 120) || `Stage ${i + 1}`,
+          order: i,
+          returnDays: Math.max(0, num(s.returnDays) ?? 0),
+          allocationPct: s.allocationPct === null || s.allocationPct === undefined ? null : Math.min(100, Math.max(0, num(s.allocationPct) ?? 0)),
+        }));
+    } else delete body.stages;
+  }
+
+  if (body.rewardsEnabled !== undefined) body.rewardsEnabled = body.rewardsEnabled === true || body.rewardsEnabled === "true";
+
+  if (body.rewardsConfig !== undefined) {
+    const rc = parse(body.rewardsConfig);
+    if (rc && typeof rc === "object") {
+      body.rewardsConfig = {
+        budget: num((rc as any).budget),
+        token: typeof (rc as any).token === "string" ? (rc as any).token.slice(0, 16) : undefined,
+        network: typeof (rc as any).network === "string" ? (rc as any).network.slice(0, 40) : undefined,
+        recipients: num((rc as any).recipients),
+        retentionRequirementPct: num((rc as any).retentionRequirementPct),
+        participantPool: num((rc as any).participantPool),
+        validationRewardsOn: Boolean((rc as any).validationRewardsOn),
+        curatorRewardsOn: Boolean((rc as any).curatorRewardsOn),
+        curatorAddress: typeof (rc as any).curatorAddress === "string" ? (rc as any).curatorAddress.slice(0, 64) : undefined,
+        totalPaid: num((rc as any).totalPaid),
+        paymentTxHash: typeof (rc as any).paymentTxHash === "string" ? (rc as any).paymentTxHash.slice(0, 120) : undefined,
+      };
+    } else delete body.rewardsConfig;
+  }
+
+  if (body.templateId !== undefined) body.templateId = typeof body.templateId === "string" && body.templateId ? body.templateId.slice(0, 64) : null;
+}
+
 export const saveCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
     // FormData sends JSON fields as strings — parse them before validation
     if (typeof req.body.reward === "string") {
       try { req.body.reward = JSON.parse(req.body.reward); } catch { /* leave as-is */ }
     }
+    parseRetentionBuilderFields(req.body);
 
     req.body.starts_at = normalizeCampaignDateInput(req.body.starts_at);
     req.body.ends_at = normalizeCampaignDateInput(req.body.ends_at);

@@ -16,6 +16,7 @@ import { fetchHubCampaigns, publishCampaign } from "@/controllers/campaign.contr
 import { requireStudioPayment } from "@/controllers/studioPayment.controller";
 import { validateCampaignSubmissions, getCampaignSubmissions, getHub, getHubAdmins, updateIds } from "@/controllers/hub.controller";
 import hubAppRoutes from "./hub.app.routes";
+import governanceRoutes from "./governance.routes";
 
 const router = Router();
 
@@ -39,6 +40,8 @@ router
   .get("/get-servers", fetchServers)
   .post("/admin/sign-up", hubAdminSignUp)
   .patch("/update-ids", authenticateHubAdmin2, updateIds)
+  // --- Admin Management governance (any admin; roles checked in the controller) ---
+  .use("/governance", authenticateHubAdmin2, governanceRoutes)
   // --- Superadmin-only routes ---
   .use("/", authenticateHubAdmin, hubAppRoutes)
 
