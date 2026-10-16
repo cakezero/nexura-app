@@ -44,9 +44,9 @@ const directInviteTransporter = nodemailer.createTransport({
     user: EMAIL_USER,
     pass: EMAIL_PASSWORD,
   },
-  connectionTimeout: 15000,
-  greetingTimeout: 15000,
-  socketTimeout: 20000,
+  // connectionTimeout: 15000,
+  // greetingTimeout: 15000,
+  // socketTimeout: 20000,
 });
 
 const options: NodemailerExpressHandlebarsOptions = {
