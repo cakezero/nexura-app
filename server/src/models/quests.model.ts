@@ -21,6 +21,15 @@ const ecosystemQuestSchema = new Schema({
 		type: String,
 		required: true,
 	},
+	published: {
+		type: Boolean,
+		default: false
+	},
+	status: {
+		type: String,
+		enum: ["active", "paused"],
+		default: "paused"
+	},
 	category: {
 		type: String,
 		required: false,

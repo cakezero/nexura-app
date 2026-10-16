@@ -265,6 +265,15 @@ const isActiveQuest = (quest: any) => {
 
 const quests = questsRaw.filter(isActiveQuest);
 
+// "pending" is the draft placeholder stored before an upload — treat it as
+// "no image" so the card fallback renders instead of a broken <img>.
+const toDisplayImage = (value?: string | null): string => {
+  if (typeof value !== "string") return "";
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.toLowerCase() === "pending") return "";
+  return trimmed;
+};
+
   const DiscoverCard = ({ card }: any) => {
   return (
     <div
@@ -899,8 +908,8 @@ const quests = questsRaw.filter(isActiveQuest);
                   title={title}
                   description={description}
                   creatorName={project}
-                  creatorLogo={quest.project_image || "/quest-1.png"}
-                  heroImage={quest.projectCoverImage || "/quest-1.png"}
+                  creatorLogo={toDisplayImage(quest.project_image) || "/quest-1.png"}
+                  heroImage={toDisplayImage(quest.projectCoverImage) || "/quest-1.png"}
                   rewards={`${quest.reward || quest.rewards || 0} XP`}
                   starts_at={quest.starts_at}
                   ends_at={quest.ends_at}
@@ -936,8 +945,8 @@ const quests = questsRaw.filter(isActiveQuest);
                   title={title}
                   description={description}
                   creatorName={project}
-                  creatorLogo={quest.project_image || "/quest-1.png"}
-                  heroImage={quest.projectCoverImage || "/quest-1.png"}
+                  creatorLogo={toDisplayImage(quest.project_image) || "/quest-1.png"}
+                  heroImage={toDisplayImage(quest.projectCoverImage) || "/quest-1.png"}
                   rewards={`${quest.reward || quest.rewards || 0} XP`}
                   starts_at={quest.starts_at}
                   ends_at={quest.ends_at}
@@ -982,8 +991,8 @@ const quests = questsRaw.filter(isActiveQuest);
                   title={title}
                   description={description}
                   creatorName={project}
-                  creatorLogo={quest.project_image || "/quest-1.png"}
-                  heroImage={quest.projectCoverImage || "/quest-1.png"}
+                  creatorLogo={toDisplayImage(quest.project_image) || "/quest-1.png"}
+                  heroImage={toDisplayImage(quest.projectCoverImage) || "/quest-1.png"}
                   rewards={`${quest.reward || quest.rewards || 0} XP`}
                   starts_at={quest.starts_at}
                   ends_at={quest.ends_at}

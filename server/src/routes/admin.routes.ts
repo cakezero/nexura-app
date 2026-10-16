@@ -48,6 +48,8 @@ import {
   deleteEcosystemDapp,
   updateEcosystemDapp,
   restoreUserStreak,
+  publishEcosystemDapp,
+  getLocationAnalytics,
 } from "@/controllers/admin.controller";
 import { deleteQuest, deleteSingleQuest, saveQuest, saveSingleQuest, publishSingleQuest, toggleQuestPublish } from "@/controllers/quest.controller";
 import { discordAdminCallback, adminConnectDiscord, fetchChannels, fetchRoles, fetchServers } from "@/controllers/hub.auth.controller";
@@ -85,6 +87,7 @@ const router = Router();
 router
   .post("/create-quest", createQuest)
   .post("/validate-task", markTask)
+  .get("/location-analytics", getLocationAnalytics)
   .post("/add-admin", addAdmin)
   .post("/restore-streak", restoreUserStreak)
   .post("/resend-invite", resendAdminInvite)
@@ -101,6 +104,7 @@ router
   .post("/unban-creator", unbanCreator)
   .get("/banned-creators", getBannedCreators)
   .get("/me", attachAdminCampaignHub, getHub)
+  .post("/update-dapp-status", requireAdminSuperadmin, publishEcosystemDapp)
   .patch("/update-hub", requireAdminSuperadmin, attachAdminCampaignHub, upload.fields([{ name: "logo", maxCount: 1 }, { name: "document", maxCount: 1 }]), updateHub)
   .patch("/disconnect-discord", requireAdminSuperadmin, attachAdminCampaignHub, disconnectHubDiscord)
   .post("/complete-discord-connect", requireAdminSuperadmin, attachAdminCampaignHub, completeHubDiscordConnect)
