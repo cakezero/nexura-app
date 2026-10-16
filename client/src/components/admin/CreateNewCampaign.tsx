@@ -1,10 +1,11 @@
 "use client";
 import React, { useState, useRef, useEffect } from "react";
+import { scrollToTop } from "@/lib/scrollToTop";
 
 // ─── TEMPLATE DATA ────────────────────────────────────────────────────────────
 const DEFAULT_RETENTION_REQUIREMENT = "90";
 const COVER_TYPES = ["image/svg+xml", "image/png", "image/jpeg", "image/gif"];
-const COVER_MAX_BYTES = 10 * 1024 * 1024;
+const COVER_MAX_BYTES = 5 * 1024 * 1024; // the server rejects uploads over 5MB
 const NEXURA_MAIN_APP_URL = "https://nexura.intuition.box/discover";
 const TEMPLATES = [
   {
@@ -147,7 +148,7 @@ const SAMPLE_RETENTION_STATS: RetentionStats = {
 };
 
 // ─── TASK CATALOG ─────────────────────────────────────────────────────────────
-const TASK_CATALOG = [
+export const TASK_CATALOG = [
   { id: "custom",              name: "Create a custom task",           category: "Custom",   points: 50,  description: "Create a unique task tailored to your specific campaign goals.", subtext: "Manual Validation" },
   { id: "follow-x",           name: "Follow an account on X",             category: "Social",   points: 100, description: "Ask participants to follow your official X (Twitter) account.",        subtext: "Auto Validated"   },
   { id: "portal-claims",      name: "I Trust (Portal claims)",            category: "On-chain", points: 200, description: "Verify on-chain trust attestations through the portal system.",        subtext: "Auto Validated"   },
@@ -276,7 +277,8 @@ function titleCase(s: string): string { return s.replace(/\b\w/g, c => c.toUpper
 const CONFIGURABLE_VALIDATION_TASKS = ["custom", "give-feedback", "product-feature"];
 // Custom and survey/feedback tasks can be peer reviewed by the community
 const PEER_REVIEW_TASKS = ["custom", "give-feedback"];
-type TaskEntry = { id: string; taskTypeId: string; name: string; category: string; points: number; description: string; subtext: string; validationMode?: ValidationMode; apiEndpoint?: string; taskUrl?: string };
+/** `questId` is the saved quest this task maps to, so editing a live campaign keeps its submissions. */
+export type TaskEntry = { id: string; taskTypeId: string; name: string; category: string; points: number; description: string; subtext: string; validationMode?: ValidationMode; apiEndpoint?: string; taskUrl?: string; questId?: string };
 
 function TaskIcon({ type, size = 30 }: { type: string; size?: number }) {
   const bg: Record<string, string> = { Social: "#e8f4fd", "On-chain": "#ede9fe", Product: "#fff3e0", Feedback: "#fce4ec", Custom: "#f3e5f5", default: "#f0f0f0" };
@@ -418,8 +420,8 @@ export async function switchWalletChain(eth: InjectedWallet, chainId: number | n
 // ─── HEADER ───────────────────────────────────────────────────────────────────
 function shortAddress(a: string): string { return a.length > 12 ? `${a.slice(0, 6)}…${a.slice(-4)}` : a; }
 type SaveState = "idle" | "saving" | "saved" | "skipped" | "error";
-function Header({ saveState = "idle", activeChain, onChainChange, walletAddress, onConnectWallet, onDisconnectWallet }: {
-  saveState?: SaveState; activeChain: NetworkId; onChainChange: (id: NetworkId) => void;
+function Header({ saveState = "idle", saveError, activeChain, onChainChange, walletAddress, onConnectWallet, onDisconnectWallet }: {
+  saveState?: SaveState; saveError?: string; activeChain: NetworkId; onChainChange: (id: NetworkId) => void;
   walletAddress?: string | null; onConnectWallet?: () => void; onDisconnectWallet?: () => void;
 }) {
   const [theme, setTheme] = useState<"light" | "dark">("light");
@@ -487,14 +489,13 @@ function Header({ saveState = "idle", activeChain, onChainChange, walletAddress,
         </div>
 
         {/* Auto-save chip — "Saving…" while the draft is saved, then the real result */}
-        {saveState !== "idle" && (() => {
+        {saveState !== "idle" && saveState !== "skipped" && (() => {
           const tone = saveState === "saving" ? { bg: "rgba(28,37,51,0.05)", bd: "rgba(28,37,51,0.16)", fg: "#6b7280" }
             : saveState === "saved" ? { bg: "rgba(0,229,192,0.1)", bd: "#00e5c0", fg: "#00875a" }
-            : saveState === "skipped" ? { bg: "rgba(28,37,51,0.05)", bd: "rgba(28,37,51,0.16)", fg: "#69728a" }
             : { bg: "rgba(245,158,11,0.14)", bd: "rgba(194,124,0,0.3)", fg: "#c27c00" };
-          const text = saveState === "saving" ? "Saving…" : saveState === "saved" ? "Saved just now" : saveState === "skipped" ? "Draft saves once it has a name and dates" : "Draft not saved";
+          const text = saveState === "saving" ? "Saving…" : saveState === "saved" ? "Saved" : "Not saved";
           return (
-          <div style={{ background: tone.bg, border: `1px solid ${tone.bd}`, borderRadius: 20, height: 24, display: "flex", alignItems: "center", paddingLeft: 8, paddingRight: 12, gap: 6, flexShrink: 0 }}>
+          <div title={saveState === "error" && saveError ? saveError : undefined} style={{ background: tone.bg, border: `1px solid ${tone.bd}`, borderRadius: 20, height: 24, display: "flex", alignItems: "center", paddingLeft: 8, paddingRight: 12, gap: 6, flexShrink: 0 }}>
             {saveState === "saving" ? (
               <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
                 <circle cx="6.5" cy="6.5" r="5" stroke="rgba(28,37,51,0.2)" strokeWidth="1.5"/>
@@ -998,6 +999,21 @@ export type PublishedCampaign = {
   /** Each task's `title` is its Task Description: the text participants see in the main app. */
   stages: Array<{ id: string; name: string; returnDays: number; tasks: Array<TaskEntry & { title: string }>; allocationPct: number | null }>;
   rewards: null | { budget: number; token: TokenSymbol; network: NetworkId; validationRewardsOn: boolean; curatorRewardsOn: boolean; curatorAddress: string | null; recipients: number; retentionRequirementPct: number; participantPool: number; totalPaid: number; paymentTxHash: string | null };
+  /** Raw builder state, saved with the draft so it reopens exactly where it was left. */
+  builder: BuilderState;
+};
+/** Everything on screen in the builder, including the step the admin was on. */
+export type BuilderState = {
+  version: 1;
+  step: number;
+  templateId: string | null;
+  journeyCadence: "daily" | "weekly";
+  rewardsEnabled: boolean;
+  name: string; description: string; startDate: string; endDate: string;
+  stages: Array<{ id: string; name: string; tasks: TaskEntry[]; returnDays: number; retentionType: "immediately" | "custom" }>;
+  rewardBudget: string; rewardNetwork: NetworkId; rewardToken: TokenSymbol; rewardRecipients: string;
+  retentionRequirement: string; stageAlloc: Record<string, string>;
+  paidKey: string | null; paymentTxHash: string | null;
 };
 /** What the wallet is asked to pay when "Pay campaign total" is clicked. */
 export type CampaignPayment = {
@@ -1014,7 +1030,16 @@ export default function CreateNewCampaign({
   tokenPricesUsd,
   retentionStats,
   projectCurator,
+  initialState,
+  initialCoverUrl,
+  mode = "create",
 }: {
+  /** A saved draft to reopen: the builder starts on the step it was left on, with every field filled in. */
+  initialState?: BuilderState | null;
+  /** Cover image already stored for the campaign being reopened. */
+  initialCoverUrl?: string | null;
+  /** "live" edits a published campaign: nothing autosaves, and the last step saves the changes instead of publishing. */
+  mode?: "create" | "live";
   onUseTemplate?: (id: string) => void;
   onScratch?: () => void;
   /** Saves and publishes the campaign. When it returns a promise, the page shows "Published" only after it resolves, and shows the error if it rejects. */
@@ -1040,36 +1065,40 @@ export default function CreateNewCampaign({
   projectCurator?: { name: string; address?: string } | null;
 } = {}) {
   // ── Wizard navigation ──
-  const [currentStep, setCurrentStep] = useState<number>(1);
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const init = initialState ?? null;
+  const [currentStep, setCurrentStep] = useState<number>(init?.step ?? 1);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(init?.templateId ?? null);
   const [startChoice, setStartChoice] = useState<{ kind: "template"; id: string } | { kind: "scratch" } | null>(null);
   const [pendingRewards, setPendingRewards] = useState<boolean | null>(null);
   const [showJourneyTpl, setShowJourneyTpl] = useState(false);
-  const [journeyCadence, setJourneyCadence] = useState<"daily" | "weekly">("weekly");
-  const goToStep = (step: number) => { setCurrentStep(step); window.scrollTo({ top: 0 }); };
+  const [journeyCadence, setJourneyCadence] = useState<"daily" | "weekly">(init?.journeyCadence ?? "weekly");
+  const goToStep = (step: number) => { setCurrentStep(step); scrollToTop(); };
+  // Every step opens at the top (the Studio scrolls inside its <main> panel, not the window)
+  useEffect(() => { scrollToTop(); }, [currentStep]);
 
   // ── Step 1 state ──
-  const [rewardsEnabled, setRewardsEnabled] = useState(true);
+  const [rewardsEnabled, setRewardsEnabled] = useState(init?.rewardsEnabled ?? true);
   const [scratchHovered, setScratchHovered] = useState(false);
 
   // ── Step 2 state ──
-  const [campaignName, setCampaignName]               = useState("");
-  const [campaignDescription, setCampaignDescription] = useState("");
-  const [coverPreview, setCoverPreview]               = useState<string | null>(null);
+  const [campaignName, setCampaignName]               = useState(init?.name ?? "");
+  const [campaignDescription, setCampaignDescription] = useState(init?.description ?? "");
+  const [coverPreview, setCoverPreview]               = useState<string | null>(initialCoverUrl ?? null);
   const [coverFile, setCoverFile]                     = useState<File | null>(null);
   const [coverError, setCoverError]                   = useState("");
   const [coverDragOver, setCoverDragOver]             = useState(false);
-  const [startDate, setStartDate]                     = useState("");
-  const [endDate, setEndDate]                         = useState("");
+  const [startDate, setStartDate]                     = useState(init?.startDate ?? "");
+  const [endDate, setEndDate]                         = useState(init?.endDate ?? "");
   const [continueHovered, setContinueHovered]         = useState(false);
   const [backHovered, setBackHovered]                 = useState(false);
   const [saveState, setSaveState]                     = useState<SaveState>("idle");
+  const [saveError, setSaveError]                     = useState("");
   const fileRef    = useRef<HTMLInputElement>(null);
   const saveTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hideTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Step 3 state ──
-  const [stages, setStages] = useState<Array<{ id: string; name: string; tasks: TaskEntry[]; returnDays: number; retentionType: "immediately" | "custom" }>>([]);
+  const [stages, setStages] = useState<BuilderState["stages"]>(init?.stages ?? []);
   const [activeStageId, setActiveStageId] = useState<string | null>(null);
   const [addStageHovered, setAddStageHovered] = useState(false);
   const [useJourneyTplHovered, setUseJourneyTplHovered] = useState(false);
@@ -1090,9 +1119,9 @@ export default function CreateNewCampaign({
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [customisingStageId, setCustomisingStageId] = useState<string | null>(null);
   // ── Rewards & Funding state ──
-  const [rewardBudget, setRewardBudget] = useState("");
-  const [rewardNetwork, setRewardNetwork] = useState<NetworkId>(DEFAULT_NETWORK);
-  const [rewardToken, setRewardToken] = useState<TokenSymbol>(NETWORKS.find(n => n.id === DEFAULT_NETWORK)!.tokens[0]);
+  const [rewardBudget, setRewardBudget] = useState(init?.rewardBudget ?? "");
+  const [rewardNetwork, setRewardNetwork] = useState<NetworkId>(init?.rewardNetwork ?? DEFAULT_NETWORK);
+  const [rewardToken, setRewardToken] = useState<TokenSymbol>(init?.rewardToken ?? NETWORKS.find(n => n.id === DEFAULT_NETWORK)!.tokens[0]);
   const [tokenMenuOpen, setTokenMenuOpen] = useState(false);
   const tokenMenuRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -1103,11 +1132,11 @@ export default function CreateNewCampaign({
     document.addEventListener("keydown", onKey);
     return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("keydown", onKey); };
   }, [tokenMenuOpen]);
-  const [rewardRecipients, setRewardRecipients] = useState("");
-  const [retentionRequirement, setRetentionRequirement] = useState(DEFAULT_RETENTION_REQUIREMENT);
+  const [rewardRecipients, setRewardRecipients] = useState(init?.rewardRecipients ?? "");
+  const [retentionRequirement, setRetentionRequirement] = useState(init?.retentionRequirement ?? DEFAULT_RETENTION_REQUIREMENT);
   const templateEndDateRef = useRef<string | null>(null); // end date the template filled in, so scratch can undo it
-  const [stageAlloc, setStageAlloc] = useState<Record<string, string>>({});
-  const [paidKey, setPaidKey] = useState<string | null>(null);
+  const [stageAlloc, setStageAlloc] = useState<Record<string, string>>(init?.stageAlloc ?? {});
+  const [paidKey, setPaidKey] = useState<string | null>(init?.paidKey ?? null);
   // Wallet: the app can control it via props; otherwise the page connects an injected browser wallet itself
   const [injectedAddress, setInjectedAddress] = useState<string | null>(null);
   const [walletNotice, setWalletNotice] = useState("");
@@ -1149,7 +1178,7 @@ export default function CreateNewCampaign({
   }, [walletAddress]);
   const [payStatus, setPayStatus] = useState<"idle" | "awaiting" | "error">("idle");
   const [payError, setPayError] = useState("");
-  const [paymentTxHash, setPaymentTxHash] = useState<string | null>(null);
+  const [paymentTxHash, setPaymentTxHash] = useState<string | null>(init?.paymentTxHash ?? null);
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [published, setPublished] = useState(false);
   const [publishing, setPublishing] = useState(false);
@@ -1197,7 +1226,8 @@ export default function CreateNewCampaign({
   const stageMinPct = maxPerRecipient > 0 ? Math.ceil((MIN_PER_STAGE_USD / maxPerRecipient) * 1000) / 10 : 100;
   const stageAllocErrors = allocValues.map(v => priceKnown && v > 0 && (maxPerRecipient * v / 100) < MIN_PER_STAGE_USD);
   const paymentKey = totalPaymentDue !== null ? `${rewardNetwork}|${rewardToken}|${totalPaymentDue}` : null;
-  const isPaid = paidKey !== null && paidKey === paymentKey;
+  // A live campaign was paid for when it was published
+  const isPaid = mode === "live" || (paidKey !== null && paidKey === paymentKey);
   const rewardsValid = priceKnown && budgetNum > 0 && recipientsNum > 0 && !recipientsOverCapacity && Math.abs(totalAllocated - 100) < 0.05 && !stageAllocErrors.some(Boolean);
   const canContinueToReview = rewardsValid && isPaid;
   const activeNetworkInfo = NETWORKS.find(n => n.id === rewardNetwork) || NETWORKS[0];
@@ -1274,22 +1304,38 @@ export default function CreateNewCampaign({
   function buildPayload(): PublishedCampaign {
     return {
       name: campaignName.trim(), description: campaignDescription.trim(), coverImage: coverFile, startDate, endDate, rewardsEnabled,
-      templateId: startChoice?.kind === "template" ? startChoice.id : null,
+      templateId: selectedTemplateId,
       stages: stages.map(st => ({ id: st.id, name: st.name, returnDays: st.returnDays, tasks: st.tasks.map(t => ({ ...t, title: t.description.trim() || t.name })), allocationPct: rewardsEnabled ? (Number(stageAlloc[st.id]) || 0) : null })),
       rewards: rewardsEnabled ? { budget: budgetNum, token: rewardToken, network: rewardNetwork, validationRewardsOn, curatorRewardsOn, curatorAddress: projectCurator?.address ?? null, recipients: recipientsNum, retentionRequirementPct: Number(retentionRequirement) || 0, participantPool: participantPoolTokens, totalPaid: isPaid && totalPaymentDue !== null ? totalPaymentDue : 0, paymentTxHash: isPaid ? paymentTxHash : null } : null,
+      builder: {
+        version: 1, step: currentStep, templateId: selectedTemplateId, journeyCadence, rewardsEnabled,
+        name: campaignName, description: campaignDescription, startDate, endDate, stages,
+        rewardBudget, rewardNetwork, rewardToken, rewardRecipients, retentionRequirement, stageAlloc,
+        paidKey, paymentTxHash,
+      },
     };
   }
 
   // ── Auto-save: shows "Saving…" on any change, then saves the draft 1.5 s after typing stops ──
+  // A reopened draft isn't saved again until something changes; a live campaign never autosaves.
+  const skipFirstAutosave = useRef(!!initialState);
+  // The save still waiting on its 1.5 s delay; sent straight away if the builder closes first
+  const pendingAutosave = useRef<(() => void) | null>(null);
+  useEffect(() => () => { pendingAutosave.current?.(); }, []);
   useEffect(() => {
-    if (currentStep < 2) return;
+    if (mode === "live" || currentStep < 2) return;
+    if (skipFirstAutosave.current) { skipFirstAutosave.current = false; return; }
     setSaveState("saving");
     if (saveTimer.current)  clearTimeout(saveTimer.current);
     if (hideTimer.current)  clearTimeout(hideTimer.current);
+    const payload = buildPayload();
+    pendingAutosave.current = () => { onAutosave?.(payload).catch(() => {}); };
     saveTimer.current = setTimeout(async () => {
+      pendingAutosave.current = null;
       let result: SaveState = "saved";
       if (onAutosave) {
-        try { result = await onAutosave(buildPayload()); } catch { result = "error"; }
+        try { result = await onAutosave(buildPayload()); setSaveError(""); }
+        catch (err) { result = "error"; setSaveError(err instanceof Error ? err.message : "The draft could not be saved."); }
       }
       setSaveState(result);
       if (result === "saved") hideTimer.current = setTimeout(() => setSaveState("idle"), 3000);
@@ -1298,7 +1344,8 @@ export default function CreateNewCampaign({
       if (saveTimer.current) clearTimeout(saveTimer.current);
       if (hideTimer.current) clearTimeout(hideTimer.current);
     };
-  }, [campaignName, campaignDescription, startDate, endDate, rewardsEnabled, coverPreview, stages, currentStep]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [campaignName, campaignDescription, startDate, endDate, rewardsEnabled, coverPreview, stages, currentStep, selectedTemplateId, journeyCadence, rewardBudget, rewardNetwork, rewardToken, rewardRecipients, retentionRequirement, stageAlloc, paidKey]);
 
   // Template / scratch choices ask for confirmation first
   function handleUseTemplate(id: string) { setStartChoice({ kind: "template", id }); }
@@ -1335,7 +1382,7 @@ export default function CreateNewCampaign({
   function acceptCover(file: File | undefined) {
     if (!file) return;
     if (!COVER_TYPES.includes(file.type)) { setCoverError("Use an SVG, PNG, JPG or GIF image."); return; }
-    if (file.size > COVER_MAX_BYTES) { setCoverError("That image is over 10MB. Use a smaller file."); return; }
+    if (file.size > COVER_MAX_BYTES) { setCoverError("That image is over 5MB. Use a smaller file."); return; }
     setCoverError("");
     if (coverPreview) URL.revokeObjectURL(coverPreview);
     setCoverFile(file);
@@ -1658,7 +1705,7 @@ export default function CreateNewCampaign({
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "#f7f5ff", fontFamily: "'Geist', 'DM Sans', 'Inter', sans-serif" }}>
 
-      <Header saveState={saveState} activeChain={rewardNetwork} onChainChange={handleNetworkChange} walletAddress={connectedAddress} onConnectWallet={connectWallet} onDisconnectWallet={disconnectWallet} />
+      <Header saveState={saveState} saveError={saveError} activeChain={rewardNetwork} onChainChange={handleNetworkChange} walletAddress={connectedAddress} onConnectWallet={connectWallet} onDisconnectWallet={disconnectWallet} />
 
       {/* ══════════ STEP 1 ══════════ */}
       {currentStep === 1 && (
@@ -1789,7 +1836,7 @@ export default function CreateNewCampaign({
                       <span style={{ fontSize: 13, fontWeight: 500, color: "#1c2533", textAlign: "center" }}>
                         <span style={{ color: "#8b3efe" }}>Click to upload </span>OR you can drag and drop
                       </span>
-                      <span style={{ fontSize: 13, fontWeight: 300, color: "rgba(28,37,51,0.5)", textAlign: "center" }}>SVG, PNG, JPG or GIF (max. 10MB)</span>
+                      <span style={{ fontSize: 13, fontWeight: 300, color: "rgba(28,37,51,0.5)", textAlign: "center" }}>SVG, PNG, JPG or GIF (max. 5MB)</span>
                     </div>
                   </>
                 )}
@@ -2338,7 +2385,7 @@ export default function CreateNewCampaign({
                   disabled={!journeyReady}
                   onMouseEnter={() => setContinueStep3Hovered(true)}
                   onMouseLeave={() => setContinueStep3Hovered(false)}
-                  onClick={() => { if (!journeyReady) return; setActiveStageId(null); setCurrentStep(rewardsEnabled ? 4 : 5); window.scrollTo({ top: 0 }); }}
+                  onClick={() => { if (!journeyReady) return; setActiveStageId(null); setCurrentStep(rewardsEnabled ? 4 : 5); scrollToTop(); }}
                   style={{ height: 34, borderRadius: 40, padding: "0 16px", background: !journeyReady ? "#c4a6fe" : continueStep3Hovered ? "#7a28e8" : "#8b3efe", border: "1px solid transparent", cursor: journeyReady ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 7, fontSize: 12.5, fontWeight: 600, color: "white", fontFamily: "inherit", transition: "background 0.15s" }}
                 >
                   {rewardsEnabled ? "Continue to rewards and funding" : "Continue to review"}
@@ -2731,14 +2778,14 @@ export default function CreateNewCampaign({
 
             {/* Back / Continue */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, marginTop: 34, flexWrap: "wrap" as const }}>
-              <button onClick={() => { setCurrentStep(3); window.scrollTo({ top: 0 }); }}
+              <button onClick={() => { setCurrentStep(3); scrollToTop(); }}
                 style={{ width: 78, height: 34, borderRadius: 40, background: "#f7f4fe", border: "1px solid rgba(28,37,51,0.15)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 7, fontSize: 12.5, fontWeight: 600, color: "#1c2533", fontFamily: "inherit" }}>
                 <FigmaIcon name="arrowLeft" />
                 Back
               </button>
               <button disabled={!canContinueToReview}
                 title={canContinueToReview ? undefined : !rewardsValid ? "Fix the highlighted issues first" : "Pay the campaign total to continue"}
-                onClick={() => { if (canContinueToReview) { setCurrentStep(5); window.scrollTo({ top: 0 }); } }}
+                onClick={() => { if (canContinueToReview) { setCurrentStep(5); scrollToTop(); } }}
                 style={{ height: 34, borderRadius: 40, padding: "0 16px", background: "#8b3efe", opacity: canContinueToReview ? 1 : 0.45, border: "1px solid transparent", cursor: canContinueToReview ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 7, fontSize: 12.5, fontWeight: 600, color: "white", fontFamily: "inherit" }}>
                 Continue to review
                 <FigmaIcon name="arrowRightWhite" />
@@ -2860,7 +2907,7 @@ export default function CreateNewCampaign({
                                 </span>
                               )}
                               <button
-                                onClick={() => { setActiveStageId(st.id); setCurrentStep(3); window.scrollTo({ top: 0 }); }}
+                                onClick={() => { setActiveStageId(st.id); setCurrentStep(3); scrollToTop(); }}
                                 onMouseEnter={e => { e.currentTarget.style.background = "rgba(138,63,252,0.1)"; }}
                                 onMouseLeave={e => { e.currentTarget.style.background = "#f7f4fe"; }}
                                 style={{ minHeight: 34, padding: "7.24px 11.83px 7.26px", borderRadius: 40, background: "#f7f4fe", border: "1px solid rgba(28,37,51,0.15)", display: "flex", alignItems: "center", gap: 7.99, fontSize: 13, fontWeight: 600, color: "#1c2533", fontFamily: "inherit", cursor: "pointer" }}
@@ -2904,7 +2951,7 @@ export default function CreateNewCampaign({
 
             {/* Back / Publish */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, marginTop: 30, flexWrap: "wrap" as const }}>
-              <button onClick={() => { setCurrentStep(rewardsEnabled ? 4 : 3); window.scrollTo({ top: 0 }); }}
+              <button onClick={() => { setCurrentStep(rewardsEnabled ? 4 : 3); scrollToTop(); }}
                 style={{ width: 78, height: 34, borderRadius: 40, background: "#f7f4fe", border: "1px solid rgba(28,37,51,0.15)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 7, fontSize: 12.5, fontWeight: 600, color: "#1c2533", fontFamily: "inherit" }}>
                 <FigmaIcon name="arrowLeft" />
                 Back
@@ -2912,7 +2959,7 @@ export default function CreateNewCampaign({
               <button disabled={!allChecksOk || published}
                 onClick={() => { if (allChecksOk && !published) setShowPublishModal(true); }}
                 style={{ height: 34, borderRadius: 40, padding: "0 16px", background: "#8b3efe", opacity: allChecksOk && !published ? 1 : 0.45, border: "1px solid transparent", cursor: allChecksOk && !published ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 7, fontSize: 12.5, fontWeight: 600, color: "white", fontFamily: "inherit" }}>
-                {published ? "Published" : "Publish"}
+                {published ? (mode === "live" ? "Proposed" : "Published") : (mode === "live" ? "Propose changes" : "Publish")}
                 <FigmaIcon name={published ? "checkWhite" : "arrowRightWhite"} />
               </button>
             </div>
@@ -3020,12 +3067,14 @@ export default function CreateNewCampaign({
           <div onClick={() => { if (!publishing) setShowPublishModal(false); }} style={{ position: "fixed", inset: 0, zIndex: 9999, background: "rgba(4,3,9,0.7)", backdropFilter: "blur(2px)", WebkitBackdropFilter: "blur(2px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, overflowY: "auto" as const }}>
             <div role="dialog" aria-modal="true" aria-labelledby="publish-title" onClick={e => e.stopPropagation()}
               style={{ width: "100%", maxWidth: 480.33, background: "white", border: "1px solid rgba(28,37,51,0.15)", borderRadius: 40, overflow: "hidden", padding: "29px 6px 1px", boxSizing: "border-box" as const }}>
-              <div id="publish-title" style={{ padding: "0 24px", fontSize: 16.4, fontWeight: 600, color: "#1c2533", letterSpacing: -0.328, lineHeight: "18.84px" }}>Publish this campaign?</div>
+              <div id="publish-title" style={{ padding: "0 24px", fontSize: 16.4, fontWeight: 600, color: "#1c2533", letterSpacing: -0.328, lineHeight: "18.84px" }}>{mode === "live" ? "Propose changes to this campaign?" : "Publish this campaign?"}</div>
               <div style={{ padding: "16px 24px", display: "flex", flexDirection: "column", gap: 15.99 }}>
                 <div style={{ fontSize: 14, color: "#3d485c", lineHeight: "21.7px" }}>
-                  Once published, {campaignName.trim() || "Untitled campaign"} moves to Upcoming and appears on the public page, but participants cannot join until it starts. {rewardsEnabled ? "Reward amounts and reserved participant funds become locked. You can still increase the pool later." : ""}
+                  {mode === "live"
+                    ? `This campaign is published, so your changes to ${campaignName.trim() || "this campaign"} go to Admin Management as a proposal. You will sign it with your wallet, and the changes apply once the signers approve.`
+                    : <>Once published, {campaignName.trim() || "Untitled campaign"} moves to Upcoming and appears on the public page, but participants cannot join until it starts. {rewardsEnabled ? "Reward amounts and reserved participant funds become locked. You can still increase the pool later." : ""}</>}
                 </div>
-                <div style={{ background: "rgba(138,63,252,0.1)", border: "1px solid rgba(155,124,255,0.24)", borderRadius: 40, padding: "21px 16.83px", display: "flex", gap: 12, alignItems: "flex-start" }}>
+                <div style={{ background: "rgba(138,63,252,0.1)", border: "1px solid rgba(155,124,255,0.24)", borderRadius: 40, padding: "21px 16.83px", display: mode === "live" ? "none" : "flex", gap: 12, alignItems: "flex-start" }}>
                   <FigmaIcon name="modalInfo" style={{ marginTop: 1 }} />
                   <span style={{ fontSize: 13, color: "#6e2bd8", lineHeight: "20.15px" }}>
                     <b style={{ fontWeight: 600 }}>Starts {fmtReviewDate(startDate)}</b>{startText} Participants can join from the start date until <b>{fmtShortDate(endDate)}.</b>
@@ -3059,7 +3108,7 @@ export default function CreateNewCampaign({
                   }}
                   style={{ minHeight: 40, padding: "10.83px 16.83px", borderRadius: 40, background: "#8b3efe", border: "1px solid transparent", fontSize: 14, fontWeight: 600, color: "white", fontFamily: "inherit", cursor: publishing ? "wait" : "pointer", opacity: publishing ? 0.7 : 1, display: "flex", alignItems: "center", gap: 7.99 }}>
                   <FigmaIcon name="checkWhite" />
-                  {publishing ? "Publishing…" : "Publish"}
+                  {mode === "live" ? (publishing ? "Proposing…" : "Sign & propose") : (publishing ? "Publishing…" : "Publish")}
                 </button>
               </div>
             </div>
@@ -3082,6 +3131,17 @@ export default function CreateNewCampaign({
               <svg width="16" height="16" viewBox="0 0 14 14" fill="none"><path d="M11 7H3M3 7L7 3M3 7L7 11" stroke="#1c2533" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
               Back
             </button>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            {/* Campaign already has content: go back to it without applying a template or clearing it */}
+            {(initialState || stages.length > 0 || campaignName.trim()) && (
+              <button
+                onClick={() => goToStep(2)}
+                style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, background: "#8b3efe", color: "white", border: "1px solid transparent", borderRadius: 40, padding: "0 16px", height: 34, cursor: "pointer", fontSize: 12.5, fontWeight: 600 }}
+              >
+                Continue editing
+                <svg width="16" height="16" viewBox="0 0 14 14" fill="none"><path d="M3 7h8M11 7L7 3M11 7L7 11" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </button>
+            )}
             <button
               onMouseEnter={() => setScratchHovered(true)}
               onMouseLeave={() => setScratchHovered(false)}
@@ -3098,6 +3158,7 @@ export default function CreateNewCampaign({
               Start from scratch
               <svg width="16" height="16" viewBox="0 0 14 14" fill="none"><path d="M3 7h8M11 7L7 3M11 7L7 11" stroke={scratchHovered ? "white" : "#8b3efe"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
             </button>
+            </div>
           </>
         )}
 

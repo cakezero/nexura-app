@@ -38,8 +38,7 @@ export default function StudioSidebar({
   const sidebarItems: NavItem[] = [
     { title: "Profile", icon: "/sidebar-icons/nexura-studio.png", id: "hubProfile" },
     { title: "Campaigns", short: "Campaigns", icon: "/sidebar-icons/campaigns.png", id: "campaignsTab" },
-    { title: "New Campaigns", short: "New", icon: "/sidebar-icons/campaigns.png", id: "campaignsFlow", badge: "New" },
-    { title: "Dashboard", short: "Dashboard", icon: "/sidebar-icons/analytics.png", id: "campaignSubmissions" },
+    { title: "Submissions", short: "Submissions", icon: "/sidebar-icons/analytics.png", id: "campaignSubmissions" },
     ...(adminRole === "superadmin" ? [
       { title: "Admin Management", short: "Admins", icon: Shield, id: "adminManagement" as TabType },
     ] : []),

@@ -15,6 +15,7 @@ import { authenticateHubAdmin, authenticateHubAdmin2 } from "@/middlewares/auth.
 import { fetchHubCampaigns, publishCampaign } from "@/controllers/campaign.controller";
 import { requireStudioPayment } from "@/controllers/studioPayment.controller";
 import { validateCampaignSubmissions, getCampaignSubmissions, getHub, getHubAdmins, updateIds } from "@/controllers/hub.controller";
+import { getSubmissionCampaigns, getCampaignSubmissionDetails } from "@/controllers/submissions.controller";
 import { getRetentionDraft, saveRetentionDraft } from "@/controllers/retentionDraft.controller";
 import hubAppRoutes from "./hub.app.routes";
 import governanceRoutes from "./governance.routes";
@@ -25,6 +26,8 @@ router
   // --- Any-admin routes (authenticateHubAdmin2) ---
   .get("/get-campaigns", authenticateHubAdmin2, fetchHubCampaigns)
   .get("/campaign-submissions", authenticateHubAdmin2, getCampaignSubmissions)
+  .get("/submission-campaigns", authenticateHubAdmin2, getSubmissionCampaigns)
+  .get("/campaign-submission-details", authenticateHubAdmin2, getCampaignSubmissionDetails)
   .post("/validate-campaign-submissions", authenticateHubAdmin2, validateCampaignSubmissions)
   .get("/me", authenticateHubAdmin2, getHub)
   .get("/retention-draft", authenticateHubAdmin2, getRetentionDraft)

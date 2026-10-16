@@ -2,7 +2,11 @@ import { ethers } from "ethers";
 import logger from "@/config/logger";
 import { hub, hubAdmin } from "@/models/hub.model";
 import { hubGovernance, governanceProposal } from "@/models/governance.model";
+import { campaign } from "@/models/campaign.model";
+import { parseDate } from "@/utils/dates";
 import { createHubInvite } from "@/utils/hubInvite";
+import { applyCampaignUpdate, prepareCampaignSaveBody } from "@/controllers/hub.controller";
+import { validateDiscordTaskConfig } from "@/utils/utils";
 import { BAD_REQUEST, CREATED, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_FOUND, OK } from "@/utils/status.utils";
 
 /*
@@ -46,6 +50,9 @@ class HttpError extends Error {
   status: number;
   constructor(status: number, message: string) { super(message); this.status = status; }
 }
+
+// A campaign never ends immediately: an approved "end campaign" proposal gives participants this notice
+const CAMPAIGN_END_NOTICE_MS = 7 * 24 * 60 * 60 * 1000;
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const isInt = (v: unknown): v is number => typeof v === "number" && Number.isInteger(v);
@@ -230,6 +237,44 @@ async function validateAction(ctx: Ctx, me: { id: string; role: Role }, raw: any
       const prev = ctx.adminById(me.id);
       return { kind: "transferOwnership", newOwnerId: id, newOwnerName: t.name, prevOwnerId: me.id, prevOwnerName: prev?.name ?? "" };
     }
+    case "endCampaign": {
+      const id = typeof raw.campaignId === "string" ? raw.campaignId : "";
+      const c = /^[a-f0-9]{24}$/i.test(id) ? await campaign.findById(id).select("hub title status ends_at deletedAt").lean() as any : null;
+      if (!c || String(c.hub) !== ctx.hubId || c.deletedAt) throw new HttpError(NOT_FOUND, "campaign not found in your hub");
+      if (c.status === "Save") throw new HttpError(BAD_REQUEST, "drafts aren't live, so there's nothing to end");
+      const endsAt = parseDate(c.ends_at);
+      if (c.status === "Ended" || (endsAt && endsAt.getTime() <= Date.now())) throw new HttpError(BAD_REQUEST, "this campaign has already ended");
+      if (pending.some(p => p.action?.kind === "endCampaign" && p.action.campaignId === id)) throw new HttpError(BAD_REQUEST, "ending this campaign is already proposed");
+      return { kind: "endCampaign", campaignId: id, campaignTitle: String(c.title ?? ""), noticeDays: CAMPAIGN_END_NOTICE_MS / 86_400_000 };
+    }
+    case "editCampaign": {
+      const id = typeof raw.campaignId === "string" ? raw.campaignId : "";
+      const c = /^[a-f0-9]{24}$/i.test(id) ? await campaign.findById(id).select("hub title status ends_at deletedAt").lean() as any : null;
+      if (!c || String(c.hub) !== ctx.hubId || c.deletedAt) throw new HttpError(NOT_FOUND, "campaign not found in your hub");
+      if (c.status === "Save") throw new HttpError(BAD_REQUEST, "drafts aren't published, so they're edited directly");
+      const endsAt = parseDate(c.ends_at);
+      if (c.status === "Ended" || (endsAt && endsAt.getTime() <= Date.now())) throw new HttpError(BAD_REQUEST, "this campaign has already ended");
+      if (pending.some(p => p.action?.kind === "editCampaign" && p.action.campaignId === id)) throw new HttpError(BAD_REQUEST, "changes to this campaign are already proposed; approve or reject that proposal first");
+
+      const changes = raw.changes;
+      if (!changes || typeof changes !== "object" || Array.isArray(changes)) throw new HttpError(BAD_REQUEST, "the proposed changes are missing");
+      if (JSON.stringify(changes).length > 300_000) throw new HttpError(BAD_REQUEST, "the proposed changes are too large");
+      // Only the fields the campaign builder saves
+      const ALLOWED = ["title", "description", "nameOfProject", "starts_at", "ends_at", "maxParticipants", "reward", "stages", "rewardsEnabled", "rewardsConfig", "templateId", "builderState", "campaignQuests", "coverImage"];
+      const body: Record<string, any> = {};
+      for (const k of ALLOWED) if (changes[k] !== undefined) body[k] = changes[k];
+      if (body.coverImage !== undefined && !(typeof body.coverImage === "string" && body.coverImage.startsWith("https://"))) delete body.coverImage;
+      if (body.campaignQuests !== undefined) {
+        if (!Array.isArray(body.campaignQuests) || body.campaignQuests.length > 500) throw new HttpError(BAD_REQUEST, "the proposed tasks are invalid");
+        body.campaignQuests.forEach((q: any, i: number) => {
+          const check = validateDiscordTaskConfig(q);
+          if (!check.success) throw new HttpError(BAD_REQUEST, `task #${i + 1}: ${check.error}`);
+        });
+      }
+      const bodyError = prepareCampaignSaveBody(body);
+      if (bodyError) throw new HttpError(BAD_REQUEST, bodyError);
+      return { kind: "editCampaign", campaignId: id, campaignTitle: String(body.title ?? c.title ?? ""), changes: body };
+    }
     default:
       throw new HttpError(BAD_REQUEST, "unknown action");
   }
@@ -249,7 +294,7 @@ function tally(ctx: Ctx, proposal: any) {
   return { approvals, rejections, votes: latest };
 }
 
-async function runAction(ctx: Ctx, action: any) {
+async function runAction(ctx: Ctx, action: any, proposalRef: string) {
   const gov = ctx.gov;
   const signerList = () => (gov.signers ?? []).map(String);
   const setSigners = (ids: string[]) => { (gov as any).signers = Array.from(new Set(ids)); };
@@ -308,6 +353,31 @@ async function runAction(ctx: Ctx, action: any) {
       setSigners([...signerList().filter(id => id !== action.newOwnerId), action.prevOwnerId]);
       break;
     }
+    case "endCampaign": {
+      // The contract that will enforce this isn't deployed yet. Until then the end date moves to
+      // 7 days after approval (or stays put if the campaign already ends sooner).
+      const c = await campaign.findById(action.campaignId);
+      if (!c || String(c.hub) !== ctx.hubId || c.deletedAt) throw new Error("the campaign no longer exists");
+      const now = Date.now();
+      const currentEnd = parseDate(c.ends_at);
+      if (c.status === "Ended" || (currentEnd && currentEnd.getTime() <= now)) throw new Error("the campaign has already ended");
+      const noticeEnd = new Date(now + CAMPAIGN_END_NOTICE_MS);
+      const endsAt = currentEnd && currentEnd < noticeEnd ? currentEnd : noticeEnd;
+      c.ends_at = endsAt.toISOString();
+      (c as any).endProposal = { ref: proposalRef, executedAt: new Date(now), endsAt: endsAt.toISOString() };
+      await c.save();
+      return; // the governance record itself doesn't change
+    }
+    case "editCampaign": {
+      // Applies the edit with the same rules as the builder's save (dates, rewards, quests)
+      const hubFound = await hub.findById(ctx.hubId).lean();
+      if (!hubFound) throw new Error("the hub no longer exists");
+      const c = await campaign.findById(action.campaignId).select("hub deletedAt").lean() as any;
+      if (!c || String(c.hub) !== ctx.hubId || c.deletedAt) throw new Error("the campaign no longer exists");
+      const changes = { ...action.changes };
+      await applyCampaignUpdate(action.campaignId, hubFound, changes, Array.isArray(changes.campaignQuests) ? changes.campaignQuests : null);
+      return; // the governance record itself doesn't change
+    }
     default:
       throw new Error("unknown action");
   }
@@ -320,7 +390,7 @@ async function settle(ctx: Ctx, proposal: any) {
   const { approvals, rejections } = tally(ctx, proposal);
   if (approvals >= ctx.thresholds.approval) {
     try {
-      await runAction(ctx, proposal.action);
+      await runAction(ctx, proposal.action, proposal.ref);
       proposal.status = "executed";
       proposal.resolvedAt = new Date();
       proposal.resolvedCount = approvals;

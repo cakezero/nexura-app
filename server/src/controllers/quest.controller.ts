@@ -38,6 +38,7 @@ import { parseDate, normalizeCampaignDateInput } from "@/utils/dates";
 import { xpLog } from "@/models/xpLog.model";
 import { consumePaymentHash } from "./studioPayment.controller";
 import { environment } from "@/utils/env.utils";
+import { refreshUserRetention } from "@/utils/retention";
 import { resolveAdminCampaignHub } from "@/utils/adminCampaignHub";
 
 // Image fields may hold empty strings or the literal "pending" (draft
@@ -506,6 +507,8 @@ export const fetchCampaignQuests = async (req: GlobalRequest, res: GlobalRespons
 			completedCampaign.questsCompleted = true;
 			await completedCampaign.save();
 		}
+		// Keep stored retention in step with the tasks this person has completed
+		if (completedCampaign && campaignQuestsMarkedAsDone.length > 0) void refreshUserRetention(userId);
 
 		const campaignNumber = padNumber(currentCampaign.campaignNumber);
 

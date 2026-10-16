@@ -143,7 +143,11 @@ export type ProposalAction =
   | { kind: "signer"; adminId: string; adminName: string; add: boolean; threshold?: number }
   | { kind: "replaceSigner"; oldId: string; oldName: string; newId: string; newName: string }
   | { kind: "revoke"; adminId: string; adminName: string }
-  | { kind: "transferOwnership"; newOwnerId: string; newOwnerName?: string; prevOwnerId?: string; prevOwnerName?: string };
+  | { kind: "transferOwnership"; newOwnerId: string; newOwnerName?: string; prevOwnerId?: string; prevOwnerName?: string }
+  /** Ends a live campaign `noticeDays` (7) after the proposal is approved; it never ends immediately. */
+  | { kind: "endCampaign"; campaignId: string; campaignTitle?: string; noticeDays?: number }
+  /** Changes to a published campaign; applied only once the signers approve. `changes` holds the builder's save fields. */
+  | { kind: "editCampaign"; campaignId: string; campaignTitle?: string; changes: Record<string, unknown> };
 
 /** Wallet signature proving a signer proposed / voted (Safe-style). */
 export type ProposalSignature = { address: string; signature: string; message: string; signedAt: string };

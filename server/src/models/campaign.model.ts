@@ -156,6 +156,18 @@ const campaignSchema = new Schema({
 		totalPaid: { type: Number },
 		paymentTxHash: { type: String },
 	},
+	// Everything the Create Campaign builder needs to reopen a draft exactly where it was left
+	// (field values, current step, reward settings). Owned by the studio client.
+	builderState: {
+		type: Schema.Types.Mixed,
+		default: null,
+	},
+	// Set when an approved governance proposal schedules this campaign to end
+	endProposal: {
+		ref: { type: String },
+		executedAt: { type: Date },
+		endsAt: { type: String },
+	},
 }, { timestamps: true });
 
 export const campaign = mongoose.model("campaigns", campaignSchema);
@@ -177,6 +189,10 @@ const campaignCompletedSchema = new Schema({
 		type: mongoose.Schema.Types.ObjectId,
 		ref: "campaign",
 	},
+	// Retention on this campaign: stages fully completed out of all stages (see utils/retention.ts)
+	stagesCompleted: { type: Number, default: 0 },
+	stagesTotal: { type: Number, default: 0 },
+	retentionRate: { type: Number, default: null },
 }, { timestamps: true });
 
 export const campaignCompleted = mongoose.model(

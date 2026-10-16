@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { Calendar, Shield, LayoutDashboard, Search, Bell, RefreshCw, Check, X, Eye, Clock, CheckCircle2, XCircle, ChevronDown, Users, FileText, Copy } from "lucide-react";
 import { StatsOverview } from "@/components/admin/StatsOverview";
-import CampaignSubmissions from "@/components/admin/CampaignSubmissions";
+import SubmissionsHub from "@/components/admin/SubmissionsHub";
 import { TASKS } from "@/types/admin";
 import AdminManagement, { AdminType as Admin } from "@/components/admin/AdminManagement";
 import CampaignsTab from "@/components/admin/CampaignsTab";
@@ -72,6 +72,8 @@ const [campaignTasks, setCampaignTasks] = useState<TASKS[]>([]);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<TASKS | null>(null);
     const [searchTerm, setSearchTerm] = useState("");
+  // Bumped after a submission is accepted or rejected so the Submissions view reloads
+  const [submissionsRefresh, setSubmissionsRefresh] = useState(0);
     
 
   const fetchTasks = async () => {
@@ -114,20 +116,10 @@ const [campaignTasks, setCampaignTasks] = useState<TASKS[]>([]);
     }
   };
 
-  const handleView = (id: string, _taskType: string, _link: string) => {
-    console.log("[ACTION] StudioDashboard.handleView", id);
-    try {
-      // Always show modal instead of opening links directly
-      const allTasks = [...campaignTasks];
-      const task = allTasks.find(t => t._id === id);
-      if (task) {
-        setSelectedTask(task);
-        setViewModalOpen(true);
-        setViewedSubmissions((prev) => new Set(prev).add(id));
-      }
-    } catch (error) {
-      console.error("Error in handleView:", error);
-    }
+  const openSubmission = (task: TASKS) => {
+    setSelectedTask(task);
+    setViewModalOpen(true);
+    setViewedSubmissions((prev) => new Set(prev).add(task._id));
   };
 
   const handleAction = async (id: string, action: "accept" | "reject") => {
@@ -142,6 +134,8 @@ const [campaignTasks, setCampaignTasks] = useState<TASKS[]>([]);
 
       // Refresh tasks after action
       await fetchTasks();
+      setSubmissionsRefresh(n => n + 1);
+      setViewModalOpen(false);
 
       // Remove from viewed submissions
       setViewedSubmissions((prev) => {
@@ -215,6 +209,7 @@ const fetchBannedUsers = async () => {
                 : activeTab === "adminManagement" ? "User Administration"
                 : activeTab === "campaignsTab" ? "Campaigns"
                 : activeTab === "campaignsFlow" ? "New Campaigns"
+                : activeTab === "campaignSubmissions" ? "Submissions"
                 : "Nexura Studio"
               }
             />
@@ -223,26 +218,22 @@ const fetchBannedUsers = async () => {
 
           <main className="flex-1 overflow-y-auto pt-16 pb-24 px-4 md:pt-8 md:pb-8 md:px-9 relative bg-[#f7f5ff] text-[#1c2533]" style={{ fontFamily: "'Geist', 'Inter', sans-serif" }}>
             <div className="max-w-7xl mx-auto">
-              {activeTab !== "adminManagement" && activeTab !== "campaignsTab" && activeTab !== "campaignsFlow" && (
-                <StatsOverview key={activeTab} tasks={activeTab === "campaignSubmissions" ? campaignTasks : []} />
-              )}
+              {activeTab === "hubProfile" && <StatsOverview key={activeTab} tasks={[]} />}
               {activeTab === "campaignsTab" && <CampaignsTab />}
 
               {activeTab === "campaignSubmissions" && (
-<CampaignSubmissions
-  tasks={campaignTasks}
-  loading={loading}
-  searchTerm={searchTerm}
-  setSearchTerm={setSearchTerm}
-  selectedUsers={selectedUsers}
-  viewedSubmissions={viewedSubmissions}
-  toggleUserSelection={toggleUserSelection}
-  handleView={handleView}
-  handleAction={handleAction}
-  onRefresh={fetchTasks}
-/>
-
-)}
+                <SubmissionsHub
+                  refreshKey={submissionsRefresh}
+                  loading={loading}
+                  searchTerm={searchTerm}
+                  setSearchTerm={setSearchTerm}
+                  selectedUsers={selectedUsers}
+                  viewedSubmissions={viewedSubmissions}
+                  toggleUserSelection={toggleUserSelection}
+                  onOpenSubmission={openSubmission}
+                  handleAction={handleAction}
+                />
+              )}
 
               {activeTab === "adminManagement" && <AdminManagement />}
             </div>

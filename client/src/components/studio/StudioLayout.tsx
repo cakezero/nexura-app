@@ -32,7 +32,7 @@ export default function StudioLayout({ children, title = "Nexura Studio", hideHe
     if (pathname.includes("admin-management")) return "adminManagement";
     if (pathname === "/studio-dashboard") return "campaignSubmissions";
     if (pathname.includes("campaigns-flow")) return "campaignsFlow";
-    if (pathname.includes("campaigns-tab") || pathname.includes("create-new-campaign") || pathname.includes("my-campaign"))
+    if (pathname.includes("campaigns-tab") || pathname.includes("create-new-campaign") || pathname.includes("campaign-preview") || pathname.includes("my-campaign"))
       return "campaignsTab";
     return "campaignSubmissions";
   };

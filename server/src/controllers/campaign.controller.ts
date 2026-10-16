@@ -20,6 +20,7 @@ import { validateCampaignData, updateLevel, checkPayment, validateDiscordTaskCon
 import { campaignQuest } from "@/models/quests.model";
 import { ethers } from "ethers";
 import { xpLog } from "@/models/xpLog.model";
+import { refreshUserRetention } from "@/utils/retention";
 
 interface IReward {
 	xp: number;
@@ -659,6 +660,14 @@ export const closeCampaign = async (
 			return;
 		}
 
+		// Projects can't end a running campaign on the spot: they propose it, and once signers
+		// approve it ends 7 days later (see the "endCampaign" governance action).
+		const endsAt = parseDate(foundCampaign.ends_at);
+		if (!req.isPlatformAdmin && endsAt && endsAt.getTime() > Date.now()) {
+			res.status(FORBIDDEN).json({ error: "a running campaign can't be ended immediately; propose ending it instead" });
+			return;
+		}
+
 		foundCampaign.status = "Ended";
 		await foundCampaign.save();
 
@@ -892,6 +901,7 @@ export const claimCampaignRewards = async (
 		await completedCampaign.save();
 		await campaignToClaimRewards.save();
 		await userToReward.save();
+		await refreshUserRetention(userToReward._id);
 
 		res.status(OK).json({ message: "campaign completed" });
 	} catch (error) {

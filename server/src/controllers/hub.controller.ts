@@ -14,6 +14,7 @@ import { miniQuestCompleted, campaignQuestCompleted } from '@/models/questsCompl
 import { campaign } from '@/models/campaign.model';
 import { campaignQuest } from '@/models/quests.model';
 import { withSubmissionCategory } from '@/controllers/quest.controller';
+import { refreshUserRetention } from "@/utils/retention";
 import { uploadImg } from "@/utils/img.utils";
 import { uploadFile } from "@/utils/file.utils";
 import { normalizeCampaignDateInput, normalizeCampaignDatesForResponse, parseDate } from "@/utils/dates";
@@ -589,6 +590,7 @@ export const validateCampaignSubmissions = async (req: GlobalRequest, res: Globa
 
     await userSubmission.save();
     await model.save();
+    if (action === "accept" && !isSeasonalQuest) void refreshUserRetention(userSubmission.user);
 
     res.status(NO_CONTENT).send();
   } catch (error) {
@@ -682,18 +684,223 @@ function parseRetentionBuilderFields(body: Record<string, any>) {
   }
 
   if (body.templateId !== undefined) body.templateId = typeof body.templateId === "string" && body.templateId ? body.templateId.slice(0, 64) : null;
+
+  if (body.builderState !== undefined) {
+    const raw = typeof body.builderState === "string" ? body.builderState : JSON.stringify(body.builderState ?? null);
+    const state = raw.length <= 200_000 ? parse(raw) : undefined;
+    if (state && typeof state === "object" && !Array.isArray(state)) body.builderState = state;
+    else delete body.builderState;
+  }
+}
+
+/** Parses a campaign save body in place (FormData sends JSON fields as strings) and validates it. Returns an error message or null. */
+export function prepareCampaignSaveBody(body: Record<string, any>): string | null {
+  if (typeof body.reward === "string") {
+    try { body.reward = JSON.parse(body.reward); } catch { /* leave as-is */ }
+  }
+  parseRetentionBuilderFields(body);
+  body.starts_at = normalizeCampaignDateInput(body.starts_at);
+  body.ends_at = normalizeCampaignDateInput(body.ends_at);
+  const { error } = validateSaveCampaignData(body);
+  return error ? `Missing required fields: ${getMissingFields(error)}` : null;
+}
+
+/** A rejected campaign update, with the HTTP status to answer it with. */
+export class CampaignUpdateError extends Error {
+  constructor(public status: number, message: string) { super(message); }
+}
+
+/**
+ * Applies a save to an existing campaign: fields, dates/status and quests (existing quest IDs and
+ * submissions are kept). Used by the builder for drafts and by an approved "editCampaign" proposal.
+ * Throws CampaignUpdateError when the change isn't allowed.
+ */
+export async function applyCampaignUpdate(id: string, hubFound: any, body: Record<string, any>, questsToSave: any[] | null) {
+  const campaignFound = await campaign.findById(id).lean();
+  if (!campaignFound) {
+    throw new CampaignUpdateError(NOT_FOUND, "campaign not found");
+  }
+
+  const lockedDiscordGuildId = campaignFound.status !== "Save"
+    ? await resolveCampaignDiscordLaunchGuildId(campaignFound)
+    : "";
+
+  const discordGuildIdForCampaign = lockedDiscordGuildId || String(hubFound.guildId ?? "").trim();
+
+  const incomingNameOfProject = typeof body.nameOfProject === "string"
+    ? body.nameOfProject.trim()
+    : "";
+
+  const { campaignQuests: _cq, isDraft: _d, existingCoverImage: _e, hubCoverImage: _h, nameOfProject: _n, coverImage: newCoverImage, ...updateFields } = body;
+
+  // A cover uploaded after the first save replaces the stored one
+  if (typeof newCoverImage === "string" && newCoverImage) updateFields.projectCoverImage = newCoverImage;
+
+  if (updateFields.reward && typeof updateFields.reward === "object") {
+    const rewardUpdate = updateFields.reward as Record<string, unknown>;
+    const pool = Number(rewardUpdate.pool ?? 0);
+    const xp = Number(rewardUpdate.xp ?? 0);
+    const trustTokens = Number(rewardUpdate.trust ?? rewardUpdate.trustTokens ?? 0);
+    updateFields.reward = {
+      xp,
+      pool,
+      trustTokens,
+    };
+    updateFields.totalXpAvailable = xp;
+    updateFields.totalTrustAvailable = pool;
+  }
+
+  if (updateFields.maxParticipants !== undefined) {
+    updateFields.maxParticipants = Number(updateFields.maxParticipants ?? 0);
+  }
+
+  if (updateFields.description !== undefined) {
+    updateFields.sub_title = String(updateFields.description ?? "").trim();
+  }
+
+  if (body.nameOfProject !== undefined || campaignFound.project_name) {
+    updateFields.project_name = hubFound.name ?? incomingNameOfProject ?? campaignFound.project_name;
+  }
+
+  const existingPool = Number(campaignFound.reward?.pool ?? 0);
+  const existingMaxParticipants = Number((campaignFound as any).maxParticipants ?? campaignFound.participants ?? 0);
+  const existingStartsAt = parseDate(campaignFound.starts_at);
+  const existingEndsAt = parseDate(campaignFound.ends_at);
+  const incomingPool = updateFields.reward
+    ? Number((updateFields.reward as Record<string, unknown>).pool ?? existingPool)
+    : existingPool;
+  const incomingMaxParticipants = updateFields.maxParticipants !== undefined
+    ? Number(updateFields.maxParticipants ?? existingMaxParticipants)
+    : existingMaxParticipants;
+  const incomingEndsAt = updateFields.ends_at ? parseDate(updateFields.ends_at) : existingEndsAt;
+  const rewardsContractSettled = Boolean((campaignFound as any).rewardsDeployment?.remainderWithdrawalTxHash);
+  const campaignHasStarted = existingStartsAt ? existingStartsAt.getTime() <= Date.now() : false;
+
+  // A live campaign only ends earlier through an approved "end campaign" proposal, and editing can't undo one
+  if (campaignFound.status !== "Save" && existingEndsAt && incomingEndsAt) {
+    // The date picker works in whole minutes, so allow up to a minute of rounding
+    if (incomingEndsAt.getTime() < existingEndsAt.getTime() - 60_000) {
+      throw new CampaignUpdateError(BAD_REQUEST, "a live campaign's end date can't be brought forward; propose ending it instead");
+    }
+    if ((campaignFound as any).endProposal?.endsAt && incomingEndsAt.getTime() > existingEndsAt.getTime() + 60_000) {
+      throw new CampaignUpdateError(BAD_REQUEST, "this campaign is ending through an approved proposal, so its end date can't be extended");
+    }
+  }
+
+  if (campaignFound.status !== "Save" && campaignFound.contractAddress && existingPool > 0) {
+    if (
+      rewardsContractSettled &&
+      existingEndsAt &&
+      incomingEndsAt &&
+      incomingEndsAt.getTime() > existingEndsAt.getTime()
+    ) {
+      throw new CampaignUpdateError(BAD_REQUEST, "this rewards campaign cannot be extended because its remaining funds have already been withdrawn");
+    }
+
+    if (campaignHasStarted) {
+      if (incomingPool < existingPool) {
+        throw new CampaignUpdateError(BAD_REQUEST, "reward pool cannot be reduced after publishing");
+      }
+      if (incomingMaxParticipants < existingMaxParticipants) {
+        throw new CampaignUpdateError(BAD_REQUEST, "participant limit cannot be reduced after publishing");
+      }
+    }
+
+  }
+
+  // Recalculate status atomically when dates change on a published campaign
+  if (campaignFound.status !== "Save") {
+    const now = new Date();
+    const newStartsAt = updateFields.starts_at
+      ? parseDate(updateFields.starts_at)
+      : parseDate(campaignFound.starts_at);
+    const newEndsAt = updateFields.ends_at
+      ? parseDate(updateFields.ends_at)
+      : parseDate(campaignFound.ends_at);
+
+    if (newEndsAt && newEndsAt <= now) {
+      updateFields.status = "Ended";
+    } else if (newStartsAt && newStartsAt > now) {
+      updateFields.status = "Scheduled";
+    } else {
+      updateFields.status = "Active";
+    }
+  }
+
+  await campaign.findByIdAndUpdate(id, updateFields, { new: true });
+
+  // Update quests without destroying existing IDs/submissions
+  if (questsToSave !== null) {
+    const existingQuests = await campaignQuest.find({ campaign: id }).select("_id").lean();
+    const existingQuestIds = existingQuests.map((q: any) => q._id.toString());
+    const incomingQuestIds = questsToSave
+      .map((q: any) => q._id?.toString())
+      .filter(Boolean);
+
+    const questsToUpdate = questsToSave.filter((q: any) => q._id);
+    const questsToInsert = questsToSave.filter((q: any) => !q._id);
+
+    if (questsToUpdate.length > 0) {
+      // Per-task Discord validation on the update path: refuse malformed
+      // tag flips/channels on existing quests as well (e.g. swapping a "like"
+      // task's tag to "send-message-discord" without channelId would have silently
+      // persisted before this guard).
+      for (let i = 0; i < questsToUpdate.length; i++) {
+        const taskCheck = validateDiscordTaskConfig(questsToUpdate[i] as any);
+        if (!taskCheck.success) {
+          throw new CampaignUpdateError(BAD_REQUEST, `task #${i + 1}: ${taskCheck.error}`);
+        }
+      }
+      await campaignQuest.bulkWrite(
+        questsToUpdate.map((q: any) => {
+          const { _id, ...rest } = q;
+          const updatePayload = isDiscordCampaignTask(q)
+            ? { ...rest, campaign: new mongoose.Types.ObjectId(id), guildId: discordGuildIdForCampaign }
+            : { ...rest, campaign: new mongoose.Types.ObjectId(id) };
+
+          return {
+            updateOne: {
+              filter: {
+                _id: new mongoose.Types.ObjectId(_id),
+                campaign: new mongoose.Types.ObjectId(id)
+              },
+              update: { $set: updatePayload },
+            }
+          };
+        })
+      );
+    }
+
+    if (questsToInsert.length > 0) {
+      // Newly inserted rows also go through the per-task Discord validation to
+      // keep behaviour consistent with the create-only branch above.
+      for (let i = 0; i < questsToInsert.length; i++) {
+        const taskCheck = validateDiscordTaskConfig(questsToInsert[i] as any);
+        if (!taskCheck.success) {
+          throw new CampaignUpdateError(BAD_REQUEST, `task #${i + 1}: ${taskCheck.error}`);
+        }
+      }
+      await campaignQuest.insertMany(
+        questsToInsert.map((q: any) => (
+          isDiscordCampaignTask(q)
+            ? { ...q, campaign: id, guildId: discordGuildIdForCampaign }
+            : { ...q, campaign: id }
+        ))
+      );
+    }
+
+    const questIdsToDelete = existingQuestIds.filter((existingId) => !incomingQuestIds.includes(existingId));
+    if (questIdsToDelete.length > 0) {
+      await campaignQuest.deleteMany({ _id: { $in: questIdsToDelete }, campaign: id });
+    }
+
+    await campaign.findByIdAndUpdate(id, { noOfQuests: questsToSave.length });
+  }
 }
 
 export const saveCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
-    // FormData sends JSON fields as strings — parse them before validation
-    if (typeof req.body.reward === "string") {
-      try { req.body.reward = JSON.parse(req.body.reward); } catch { /* leave as-is */ }
-    }
-    parseRetentionBuilderFields(req.body);
-
-    req.body.starts_at = normalizeCampaignDateInput(req.body.starts_at);
-    req.body.ends_at = normalizeCampaignDateInput(req.body.ends_at);
+    const bodyError = prepareCampaignSaveBody(req.body);
 
     const hubFound = await hub.findById(req.admin.hub).lean();
     if (!hubFound) {
@@ -711,11 +918,19 @@ export const saveCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
       } catch { /* ignore */ }
     }
 
-    const { error } = validateSaveCampaignData(req.body);
-    if (error) {
-      const emptyFields = getMissingFields(error);
-      res.status(BAD_REQUEST).json({ error: `Missing required fields: ${emptyFields}` });
+    if (bodyError) {
+      res.status(BAD_REQUEST).json({ error: bodyError });
       return;
+    }
+
+    // A published campaign only changes through an approved "editCampaign" proposal in Admin Management
+    const { id: existingId } = req.query as { id?: string };
+    if (existingId && !req.isPlatformAdmin) {
+      const existing = await campaign.findById(existingId).select("status").lean();
+      if (existing && existing.status !== "Save") {
+        res.status(FORBIDDEN).json({ error: "this campaign is published, so changes need an approved proposal in Admin Management" });
+        return;
+      }
     }
 
     const coverImageBuffer = req.file?.buffer;
@@ -794,191 +1009,32 @@ export const saveCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
       return;
     }
 
-    const campaignFound = await campaign.findById(id).lean();
-    if (!campaignFound) {
-      res.status(NOT_FOUND).json({ error: "campaign not found" });
-      return;
-    }
-
-    const lockedDiscordGuildId = campaignFound.status !== "Save"
-      ? await resolveCampaignDiscordLaunchGuildId(campaignFound)
-      : "";
-
-    const discordGuildIdForCampaign = lockedDiscordGuildId || String(hubFound.guildId ?? "").trim();
-
-    const incomingNameOfProject = typeof req.body.nameOfProject === "string"
-      ? req.body.nameOfProject.trim()
-      : "";
-
-    const { campaignQuests: _cq, isDraft: _d, existingCoverImage: _e, hubCoverImage: _h, nameOfProject: _n, ...updateFields } = req.body;
-
-    if (updateFields.reward && typeof updateFields.reward === "object") {
-      const rewardUpdate = updateFields.reward as Record<string, unknown>;
-      const pool = Number(rewardUpdate.pool ?? 0);
-      const xp = Number(rewardUpdate.xp ?? 0);
-      const trustTokens = Number(rewardUpdate.trust ?? rewardUpdate.trustTokens ?? 0);
-      updateFields.reward = {
-        xp,
-        pool,
-        trustTokens,
-      };
-      updateFields.totalXpAvailable = xp;
-      updateFields.totalTrustAvailable = pool;
-    }
-
-    if (updateFields.maxParticipants !== undefined) {
-      updateFields.maxParticipants = Number(updateFields.maxParticipants ?? 0);
-    }
-
-    if (updateFields.description !== undefined) {
-      updateFields.sub_title = String(updateFields.description ?? "").trim();
-    }
-
-    if (req.body.nameOfProject !== undefined || campaignFound.project_name) {
-      updateFields.project_name = hubFound.name ?? incomingNameOfProject ?? campaignFound.project_name;
-    }
-
-    const existingPool = Number(campaignFound.reward?.pool ?? 0);
-    const existingMaxParticipants = Number((campaignFound as any).maxParticipants ?? campaignFound.participants ?? 0);
-    const existingStartsAt = parseDate(campaignFound.starts_at);
-    const existingEndsAt = parseDate(campaignFound.ends_at);
-    const incomingPool = updateFields.reward
-      ? Number((updateFields.reward as Record<string, unknown>).pool ?? existingPool)
-      : existingPool;
-    const incomingMaxParticipants = updateFields.maxParticipants !== undefined
-      ? Number(updateFields.maxParticipants ?? existingMaxParticipants)
-      : existingMaxParticipants;
-    const incomingEndsAt = updateFields.ends_at ? parseDate(updateFields.ends_at) : existingEndsAt;
-    const rewardsContractSettled = Boolean((campaignFound as any).rewardsDeployment?.remainderWithdrawalTxHash);
-    const campaignHasStarted = existingStartsAt ? existingStartsAt.getTime() <= Date.now() : false;
-
-    if (campaignFound.status !== "Save" && campaignFound.contractAddress && existingPool > 0) {
-      if (
-        rewardsContractSettled &&
-        existingEndsAt &&
-        incomingEndsAt &&
-        incomingEndsAt.getTime() > existingEndsAt.getTime()
-      ) {
-        res.status(BAD_REQUEST).json({
-          error: "this rewards campaign cannot be extended because its remaining funds have already been withdrawn",
-        });
-        return;
-      }
-
-      if (campaignHasStarted) {
-        if (incomingPool < existingPool) {
-          res.status(BAD_REQUEST).json({ error: "reward pool cannot be reduced after publishing" });
-          return;
-        }
-        if (incomingMaxParticipants < existingMaxParticipants) {
-          res.status(BAD_REQUEST).json({ error: "participant limit cannot be reduced after publishing" });
-          return;
-        }
-      }
-
-    }
-
-    // Recalculate status atomically when dates change on a published campaign
-    if (campaignFound.status !== "Save") {
-      const now = new Date();
-      const newStartsAt = updateFields.starts_at
-        ? parseDate(updateFields.starts_at)
-        : parseDate(campaignFound.starts_at);
-      const newEndsAt = updateFields.ends_at
-        ? parseDate(updateFields.ends_at)
-        : parseDate(campaignFound.ends_at);
-
-      if (newEndsAt && newEndsAt <= now) {
-        updateFields.status = "Ended";
-      } else if (newStartsAt && newStartsAt > now) {
-        updateFields.status = "Scheduled";
-      } else {
-        updateFields.status = "Active";
-      }
-    }
-
-    await campaign.findByIdAndUpdate(id, updateFields, { new: true });
-
-    // Update quests without destroying existing IDs/submissions
-    if (questsToSave !== null) {
-      const existingQuests = await campaignQuest.find({ campaign: id }).select("_id").lean();
-      const existingQuestIds = existingQuests.map((q: any) => q._id.toString());
-      const incomingQuestIds = questsToSave
-        .map((q: any) => q._id?.toString())
-        .filter(Boolean);
-
-      const questsToUpdate = questsToSave.filter((q: any) => q._id);
-      const questsToInsert = questsToSave.filter((q: any) => !q._id);
-
-      if (questsToUpdate.length > 0) {
-        // Per-task Discord validation on the update path: refuse malformed
-        // tag flips/channels on existing quests as well (e.g. swapping a "like"
-        // task's tag to "send-message-discord" without channelId would have silently
-        // persisted before this guard).
-        for (let i = 0; i < questsToUpdate.length; i++) {
-          const taskCheck = validateDiscordTaskConfig(questsToUpdate[i] as any);
-          if (!taskCheck.success) {
-            res.status(BAD_REQUEST).json({
-              error: `task #${i + 1}: ${taskCheck.error}`,
-            });
-            return;
-          }
-        }
-        await campaignQuest.bulkWrite(
-          questsToUpdate.map((q: any) => {
-            const { _id, ...rest } = q;
-            const updatePayload = isDiscordCampaignTask(q)
-              ? { ...rest, campaign: new mongoose.Types.ObjectId(id), guildId: discordGuildIdForCampaign }
-              : { ...rest, campaign: new mongoose.Types.ObjectId(id) };
-
-            return {
-              updateOne: {
-                filter: {
-                  _id: new mongoose.Types.ObjectId(_id),
-                  campaign: new mongoose.Types.ObjectId(id)
-                },
-                update: { $set: updatePayload },
-              }
-            };
-          })
-        );
-      }
-
-      if (questsToInsert.length > 0) {
-        // Newly inserted rows also go through the per-task Discord validation to
-        // keep behaviour consistent with the create-only branch above.
-        for (let i = 0; i < questsToInsert.length; i++) {
-          const taskCheck = validateDiscordTaskConfig(questsToInsert[i] as any);
-          if (!taskCheck.success) {
-            res.status(BAD_REQUEST).json({
-              error: `task #${i + 1}: ${taskCheck.error}`,
-            });
-            return;
-          }
-        }
-        await campaignQuest.insertMany(
-          questsToInsert.map((q: any) => (
-            isDiscordCampaignTask(q)
-              ? { ...q, campaign: id, guildId: discordGuildIdForCampaign }
-              : { ...q, campaign: id }
-          ))
-        );
-      }
-
-      const questIdsToDelete = existingQuestIds.filter((existingId) => !incomingQuestIds.includes(existingId));
-      if (questIdsToDelete.length > 0) {
-        await campaignQuest.deleteMany({ _id: { $in: questIdsToDelete }, campaign: id });
-      }
-
-      await campaign.findByIdAndUpdate(id, { noOfQuests: questsToSave.length });
-    }
-
+    await applyCampaignUpdate(id, hubFound, req.body, questsToSave);
     res.status(OK).json({ campaignId: id });
   } catch (error: any) {
+    if (error instanceof CampaignUpdateError) {
+      res.status(error.status).json({ error: error.message });
+      return;
+    }
     logger.error(error);
     res.status(INTERNAL_SERVER_ERROR).json({ error: error?.message || 'Failed to save campaign' });
   }
 }
+
+/** Uploads a new cover for a published campaign's edit proposal; the proposal carries the returned URL. */
+export const uploadCampaignCover = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    if (!req.file?.buffer) {
+      res.status(BAD_REQUEST).json({ error: "send a cover image" });
+      return;
+    }
+    const url = await uploadImg({ file: req.file.buffer, filename: req.file.originalname, folder: "cover-images", maxSize: 2 * 1024 ** 2 });
+    res.status(OK).json({ url });
+  } catch (error: any) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: error?.message || "Failed to upload the cover image" });
+  }
+};
 
 export const saveCampaignWithQuests = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
