@@ -15,8 +15,10 @@ import { authenticateHubAdmin, authenticateHubAdmin2 } from "@/middlewares/auth.
 import { fetchHubCampaigns, publishCampaign } from "@/controllers/campaign.controller";
 import { requireStudioPayment } from "@/controllers/studioPayment.controller";
 import { validateCampaignSubmissions, getCampaignSubmissions, getHub, getHubAdmins, updateIds } from "@/controllers/hub.controller";
+import { getSubmissionCampaigns, getCampaignSubmissionDetails } from "@/controllers/submissions.controller";
 import { getRetentionDraft, saveRetentionDraft } from "@/controllers/retentionDraft.controller";
 import hubAppRoutes from "./hub.app.routes";
+import governanceRoutes from "./governance.routes";
 
 const router = Router();
 
@@ -24,6 +26,8 @@ router
   // --- Any-admin routes (authenticateHubAdmin2) ---
   .get("/get-campaigns", authenticateHubAdmin2, fetchHubCampaigns)
   .get("/campaign-submissions", authenticateHubAdmin2, getCampaignSubmissions)
+  .get("/submission-campaigns", authenticateHubAdmin2, getSubmissionCampaigns)
+  .get("/campaign-submission-details", authenticateHubAdmin2, getCampaignSubmissionDetails)
   .post("/validate-campaign-submissions", authenticateHubAdmin2, validateCampaignSubmissions)
   .get("/me", authenticateHubAdmin2, getHub)
   .get("/retention-draft", authenticateHubAdmin2, getRetentionDraft)
@@ -42,6 +46,8 @@ router
   .get("/get-servers", fetchServers)
   .post("/admin/sign-up", hubAdminSignUp)
   .patch("/update-ids", authenticateHubAdmin2, updateIds)
+  // --- Admin Management governance (any admin; roles checked in the controller) ---
+  .use("/governance", authenticateHubAdmin2, governanceRoutes)
   // --- Superadmin-only routes ---
   .use("/", authenticateHubAdmin, hubAppRoutes)
 

@@ -28,11 +28,11 @@ export default function NexuraStudio() {
 }, []);
 
   return (
-    <div className="min-h-screen bg-black text-white overflow-auto relative">
+    <div className="min-h-screen bg-[#f7f5ff] text-[#1c2533] overflow-auto relative">
       <div className="relative flex flex-col min-h-screen overflow-hidden">
   {/* Video background */}
   <video
-    className="absolute top-0 left-0 w-full h-screen object-cover z-0 opacity-30"
+    className="absolute top-0 left-0 w-full h-screen object-cover z-0 opacity-10"
     src="/studio-animated.mp4"
     autoPlay
     loop
@@ -45,7 +45,7 @@ export default function NexuraStudio() {
         <div className="w-full flex items-center justify-between px-4 sm:px-6 pt-4">
           <button
             onClick={() => window.location.href = "/discover"}
-            className="inline-flex items-center gap-2 px-3 py-2 rounded-full border border-white/30 bg-black/30 hover:bg-black/50 text-white text-xs sm:text-sm"
+            className="inline-flex items-center gap-2 px-3 py-2 rounded-full border border-[rgba(28,37,51,0.12)] bg-white hover:bg-[#f4f1fc] text-[#1c2533] text-xs sm:text-sm"
           >
             <ArrowLeft className="w-4 h-4" />
             Back to Explore
@@ -59,7 +59,7 @@ export default function NexuraStudio() {
           {/* Badge */}
           <div className="flex items-center gap-2 bg-purple-500/10 border border-purple-500/30 rounded-full px-3 py-1 mb-4">
             <div className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
-            <span className="text-purple-300 text-[10px] font-semibold uppercase tracking-widest">
+            <span className="text-[#8a3ffc] text-[10px] font-semibold uppercase tracking-widest">
               ORGANIZATION PLATFORM
             </span>
           </div>
@@ -74,7 +74,7 @@ export default function NexuraStudio() {
 </div>
 
 
-<h1 className="text-5xl sm:text-6xl md:text-7xl font-extrabold mb-4 leading-tight text-gray-100 flex justify-center">
+<h1 className="text-5xl sm:text-6xl md:text-7xl font-extrabold mb-4 leading-tight text-[#1c2533] flex justify-center">
   {text.split("").map((letter, index) => {
     const startX = Math.floor(Math.random() * 300 - 150);
     const startY = Math.floor(Math.random() * 300 - 150);
@@ -85,7 +85,7 @@ export default function NexuraStudio() {
     return (
       <span
         key={index}
-        className="inline-block text-white"
+        className="inline-block text-[#1c2533]"
         style={{
           transform: `translate(${startX}px, ${startY}px) rotate(${rotate}deg) scale(${scale})`,
           opacity: 0,
@@ -114,11 +114,11 @@ export default function NexuraStudio() {
             </button>
           </div>
 
-          {/* <p className="text-white/30 text-[10px]">Reserved for project owners &amp; builders</p> */}
+          {/* <p className="text-[#98a0b4] text-[10px]">Reserved for project owners &amp; builders</p> */}
         </div>
 
         {/* Divider */}
-        <div className="mx-6 sm:mx-auto sm:max-w-3xl border-t border-white/5" />
+        <div className="mx-6 sm:mx-auto sm:max-w-3xl border-t border-[rgba(28,37,51,0.12)]" />
 
         {/* Studio Frame */}
         <div className="w-full flex justify-center mt-6">
@@ -159,12 +159,12 @@ export default function NexuraStudio() {
 
 
         {/* Footer band */}
-        <div className="mt-auto bg-white/[0.02] px-6 py-4 text-center">
-          <p className="text-white/30 text-xs">
+        <div className="mt-auto bg-[#f4f1fc] px-6 py-4 text-center">
+          <p className="text-[#98a0b4] text-xs">
             Already have a project?{" "}
             <button
               onClick={() => router.push("/projects/create/signin-to-hub")}
-              className="text-purple-400 hover:underline"
+              className="text-[#8a3ffc] hover:underline"
             >
               Sign in
             </button>{" "}

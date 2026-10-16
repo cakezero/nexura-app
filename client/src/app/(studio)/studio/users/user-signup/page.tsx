@@ -130,13 +130,13 @@ export default function UserSignup() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white overflow-auto p-4 sm:p-6 relative">
+    <div className="min-h-screen bg-[#f7f5ff] text-[#1c2533] overflow-auto p-4 sm:p-6 relative">
       <AnimatedBackground />
 
       <div className="w-full flex justify-start mb-4">
         <button
           onClick={() => router.push("/studio/users/create")}
-          className="inline-flex items-center gap-2 px-3 py-2 rounded-full border border-white/30 bg-black/30 hover:bg-black/50 text-white text-xs sm:text-sm"
+          className="inline-flex items-center gap-2 px-3 py-2 rounded-full border border-[rgba(28,37,51,0.12)] bg-white hover:bg-[#f4f1fc] text-[#1c2533] text-xs sm:text-sm"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
           Back to Studio
@@ -148,36 +148,36 @@ export default function UserSignup() {
           <h1 className="text-lg sm:text-xl font-bold mb-1">
             User Credentials
           </h1>
-          <p className="text-xs text-white/60 leading-relaxed">
+          <p className="text-xs text-[#69728a] leading-relaxed">
             Set up your user profile and secure your account on Nexura Studio
           </p>
         </div>
 
-        <Card className="border-2 border-purple-500 rounded-3xl p-5 space-y-4 bg-gray-900">
+        <Card className="border-2 border-purple-500 rounded-3xl p-5 space-y-4 bg-white">
           <div className="space-y-4">
             <div>
-              <CardTitle className="text-white text-base">Username</CardTitle>
+              <CardTitle className="text-[#1c2533] text-base">Username</CardTitle>
               <div className="relative mt-1">
                 <Input
                   value={displayUsername}
                   readOnly
                   placeholder="Connect wallet to see username"
-                  className="w-full rounded-lg bg-gray-800 text-white border-purple-500 opacity-70 cursor-not-allowed font-mono text-xs h-9"
+                  className="w-full rounded-lg bg-white text-[#1c2533] border-purple-500 opacity-70 cursor-not-allowed font-mono text-xs h-9"
                 />
                 {profileLoading && (
-                  <Loader2 className="absolute right-2.5 top-2 w-4 h-4 text-purple-400 animate-spin" />
+                  <Loader2 className="absolute right-2.5 top-2 w-4 h-4 text-[#8a3ffc] animate-spin" />
                 )}
               </div>
               {mainAppUsername && !/^(0x[a-fA-F0-9]{40}|0x[a-fA-F0-9]+\.\.\.[a-fA-F0-9]+)$/.test(mainAppUsername) ? (
-                <p className="text-[10px] text-green-400 mt-0.5">
+                <p className="text-[10px] text-[#00a87c] mt-0.5">
                   ✓ Synced from Nexura app profile
                 </p>
               ) : (walletAddress || mainAppUsername) && !profileLoading ? (
-                <p className="text-[10px] text-red-400 mt-0.5">
+                <p className="text-[10px] text-[#e4545b] mt-0.5">
                   ⚠ Please set a username and profile picture in your main profile
                 </p>
               ) : !walletAddress ? (
-                <p className="text-[10px] text-red-400 mt-0.5">
+                <p className="text-[10px] text-[#e4545b] mt-0.5">
                   ⚠ Wallet not connected — return and connect your wallet
                 </p>
               ) : null}
@@ -185,25 +185,25 @@ export default function UserSignup() {
             </div>
 
             <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-3">
-              <p className="text-[11px] text-white/70 leading-relaxed">
-                <span className="font-semibold text-purple-400">ℹ Your Nexura profile powers your hub.</span><br />
+              <p className="text-[11px] text-[#3d485c] leading-relaxed">
+                <span className="font-semibold text-[#8a3ffc]">ℹ Your Nexura profile powers your hub.</span><br />
                 Your username and profile picture are pulled from your main Nexura app profile. To update them, edit your profile in the main app settings.
               </p>
             </div>
 
             <div>
-              <CardTitle className="text-white text-base">Email Address</CardTitle>
+              <CardTitle className="text-[#1c2533] text-base">Email Address</CardTitle>
               <Input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Enter email"
-                className="mt-1 w-full rounded-lg bg-gray-800 text-white border-purple-500 h-9"
+                className="mt-1 w-full rounded-lg bg-white text-[#1c2533] border-purple-500 h-9"
               />
             </div>
 
             <div>
-              <CardTitle className="text-white text-base">Password</CardTitle>
+              <CardTitle className="text-[#1c2533] text-base">Password</CardTitle>
               <div className="relative mt-1">
                 <Input
                   type={showPassword ? "text" : "password"}
@@ -216,37 +216,37 @@ export default function UserSignup() {
                     setHasSpecialChar(/[!@#$%^&*()_+[\]{};':"\\|,.<>/?]/.test(value));
                     setIsLongEnough(value.length >= 8);
                   }}
-                  className="w-full rounded-lg bg-gray-800 text-white border-purple-500 pr-10 h-9"
+                  className="w-full rounded-lg bg-white text-[#1c2533] border-purple-500 pr-10 h-9"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-2 top-1.5 text-gray-400 hover:text-white"
+                  className="absolute right-2 top-1.5 text-[#69728a] hover:text-[#1c2533]"
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-              <div className="mt-1.5 space-y-0.5 text-[11px] bg-gray-800/60 p-2 rounded-xl">
-                <p className={isLongEnough ? "text-green-400" : "text-red-400"}>• 8+ characters</p>
-                <p className={hasUppercase ? "text-green-400" : "text-red-400"}>• 1 uppercase</p>
-                <p className={hasNumber ? "text-green-400" : "text-red-400"}>• 1 number</p>
-                <p className={hasSpecialChar ? "text-green-400" : "text-red-400"}>• 1 special character</p>
+              <div className="mt-1.5 space-y-0.5 text-[11px] bg-white p-2 rounded-xl">
+                <p className={isLongEnough ? "text-[#00a87c]" : "text-[#e4545b]"}>• 8+ characters</p>
+                <p className={hasUppercase ? "text-[#00a87c]" : "text-[#e4545b]"}>• 1 uppercase</p>
+                <p className={hasNumber ? "text-[#00a87c]" : "text-[#e4545b]"}>• 1 number</p>
+                <p className={hasSpecialChar ? "text-[#00a87c]" : "text-[#e4545b]"}>• 1 special character</p>
               </div>
             </div>
 
             <div>
-              <CardTitle className="text-white text-base">Confirm Password</CardTitle>
+              <CardTitle className="text-[#1c2533] text-base">Confirm Password</CardTitle>
               <div className="relative mt-1">
                 <Input
                   type={showConfirmPassword ? "text" : "password"}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full rounded-lg bg-gray-800 text-white border-purple-500 pr-10 h-9"
+                  className="w-full rounded-lg bg-white text-[#1c2533] border-purple-500 pr-10 h-9"
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-2 top-1.5 text-gray-400 hover:text-white"
+                  className="absolute right-2 top-1.5 text-[#69728a] hover:text-[#1c2533]"
                 >
                   {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>

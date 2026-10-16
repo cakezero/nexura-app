@@ -1,11 +1,11 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { Zap, Shield, Users, LogOut, User } from "lucide-react";
+import { Zap, Shield, Users, User } from "lucide-react";
 import { useRouter } from "next/navigation";
 import StudioBackground from "@/components/StudioBackground";
 import { useEffect, useState } from "react";
-import { getStoredProjectInfo, clearProjectSession, projectApiRequest, getStoredProjectToken, storeProjectSession } from "@/lib/projectApi";
+import { getStoredProjectInfo, projectApiRequest, getStoredProjectToken, storeProjectSession } from "@/lib/projectApi";
 
 type TabType = "hubProfile" | "campaignSubmissions" | "adminManagement" | "campaignsTab" | "campaignsFlow";
 
@@ -38,8 +38,7 @@ export default function StudioSidebar({
   const sidebarItems: NavItem[] = [
     { title: "Profile", icon: "/sidebar-icons/nexura-studio.png", id: "hubProfile" },
     { title: "Campaigns", short: "Campaigns", icon: "/sidebar-icons/campaigns.png", id: "campaignsTab" },
-    { title: "New Campaigns", short: "New", icon: "/sidebar-icons/campaigns.png", id: "campaignsFlow", badge: "New" },
-    { title: "Dashboard", short: "Dashboard", icon: "/sidebar-icons/analytics.png", id: "campaignSubmissions" },
+    { title: "Submissions", short: "Submissions", icon: "/sidebar-icons/analytics.png", id: "campaignSubmissions" },
     ...(adminRole === "superadmin" ? [
       { title: "Admin Management", short: "Admins", icon: Shield, id: "adminManagement" as TabType },
     ] : []),
@@ -227,13 +226,6 @@ export default function StudioSidebar({
             <span>{item.short ?? item.title}</span>
           </button>
         ))}
-        <button
-          onClick={() => { clearProjectSession(); router.push("/projects/create/signin-to-hub"); }}
-          className="flex-1 flex flex-col items-center justify-center gap-1 py-3 text-[10px] font-medium text-white/50"
-        >
-          <LogOut className="w-5 h-5" />
-          <span>Logout</span>
-        </button>
       </nav>
     </>
   );

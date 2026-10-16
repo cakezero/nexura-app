@@ -120,7 +120,7 @@ export default function userDashboard() {
             <DialogDescription>{selectedTask?.taskType}</DialogDescription>
           </DialogHeader>
 
-          <div className="text-white">{selectedTask?.submissionLink}</div>
+          <div className="text-[#1c2533]">{selectedTask?.submissionLink}</div>
 
           <div className="flex gap-2 mt-4">
             <Button

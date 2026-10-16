@@ -124,6 +124,50 @@ const campaignSchema = new Schema({
     ref: "hubs",
 		required: true
 	},
+	// ── Retention campaign builder (Create Campaign) ──
+	templateId: {
+		type: String,
+		default: null,
+	},
+	// Journey stages, in order. Each campaign quest points at a stage by `key`.
+	stages: [{
+		_id: false,
+		key: { type: String, required: true },
+		name: { type: String, required: true },
+		order: { type: Number, default: 0 },
+		returnDays: { type: Number, default: 0 },
+		allocationPct: { type: Number, default: null },
+	}],
+	rewardsEnabled: {
+		type: Boolean,
+		default: false,
+	},
+	// What the project set on the Rewards & Funding step
+	rewardsConfig: {
+		budget: { type: Number },
+		token: { type: String },
+		network: { type: String },
+		recipients: { type: Number },
+		retentionRequirementPct: { type: Number },
+		participantPool: { type: Number },
+		validationRewardsOn: { type: Boolean },
+		curatorRewardsOn: { type: Boolean },
+		curatorAddress: { type: String },
+		totalPaid: { type: Number },
+		paymentTxHash: { type: String },
+	},
+	// Everything the Create Campaign builder needs to reopen a draft exactly where it was left
+	// (field values, current step, reward settings). Owned by the studio client.
+	builderState: {
+		type: Schema.Types.Mixed,
+		default: null,
+	},
+	// Set when an approved governance proposal schedules this campaign to end
+	endProposal: {
+		ref: { type: String },
+		executedAt: { type: Date },
+		endsAt: { type: String },
+	},
 }, { timestamps: true });
 
 export const campaign = mongoose.model("campaigns", campaignSchema);
@@ -145,6 +189,10 @@ const campaignCompletedSchema = new Schema({
 		type: mongoose.Schema.Types.ObjectId,
 		ref: "campaign",
 	},
+	// Retention on this campaign: stages fully completed out of all stages (see utils/retention.ts)
+	stagesCompleted: { type: Number, default: 0 },
+	stagesTotal: { type: Number, default: 0 },
+	retentionRate: { type: Number, default: null },
 }, { timestamps: true });
 
 export const campaignCompleted = mongoose.model(

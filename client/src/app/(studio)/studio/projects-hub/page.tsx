@@ -66,21 +66,21 @@ export default function ProjectsHub() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white p-4 sm:p-6 relative">
+    <div className="min-h-screen bg-[#f7f5ff] text-[#1c2533] p-4 sm:p-6 relative">
       <AnimatedBackground />
 
       {/* Back Button */}
       <div className="w-full flex justify-start mb-4 relative z-10">
         <button
           onClick={() => router.push("/studio/select-role")}
-          className="inline-flex items-center gap-2 px-3 py-2 rounded-full border border-white/30 bg-black/30 hover:bg-black/50 text-white text-xs sm:text-sm"
+          className="inline-flex items-center gap-2 px-3 py-2 rounded-full border border-[rgba(28,37,51,0.12)] bg-white hover:bg-[#f4f1fc] text-[#1c2533] text-xs sm:text-sm"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
           Back to Studio
         </button>
       </div>
 
-      <div className="max-w-xl mx-auto relative z-10 space-y-6 bg-white/[0.03] border border-[#A760FF] rounded-2xl p-6">
+      <div className="max-w-xl mx-auto relative z-10 space-y-6 bg-[#f4f1fc] border border-[#A760FF] rounded-2xl p-6">
 
         <CardTitle className="text-lg">Create Project Hub</CardTitle>
 
@@ -90,7 +90,7 @@ export default function ProjectsHub() {
             value={hubName}
             onChange={(e) => setHubName(e.target.value)}
             placeholder="Enter your Project Name..."
-            className="bg-gray-800 border-purple-500 text-white"
+            className="bg-white border-purple-500 text-[#1c2533]"
           />
         </div>
 
@@ -101,7 +101,7 @@ export default function ProjectsHub() {
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Describe your project (150–300 characters)"
             maxLength={300}
-            className="bg-gray-800 border-purple-500 text-white h-32"
+            className="bg-white border-purple-500 text-[#1c2533] h-32"
           />
         </div>
 
@@ -109,22 +109,22 @@ export default function ProjectsHub() {
           <CardTitle className="text-xs">Project Links</CardTitle>
 
           <div className="relative">
-            <Globe className="w-4 h-4 text-white/50 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Globe className="w-4 h-4 text-[#69728a] absolute left-3 top-1/2 -translate-y-1/2" />
             <Input
               value={website}
               onChange={(e) => setWebsite(e.target.value)}
               placeholder="Website"
-              className="bg-gray-800 border-purple-500 text-white pl-10"
+              className="bg-white border-purple-500 text-[#1c2533] pl-10"
             />
           </div>
 
           <div className="relative">
-            <Twitter className="w-4 h-4 text-white/50 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Twitter className="w-4 h-4 text-[#69728a] absolute left-3 top-1/2 -translate-y-1/2" />
             <Input
               value={xAccount}
               onChange={(e) => setXAccount(e.target.value)}
               placeholder="X account"
-              className="bg-gray-800 border-purple-500 text-white pl-10"
+              className="bg-white border-purple-500 text-[#1c2533] pl-10"
             />
           </div>
         </div>
@@ -132,13 +132,13 @@ export default function ProjectsHub() {
         <div className="space-y-3">
           <CardTitle className="text-xs text-center">Project Logo</CardTitle>
 
-          <label className="w-full border-2 border-dashed border-purple-500 rounded-2xl p-8 bg-black cursor-pointer block">
+          <label className="w-full border-2 border-dashed border-purple-500 rounded-2xl p-8 bg-white cursor-pointer block">
             <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
 
             {imagePreview ? (
               <img src={imagePreview} className="w-32 h-32 mx-auto rounded-xl" />
             ) : (
-              <p className="text-center text-white/60">Upload logo</p>
+              <p className="text-center text-[#69728a]">Upload logo</p>
             )}
           </label>
         </div>

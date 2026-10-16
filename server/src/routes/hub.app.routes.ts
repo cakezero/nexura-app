@@ -17,6 +17,7 @@ import {
   removeHubAdmin,
   saveCampaign,
   saveCampaignWithQuests,
+  uploadCampaignCover,
   updateCamapaignQuest,
   updateHub,
   updateIds,
@@ -55,6 +56,7 @@ const router = Router();
 router
   .patch("/save-campaign-quests", upload.single("coverImage"), saveCampaignWithQuests)
   .patch("/save-campaign", upload.single("coverImage"), saveCampaign)
+  .post("/upload-campaign-cover", upload.single("coverImage"), uploadCampaignCover)
   .get("/get-campaign", getCampaign)
   .get("/get-quests", getHubQuests)
   .delete("/delete-hub", deleteHub)

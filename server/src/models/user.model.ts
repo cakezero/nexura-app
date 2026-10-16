@@ -192,6 +192,12 @@ const userSchema = new Schema({
 		type: mongoose.Schema.Types.ObjectId,
 		ref: "campaign",
 	}],
+	// Overall retention across campaigns (see utils/retention.ts)
+	retention: {
+		rate: { type: Number, default: null },
+		campaigns: { type: Number, default: 0 },
+		updatedAt: { type: Date },
+	},
 }, { timestamps: true });
 
 userSchema.index({ xp: -1 });

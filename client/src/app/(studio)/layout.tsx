@@ -2,7 +2,6 @@
 
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
-import AnimatedBackground from "@/components/AnimatedBackground";
 
 export default function StudioGroupLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() || "";
@@ -29,8 +28,7 @@ export default function StudioGroupLayout({ children }: { children: React.ReactN
   }, [pathname]);
 
   return (
-    <div className="flex h-screen w-full text-white selection:bg-blue-500/30 relative">
-      <AnimatedBackground />
+    <div className="flex h-screen w-full bg-[#f7f5ff] text-[#1c2533] selection:bg-[rgba(138,63,252,0.2)] relative">
       <div className="flex-1 flex flex-col relative z-10">
         <main ref={mainRef} className="flex-1 overflow-y-auto">
           {children}
