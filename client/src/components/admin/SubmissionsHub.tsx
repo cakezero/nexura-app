@@ -1,8 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import { ArrowLeft, Check, CheckCircle2, ChevronDown, Clock, Copy, ImageIcon, Inbox, Lock, Plus, RefreshCw, Search, Users } from "lucide-react";
+import { ArrowLeft, Check, CheckCircle2, ChevronDown, Clock, Copy, ImageIcon, Inbox, Lock, RefreshCw, Search, Users } from "lucide-react";
 import { Card } from "../ui/card";
 import { Input } from "../ui/input";
 import { cn } from "../../lib/utils";
@@ -125,7 +124,6 @@ export default function SubmissionsHub(props: SubmissionsHubProps) {
 
 // ─── Campaign list ────────────────────────────────────────────────────────────
 function CampaignList({ refreshKey, onOpen }: { refreshKey: number; onOpen: (id: string) => void }) {
-  const router = useRouter();
   const [campaigns, setCampaigns] = useState<SubmissionCampaign[] | null>(null);
   const [error, setError] = useState("");
   const [unavailable, setUnavailable] = useState(false);
@@ -168,13 +166,7 @@ function CampaignList({ refreshKey, onOpen }: { refreshKey: number; onOpen: (id:
       <div className="flex flex-col gap-6">
         {header}
         <EmptyState icon={Inbox} title="No campaigns yet"
-          body="Once a campaign is live, it shows here. Click it to see its tasks, review submissions and see who completed it and claimed the reward."
-          action={
-            <button onClick={() => router.push("/studio-dashboard/create-new-campaign")}
-              className="inline-flex items-center gap-2 h-10 px-5 rounded-full bg-[#8B3EFE] text-white text-[13px] font-semibold hover:bg-[#7b35e6] transition">
-              <Plus className="w-4 h-4" /> Create a campaign
-            </button>
-          } />
+          body="Once a campaign is live, it shows here. Click it to see its tasks, review submissions and see who completed it and claimed the reward." />
       </div>
     );
   }
