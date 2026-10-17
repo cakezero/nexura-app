@@ -16,7 +16,9 @@ import {
 	FORBIDDEN,
 	UNAUTHORIZED,
   NO_CONTENT,
+  CONFLICT,
 } from "@/utils/status.utils";
+import { spentPayment } from "@/models/spentPayment.model";
 import { validateCampaignData, updateLevel, checkPayment, validateDiscordTaskConfig } from "@/utils/utils";
 import { campaignQuest } from "@/models/quests.model";
 import { ethers } from "ethers";
@@ -856,11 +858,18 @@ export const claimCampaignRewards = async (
 			return;
 		}
 
-		if (completedCampaign.campaignCompleted) {
+		// Claim once: the flag flips atomically before anything is paid, so a double click or a
+		// retried request can't reward the same person twice
+		const claimed = await campaignCompleted.findOneAndUpdate(
+			{ _id: completedCampaign._id, campaignCompleted: { $ne: true } },
+			{ $set: { campaignCompleted: true } },
+		);
+		if (!claimed) {
 			res.status(FORBIDDEN).json({ error: "campaign reward has been claimed" });
 			return;
 		}
 
+		try {
 		if (userToReward.status !== "Active") {
 			userToReward.status = "Active";
 
@@ -875,17 +884,11 @@ export const claimCampaignRewards = async (
 		const xp = campaignToClaimRewards.reward?.xp as number;
 		const trustTokens = campaignToClaimRewards.reward?.trustTokens ?? 0;
 
-		if (campaignToClaimRewards.trustClaimed < campaignToClaimRewards.totalTrustAvailable) {
-			userToReward.trustEarned += trustTokens;
-			campaignToClaimRewards.trustClaimed += trustTokens;
-		}
+		const giveTrust = campaignToClaimRewards.trustClaimed < campaignToClaimRewards.totalTrustAvailable;
+		if (giveTrust) userToReward.trustEarned += trustTokens;
 
 		userToReward.xp += xp;
 		userToReward.campaignsCompleted += 1;
-
-		campaignToClaimRewards.xpClaimed += xp;
-
-		completedCampaign.campaignCompleted = true;
 
 		const level = await updateLevel(userToReward);
 		
@@ -899,9 +902,17 @@ export const claimCampaignRewards = async (
 			type: "campaign"
     });
 
-		await completedCampaign.save();
-		await campaignToClaimRewards.save();
+		// Counters are incremented in place so claims landing together don't overwrite each other
+		await campaign.updateOne(
+			{ _id: campaignToClaimRewards._id },
+			{ $inc: { xpClaimed: xp, ...(giveTrust ? { trustClaimed: trustTokens } : {}) } },
+		);
 		await userToReward.save();
+		} catch (payoutError) {
+			// Nothing was paid: let them claim again
+			await campaignCompleted.updateOne({ _id: completedCampaign._id }, { $set: { campaignCompleted: false } }).catch(() => {});
+			throw payoutError;
+		}
 		await refreshUserRetention(userToReward._id);
 
 		res.status(OK).json({ message: "campaign completed" });
@@ -1069,12 +1080,42 @@ export const publishCampaign = async (req: GlobalRequest, res: GlobalResponse) =
 		}
 
 		const startsAt = parseDate(campaignExists.starts_at);
-		campaignExists.status = startsAt && startsAt > new Date() ? "Scheduled" : "Active";
-		createdHub.campaignsCreated += 1;
-		(createdHub as any).pendingTxHash = null;
+		const publishedStatus = startsAt && startsAt > new Date() ? "Scheduled" : "Active";
 
+		// A transaction that already paid for a launch (here or in another hub) can't pay again
+		const paidHash = (createdHub as any).pendingTxHash ?? null;
+		const realPayment = typeof paidHash === "string" && /^0x[0-9a-fA-F]{64}$/.test(paidHash);
+		if (realPayment && await spentPayment.exists({ txHash: paidHash.toLowerCase() })) {
+			await hub.updateOne({ _id: createdHub._id, pendingTxHash: paidHash }, { $set: { pendingTxHash: null } });
+			return res.status(CONFLICT).json({ error: "this payment was already used for another launch; pay the launch fee again" });
+		}
+
+		// Publish once: only one request can move the draft out of "Save" (double clicks, retries)
+		const locked = await campaign.findOneAndUpdate(
+			{ _id: campaignExists._id, status: "Save" },
+			{ $set: { status: publishedStatus } },
+		);
+		if (!locked) {
+			return res.status(CONFLICT).json({ error: "this campaign is already being published" });
+		}
+
+		// Spend the launch fee once: one payment can't publish two campaigns at the same time
+		const spent = await hub.findOneAndUpdate(
+			{ _id: createdHub._id, pendingTxHash: paidHash },
+			{ $set: { pendingTxHash: null }, $inc: { campaignsCreated: 1 } },
+		);
+		if (!spent) {
+			await campaign.updateOne({ _id: campaignExists._id }, { $set: { status: "Save" } });
+			return res.status(CONFLICT).json({ error: "this launch fee was already used to publish another campaign; pay the fee again to publish this one" });
+		}
+
+		if (realPayment) {
+			await spentPayment.create({ txHash: paidHash.toLowerCase(), hub: createdHub._id, campaign: campaignExists._id })
+				.catch(err => logger.warn(`publishCampaign: payment ${paidHash} already recorded: ${err?.message}`));
+		}
+
+		campaignExists.status = publishedStatus;
 		await campaignExists.save();
-		await createdHub.save();
 
 		res.status(OK).json({ message: "campaign published" });
 	} catch (error: any) {

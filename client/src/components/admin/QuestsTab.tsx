@@ -2,6 +2,8 @@
 import StudioLoader from "@/components/studio/StudioLoader";
 
 import { useEffect, useState, useCallback } from "react";
+import { useUrlState } from "../../hooks/use-url-state";
+import { useLiveRefresh } from "../../hooks/use-live-refresh";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { RefreshCw, XCircle, Trash2, Loader2, Clock } from "lucide-react";
@@ -39,8 +41,10 @@ function getApiConfig() {
   return result;
 }
 
+const QUEST_TABS = ["all", "active", "scheduled", "drafts", "completed"] as const;
+
 export default function QuestsTab() {
-  const [activeTab, setActiveTab] = useState<"all" | "active" | "scheduled" | "drafts" | "completed">("all");
+  const [activeTab, setActiveTab] = useUrlState("tab", "all", QUEST_TABS);
   const [serverOffset, setServerOffset] = useState(0);
   const [countdowns, setCountdowns] = useState<Record<string, string>>({});
   const [quests, setQuests] = useState<Quest[]>([]);
@@ -54,9 +58,10 @@ export default function QuestsTab() {
   const session = getStoredUserSession();
   const isUser = session?.type === "user";
 
-  const fetchQuests = useCallback(async () => {
+  /** `quiet` refreshes in the background, without the loading state or error toasts. */
+  const fetchQuests = useCallback(async (quiet = false) => {
     try {
-      setLoading(true);
+      if (!quiet) setLoading(true);
       const { apiPrefix, apiRequest } = getApiConfig();
       const res = await apiRequest<{ quests?: Quest[]; hubQuests?: Quest[] }>({
         method: "GET",
@@ -64,19 +69,22 @@ export default function QuestsTab() {
       });
       setQuests(res.quests ?? res.hubQuests ?? []);
     } catch (err: any) {
+      if (quiet) return;
       toast({
         title: "Fetch failed",
         description: err.message,
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      if (!quiet) setLoading(false);
     }
   }, [toast]);
 
   useEffect(() => {
     fetchQuests();
   }, [fetchQuests]);
+
+  useLiveRefresh(() => fetchQuests(true));
 
   // Server time sync
   useEffect(() => {
@@ -303,7 +311,7 @@ export default function QuestsTab() {
             variant="ghost"
             size="icon"
             className="text-[#69728a] hover:text-[#1c2533]"
-            onClick={fetchQuests}
+            onClick={() => fetchQuests()}
             disabled={loading}
           >
             <RefreshCw className={`w-5 h-5 ${loading ? "animate-spin" : ""}`} />

@@ -180,6 +180,8 @@ export type ProposalAction =
   | { kind: "signer"; adminId: string; adminName: string; add: boolean; threshold?: number }
   | { kind: "replaceSigner"; oldId: string; oldName: string; newId: string; newName: string }
   | { kind: "revoke"; adminId: string; adminName: string }
+  /** Cancels a pending invitation before it is accepted. */
+  | { kind: "revokeInvite"; inviteId: string; email: string; role: BackendRole }
   | { kind: "transferOwnership"; newOwnerId: string; newOwnerName?: string; prevOwnerId?: string; prevOwnerName?: string }
   /** Ends a live campaign `noticeDays` (7) after the proposal is approved; it never ends immediately. */
   | { kind: "endCampaign"; campaignId: string; campaignTitle?: string; noticeDays?: number }

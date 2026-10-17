@@ -11,6 +11,7 @@ import { projectApiRequest } from "@/lib/projectApi";
 import { createRewardsContract, payStudioHubFee } from "@/lib/performOnchainAction";
 import { getNetwork } from "@/lib/runtimeNetwork";
 import { useToast } from "@/hooks/use-toast";
+import { writeUrlParam } from "@/hooks/use-url-state";
 import { useGovernanceProposer } from "@/components/studio/useGovernanceProposer";
 import type { ProposalAction } from "@/lib/adminGovernance";
 
@@ -298,6 +299,8 @@ export default function Page() {
       const campaignId = saved.campaignId ?? draftId.current;
       if (!campaignId) throw new Error("The campaign could not be saved.");
       draftId.current = campaignId;
+      // Once saved, a refresh reopens this draft instead of starting a new campaign
+      if (!published.current) writeUrlParam("edit", campaignId);
       if (c.coverImage) uploadedCover.current = c.coverImage;
       return campaignId;
     };

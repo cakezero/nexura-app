@@ -17,6 +17,7 @@ import { signIn } from "@/controllers/auth.controller";
 import { createAdmin, adminLogin, forgotAdminPassword, resetAdminPassword } from "@/controllers/admin.controller";
 import { authenticateUser2, authenticateAdmin, authenticateUser } from "@/middlewares/auth.middleware";
 import userHubRoutes from "./userHub.routes.ts";
+import { attemptGuard, authIpLimiter, codeSendLimiter } from "@/middlewares/authGuard";
 // import testSeedRoutes from "./test-seed.routes.ts";
 import { confirmHubEmailValidation, validateHubEmail, adminConnectDiscord, discordAdminCallback } from "@/controllers/hub.auth.controller.ts";
 
@@ -26,10 +27,11 @@ router
 	.get("/server-time", (_req, res) => {
 		res.json({ serverTime: Date.now() });
 	})
-  .post("/admin/register", createAdmin)
-  .post("/admin/login", adminLogin)
-  .post("/admin/forgot-password", forgotAdminPassword)
-  .post("/admin/reset-password", resetAdminPassword)
+  // Sign-in and code checks are rate limited and lock out after repeated wrong attempts (see authGuard)
+  .post("/admin/register", authIpLimiter, attemptGuard("platform-register"), createAdmin)
+  .post("/admin/login", authIpLimiter, attemptGuard("platform-login"), adminLogin)
+  .post("/admin/forgot-password", codeSendLimiter, forgotAdminPassword)
+  .post("/admin/reset-password", authIpLimiter, resetAdminPassword)
   .get("/admin/connect-discord", adminConnectDiscord)
   .get("/admin/discord/callback", discordAdminCallback)
   .post("/user/sign-in", signIn)
@@ -45,8 +47,8 @@ router
 	.use("/user-hub", userHubRoutes)
 	.use("/quest", authenticateUser, questRoutes)
   .use("/lesson", lessonRoutes)
-  .post("/hub-auth/validate-email", validateHubEmail)
-	.post("/auth/confirm-hub-email-validation", confirmHubEmailValidation)
+  .post("/hub-auth/validate-email", codeSendLimiter, validateHubEmail)
+	.post("/auth/confirm-hub-email-validation", authIpLimiter, attemptGuard("hub-email-code"), confirmHubEmailValidation)
 	.use("/user", authenticateUser, userRoutes);
 
 export default router;

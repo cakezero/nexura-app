@@ -7,6 +7,7 @@ import { Input } from "../ui/input";
 import { cn } from "../../lib/utils";
 import { projectApiRequest } from "../../lib/projectApi";
 import { useToast } from "../../hooks/use-toast";
+import { useUrlState } from "../../hooks/use-url-state";
 import { TASKS } from "../../types/admin";
 import StudioLoader from "../studio/StudioLoader";
 
@@ -82,7 +83,7 @@ function StatusPill({ status }: { status: TASKS["status"] }) {
 
 export default function CampaignSubmissions({ tasks, loading, searchTerm, setSearchTerm, handleView, handleAction, onRefresh }: CampaignSubmissionsProps) {
   const { toast } = useToast();
-  const [view, setView] = useState<View>("pending");
+  const [view, setView] = useUrlState<View>("review", "pending", ["pending", "reviewed"]);
   const [flaggedOnly, setFlaggedOnly] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());

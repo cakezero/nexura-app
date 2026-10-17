@@ -3,20 +3,18 @@ import StudioLoader from "@/components/studio/StudioLoader";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CheckCircle2, Clock, XCircle } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useAccount, useSignTypedData } from "wagmi";
-import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { useStudioWallet } from "../studio/useStudioWallet";
-import { useSilentWalletConnect } from "../studio/useSilentWalletConnect";
-import { recoverTypedDataAddress } from "viem";
+import { useStudioSigner } from "../studio/useStudioSigner";
 import { getStoredProjectInfo, projectApiRequest } from "../../lib/projectApi";
 import { useToast } from "../../hooks/use-toast";
+import { useUrlState } from "../../hooks/use-url-state";
+import { useLiveRefresh } from "../../hooks/use-live-refresh";
 import StudioDropdown from "../studio/StudioDropdown";
 import { OPEN_PROPOSALS_EVENT } from "../studio/useProposalNotifications";
 import {
   type BackendRole, type GovernanceSnapshot, type Proposal, type ProposalAction, type ProposalStatus, type SignedPayload,
   type StudioRole, type TeamMember, type Vote,
-  PERMISSION_COUNT, PERMISSION_GROUPS, PRESENCE_HEARTBEAT_MS, ROLE_LABEL, ROLE_SUMMARY, presenceOf, timeAgo,
+  PERMISSION_COUNT, PERMISSION_GROUPS, ROLE_LABEL, ROLE_SUMMARY, presenceOf, timeAgo,
   EMPTY_SNAPSHOT, apiHost, assignableRoles, isGovernanceUnavailable, can, canManageMember, fetchGovernance, formatDateTime, minApprovalThreshold, newProposalId,
   notifyGovernanceChanged, permissionCount, studioRole, submitExecution, submitProposal, submitVote, tally,
 } from "../../lib/adminGovernance";
@@ -34,21 +32,11 @@ type PendingInvite = {
 type Tab = "team" | "proposals" | "roles" | "signers";
 const TABS: Tab[] = ["team", "proposals", "roles", "signers"];
 type ProposalFilter = ProposalStatus | "all";
+const FILTERS: ProposalFilter[] = ["pending", "executed", "rejected", "all"];
+const ROLE_TABS: StudioRole[] = ["owner", "superadmin", "admin"];
 
 const ICON = "/admin-management";
 
-// EIP-712 data every proposal, approval, rejection and execution is signed with
-const SIGN_DOMAIN = { name: "Nexura Studio", version: "1" } as const;
-const SIGN_TYPES = {
-  StudioAction: [
-    { name: "hub", type: "string" },
-    { name: "action", type: "string" },
-    { name: "proposal", type: "string" },
-    { name: "proposalId", type: "string" },
-    { name: "signer", type: "string" },
-    { name: "signedAt", type: "string" },
-  ],
-} as const;
 const FONT: React.CSSProperties = { fontFamily: "'Geist', 'Inter', sans-serif" };
 const MONO = "font-['Geist_Mono','ui-monospace',monospace]";
 
@@ -255,7 +243,6 @@ const tdStyle = "p-[12px] h-[70px] border-b-[0.833px] border-solid border-[rgba(
 
 // ─── Main component ──────────────────────────────────────────────────────────
 export default function AdminManagement() {
-  const router = useRouter();
   const { toast } = useToast();
 
   const [admins, setAdmins] = useState<TeamMember[]>([]);
@@ -270,9 +257,10 @@ export default function AdminManagement() {
   // The connected API doesn't have the governance endpoints yet (not deployed)
   const [govUnavailable, setGovUnavailable] = useState(false);
 
-  const [tab, setTab] = useState<Tab>("team");
-  const [filter, setFilter] = useState<ProposalFilter>("pending");
-  const [roleTab, setRoleTab] = useState<StudioRole>("owner");
+  // Kept in the URL so a refresh stays on the same tab
+  const [tab, setTab] = useUrlState<Tab>("tab", "team", TABS);
+  const [filter, setFilter] = useUrlState<ProposalFilter>("status", "pending", FILTERS);
+  const [roleTab, setRoleTab] = useUrlState<StudioRole>("role", "owner", ROLE_TABS);
   const [addOpen, setAddOpen] = useState(false);
   const [signerDialog, setSignerDialog] = useState<SignerDialogState | null>(null);
   const [rulesOpen, setRulesOpen] = useState(false);
@@ -282,11 +270,8 @@ export default function AdminManagement() {
   const [busyInvite, setBusyInvite] = useState<string | null>(null);
   const [executing, setExecuting] = useState<string | null>(null);
   const [signing, setSigning] = useState<string | null>(null);
-  const { address: liveAddress, isConnected: walletConnected } = useAccount();
   const sessionWallet = useStudioWallet();
-  const silentConnect = useSilentWalletConnect();
-  const { signTypedDataAsync } = useSignTypedData();
-  const { openConnectModal } = useConnectModal();
+  const signStudioAction = useStudioSigner();
 
   // Ticks with the team refresh so "Last seen" and online status stay current
   const [now, setNow] = useState(() => Date.now());
@@ -318,16 +303,8 @@ export default function AdminManagement() {
 
   useEffect(() => { fetchTeam(); }, [fetchTeam]);
 
-  // Keep everyone's status current while the page is open
+  // The notification bell switches an already-open page to its Proposals tab
   useEffect(() => {
-    const id = setInterval(() => { if (document.visibilityState === "visible") fetchTeam(true); }, PRESENCE_HEARTBEAT_MS);
-    return () => clearInterval(id);
-  }, [fetchTeam]);
-
-  // Deep link from the notification bell: ?tab=proposals
-  useEffect(() => {
-    const t = new URLSearchParams(window.location.search).get("tab") as Tab | null;
-    if (t && TABS.includes(t)) { setTab(t); if (t === "proposals") setFilter("pending"); }
     const openProposals = () => { setTab("proposals"); setFilter("pending"); };
     window.addEventListener(OPEN_PROPOSALS_EVENT, openProposals);
     return () => window.removeEventListener(OPEN_PROPOSALS_EVENT, openProposals);
@@ -371,7 +348,7 @@ export default function AdminManagement() {
     if (!p) return;
     if (p.status === "executed") {
       setToastMsg({ tone: "executed", title: "Proposal executed", body: p.inviteShare ? "Invitation created. The email couldn't be delivered, so copy the link on the proposal and send it yourself." : `${p.title} was applied` });
-      if (p.action.kind !== "thresholds") fetchTeam();
+      if (p.action.kind !== "thresholds") fetchTeam(true);
     } else if (p.status === "rejected") {
       setToastMsg({ tone: "rejected", title: "Proposal rejected", body: (p.resolvedCount ?? 0) >= snap.thresholds.rejection ? "It reached the rejection threshold" : "It can no longer get enough approvals to pass" });
     } else if (p.executionError) {
@@ -379,7 +356,8 @@ export default function AdminManagement() {
     }
   };
 
-  const loadGovernance = useCallback(async () => {
+  /** `quiet` refreshes in the background, without error toasts. */
+  const loadGovernance = useCallback(async (quiet = false) => {
     try {
       const snap = await fetchGovernance();
       setGov(snap);
@@ -387,6 +365,7 @@ export default function AdminManagement() {
       if (snap.ownerId) setOwnerId(snap.ownerId);
     } catch (err: unknown) {
       if (isGovernanceUnavailable(err)) { setGovUnavailable(true); return; }
+      if (quiet) return;
       toast({ title: "Couldn't load proposals", description: err instanceof Error ? err.message : "Try again shortly.", variant: "destructive" });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -394,22 +373,15 @@ export default function AdminManagement() {
 
   useEffect(() => { loadGovernance(); }, [loadGovernance]);
 
+  // Pick up changes other admins make (votes, new proposals, team changes) without a reload
+  useLiveRefresh(() => Promise.all([fetchTeam(true), govUnavailable ? null : loadGovernance(true)]));
+
   /**
    * Safe-style proof of intent: the connected wallet signs structured (EIP-712) data describing the action,
    * so the wallet shows exactly what is being confirmed. The server verifies the signature, links the
    * wallet on an admin's first signature, and afterwards only accepts that wallet for them.
    */
   const signAction = async (verb: "Propose" | "Approve" | "Reject" | "Execute", proposal: Pick<Proposal, "id" | "title">): Promise<SignedPayload> => {
-    const linked = gov.signerWallets?.[meId];
-    // The header may show a remembered address without a live connection: restore it silently first
-    const walletAddress = (walletConnected && liveAddress) ? liveAddress : await silentConnect(linked ?? sessionWallet.address);
-    if (!walletAddress) {
-      openConnectModal?.();
-      throw new Error("Connect your wallet to sign. Signing proves the action came from you.");
-    }
-    if (linked && linked.toLowerCase() !== walletAddress.toLowerCase()) {
-      throw new Error(`Switch to the wallet linked to your account (${linked.slice(0, 6)}…${linked.slice(-4)}) to sign.`);
-    }
     const message = {
       hub: hubName,
       action: verb,
@@ -418,16 +390,17 @@ export default function AdminManagement() {
       signer: `${me?.name ?? "Admin"} (${meId})`,
       signedAt: new Date().toISOString(),
     };
-    const signature = await signTypedDataAsync({ account: walletAddress as `0x${string}`, domain: SIGN_DOMAIN, types: SIGN_TYPES, primaryType: "StudioAction", message });
-    const recovered = await recoverTypedDataAddress({ domain: SIGN_DOMAIN, types: SIGN_TYPES, primaryType: "StudioAction", message, signature });
-    if (recovered.toLowerCase() !== walletAddress.toLowerCase()) throw new Error("The signature doesn't match the connected wallet.");
+    // Signs through the shown wallet without asking to connect it again
+    const { signature } = await signStudioAction(message, { linked: gov.signerWallets?.[meId], preferred: sessionWallet.address });
     return { signature, message };
   };
 
   const signError = (err: unknown) => {
     const msg = err instanceof Error ? err.message : String(err);
     if (/user (rejected|denied)|request rejected|cancel/i.test(msg)) return; // closed the wallet prompt
-    toast({ title: "Not completed", description: msg, variant: "destructive" });
+    // An older server that doesn't know this proposal type yet
+    const description = /^unknown action$/i.test(msg.trim()) ? "The server doesn't support this change yet. It needs the latest server update." : msg;
+    toast({ title: "Not completed", description, variant: "destructive" });
   };
 
   /** Sign → send to the server → show the server's result. */
@@ -471,25 +444,24 @@ export default function AdminManagement() {
   };
 
   // ─── Invitations (already-approved invites) ────────────────────────────────
-  const revokeInvite = async (invite: PendingInvite) => {
-    setBusyInvite(invite._id);
-    try {
-      await projectApiRequest({ method: "DELETE", endpoint: "/hub/delete-invite", params: { id: invite._id } });
-      setPendingInvites(prev => prev.filter(i => i._id !== invite._id));
-      toast({ title: "Invitation revoked", description: `${invite.email} can no longer use this invitation.` });
-    } catch (err: unknown) {
-      toast({ title: "Error", description: err instanceof Error ? err.message : "Failed to revoke the invitation.", variant: "destructive" });
-    } finally {
-      setBusyInvite(null);
-    }
+  /** Revoking an invitation is a proposal like any other team change; it is removed once executed. */
+  const revokeInvite = (invite: PendingInvite) => {
+    const role: BackendRole = invite.role === "superadmin" ? "superadmin" : "admin";
+    createProposal(
+      `Revoke invitation for ${invite.email}`,
+      `Cancel the ${ROLE_LABEL[role]} invitation sent to ${invite.email}`,
+      { kind: "revokeInvite", inviteId: invite._id, email: invite.email, role },
+    );
   };
+  const revokeInviteProposed = (inviteId: string) =>
+    gov.proposals.some(p => p.status === "pending" && p.action.kind === "revokeInvite" && p.action.inviteId === inviteId);
 
   const resendInvite = async (invite: PendingInvite) => {
     setBusyInvite(invite._id);
     try {
       await projectApiRequest({ method: "POST", endpoint: "/hub/resend-invite", data: { inviteId: invite._id, clientUrl: window.location.origin } });
       toast({ title: "Invitation resent", description: `A new invitation was sent to ${invite.email}.` });
-      fetchTeam();
+      fetchTeam(true);
     } catch (err: unknown) {
       toast({ title: "Error", description: err instanceof Error ? err.message : "Failed to resend the invitation.", variant: "destructive" });
     } finally {
@@ -536,19 +508,13 @@ export default function AdminManagement() {
   return (
     <div className="min-h-full bg-[#f7f5ff] text-[#1c2533]" style={FONT}>
       <div className="max-w-[1118px] px-4 md:px-[36px] pt-[30px] pb-16 md:pb-[48px] box-content">
-        {/* Back */}
-        <button onClick={() => router.push("/studio-dashboard/campaigns-tab")} className="inline-flex items-center gap-[8px] min-h-[34px] px-[16px] py-[8px] rounded-[8px] text-[13px] font-semibold text-[#1c2533] hover:bg-[rgba(138,63,252,0.06)]">
-          <img src={`${ICON}/back-arrow.svg`} alt="" className="size-[16px]" />
-          All Campaigns
-        </button>
-
         {/* Title + Add Admin */}
-        <div className="flex flex-wrap items-start gap-[16px] mt-[20px]">
+        <div className="flex flex-wrap items-start gap-[16px]">
           <div className="flex-1 min-w-[220px]">
             <h1 className="text-[26px] font-semibold leading-[40.3px] tracking-[-0.65px] text-[#1c2533]">Admin Management</h1>
             <p className="text-[14px] leading-[21.7px] text-[#69728a]">Team access and project settings for your hub.</p>
           </div>
-          {canAddAdmins && (
+          {canAddAdmins && tab === "team" && (
             <button
               onClick={() => setAddOpen(true)}
               className="inline-flex items-center gap-[8px] min-h-[40px] px-[16px] py-[10px] rounded-[40px] bg-[#8b3efe] text-white text-[14px] font-semibold drop-shadow-[0px_8px_11px_rgba(138,63,252,0.25)] hover:bg-[#7c2ff0]"
@@ -706,7 +672,11 @@ export default function AdminManagement() {
                             {canTouch && (
                               <div className="inline-flex gap-[8px]">
                                 <button disabled={busyInvite === inv._id} onClick={() => resendInvite(inv)} className="min-h-[34px] px-[12px] py-[6px] rounded-[40px] text-[13px] font-semibold text-[#3d485c] hover:bg-[rgba(138,63,252,0.06)] disabled:opacity-50">Resend</button>
-                                <button disabled={busyInvite === inv._id} onClick={() => revokeInvite(inv)} className="min-h-[34px] px-[12px] py-[6px] rounded-[40px] bg-[#f7f4fe] border-[0.833px] border-solid border-[rgba(28,37,51,0.15)] text-[13px] font-semibold text-[#1c2533] hover:bg-[#efeafb] disabled:opacity-50">Revoke</button>
+                                {revokeInviteProposed(inv._id) ? (
+                                  <button onClick={() => { setTab("proposals"); setFilter("pending"); }} className="min-h-[34px] px-[12px] py-[6px] rounded-[40px] text-[13px] font-semibold text-[#8a3ffc] hover:bg-[rgba(138,63,252,0.06)]">Revoke pending approval</button>
+                                ) : (
+                                  <button disabled={busyInvite === inv._id || !!signing || !!executing} onClick={() => revokeInvite(inv)} title="Sends a proposal; the invitation is cancelled once signers approve and it is executed" className="min-h-[34px] px-[12px] py-[6px] rounded-[40px] bg-[#f7f4fe] border-[0.833px] border-solid border-[rgba(28,37,51,0.15)] text-[13px] font-semibold text-[#1c2533] hover:bg-[#efeafb] disabled:opacity-50">Propose revoke</button>
+                                )}
                               </div>
                             )}
                           </td>

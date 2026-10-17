@@ -5,6 +5,8 @@ import hbs, {
 import path, { dirname } from "path";
 import { fileURLToPath } from "url";
 import logger from "@/config/logger";
+import { randomUUID } from "crypto";
+import { withRetry, fetchWithRetry } from "@/utils/resilience";
 import {
   EMAIL_USER,
   EMAIL_PASSWORD,
@@ -72,13 +74,17 @@ const isConnectionError = (error: any) =>
   ["ETIMEDOUT", "ECONNECTION", "ESOCKET", "ECONNREFUSED", "ECONNRESET", "EDNS", "ENETUNREACH", "EHOSTUNREACH"].includes(error?.code)
   || /timeout|timed out|connect/i.test(error?.message ?? "");
 
+/** Sends through the main SMTP route, retrying brief connection failures with backoff. */
+const sendMailWithRetry = (mail: Parameters<typeof transporter.sendMail>[0]) =>
+  withRetry(() => transporter.sendMail(mail), { label: "email (SMTP)", shouldRetry: isConnectionError });
+
 async function sendViaResend(mail: { to: string; subject: string; html: string; text: string }) {
-  const res = await fetch("https://api.resend.com/emails", {
+  // The idempotency key makes a retried send deliver one email, never two
+  const res = await fetchWithRetry("https://api.resend.com/emails", {
     method: "POST",
-    headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
+    headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json", "Idempotency-Key": randomUUID() },
     body: JSON.stringify({ from: RESEND_FROM || EMAIL_USER, ...mail }),
-    signal: AbortSignal.timeout(15000),
-  });
+  }, { timeoutMs: 15000, retries: 2, label: "email (Resend)" });
   if (!res.ok) throw new Error(`Resend refused the email (${res.status}): ${(await res.text()).slice(0, 200)}`);
 }
 
@@ -91,7 +97,8 @@ async function deliverInvite(mail: { to: string; subject: string; html: string; 
   let lastError: any;
   for (const route of inviteSmtpRoutes) {
     try {
-      await route.transporter.sendMail({ from: EMAIL_USER, ...mail } as MailOptions);
+      // One quick retry on this route before moving to the next
+      await withRetry(() => route.transporter.sendMail({ from: EMAIL_USER, ...mail } as MailOptions), { retries: 1, label: `invite email via ${route.label}`, shouldRetry: isConnectionError });
       return;
     } catch (error: any) {
       lastError = error;
@@ -116,7 +123,7 @@ export const sendEmailToAdmin = async (email: string, code: string, origin?: str
   try {
     const baseUrl = origin || ADMIN_URL;
     const signUpUrl = `${baseUrl.replace(/\/$/, "")}/?email=${encodeURIComponent(email)}`;
-    await transporter.sendMail({
+    await sendMailWithRetry({
       from: EMAIL_USER,
       to: email,
       subject: "Complete Nexura Admin Setup",
@@ -133,7 +140,7 @@ export const sendEmailToAdmin = async (email: string, code: string, origin?: str
 
 export const resetEmail = async (email: string, link: string) => {
   try {
-    await transporter.sendMail({
+    await sendMailWithRetry({
       from: EMAIL_USER,
       to: email,
       subject: "Reset Password",
@@ -150,7 +157,7 @@ export const resetEmail = async (email: string, link: string) => {
 export const resetPasswordOTPEmail = async (email: string, code: string) => {
   try {
     console.log(`[TEST] OTP for ${email}: ${code}`);
-    await transporter.sendMail({
+    await sendMailWithRetry({
       from: EMAIL_USER,
       to: email,
       subject: "Password Reset Code",
@@ -170,7 +177,7 @@ export const sendAdminResetEmail = async (email: string, token: string, origin?:
     const baseUrl = (origin || ADMIN_URL).replace(/\/$/, "");
     const link = `${baseUrl}/?reset=1&token=${encodeURIComponent(token)}`;
 
-    await transporter.sendMail({
+    await sendMailWithRetry({
       from: EMAIL_USER,
       to: email,
       subject: "Reset Admin Password",
@@ -216,7 +223,7 @@ export const addHubAdminEmail = async (email: string, code: string, origin?: str
 
 export const sendOTPConfirmEmail = async ({ email, code }: { email: string, code: string }) => {
   try {
-    await transporter.sendMail({
+    await sendMailWithRetry({
       from: EMAIL_USER,
       to: email,
       subject: "Your Nexura Verification Code",

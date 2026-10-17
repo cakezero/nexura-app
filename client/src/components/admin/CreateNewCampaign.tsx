@@ -1,6 +1,9 @@
 "use client";
 import React, { useState, useRef, useEffect } from "react";
 import { scrollToTop } from "@/lib/scrollToTop";
+import SignInPrompt from "@/components/studio/SignInPrompt";
+import { STUDIO_SIGN_IN_URL, useProjectSession } from "@/components/studio/useProjectSession";
+import { readUrlParam, writeUrlParam } from "@/hooks/use-url-state";
 
 // ─── TEMPLATE DATA ────────────────────────────────────────────────────────────
 const DEFAULT_RETENTION_REQUIREMENT = "90";
@@ -420,10 +423,22 @@ export async function switchWalletChain(eth: InjectedWallet, chainId: number | n
 // ─── HEADER ───────────────────────────────────────────────────────────────────
 function shortAddress(a: string): string { return a.length > 12 ? `${a.slice(0, 6)}…${a.slice(-4)}` : a; }
 type SaveState = "idle" | "saving" | "saved" | "skipped" | "error";
-function Header({ saveState = "idle", saveError, activeChain, onChainChange, walletAddress, onConnectWallet, onDisconnectWallet }: {
+function Header({ saveState = "idle", saveError, activeChain, onChainChange, walletAddress: connectedAddress, onConnectWallet, onDisconnectWallet, signedIn = true, onSignIn }: {
   saveState?: SaveState; saveError?: string; activeChain: NetworkId; onChainChange: (id: NetworkId) => void;
   walletAddress?: string | null; onConnectWallet?: () => void; onDisconnectWallet?: () => void;
+  /** False once the studio session has expired: the wallet and notifications ask to sign in again. */
+  signedIn?: boolean; onSignIn?: () => void;
 }) {
+  const walletAddress = signedIn ? connectedAddress : null;
+  const [signInOpen, setSignInOpen] = useState(false);
+  const signInRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!signInOpen) return;
+    const onDown = (e: MouseEvent) => { if (signInRef.current && !signInRef.current.contains(e.target as Node)) setSignInOpen(false); };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [signInOpen]);
+  useEffect(() => { if (signedIn) setSignInOpen(false); }, [signedIn]);
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [walletOpen, setWalletOpen] = useState(false);
   const [bellOpen, setBellOpen] = useState(false);
@@ -472,7 +487,8 @@ function Header({ saveState = "idle", saveError, activeChain, onChainChange, wal
           >
             <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2.5A4 4 0 005 6.5V10.5L3.5 12.5h11L13 10.5V6.5A4 4 0 009 2.5z" stroke="#6B7280" strokeWidth="1.3"/><path d="M7.5 14.5a1.5 1.5 0 003 0" stroke="#6B7280" strokeWidth="1.3" strokeLinecap="round"/></svg>
           </button>
-          {bellOpen && (
+          {bellOpen && !signedIn && <SignInPrompt what="see your notifications" onSignIn={() => { setBellOpen(false); onSignIn?.(); }} />}
+          {bellOpen && signedIn && (
             <div style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, width: 300, background: "white", borderRadius: 14, border: "1px solid #E5E7EB", boxShadow: "0 8px 30px rgba(0,0,0,0.10)", zIndex: 200, overflow: "hidden" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderBottom: "1px solid #F3F4F6" }}>
                 <span style={{ fontSize: 13, fontWeight: 700, color: "#1c2533" }}>Notifications</span>
@@ -513,13 +529,16 @@ function Header({ saveState = "idle", saveError, activeChain, onChainChange, wal
 
         {/* Wallet: connect button until a wallet is connected, then address + network menu */}
         {!walletAddress ? (
+          <div ref={signInRef} style={{ position: "relative" }}>
           <button
-            onClick={() => { setBellOpen(false); onConnectWallet?.(); }}
+            onClick={() => { setBellOpen(false); if (!signedIn) { setSignInOpen(o => !o); return; } onConnectWallet?.(); }}
             style={{ display: "flex", alignItems: "center", gap: 8, background: "linear-gradient(165.12deg, #7C3AED 0%, #6b21d8 100%)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 999, padding: "0 16px", cursor: "pointer", height: 38, whiteSpace: "nowrap" as const, fontFamily: "inherit" }}
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="1.75" y="3.5" width="12.5" height="9.5" rx="2" stroke="white" strokeWidth="1.3"/><path d="M1.75 6h12.5" stroke="white" strokeWidth="1.3"/><circle cx="11" cy="9.5" r="0.9" fill="white"/></svg>
             <span style={{ fontSize: 12.8, fontWeight: 600, color: "#f7f5ff" }}>Connect wallet</span>
           </button>
+          {signInOpen && <SignInPrompt what="connect your wallet" onSignIn={() => { setSignInOpen(false); onSignIn?.(); }} />}
+          </div>
         ) : (
         <div ref={walletRef} style={{ position: "relative" }}>
           <button
@@ -555,7 +574,7 @@ function Header({ saveState = "idle", saveError, activeChain, onChainChange, wal
         {/* Back to Main App */}
         <button
           onClick={() => { window.location.href = NEXURA_MAIN_APP_URL; }}
-          style={{ display: "flex", alignItems: "center", gap: 10, background: "linear-gradient(167.33deg, #7C3AED 0%, #6b21d8 100%)", border: "1px solid rgba(167,139,250,0.28)", borderRadius: 999, padding: "0 17px", cursor: "pointer", height: 38, whiteSpace: "nowrap" }}
+          style={{ display: "flex", alignItems: "center", gap: 10, background: "#000000", border: "1px solid #000000", borderRadius: 999, padding: "0 17px", cursor: "pointer", height: 38, whiteSpace: "nowrap" }}
         >
           <svg width="16" height="16" viewBox="0 0 14 14" fill="none"><path d="M6 3H3a1 1 0 00-1 1v7a1 1 0 001 1h7a1 1 0 001-1V8" stroke="white" strokeWidth="1.3" strokeLinecap="round"/><path d="M9 2h3v3M12 2L7 7" stroke="white" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
           <span style={{ fontSize: 12.8, fontWeight: 600, color: "#f7f5ff" }}>Back to Main App</span>
@@ -1067,11 +1086,18 @@ export default function CreateNewCampaign({
   projectCurator?: { name: string; address?: string } | null;
 } = {}) {
   // ── Wizard navigation ──
+  const signedIn = useProjectSession();
   const init = initialState ?? null;
   // A reopened campaign (live or saved draft) already has its content: picking a template or
   // starting from scratch would overwrite it, so the Template step can't be reopened.
   const templateLocked = mode === "live" || init !== null;
-  const [currentStep, setCurrentStep] = useState<number>(templateLocked ? Math.max(init?.step ?? 2, 2) : 1);
+  // A refresh reopens the step in the URL (?step=), falling back to where the draft was saved
+  const [currentStep, setCurrentStep] = useState<number>(() => {
+    if (!templateLocked) return 1;
+    const fromUrl = Number(readUrlParam("step"));
+    const step = Number.isInteger(fromUrl) && fromUrl >= 2 && fromUrl <= 5 ? fromUrl : Math.max(init?.step ?? 2, 2);
+    return step === 4 && init?.rewardsEnabled === false ? 3 : step;
+  });
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(init?.templateId ?? null);
   const [startChoice, setStartChoice] = useState<{ kind: "template"; id: string } | { kind: "scratch" } | null>(null);
   const [pendingRewards, setPendingRewards] = useState<boolean | null>(null);
@@ -1079,7 +1105,7 @@ export default function CreateNewCampaign({
   const [journeyCadence, setJourneyCadence] = useState<"daily" | "weekly">(init?.journeyCadence ?? "weekly");
   const goToStep = (step: number) => { setCurrentStep(step); scrollToTop(); };
   // Every step opens at the top (the Studio scrolls inside its <main> panel, not the window)
-  useEffect(() => { scrollToTop(); }, [currentStep]);
+  useEffect(() => { scrollToTop(); writeUrlParam("step", currentStep > 1 ? String(currentStep) : null); }, [currentStep]);
 
   // ── Step 1 state ──
   const [rewardsEnabled, setRewardsEnabled] = useState(init?.rewardsEnabled ?? true);
@@ -1710,7 +1736,7 @@ export default function CreateNewCampaign({
   return (
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: "#f7f5ff", fontFamily: "'Geist', 'DM Sans', 'Inter', sans-serif" }}>
 
-      <Header saveState={saveState} saveError={saveError} activeChain={rewardNetwork} onChainChange={handleNetworkChange} walletAddress={connectedAddress} onConnectWallet={connectWallet} onDisconnectWallet={disconnectWallet} />
+      <Header saveState={saveState} saveError={saveError} activeChain={rewardNetwork} onChainChange={handleNetworkChange} walletAddress={connectedAddress} onConnectWallet={connectWallet} onDisconnectWallet={disconnectWallet} signedIn={signedIn} onSignIn={() => { window.location.href = STUDIO_SIGN_IN_URL; }} />
 
       {/* ══════════ STEP 1 ══════════ */}
       {currentStep === 1 && (
@@ -3188,7 +3214,7 @@ export default function CreateNewCampaign({
                 background: continueHovered ? "#8b3efe" : "white",
                 color: continueHovered ? "white" : "#8b3efe",
                 border: continueHovered ? "1px solid transparent" : "1px solid #8b3efe",
-                borderRadius: 40, width: 144, height: 34,
+                borderRadius: 40, padding: "0 24px", height: 34, whiteSpace: "nowrap",
                 cursor: "pointer", fontSize: 12.5, fontWeight: 600,
                 transition: "background 0.15s, color 0.15s, border-color 0.15s",
                 boxShadow: continueHovered ? "0 4px 16px rgba(139,62,254,0.35)" : "none",
@@ -3221,7 +3247,7 @@ export default function CreateNewCampaign({
                 background: stages.length === 0 ? "#f7f4fe" : continueStep3Hovered ? "#8b3efe" : "white",
                 color: stages.length === 0 ? "#9ca3af" : continueStep3Hovered ? "white" : "#8b3efe",
                 border: stages.length === 0 ? "1px solid rgba(28,37,51,0.15)" : continueStep3Hovered ? "1px solid transparent" : "1px solid #8b3efe",
-                borderRadius: 40, width: 144, height: 34,
+                borderRadius: 40, padding: "0 24px", height: 34, whiteSpace: "nowrap",
                 cursor: stages.length === 0 ? "not-allowed" : "pointer", fontSize: 12.5, fontWeight: 600,
                 opacity: stages.length === 0 ? 0.6 : 1,
                 transition: "background 0.15s, color 0.15s, border-color 0.15s, opacity 0.15s",

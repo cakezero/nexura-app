@@ -7,7 +7,7 @@ import { lesson, lessonCompleted, miniLesson, question, questionCompleted, video
 import { admin } from "@/models/admin.model";
 import { BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND, NO_CONTENT, OK, UNAUTHORIZED, FORBIDDEN } from "@/utils/status.utils";
 import { campaign as campaignModel, campaignCompleted, campaign } from "@/models/campaign.model";
-import { generateOTP, getRefreshToken, hashPassword, JWT, startOfDayUTC, updateLevel, validateQuestData } from "@/utils/utils";
+import { generateOTP, getRefreshToken, hashPassword, JWT, passwordChangeMark, startOfDayUTC, updateLevel, validateQuestData } from "@/utils/utils";
 import { sendAdminResetEmail, sendEmailToAdmin } from "@/utils/sendMail";
 import { campaignQuestCompleted, miniQuestCompleted, questCompleted } from "@/models/questsCompleted.models";
 import { submission } from "@/models/submission.model";
@@ -1074,7 +1074,8 @@ export const forgotAdminPassword = async (req: GlobalRequest, res: GlobalRespons
       return;
     }
 
-    const token = JWT.sign(adminExists._id.toString(), "10m");
+    // A reset-only token: it can't be used as a session, and a session token can't reset a password
+    const token = JWT.signFor(adminExists._id.toString(), "admin-reset", "10m");
     await sendAdminResetEmail(normalizedEmail, token, clientUrl);
 
     res.status(OK).json({ message: "password reset email sent!" });
@@ -1099,7 +1100,14 @@ export const resetAdminPassword = async (req: GlobalRequest, res: GlobalResponse
       return;
     }
 
-    const { id } = await JWT.verify(token) as { id: string };
+    let id: string;
+    let issuedAt: number;
+    try {
+      ({ id, issuedAt } = await JWT.verifyFor(token, "admin-reset"));
+    } catch {
+      res.status(BAD_REQUEST).json({ error: "this reset link is invalid or has expired, request a new one" });
+      return;
+    }
     const adminExists = await admin.findOne({ _id: id, verified: true });
 
     if (!adminExists) {
@@ -1107,7 +1115,16 @@ export const resetAdminPassword = async (req: GlobalRequest, res: GlobalResponse
       return;
     }
 
+    // Works once: after a password change, links issued before it no longer do (even if Redis is down)
+    const changedAt = (adminExists as any).passwordChangedAt ? new Date((adminExists as any).passwordChangedAt).getTime() : 0;
+    if (changedAt && issuedAt < changedAt) {
+      res.status(BAD_REQUEST).json({ error: "access token already used, request a new one to change your password" });
+      return;
+    }
+
     adminExists.password = await hashPassword(password);
+    // Signs out every other session
+    (adminExists as any).passwordChangedAt = new Date(Math.max(passwordChangeMark().getTime(), issuedAt + 1000));
     await adminExists.save();
 
     await REDIS.set({ key: `admin-reset-access-token:${token}`, data: { token }, ttl: 10 * 60 });

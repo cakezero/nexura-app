@@ -14,6 +14,9 @@ export function getS3Client() {
 				secretAccessKey: AWS_SECRET_ACCESS_KEY,
 			},
 			region: AWS_REGION,
+			// Uploads give up instead of hanging, and brief failures are retried (3 tries in all)
+			maxAttempts: 3,
+			requestHandler: { connectionTimeout: 5_000, requestTimeout: 30_000 },
 		});
 	}
 

@@ -34,6 +34,11 @@ const adminSchema = new mongoose.Schema({
   isOnline: {
     type: Boolean,
     default: false
+  },
+  // Sessions and reset links issued before this stop working (set when the password changes)
+  passwordChangedAt: {
+    type: Date,
+    default: null
   }
 }, { timestamps: true });
 

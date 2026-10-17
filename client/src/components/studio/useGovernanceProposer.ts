@@ -1,28 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useAccount, useSignTypedData } from "wagmi";
-import { useConnectModal } from "@rainbow-me/rainbowkit";
-import { recoverTypedDataAddress } from "viem";
-import { useSilentWalletConnect } from "./useSilentWalletConnect";
+import { useStudioSigner } from "./useStudioSigner";
+import { useStudioWallet } from "./useStudioWallet";
+import { useLiveRefresh } from "@/hooks/use-live-refresh";
 import { projectApiRequest } from "@/lib/projectApi";
 import {
   EMPTY_SNAPSHOT, type GovernanceSnapshot, type ProposalAction,
   fetchGovernance, isGovernanceUnavailable, newProposalId, notifyGovernanceChanged, submitProposal,
 } from "@/lib/adminGovernance";
-
-// Same EIP-712 data Admin Management signs with (the server verifies it)
-const SIGN_DOMAIN = { name: "Nexura Studio", version: "1" } as const;
-const SIGN_TYPES = {
-  StudioAction: [
-    { name: "hub", type: "string" },
-    { name: "action", type: "string" },
-    { name: "proposal", type: "string" },
-    { name: "proposalId", type: "string" },
-    { name: "signer", type: "string" },
-    { name: "signedAt", type: "string" },
-  ],
-} as const;
 
 /**
  * Makes signed governance proposals from outside Admin Management (e.g. proposing to end a campaign).
@@ -31,10 +17,8 @@ const SIGN_TYPES = {
 export function useGovernanceProposer() {
   const [gov, setGov] = useState<GovernanceSnapshot>(EMPTY_SNAPSHOT);
   const [me, setMe] = useState<{ id: string; name: string; hubName: string } | null>(null);
-  const { address: liveAddress, isConnected } = useAccount();
-  const { signTypedDataAsync } = useSignTypedData();
-  const { openConnectModal } = useConnectModal();
-  const silentConnect = useSilentWalletConnect();
+  const signStudioAction = useStudioSigner();
+  const sessionWallet = useStudioWallet();
 
   const refresh = useCallback(async () => {
     try { setGov(await fetchGovernance()); }
@@ -48,22 +32,15 @@ export function useGovernanceProposer() {
       .catch(() => {});
   }, [refresh]);
 
+  // Pending proposals change as other signers vote
+  useLiveRefresh(refresh);
+
   /**
    * Has the connected wallet sign a studio action (EIP-712, no transaction or gas).
    * `id` is what the action is about: a proposal ref, or a campaign id when publishing.
    */
   const sign = async (verb: "Propose" | "Publish", title: string, id: string) => {
     if (!me) throw new Error("Your admin account is still loading. Try again in a moment.");
-    const linked = gov.signerWallets?.[me.id];
-    // The header may show a remembered address without a live connection: restore it silently first
-    const address = (isConnected && liveAddress) ? liveAddress : await silentConnect(linked);
-    if (!address) {
-      openConnectModal?.();
-      throw new Error("Connect your wallet to sign, then try again.");
-    }
-    if (linked && linked.toLowerCase() !== address.toLowerCase()) {
-      throw new Error(`Switch to the wallet linked to your account (${linked.slice(0, 6)}…${linked.slice(-4)}) to sign.`);
-    }
     const message = {
       hub: me.hubName,
       action: verb,
@@ -72,16 +49,8 @@ export function useGovernanceProposer() {
       signer: `${me.name} (${me.id})`,
       signedAt: new Date().toISOString(),
     };
-    let signature: `0x${string}`;
-    try {
-      signature = await signTypedDataAsync({ account: address as `0x${string}`, domain: SIGN_DOMAIN, types: SIGN_TYPES, primaryType: "StudioAction", message });
-    } catch (err) {
-      // Wallet errors are long; their short message says what actually happened
-      const e = err as { shortMessage?: string; message?: string };
-      throw new Error(e?.shortMessage || e?.message || "The wallet could not sign.");
-    }
-    const recovered = await recoverTypedDataAddress({ domain: SIGN_DOMAIN, types: SIGN_TYPES, primaryType: "StudioAction", message, signature });
-    if (recovered.toLowerCase() !== address.toLowerCase()) throw new Error("The signature doesn't match the connected wallet.");
+    // Signs through the shown wallet without asking to connect it again
+    const { signature } = await signStudioAction(message, { linked: gov.signerWallets?.[me.id], preferred: sessionWallet.address });
     return { signature, message };
   };
 

@@ -6,7 +6,8 @@ import {
 	JWT,
 	getRefreshToken,
 	hashPassword,
-	generateOTP
+	generateOTP,
+	passwordChangeMark
 } from "@/utils/utils";
 import logger from "@/config/logger";
 import { server } from "@/models/server.model";
@@ -48,7 +49,8 @@ export const signIn = async (req: GlobalRequest, res: GlobalResponse) => {
 			return;
 		}
 
-		const adminExists = await hubAdmin.findOne({ email }).lean();
+		// Matches the account however the email was typed (case, surrounding spaces)
+		const adminExists = await hubAdmin.findOne({ email: String(email).trim().toLowerCase() }).collation({ locale: "en", strength: 2 }).lean();
 		if (!adminExists) {
 			res.status(BAD_REQUEST).json({ error: "invalid signin credentials" });
 			return;
@@ -427,6 +429,8 @@ export const forgotPassword = async (req: GlobalRequest, res: GlobalResponse) =>
 
 		const code = generateOTP();
 
+		// Only the newest reset code works (invite codes carry a hubId and are left alone)
+		await OTP.deleteMany({ email: strippedEmail, page: "project", hubId: null });
 		await OTP.create({
 			email: strippedEmail,
 			code,
@@ -454,8 +458,8 @@ export const resetPassword = async (req: GlobalRequest, res: GlobalResponse) => 
 			return;
 		}
 
-		const otp = await OTP.findOne({ email: email.trim().toLowerCase(), code, page: "project" }).lean();
-		if (!otp) {
+		const otp = await OTP.findOne({ email: email.trim().toLowerCase(), code: String(code), page: "project", hubId: null }).lean();
+		if (!otp || new Date(otp.expiresAt).getTime() <= Date.now()) {
 			res.status(BAD_REQUEST).json({ error: "invalid or expired code" });
 			return;
 		}
@@ -469,9 +473,12 @@ export const resetPassword = async (req: GlobalRequest, res: GlobalResponse) => 
 		const hashedPassword = await hashPassword(password);
 
 		adminExists.password = hashedPassword;
+		// Signs out every other session
+		(adminExists as any).passwordChangedAt = passwordChangeMark();
 		await adminExists.save();
 
-		await OTP.deleteOne({ _id: otp._id });
+		// Each code works once; any other reset code for this email is spent too
+		await OTP.deleteMany({ email: email.trim().toLowerCase(), page: "project", hubId: null });
 
 		const id = adminExists._id.toString();
 		touchHubAdminActivity(id);
@@ -529,7 +536,8 @@ export const userHubSignIn = async (req: GlobalRequest, res: GlobalResponse) => 
 			return;
 		}
 
-		const adminExists = await userHubAdmin.findOne({ email }).lean();
+		// Matches the account however the email was typed (case, surrounding spaces)
+		const adminExists = await userHubAdmin.findOne({ email: String(email).trim().toLowerCase() }).collation({ locale: "en", strength: 2 }).lean();
 		if (!adminExists) {
 			res.status(BAD_REQUEST).json({ error: "invalid signin credentials" });
 			return;
@@ -617,7 +625,7 @@ export const userHubSignIn = async (req: GlobalRequest, res: GlobalResponse) => 
 
 export const userHubAdminSignUp = async (req: GlobalRequest, res: GlobalResponse) => {
 	try {
-    console.log('[userHubAdminSignUp] Received request body:', req.body);
+    console.log('[userHubAdminSignUp] sign-up request for', String(req.body?.email ?? ''));
 		const { error } = validateSuperAdminData(req.body);
 		if (error) {
 			const missingFields = getMissingFields(error);
@@ -751,8 +759,9 @@ export const userHubForgotPassword = async (req: GlobalRequest, res: GlobalRespo
 		const code = generateOTP();
 		const hubId = hubAdminExists.hub?.toString();
 
+		// Replaces only an earlier reset code, never an invite for the same email
 		await OTP.findOneAndUpdate(
-			{ email: hubAdminExists.email },
+			{ email: hubAdminExists.email, page: "user" },
 			{
 				email: hubAdminExists.email,
 				code,
@@ -783,8 +792,8 @@ export const userHubResetPassword = async (req: GlobalRequest, res: GlobalRespon
 			return;
 		}
 
-		const otp = await OTP.findOne({ email: email.trim().toLowerCase(), code, page: "user" }).lean();
-		if (!otp) {
+		const otp = await OTP.findOne({ email: email.trim().toLowerCase(), code: String(code), page: "user" }).lean();
+		if (!otp || new Date(otp.expiresAt).getTime() <= Date.now()) {
 			res.status(BAD_REQUEST).json({ error: "invalid or expired code" });
 			return;
 		}
@@ -800,7 +809,8 @@ export const userHubResetPassword = async (req: GlobalRequest, res: GlobalRespon
 		adminExists.password = hashedPassword;
 		await adminExists.save();
 
-		await OTP.deleteOne({ _id: otp._id });
+		// Each code works once
+		await OTP.deleteMany({ email: email.trim().toLowerCase(), page: "user" });
 
 		const id = adminExists._id.toString();
 		touchHubAdminActivity(id);

@@ -18,6 +18,8 @@ import { validateCampaignSubmissions, validateCampaignSubmissionsBulk, getCampai
 import { getSubmissionCampaigns, getCampaignSubmissionDetails } from "@/controllers/submissions.controller";
 import { getRetentionDraft, saveRetentionDraft } from "@/controllers/retentionDraft.controller";
 import hubAppRoutes from "./hub.app.routes";
+import { attemptGuard, authIpLimiter, codeSendLimiter } from "@/middlewares/authGuard";
+import { requireInHub, fromQuery, campaignInHub } from "@/utils/hubOwnership";
 import governanceRoutes from "./governance.routes";
 
 const router = Router();
@@ -34,18 +36,19 @@ router
   .get("/retention-draft", authenticateHubAdmin2, getRetentionDraft)
   .put("/retention-draft", authenticateHubAdmin2, saveRetentionDraft)
   .get("/hub-admins", authenticateHubAdmin2, getHubAdmins)
-  .patch("/publish-campaign", authenticateHubAdmin, requireStudioPayment, publishCampaign)
+  .patch("/publish-campaign", authenticateHubAdmin, requireInHub(campaignInHub, fromQuery("id"), "campaign"), requireStudioPayment, publishCampaign)
   // --- Public routes ---
-  .post("/sign-in", signIn)
+  // Sign-in and code checks are rate limited and lock out after repeated wrong attempts (see authGuard)
+  .post("/sign-in", authIpLimiter, attemptGuard("hub-login"), signIn)
   .post("/logout", authenticateHubAdmin2, logout)
-  .post("/reset-password", resetPassword)
-  .post("/forgot-password", forgotPassword)
-  .post("/sign-up", superAdminSignUp)
+  .post("/reset-password", authIpLimiter, attemptGuard("hub-reset"), resetPassword)
+  .post("/forgot-password", codeSendLimiter, forgotPassword)
+  .post("/sign-up", authIpLimiter, superAdminSignUp)
   .get("/discord/callback", hubDiscordCallback)
   .get("/get-roles", fetchRoles)
   .get("/get-channels", fetchChannels)
   .get("/get-servers", fetchServers)
-  .post("/admin/sign-up", hubAdminSignUp)
+  .post("/admin/sign-up", authIpLimiter, attemptGuard("hub-invite"), hubAdminSignUp)
   .patch("/update-ids", authenticateHubAdmin2, updateIds)
   // --- Admin Management governance (any admin; roles checked in the controller) ---
   .use("/governance", authenticateHubAdmin2, governanceRoutes)

@@ -1,6 +1,7 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 import { BACKEND_URL } from "./constants";
 import { toUserFriendlyErrorMessage } from "./errorMessages";
+import { resilientFetch } from "@/lib/resilientFetch";
 
 export const buildUrl = (path: string) =>  {
   const base = (BACKEND_URL || "").replace(/\/+$/g, "");
@@ -58,7 +59,7 @@ export async function apiRequest(
 
   console.log(`[API] → ${method} ${url}`);
   try {
-    const res = await fetch(fullUrl, {
+    const res = await resilientFetch(fullUrl, {
       method,
       headers,
       body: data ? JSON.stringify(data) : undefined,
@@ -85,7 +86,7 @@ export async function apiRequestV2(
 
   console.log(`[API] → ${method} ${endpoint}`);
   try {
-    const res = await fetch(`${BACKEND_URL || ""}${endpoint}`, {
+    const res = await resilientFetch(`${BACKEND_URL || ""}${endpoint}`, {
       method,
       headers,
       body: isFormData ? data : data ? JSON.stringify(data) : undefined,
@@ -109,7 +110,7 @@ export const getQueryFn: <T>(options: {
   async ({ queryKey }: { queryKey: readonly unknown[] }) => {
     const path = (queryKey as string[]).join("/");
     const headers = buildAuthHeaders();
-    const res = await fetch(buildUrl(path), { headers });
+    const res = await resilientFetch(buildUrl(path), { headers });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
       return null;

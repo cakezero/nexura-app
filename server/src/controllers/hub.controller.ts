@@ -17,6 +17,7 @@ import { withSubmissionCategory } from '@/controllers/quest.controller';
 import { refreshUserRetention } from "@/utils/retention";
 import { uploadImg } from "@/utils/img.utils";
 import { uploadFile } from "@/utils/file.utils";
+import { ownsHubRecord, submissionInHub } from "@/utils/hubOwnership";
 import { normalizeCampaignDateInput, normalizeCampaignDatesForResponse, parseDate } from "@/utils/dates";
 
 const DISCORD_CAMPAIGN_TAGS = new Set([
@@ -592,7 +593,16 @@ async function applySubmissionDecision(submissionId: string, action: "accept" | 
 export const validateCampaignSubmissions = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
     const { submissionId, action }: { submissionId: string; action: "reject" | "accept" } = req.body;
-    await applySubmissionDecision(submissionId, action, req.adminName);
+    if (action !== "accept" && action !== "reject") {
+      res.status(BAD_REQUEST).json({ error: "action must be accept or reject" });
+      return;
+    }
+    // Only submissions on this hub's own campaigns and quests can be reviewed
+    if (!(await submissionInHub(req, submissionId))) {
+      res.status(NOT_FOUND).json({ error: "submission not found in your hub" });
+      return;
+    }
+    await applySubmissionDecision(submissionId, action, req.adminName ?? "Admin");
     res.status(NO_CONTENT).send();
   } catch (error) {
     if (error instanceof SubmissionDecisionError) {
@@ -654,7 +664,7 @@ export const validateCampaignSubmissionsBulk = async (req: GlobalRequest, res: G
     for (const id of ids) {
       if (!allowed.has(id)) { failed.push({ id, error: "not a submission on your campaigns" }); continue; }
       try {
-        await applySubmissionDecision(id, action, req.adminName);
+        await applySubmissionDecision(id, action, req.adminName ?? "Admin");
         applied.push(id);
       } catch (err: any) {
         failed.push({ id, error: err instanceof SubmissionDecisionError ? err.message : "could not be updated" });
@@ -693,7 +703,8 @@ export const getCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
       res.status(NOT_FOUND).json({ error: "campaign not found" });
       return;
     }
-    if (req.admin?.hub && !req.isPlatformAdmin && String(campaignFound.hub) !== String(req.admin.hub)) {
+    // Every admin needs a hub to read a campaign, and it must be theirs (platform admins see all)
+    if (!req.isPlatformAdmin && !(await ownsHubRecord(req, campaignFound.hub))) {
       res.status(FORBIDDEN).json({ error: "you are not allowed to access this campaign" });
       return;
     }
@@ -1140,7 +1151,8 @@ export const saveCampaignWithQuests = async (req: GlobalRequest, res: GlobalResp
         folder: "cover-images",
         maxSize: 2 * 1024 ** 2
       });
-      const savedCampaign = await campaign.create(req.body);
+      // A new campaign always belongs to the admin's own hub
+      const savedCampaign = await campaign.create({ ...req.body, hub: req.admin.hub, creator: req.id });
 
       campaignId = savedCampaign._id.toString();
     } else {
@@ -1150,7 +1162,9 @@ export const saveCampaignWithQuests = async (req: GlobalRequest, res: GlobalResp
         return;
       }
 
-      await campaign.findByIdAndUpdate(id, req.body.campaignData, { new: true });
+      // The hub and creator never change through an edit
+      const { hub: _hub, creator: _creator, ...campaignData } = req.body.campaignData ?? {};
+      await campaign.findByIdAndUpdate(id, campaignData, { new: true });
     }
 
     const { error: questError } = validateCampaignQuestData(req.body.questData);
@@ -1175,12 +1189,11 @@ export const saveCampaignWithQuests = async (req: GlobalRequest, res: GlobalResp
         : { ...qd };
 
       if (qd.campaign && qd._id) {
-        if (questData.campaign) {
-          questData.campaign = new mongoose.Types.ObjectId(questData.campaign);
-        }
+        // Only tasks of this campaign can be updated, and they can't be moved to another campaign
+        questData.campaign = new mongoose.Types.ObjectId(campaignId);
         createdQuests.push({
           updateOne: {
-            filter: { _id: new mongoose.Types.ObjectId(qd._id) },
+            filter: { _id: new mongoose.Types.ObjectId(qd._id), campaign: new mongoose.Types.ObjectId(campaignId) },
             update: {
               $set: {
                 ...questData,
@@ -1248,7 +1261,9 @@ export const updateCamapaignQuest = async (req: GlobalRequest, res: GlobalRespon
       return;
     }
 
-    await campaignQuest.findByIdAndUpdate(id, req.body);
+    // A task can't be moved to another campaign
+    const { _id: _ignoredId, campaign: _ignoredCampaign, ...changes } = req.body ?? {};
+    await campaignQuest.findByIdAndUpdate(id, changes);
 
     res.status(NO_CONTENT).send();
   } catch (error) {

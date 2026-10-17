@@ -11,6 +11,10 @@ import { firstMessage } from "@/models/msg.model";
 import { startAdminActivityCron } from "@/utils/adminActivityCron";
 import { startRelicHodlCron } from "@/utils/relicHodlCron";
 import { initRedis } from "@/config/redis";
+import { configureAxiosResilience } from "@/utils/resilience";
+
+// Every outside call (Discord, X, Intuition…) gets a time limit and retries on brief failures
+configureAxiosResilience();
 
 const server = express();
 
@@ -20,6 +24,15 @@ server.set("trust proxy", true);
 server.use(express.json());
 server.use(express.urlencoded({ extended: true }));
 
+// Never write passwords, codes or tokens to the logs
+const SECRET_KEYS = /pass(word)?|code|otp|token|secret|signature|authorization|private/i;
+const redact = (value: unknown, depth = 0): unknown => {
+	if (depth > 6 || value === null || typeof value !== "object") return value;
+	if (Array.isArray(value)) return value.map(v => redact(v, depth + 1));
+	return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([k, v]) =>
+		[k, SECRET_KEYS.test(k) ? "[redacted]" : redact(v, depth + 1)]));
+};
+
 server.use((req, res, next) => {
 	const start = Date.now();
 	const originalUrl = req.url;
@@ -28,7 +41,7 @@ server.use((req, res, next) => {
 		const logMsg = `${req.method} ${originalUrl} ${res.statusCode} ${duration}ms`;
 		console.log(`[REQUEST] ${logMsg}`);
 		if (req.body && Object.keys(req.body).length > 0) {
-			console.log(`[BODY]`, JSON.stringify(req.body, null, 2));
+			console.log(`[BODY]`, JSON.stringify(redact(req.body), null, 2));
 		}
 	});
 	next();

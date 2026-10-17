@@ -19,6 +19,7 @@ import {
 import { ArrowLeft, Camera, Loader2, Save, Globe, Twitter } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
+import { useLiveRefresh } from "@/hooks/use-live-refresh";
 import {
   projectApiRequest,
   getStoredProjectInfo,
@@ -69,6 +70,12 @@ export default function HubProfile() {
       })
       .finally(() => setLoading(false));
   }, []);
+
+  // The form isn't overwritten while someone may be editing it; only the Discord status stays live
+  useLiveRefresh(() =>
+    projectApiRequest<{ hub: Record<string, any> }>({ method: "GET", endpoint: "/hub/me" })
+      .then(({ hub }) => { if (hub) setDiscordConnected(Boolean(hub.discordConnected)); })
+      .catch(() => {}));
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target?.files?.[0];

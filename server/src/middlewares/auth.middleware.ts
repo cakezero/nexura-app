@@ -6,14 +6,19 @@ import { hubAdmin, touchHubAdminActivity, userHubAdmin } from "@/models/hub.mode
 import { user } from "@/models/user.model";
 import { resolveAdminCampaignHub } from "@/utils/adminCampaignHub";
 import { BAD_REQUEST, INTERNAL_SERVER_ERROR, UNAUTHORIZED, FORBIDDEN } from "@/utils/status.utils";
-import { JWT } from "@/utils/utils";
+import { JWT, issuedBeforePasswordChange } from "@/utils/utils";
 import { REDIS } from "@/utils/redis.utils";
 import multer from "multer";
 import { updateAdminLastActivity } from "@/utils/adminActivityCron";
 
 type decodedDataType = {
 	id: string;
+	iat?: number;
 };
+
+// The studio signs the person out when it sees these (they match its "kindly re-login" check)
+const ACCESS_REMOVED = "your access to this hub has been removed, kindly re-login";
+const PASSWORD_CHANGED = "your password was changed, kindly re-login";
 
 const fileSize = 5 * (1024 ** 2); // 5 MB
 
@@ -31,6 +36,22 @@ const resolveUserIdFromWalletHeader = async (req: GlobalRequest): Promise<string
 	return userFound?._id ? userFound._id.toString() : null;
 };
 
+/**
+ * JWT.verify rejects with jsonwebtoken's message (a string), so only those mean the session is bad.
+ * Anything else (a database hiccup, a lookup error) is a server fault: asking to re-login wouldn't help.
+ */
+const sendAuthError = (res: GlobalResponse, error: unknown) => {
+	logger.error(error);
+	const msg = typeof error === "string" ? error.trim() : "";
+	if (msg === "jwt expired") {
+		res.status(BAD_REQUEST).json({ error: "Token has expired, kindly re-login" });
+	} else if (msg) {
+		res.status(UNAUTHORIZED).json({ error: "Invalid authentication token, kindly re-login." });
+	} else {
+		res.status(INTERNAL_SERVER_ERROR).json({ error: "couldn't verify your session right now, please try again" });
+	}
+};
+
 export const upload = multer({
 	storage: multer.memoryStorage(),
 	limits: { fileSize }
@@ -46,10 +67,20 @@ export const authenticateHubAdmin = async (req: GlobalRequest, res: GlobalRespon
 			return;
     }
 
-		const { id } = await JWT.verify(authHeader.split(" ")[1]!) as decodedDataType;
+		const decoded = await JWT.verify(authHeader.split(" ")[1]!) as decodedDataType;
+		const { id } = decoded;
 
-    const superAdminExists = await hubAdmin.findOne({ _id: id, role: "superadmin" });
+    const superAdminExists = await hubAdmin.findById(id);
+    // Removed from the hub (e.g. an approved revoke): the old token stops working at once
     if (!superAdminExists) {
+      res.status(UNAUTHORIZED).json({ error: ACCESS_REMOVED });
+      return;
+    }
+    if (issuedBeforePasswordChange(decoded, superAdminExists as any)) {
+      res.status(UNAUTHORIZED).json({ error: PASSWORD_CHANGED });
+      return;
+    }
+    if (superAdminExists.role !== "superadmin") {
       res.status(UNAUTHORIZED).json({ error: "route is available only to super admins" });
       return;
     }
@@ -68,13 +99,7 @@ export const authenticateHubAdmin = async (req: GlobalRequest, res: GlobalRespon
 
 		next();
 	} catch (error: any) {
-		logger.error(error);
-		if (error?.trim() === "jwt expired") {
-			res.status(BAD_REQUEST).json({ error: "Token has expired, kindly re-login" });
-			return
-		}
-
-		res.status(INTERNAL_SERVER_ERROR).json({ error: "Invalid authentication token, kindly re-login." });
+		sendAuthError(res, error);
 	}
 }
 
@@ -123,14 +148,8 @@ export const authenticateUserHub = async (req: GlobalRequest, res: GlobalRespons
 
 		next();
   } catch (error: any) {
-    logger.error(error);
-		if (error?.trim() === "jwt expired") {
-			res.status(BAD_REQUEST).json({ error: "Token has expired, kindly re-login" });
-			return
-		}
-
-		res.status(INTERNAL_SERVER_ERROR).json({ error: "Invalid authentication token, kindly re-login." });
-  }
+		sendAuthError(res, error);
+	}
 }
 
 export const authenticateHubAdmin2 = async (req: GlobalRequest, res: GlobalResponse, next: GlobalNextFunction) => {
@@ -156,14 +175,20 @@ export const authenticateHubAdmin2 = async (req: GlobalRequest, res: GlobalRespo
       logger.warn("Redis unavailable in authenticateHubAdmin2, skipping logout check");
     }
 
-    const { id } = await JWT.verify(token) as decodedDataType;
+    const decoded = await JWT.verify(token) as decodedDataType;
+    const { id } = decoded;
 
     let exists = await hubAdmin.findById(id).lean();
     if (!exists) {
       exists = await userHubAdmin.findOne({ userId: new mongoose.Types.ObjectId(id) }).lean() as any;
     }
+    // Removed from the hub (e.g. an approved revoke): the old token stops working at once
     if (!exists) {
-      res.status(UNAUTHORIZED).json({ error: "route is available only to admins" });
+      res.status(UNAUTHORIZED).json({ error: ACCESS_REMOVED });
+      return;
+    }
+    if (issuedBeforePasswordChange(decoded, exists as any)) {
+      res.status(UNAUTHORIZED).json({ error: PASSWORD_CHANGED });
       return;
     }
 
@@ -175,14 +200,7 @@ export const authenticateHubAdmin2 = async (req: GlobalRequest, res: GlobalRespo
 
 		next();
 	} catch (error: any) {
-		logger.error(error);
-		const msg = typeof error === "string" ? error.trim() : error?.message ?? "";
-		if (msg === "jwt expired") {
-			res.status(BAD_REQUEST).json({ error: "Token has expired, kindly re-login" });
-			return
-		}
-
-		res.status(INTERNAL_SERVER_ERROR).json({ error: "Invalid authentication token, kindly re-login." });
+		sendAuthError(res, error);
 	}
 }
 
@@ -229,14 +247,7 @@ export const authenticateUser = async (req: GlobalRequest, res: GlobalResponse, 
 
 		next();
 	} catch (error: any) {
-		logger.error(error);
-		const msg = typeof error === "string" ? error.trim() : error?.message ?? "";
-		if (msg === "jwt expired") {
-			res.status(BAD_REQUEST).json({ error: "Token has expired, kindly re-login" });
-			return
-		}
-
-		res.status(INTERNAL_SERVER_ERROR).json({ error: "Invalid authentication token, kindly re-login." });
+		sendAuthError(res, error);
 	}
 }
 
@@ -283,21 +294,22 @@ export const authenticateAdmin = async (req: GlobalRequest, res: GlobalResponse,
       return;
     }
 
-    const id = (await JWT.verify(token) as decodedDataType).id;
+    const decoded = await JWT.verify(token) as decodedDataType;
+    const id = decoded.id;
 
-    let isAdmin = await admin.findById(id).lean();
-    let isHubAdmin: any = null;
-
+    // Platform admins only. Studio hub admins have their own routes (/hub); letting their tokens in
+    // here gave a hub Super Admin platform powers (rewarding XP, banning users, other hubs' content).
+    const isAdmin = await admin.findById(id).lean();
     if (!isAdmin) {
-      isHubAdmin = await hubAdmin.findById(id).lean();
-    }
-
-    if (!isAdmin && !isHubAdmin) {
       res.status(UNAUTHORIZED).json({ error: "only admins can use this route" });
       return;
     }
+    if (issuedBeforePasswordChange(decoded, isAdmin as any)) {
+      res.status(UNAUTHORIZED).json({ error: PASSWORD_CHANGED });
+      return;
+    }
 
-    const adminUser = isAdmin || isHubAdmin;
+    const adminUser: any = isAdmin;
     const adminName =
       adminUser.username?.trim() ||
       adminUser.name?.trim() ||
@@ -307,7 +319,7 @@ export const authenticateAdmin = async (req: GlobalRequest, res: GlobalResponse,
     req.id = id;
     req.token = token;
     req.role = adminUser.role;
-    req.isPlatformAdmin = Boolean(isAdmin);
+    req.isPlatformAdmin = true;
     req.adminName = adminName;
     req.admin = {
       ...adminUser,
@@ -319,14 +331,8 @@ export const authenticateAdmin = async (req: GlobalRequest, res: GlobalResponse,
 
     next();
   } catch (error: any) {
-    logger.error(error);
-    if (error?.trim() === "jwt expired") {
-      res.status(BAD_REQUEST).json({ error: "Token has expired, kindly re-login, kindly login again" });
-      return
-    }
-
-    res.status(INTERNAL_SERVER_ERROR).json({ error: "Invalid authentication token, kindly re-login." });
-  }
+		sendAuthError(res, error);
+	}
 }
 
 export const requireAdminSuperadmin = async (req: GlobalRequest, res: GlobalResponse, next: GlobalNextFunction) => {

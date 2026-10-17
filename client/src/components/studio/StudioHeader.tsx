@@ -8,6 +8,8 @@ import { getNetwork } from "@/lib/runtimeNetwork";
 import { usePathname, useRouter } from "next/navigation";
 import { OPEN_PROPOSALS_EVENT, useProposalNotifications } from "./useProposalNotifications";
 import NotificationsPanel from "./NotificationsPanel";
+import { STUDIO_SIGN_IN_URL, useProjectSession } from "./useProjectSession";
+import SignInPrompt from "./SignInPrompt";
 
 const NEXURA_MAIN_APP_URL = "https://nexura.intuition.box/discover";
 
@@ -19,7 +21,11 @@ function shortAddress(a: string): string { return a.length > 12 ? `${a.slice(0, 
  * Mirrors the header used on the Create Campaign page.
  */
 export default function StudioHeader({ title }: { title: string }) {
-  const { address: walletAddress, connect: connectWallet, disconnect: disconnectWallet } = useStudioWallet();
+  const { address: connectedAddress, connect: connectWallet, disconnect: disconnectWallet } = useStudioWallet();
+  // An expired session hides the wallet and notifications until the admin signs in again
+  const signedIn = useProjectSession();
+  const walletAddress = signedIn ? connectedAddress : null;
+  const [signInFor, setSignInFor] = useState<"bell" | "wallet" | null>(null);
   const { chainId } = useAccount();
   const [walletOpen, setWalletOpen] = useState(false);
   const [network, setNetwork] = useState<NetworkId>(getNetwork() === "mainnet" ? "intuition" : "intuition-testnet");
@@ -36,9 +42,12 @@ export default function StudioHeader({ title }: { title: string }) {
     if (eth && net) switchWalletChain(eth, net.chainId).catch(() => {});
   };
   const [bellOpen, setBellOpen] = useState(false);
-  const { items: notifications, unread, markRead } = useProposalNotifications();
+  const { items: allNotifications, unread: allUnread, markRead } = useProposalNotifications();
+  const notifications = signedIn ? allNotifications : [];
+  const unread = signedIn ? allUnread : 0;
   const router = useRouter();
   const pathname = usePathname();
+  const goSignIn = () => { setSignInFor(null); router.push(STUDIO_SIGN_IN_URL); };
   const openProposal = () => {
     setBellOpen(false);
     if (pathname?.includes("/studio-dashboard/admin-management")) window.dispatchEvent(new Event(OPEN_PROPOSALS_EVENT));
@@ -48,13 +57,19 @@ export default function StudioHeader({ title }: { title: string }) {
   const bellRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!bellOpen) return;
-    const onDown = (e: MouseEvent) => { if (bellRef.current && !bellRef.current.contains(e.target as Node)) setBellOpen(false); };
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setBellOpen(false); };
+    if (!bellOpen && !signInFor) return;
+    const onDown = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (bellRef.current?.contains(t) || walletRef.current?.contains(t)) return;
+      setBellOpen(false); setSignInFor(null);
+    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") { setBellOpen(false); setSignInFor(null); } };
     document.addEventListener("mousedown", onDown);
     document.addEventListener("keydown", onKey);
     return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("keydown", onKey); };
-  }, [bellOpen]);
+  }, [bellOpen, signInFor]);
+  // Signing back in closes the prompt
+  useEffect(() => { if (signedIn) setSignInFor(null); else setBellOpen(false); }, [signedIn]);
   useEffect(() => {
     if (!walletOpen) return;
     const onDown = (e: MouseEvent) => { if (walletRef.current && !walletRef.current.contains(e.target as Node)) setWalletOpen(false); };
@@ -74,7 +89,11 @@ export default function StudioHeader({ title }: { title: string }) {
         <div ref={bellRef} style={{ position: "relative" }}>
           <button
             aria-label={unread ? `Notifications, ${unread} unread` : "Notifications"} aria-expanded={bellOpen}
-            onClick={() => { setBellOpen(o => !o); setWalletOpen(false); }}
+            onClick={() => {
+              setWalletOpen(false);
+              if (!signedIn) { setSignInFor(s => (s === "bell" ? null : "bell")); return; }
+              setBellOpen(o => !o);
+            }}
             style={{ position: "relative", width: 37.99, height: 37.99, background: "#f7f5ff", border: "1px solid rgba(28,37,51,0.09)", borderRadius: 40, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
           >
             <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2.5A4 4 0 005 6.5V10.5L3.5 12.5h11L13 10.5V6.5A4 4 0 009 2.5z" stroke="#6B7280" strokeWidth="1.3"/><path d="M7.5 14.5a1.5 1.5 0 003 0" stroke="#6B7280" strokeWidth="1.3" strokeLinecap="round"/></svg>
@@ -84,7 +103,8 @@ export default function StudioHeader({ title }: { title: string }) {
               </span>
             )}
           </button>
-          {bellOpen && (
+          {signInFor === "bell" && <SignInPrompt what="see your notifications" onSignIn={goSignIn} />}
+          {bellOpen && signedIn && (
             <NotificationsPanel items={notifications} unread={unread} onOpen={openProposal} onMarkRead={markRead} onViewAll={openProposal} />
           )}
         </div>
@@ -93,7 +113,11 @@ export default function StudioHeader({ title }: { title: string }) {
         <div ref={walletRef} style={{ position: "relative" }}>
           {!walletAddress ? (
             <button
-              onClick={() => { setBellOpen(false); connectWallet(); }}
+              onClick={() => {
+                setBellOpen(false);
+                if (!signedIn) { setSignInFor(s => (s === "wallet" ? null : "wallet")); return; }
+                connectWallet();
+              }}
               style={{ display: "flex", alignItems: "center", gap: 8, background: "linear-gradient(165.12deg, #7C3AED 0%, #6b21d8 100%)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 999, padding: "0 16px", cursor: "pointer", height: 38, whiteSpace: "nowrap", fontFamily: "inherit" }}
             >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="1.75" y="3.5" width="12.5" height="9.5" rx="2" stroke="white" strokeWidth="1.3"/><path d="M1.75 6h12.5" stroke="white" strokeWidth="1.3"/><circle cx="11" cy="9.5" r="0.9" fill="white"/></svg>
@@ -111,6 +135,7 @@ export default function StudioHeader({ title }: { title: string }) {
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true" style={{ flexShrink: 0, transform: walletOpen ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}><path d="M3 4.5l3 3 3-3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
             </button>
           )}
+          {signInFor === "wallet" && <SignInPrompt what="connect your wallet" onSignIn={goSignIn} />}
           {walletOpen && walletAddress && (
             <div style={{ ...POPOVER, right: 0, width: 210, borderRadius: 16, padding: 5 }}>
               <div style={{ ...POPOVER_TITLE, fontSize: 10.5, padding: "6px 9px 4px" }}>Network</div>
@@ -131,7 +156,7 @@ export default function StudioHeader({ title }: { title: string }) {
         {/* Back to Main App */}
         <button
           onClick={() => { window.location.href = NEXURA_MAIN_APP_URL; }}
-          style={{ display: "flex", alignItems: "center", gap: 10, background: "linear-gradient(167.33deg, #7C3AED 0%, #6b21d8 100%)", border: "1px solid rgba(167,139,250,0.28)", borderRadius: 999, padding: "0 17px", cursor: "pointer", height: 38, whiteSpace: "nowrap" }}
+          style={{ display: "flex", alignItems: "center", gap: 10, background: "#000000", border: "1px solid #000000", borderRadius: 999, padding: "0 17px", cursor: "pointer", height: 38, whiteSpace: "nowrap" }}
         >
           <svg width="16" height="16" viewBox="0 0 14 14" fill="none"><path d="M6 3H3a1 1 0 00-1 1v7a1 1 0 001 1h7a1 1 0 001-1V8" stroke="white" strokeWidth="1.3" strokeLinecap="round"/><path d="M9 2h3v3M12 2L7 7" stroke="white" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
           <span style={{ fontSize: 12.8, fontWeight: 600, color: "#f7f5ff" }}>Back to Main App</span>

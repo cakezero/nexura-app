@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useLiveRefresh } from "../../hooks/use-live-refresh";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ExternalLink, ImageIcon, Pencil } from "lucide-react";
 import StudioLoader from "../studio/StudioLoader";
@@ -27,16 +28,20 @@ export default function CampaignPreview() {
   const [error, setError] = useState("");
   const isSuperAdmin = (getStoredProjectInfo()?.role as string) === "superadmin";
 
-  useEffect(() => {
+  /** `quiet` refreshes in the background, keeping what is shown if the request fails. */
+  const load = (quiet = false) => {
     const id = new URLSearchParams(window.location.search).get("id");
     if (!id) { setError("No campaign selected."); return; }
-    projectApiRequest<{ campaignFound?: PreviewCampaign; campaignQuests?: PreviewQuest[] }>({ method: "GET", endpoint: "/hub/get-campaign", params: { id } })
+    return projectApiRequest<{ campaignFound?: PreviewCampaign; campaignQuests?: PreviewQuest[] }>({ method: "GET", endpoint: "/hub/get-campaign", params: { id } })
       .then(({ campaignFound, campaignQuests = [] }) => {
         if (!campaignFound) throw new Error("Campaign not found.");
         setData({ c: campaignFound, quests: campaignQuests });
       })
-      .catch(err => setError(err instanceof Error ? err.message : "The campaign could not be loaded."));
-  }, []);
+      .catch(err => { if (!quiet) setError(err instanceof Error ? err.message : "The campaign could not be loaded."); });
+  };
+
+  useEffect(() => { load(); }, []);
+  useLiveRefresh(() => load(true));
 
   const back = (
     <button

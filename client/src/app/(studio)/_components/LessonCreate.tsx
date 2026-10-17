@@ -15,6 +15,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { BACKEND_URL, getLessonFeeContractProject } from "@/lib/constants";
 import { getStoredAccessToken } from "@/lib/queryClient";
 import { payStudioHubFee } from "@/lib/performOnchainAction";
+import { resilientFetch } from "@/lib/resilientFetch";
 
 const apiRequest = async <T = any>(args: any) => {
   const { method, endpoint, data, params } = args;
@@ -29,7 +30,7 @@ const apiRequest = async <T = any>(args: any) => {
   if (token) headers["Authorization"] = `Bearer ${token}`;
   if (!(data instanceof FormData)) headers["Content-Type"] = "application/json";
 
-  const res = await fetch(`${BACKEND_URL || ""}${url}`, {
+  const res = await resilientFetch(`${BACKEND_URL || ""}${url}`, {
     method,
     headers,
     body: data instanceof FormData ? data : data ? JSON.stringify(data) : undefined,
