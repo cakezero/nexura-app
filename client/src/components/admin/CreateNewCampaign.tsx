@@ -574,12 +574,14 @@ const STEPS = [
   { n: 5, label: "Review & Fund",     sub: "Summary & Publish" },
 ];
 
-function WizardProgress({ currentStep, onStepClick }: { currentStep: number; onStepClick?: (step: number) => void }) {
+function WizardProgress({ currentStep, onStepClick, minStep = 1 }: { currentStep: number; onStepClick?: (step: number) => void; minStep?: number }) {
   return (
     <div style={{ background: "white", border: "1px solid rgba(28,37,51,0.09)", borderRadius: 40, height: 68, display: "flex", alignItems: "center", padding: "0 6px", gap: 0, minWidth: 0, overflow: "hidden" }}>
       {STEPS.map((step, idx) => {
         const completed = step.n < currentStep;
         const active    = step.n === currentStep;
+        // Steps before minStep show as done but can't be reopened
+        const clickable = completed && step.n >= minStep && !!onStepClick;
         const isWide    = step.n === 4; // "Rewards & Funding" is wider
 
         return (
@@ -588,13 +590,13 @@ function WizardProgress({ currentStep, onStepClick }: { currentStep: number; onS
               <div style={{ flex: "0 1 26px", minWidth: 6, height: 1.5, background: "rgba(68,65,81,0.3)" }} />
             )}
             <div
-              role={completed && onStepClick ? "button" : undefined}
-              tabIndex={completed && onStepClick ? 0 : undefined}
-              title={completed && onStepClick ? `Go back to ${step.label}` : undefined}
-              onClick={completed && onStepClick ? () => onStepClick(step.n) : undefined}
-              onKeyDown={completed && onStepClick ? (e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onStepClick(step.n); } }) : undefined}
+              role={clickable ? "button" : undefined}
+              tabIndex={clickable ? 0 : undefined}
+              title={clickable ? `Go back to ${step.label}` : undefined}
+              onClick={clickable ? () => onStepClick!(step.n) : undefined}
+              onKeyDown={clickable ? (e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onStepClick!(step.n); } }) : undefined}
               style={{
-              cursor: completed && onStepClick ? "pointer" : "default",
+              cursor: clickable ? "pointer" : "default",
               display: "flex", alignItems: "center",
               gap: isWide ? 16 : 11,
               padding: isWide ? "10.99px 16px" : "10.99px 16px",
@@ -1066,7 +1068,10 @@ export default function CreateNewCampaign({
 } = {}) {
   // ── Wizard navigation ──
   const init = initialState ?? null;
-  const [currentStep, setCurrentStep] = useState<number>(init?.step ?? 1);
+  // A reopened campaign (live or saved draft) already has its content: picking a template or
+  // starting from scratch would overwrite it, so the Template step can't be reopened.
+  const templateLocked = mode === "live" || init !== null;
+  const [currentStep, setCurrentStep] = useState<number>(templateLocked ? Math.max(init?.step ?? 2, 2) : 1);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(init?.templateId ?? null);
   const [startChoice, setStartChoice] = useState<{ kind: "template"; id: string } | { kind: "scratch" } | null>(null);
   const [pendingRewards, setPendingRewards] = useState<boolean | null>(null);
@@ -1751,7 +1756,7 @@ export default function CreateNewCampaign({
 
           {/* Wizard progress */}
           <div style={{ marginTop: 20 }}>
-            <WizardProgress currentStep={2} onStepClick={goToStep} />
+            <WizardProgress currentStep={2} onStepClick={goToStep} minStep={templateLocked ? 2 : 1} />
           </div>
 
           {/* Rewards toggle */}
@@ -1941,7 +1946,7 @@ export default function CreateNewCampaign({
 
           {/* Wizard progress */}
           <div style={{ marginTop: 20 }}>
-            <WizardProgress currentStep={3} onStepClick={goToStep} />
+            <WizardProgress currentStep={3} onStepClick={goToStep} minStep={templateLocked ? 2 : 1} />
           </div>
 
           {/* Rewards toggle */}
@@ -2429,7 +2434,7 @@ export default function CreateNewCampaign({
             </button>
 
             <div style={{ marginTop: 20 }}>
-              <WizardProgress currentStep={4} onStepClick={goToStep} />
+              <WizardProgress currentStep={4} onStepClick={goToStep} minStep={templateLocked ? 2 : 1} />
             </div>
 
             {/* Heading */}
@@ -2823,7 +2828,7 @@ export default function CreateNewCampaign({
             </button>
 
             <div style={{ marginTop: 20 }}>
-              <WizardProgress currentStep={5} onStepClick={goToStep} />
+              <WizardProgress currentStep={5} onStepClick={goToStep} minStep={templateLocked ? 2 : 1} />
             </div>
 
             {/* Heading */}
@@ -3168,7 +3173,7 @@ export default function CreateNewCampaign({
             <button
               onMouseEnter={() => setBackHovered(true)}
               onMouseLeave={() => setBackHovered(false)}
-              onClick={() => setCurrentStep(1)}
+              onClick={() => { if (templateLocked) window.location.href = "/studio-dashboard/campaigns-tab"; else setCurrentStep(1); }}
               style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, background: backHovered ? "rgba(28,37,51,0.06)" : "#f7f4fe", border: "1px solid rgba(28,37,51,0.15)", borderRadius: 40, width: 78, height: 34, cursor: "pointer", fontSize: 12.5, fontWeight: 600, color: "#1c2533", transition: "background 0.15s" }}
             >
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M11 7H3M3 7L7 3M3 7L7 11" stroke="#1c2533" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>

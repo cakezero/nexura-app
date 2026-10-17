@@ -14,16 +14,24 @@ export class InviteError extends Error {
   }
 }
 
+export type InviteResult =
+  | { emailed: true }
+  | { emailed: false; link: string; code: string; emailError: string };
+
+const INVITE_TTL_MS = 24 * 60 * 60 * 1000;
+
 /**
  * Creates (or refreshes) a hub admin invitation and emails it.
- * If the email can't be sent, the invitation is rolled back and the error is rethrown.
+ * If the email can't be sent: with keepIfEmailFails the invitation stays and the caller gets the
+ * link and code to pass on themselves; otherwise it's rolled back and the error is rethrown.
  */
-export async function createHubInvite({ hubId, email, role, clientUrl }: {
+export async function createHubInvite({ hubId, email, role, clientUrl, keepIfEmailFails = false }: {
   hubId: string;
   email: string;
   role?: string;
   clientUrl?: string;
-}): Promise<void> {
+  keepIfEmailFails?: boolean;
+}): Promise<InviteResult> {
   if (!email) throw new InviteError(BAD_REQUEST, "admin email is required");
   if (!hubId) throw new InviteError(BAD_REQUEST, "create a hub to continue");
 
@@ -53,7 +61,7 @@ export async function createHubInvite({ hubId, email, role, clientUrl }: {
       code,
       hubId,
       role: validRole,
-      expiresAt: new Date(Date.now() + 5 * 60 * 1000),
+      expiresAt: new Date(Date.now() + INVITE_TTL_MS),
     },
     { upsert: true, new: true, setDefaultsOnInsert: true }
   );
@@ -62,7 +70,12 @@ export async function createHubInvite({ hubId, email, role, clientUrl }: {
   const origin = clientUrl || CLIENT_URL;
   try {
     await addHubAdminEmail(normalizedEmail, code, origin);
-  } catch (error) {
+    return { emailed: true };
+  } catch (error: any) {
+    if (keepIfEmailFails) {
+      const link = `${origin.replace(/\/$/, "")}/studio/register?email=${encodeURIComponent(normalizedEmail)}&code=${encodeURIComponent(code)}`;
+      return { emailed: false, link, code, emailError: error?.message || "the email could not be sent" };
+    }
     if (existingInvite) {
       await OTP.findOneAndUpdate(
         { email: normalizedEmail, hubId },

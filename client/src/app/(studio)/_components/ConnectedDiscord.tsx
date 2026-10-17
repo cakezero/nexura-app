@@ -1,4 +1,5 @@
 "use client";
+import StudioLoader from "@/components/studio/StudioLoader";
 
 import { useEffect, useState } from "react";
 import { ArrowLeft, ArrowRight, CheckCircle2, Loader2 } from "lucide-react";
@@ -109,9 +110,7 @@ export default function ConnectedDiscord() {
 
   if (loading) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center text-[#69728a]">
-        <Loader2 className="h-6 w-6 animate-spin text-[#8B3EFE]" />
-      </div>
+      <StudioLoader message="Loading Discord…" />
     );
   }
 

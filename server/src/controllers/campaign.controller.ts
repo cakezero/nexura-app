@@ -6,6 +6,7 @@ import { user } from "@/models/user.model";
 import { getCampaignContractStartDate, performIntuitionOnchainAction } from "@/utils/account";
 import { normalizeCampaignDateInput, normalizeCampaignDatesForResponse, parseDate } from "@/utils/dates";
 import { uploadImg } from "@/utils/img.utils";
+import { recoverStudioSignature } from "@/utils/studioSignature";
 import {
 	OK,
 	INTERNAL_SERVER_ERROR,
@@ -995,6 +996,23 @@ export const publishCampaign = async (req: GlobalRequest, res: GlobalResponse) =
 		if (campaignExists.status !== "Save") {
 			return res.status(BAD_REQUEST).json({ error: "campaign is not in save status" });
 		}
+
+		// Publishing is confirmed with the admin's wallet signature
+		const adminId = String(req.admin._id);
+		let signerAddress: string;
+		try {
+			signerAddress = recoverStudioSignature(req.body ?? {}, { action: "Publish", targetId: String(campaignExists._id), adminId });
+		} catch (err: any) {
+			return res.status(BAD_REQUEST).json({ error: err?.message || "a wallet signature is required to publish" });
+		}
+		(campaignExists as any).publishSignature = {
+			address: signerAddress,
+			signature: req.body.signature,
+			message: req.body.message,
+			adminId,
+			signedAt: new Date(String(req.body.message.signedAt)),
+		};
+
 		const rewardPool = Number(campaignExists.reward?.pool ?? 0);
 		const maxParticipants = Number((campaignExists as any).maxParticipants ?? 0);
 		if (rewardPool > 0 && maxParticipants <= 0) {

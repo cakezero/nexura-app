@@ -28,18 +28,7 @@ import { BAD_REQUEST, CREATED, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_FOUND, OK }
  */
 
 // ─── Signing (must match the studio client) ──────────────────────────────────
-const SIGN_DOMAIN = { name: "Nexura Studio", version: "1" };
-const SIGN_TYPES = {
-  StudioAction: [
-    { name: "hub", type: "string" },
-    { name: "action", type: "string" },
-    { name: "proposal", type: "string" },
-    { name: "proposalId", type: "string" },
-    { name: "signer", type: "string" },
-    { name: "signedAt", type: "string" },
-  ],
-};
-const SIGNATURE_MAX_AGE_MS = 10 * 60 * 1000;
+import { SIGN_DOMAIN, SIGN_TYPES, SIGNATURE_MAX_AGE_MS } from "@/utils/studioSignature";
 const KIND_TO_VERB = { propose: "Propose", approve: "Approve", reject: "Reject", execute: "Execute" } as const;
 type SignatureKind = keyof typeof KIND_TO_VERB;
 
@@ -294,7 +283,8 @@ function tally(ctx: Ctx, proposal: any) {
   return { approvals, rejections, votes: latest };
 }
 
-async function runAction(ctx: Ctx, action: any, proposalRef: string) {
+/** Applies an approved action. Returns the invite link and code when an invite email couldn't be sent. */
+async function runAction(ctx: Ctx, action: any, proposalRef: string): Promise<{ link: string; code: string; emailError: string } | void> {
   const gov = ctx.gov;
   const signerList = () => (gov.signers ?? []).map(String);
   const setSigners = (ids: string[]) => { (gov as any).signers = Array.from(new Set(ids)); };
@@ -304,9 +294,11 @@ async function runAction(ctx: Ctx, action: any, proposalRef: string) {
       gov.approvalThreshold = action.approval;
       gov.rejectionThreshold = action.rejection;
       break;
-    case "invite":
-      await createHubInvite({ hubId: ctx.hubId, email: action.email, role: action.role, clientUrl: action.clientUrl });
-      break;
+    case "invite": {
+      // The proposal has been approved, so the invitation is created even if the email can't go out
+      const result = await createHubInvite({ hubId: ctx.hubId, email: action.email, role: action.role, clientUrl: action.clientUrl, keepIfEmailFails: true });
+      return result.emailed ? undefined : { link: result.link, code: result.code, emailError: result.emailError };
+    }
     case "member": {
       const t = ctx.adminById(action.adminId);
       if (!t) throw new Error("that admin is no longer in the hub");
@@ -390,7 +382,8 @@ async function settle(ctx: Ctx, proposal: any) {
   const { approvals, rejections } = tally(ctx, proposal);
   if (approvals >= ctx.thresholds.approval) {
     try {
-      await runAction(ctx, proposal.action, proposal.ref);
+      const share = await runAction(ctx, proposal.action, proposal.ref);
+      proposal.inviteShare = share ?? null;
       proposal.status = "executed";
       proposal.resolvedAt = new Date();
       proposal.resolvedCount = approvals;
@@ -408,7 +401,7 @@ async function settle(ctx: Ctx, proposal: any) {
 }
 
 // ─── Response shape (matches the studio client) ──────────────────────────────
-function serializeProposal(ctx: Ctx, p: any) {
+function serializeProposal(ctx: Ctx, p: any, meId: string) {
   const { votes } = tally(ctx, p);
   const allVotes: Record<string, "approve" | "reject"> = {};
   for (const s of p.signatures ?? []) {
@@ -436,6 +429,8 @@ function serializeProposal(ctx: Ctx, p: any) {
     resolvedAt: p.resolvedAt ? new Date(p.resolvedAt).toISOString() : undefined,
     resolvedCount: p.resolvedCount ?? undefined,
     executionError: p.executionError ?? undefined,
+    // The code lets someone register with that email, so only signers see it
+    inviteShare: p.inviteShare && ctx.signerIds.has(meId) ? p.inviteShare : undefined,
   };
 }
 
@@ -448,7 +443,7 @@ async function governanceState(ctx: Ctx, meId: string) {
     signerIds: Array.from(ctx.signerIds),
     signerWallets: Object.fromEntries(wallets.entries()),
     thresholds: ctx.thresholds,
-    proposals: proposals.map(p => serializeProposal(ctx, p)),
+    proposals: proposals.map(p => serializeProposal(ctx, p, meId)),
   };
 }
 

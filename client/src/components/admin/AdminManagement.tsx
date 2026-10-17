@@ -1,4 +1,5 @@
 "use client";
+import StudioLoader from "@/components/studio/StudioLoader";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -160,10 +161,32 @@ function Toast({ tone, title, body, onClose }: { tone: "executed" | "rejected"; 
   );
 }
 
+/** Invite created but its email didn't go out: the link to send the person directly. */
+function InviteShareBox({ share, email }: { share: { link: string; code: string; emailError: string }; email: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(share.link); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch { /* clipboard blocked */ }
+  };
+  return (
+    <div className="mt-[12px] px-[16px] py-[12px] rounded-[24px] bg-[rgba(245,158,11,0.08)] border-[0.833px] border-solid border-[rgba(245,158,11,0.35)]">
+      <p className="text-[13px] font-semibold text-[#b45309]">Invitation created · the email couldn&apos;t be delivered</p>
+      <p className="pt-[2px] text-[12.5px] leading-[19.4px] text-[#3d485c]">
+        Send this link to {email || "the invitee"} yourself. It fills in their email and access code ({share.code}) and stays valid for 24 hours.
+      </p>
+      <div className="mt-[10px] flex flex-wrap items-center gap-[8px]">
+        <code className={`min-w-0 flex-1 truncate px-[12px] py-[7px] rounded-[40px] bg-white border-[0.833px] border-solid border-[rgba(28,37,51,0.12)] text-[12px] ${MONO}`}>{share.link}</code>
+        <button onClick={copy} className="min-h-[34px] px-[14px] py-[7px] rounded-[40px] bg-[#8b3efe] text-white text-[13px] font-semibold hover:bg-[#7c2ff0]">
+          {copied ? "Copied" : "Copy link"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /** Plain-language reason for a failed execution. */
 function explainExecutionError(raw: string): string {
   if (/connection timeout|etimedout|econnection|greeting|smtp|socket/i.test(raw)) {
-    return `The server couldn't send the invitation email (${raw}), so the invitation was not created. This is a problem with the server's email service, not with the proposal. Once it's fixed, choose Try again.`;
+    return `The server couldn't send the invitation email (${raw}). Choose Try again: the invitation will be created, and if the email still can't go out you'll get a link to send yourself.`;
   }
   if (/already in use/i.test(raw)) return "That email already belongs to an admin, so no invitation was sent.";
   return `The server refused the change: ${raw}`;
@@ -276,7 +299,7 @@ export default function AdminManagement() {
     const p = snap.proposals.find(x => x.id === actedOn);
     if (!p) return;
     if (p.status === "executed") {
-      setToastMsg({ tone: "executed", title: "Proposal executed", body: `${p.title} was applied` });
+      setToastMsg({ tone: "executed", title: "Proposal executed", body: p.inviteShare ? "Invitation created. The email couldn't be delivered, so copy the link on the proposal and send it yourself." : `${p.title} was applied` });
       if (p.action.kind !== "thresholds") fetchTeam();
     } else if (p.status === "rejected") {
       setToastMsg({ tone: "rejected", title: "Proposal rejected", body: "It reached the rejection threshold" });
@@ -508,7 +531,7 @@ export default function AdminManagement() {
                 </thead>
                 <tbody>
                   {loading && (
-                    <tr><td colSpan={5} className="py-10 text-center text-[13.5px] text-[#69728a]">Loading team…</td></tr>
+                    <tr><td colSpan={5}><StudioLoader compact message="Loading team…" /></td></tr>
                   )}
                   {!loading && sortedAdmins.length === 0 && (
                     <tr><td colSpan={5} className="py-10 text-center text-[13.5px] text-[#69728a]">No team members found.</td></tr>
@@ -742,11 +765,14 @@ export default function AdminManagement() {
                           })()}
                         </>
                       ) : (
-                        <p className="pt-[10px] text-[12.5px] leading-[19.4px] text-[#69728a]">
-                          {p.status === "executed"
-                            ? `Approved ${formatDateTime(p.resolvedAt)} with ${p.resolvedCount ?? approvals} approval${(p.resolvedCount ?? approvals) === 1 ? "" : "s"}.`
-                            : `Rejected ${formatDateTime(p.resolvedAt)} after ${p.resolvedCount ?? rejections} rejection${(p.resolvedCount ?? rejections) === 1 ? "" : "s"}.`}
-                        </p>
+                        <>
+                          <p className="pt-[10px] text-[12.5px] leading-[19.4px] text-[#69728a]">
+                            {p.status === "executed"
+                              ? `Approved ${formatDateTime(p.resolvedAt)} with ${p.resolvedCount ?? approvals} approval${(p.resolvedCount ?? approvals) === 1 ? "" : "s"}.`
+                              : `Rejected ${formatDateTime(p.resolvedAt)} after ${p.resolvedCount ?? rejections} rejection${(p.resolvedCount ?? rejections) === 1 ? "" : "s"}.`}
+                          </p>
+                          {p.status === "executed" && p.inviteShare && <InviteShareBox share={p.inviteShare} email={p.action.kind === "invite" ? p.action.email : ""} />}
+                        </>
                       )}
                     </article>
                   );

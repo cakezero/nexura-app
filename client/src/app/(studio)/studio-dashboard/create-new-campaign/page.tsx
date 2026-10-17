@@ -27,10 +27,9 @@ type HubMe = { hub?: { pendingTxHash?: string | null; guildId?: string } };
 
 /**
  * On-chain payments (launch fee + funding the rewards contract).
- * Off for now so campaigns can be tested without wallet payments: the reward step is marked
- * paid locally, campaigns publish without a funded reward pool, and the launch-fee check is
- * satisfied with a placeholder reference (the server checks that a reference exists, not the chain).
- * Turn this back on before launch.
+ * Off until the rewards contract is deployed: the reward step is marked paid locally, campaigns
+ * publish without a funded reward pool, and the launch-fee check gets a placeholder reference.
+ * Publishing still asks the wallet to sign (see handlePublish).
  */
 const PAYMENTS_ENABLED = false;
 
@@ -174,7 +173,7 @@ export default function Page() {
   const router = useRouter();
   const { toast } = useToast();
   const wallet = useStudioWallet();
-  const { propose } = useGovernanceProposer();
+  const { propose, sign } = useGovernanceProposer();
   const feeTxHash = useRef<string | null>(null);
   const deployment = useRef<RewardsDeployment | null>(null);
   const draftId = useRef<string | null>(null);
@@ -402,7 +401,9 @@ export default function Page() {
       });
     }
 
-    await projectApiRequest({ method: "PATCH", endpoint: "/hub/publish-campaign", params: { id: campaignId }, data: { txHash } });
+    // The publishing admin confirms with a wallet signature (no transaction); the server verifies it
+    const signed = await sign("Publish", c.name, campaignId);
+    await projectApiRequest({ method: "PATCH", endpoint: "/hub/publish-campaign", params: { id: campaignId }, data: { txHash, ...signed } });
 
     published.current = true;
     feeTxHash.current = null; // the launch fee is spent on this campaign

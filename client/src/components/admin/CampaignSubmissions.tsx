@@ -1,4 +1,5 @@
 "use client";
+import StudioLoader from "@/components/studio/StudioLoader";
 
 import { useState } from "react";
 import { Card } from "../ui/card";
@@ -425,9 +426,7 @@ const completedTasks = tasks.filter(task =>
           </CollapsibleTrigger>
           <CollapsibleContent className="space-y-3">
             {loading ? (
-              <div className="flex items-center justify-center py-8">
-                <RefreshCw className="w-6 h-6 animate-spin text-[#98a0b4]" />
-              </div>
+              <StudioLoader compact message="Loading submissions…" />
             ) : pendingTasks.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-[#98a0b4]">
                 <Clock className="w-12 h-12 mb-4 opacity-50" />

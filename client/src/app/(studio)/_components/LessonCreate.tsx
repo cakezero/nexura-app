@@ -1,4 +1,5 @@
 "use client";
+import StudioLoader from "@/components/studio/StudioLoader";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
@@ -1486,7 +1487,7 @@ export default function CreateLesson({
             <h2 className="text-xl font-semibold">Lesson Details</h2>
             <Card className="bg-purple/10 backdrop-blur-md p-8 space-y-8">
               {loadingLesson ? (
-                <div className="py-12 text-center text-[#69728a]">Loading lesson...</div>
+                <StudioLoader compact message="Loading lesson…" />
               ) : (
                 <form
                   onSubmit={(e) => {

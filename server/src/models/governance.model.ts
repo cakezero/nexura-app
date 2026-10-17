@@ -49,6 +49,11 @@ const governanceProposalSchema = new Schema({
 	resolvedAt: { type: Date, default: null },
 	resolvedCount: { type: Number, default: null },
 	executionError: { type: String, default: null },
+	// Executed invite whose email couldn't be delivered: the link and code for a signer to pass on
+	inviteShare: {
+		type: new Schema({ link: String, code: String, emailError: String }, { _id: false }),
+		default: null,
+	},
 }, { timestamps: true });
 
 governanceProposalSchema.index({ hub: 1, ref: 1 }, { unique: true });

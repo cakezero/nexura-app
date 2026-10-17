@@ -226,11 +226,10 @@ function CampaignList({ refreshKey, onOpen }: { refreshKey: number; onOpen: (id:
                     <h3 className="font-semibold text-[15px] leading-5 truncate">{c.title}</h3>
                     <p className="text-[#69728a] text-xs mt-1">{fmtDate(c.starts_at)} – {fmtDate(c.ends_at)}</p>
                   </div>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-2 gap-2">
                     {[
                       { k: "Participants", v: c.participants },
                       { k: "Completed", v: c.completed },
-                      { k: c.hasRewards ? "Claimed" : "XP claimed", v: c.claimed },
                     ].map(s => (
                       <div key={s.k} className="rounded-2xl bg-[#f7f4fe] px-3 py-2">
                         <p className="text-[16px] font-bold text-[#8a3ffc]">{s.v}</p>
@@ -291,7 +290,7 @@ function CampaignView(props: SubmissionsHubProps & { campaignId: string; onBack:
   const statCards = [
     { k: "Participants", v: String(stats.participants), sub: c.maxParticipants ? `of ${c.maxParticipants} spots` : "joined so far" },
     { k: "Completed all tasks", v: String(stats.completedAllTasks), sub: stats.participants ? `${Math.round((stats.completedAllTasks / stats.participants) * 100)}% of participants` : "no participants yet" },
-    { k: c.hasRewards ? "Rewards claimed" : "XP claimed", v: String(stats.claimedReward), sub: c.hasRewards ? `${c.rewardPool} TRUST pool` : "claimed their XP" },
+    ...(c.hasRewards ? [{ k: "Rewards claimed", v: String(stats.claimedReward), sub: `${c.rewardPool} TRUST pool` }] : []),
     {
       k: "Average retention", v: stats.averageRetention === null ? "—" : `${stats.averageRetention}%`,
       sub: stats.averageOverallRetention !== null ? `of claimers · ${stats.averageOverallRetention}% overall on Nexura` : "of people who claimed",
@@ -320,7 +319,7 @@ function CampaignView(props: SubmissionsHubProps & { campaignId: string; onBack:
         </div>
       </Card>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div className={cn("grid grid-cols-1 sm:grid-cols-2 gap-4", statCards.length === 4 ? "xl:grid-cols-4" : "xl:grid-cols-3")}>
         {statCards.map(s => (
           <Card key={s.k} className="bg-white border-[0.833px] border-[rgba(28,37,51,0.09)] rounded-[40px] shadow-none p-6">
             <span className="text-[#69728a] text-sm font-semibold">{s.k}</span>
@@ -423,16 +422,16 @@ function ClaimersTable({ claimers, requirement }: { claimers: Claimer[]; require
         )}
       </div>
 
-      {shown.length === 0 ? (
-        claimers.length === 0
-          ? <EmptyState icon={Users} title="No claims yet" body="People who complete this campaign and claim the reward show up here, with their wallet, Nexura username and retention." />
-          : <EmptyState icon={Search} title="No one matches" body="Try another username or wallet address." />
-      ) : (
-        <Card className="bg-white border-[0.833px] border-[rgba(28,37,51,0.09)] rounded-[28px] shadow-none overflow-hidden">
-          <div className={cn("hidden md:grid gap-4 px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#98a0b4] border-b-[0.833px] border-[rgba(28,37,51,0.09)]", cols)}>
-            <span>Nexura user</span><span>Wallet</span><span>Campaign retention</span><span>Overall retention</span><span>Claimed</span><span />
-          </div>
-          {shown.map(p => {
+      <Card className="bg-white border-[0.833px] border-[rgba(28,37,51,0.09)] rounded-[28px] shadow-none overflow-hidden">
+        {/* The columns always show, so it's clear what is recorded for each claimer */}
+        <div className={cn("grid grid-cols-2 gap-x-4 gap-y-1 px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#98a0b4] border-b-[0.833px] border-[rgba(28,37,51,0.09)]", cols)}>
+          <span>Nexura username</span><span>Wallet address</span><span>Campaign retention</span><span>Overall retention</span><span>Claimed on</span><span className="hidden md:block" />
+        </div>
+        {shown.length === 0 ? (
+          claimers.length === 0
+            ? <EmptyState icon={Users} title="No claims yet" body="Each person who completes this campaign and claims the reward is listed here." />
+            : <EmptyState icon={Search} title="No one matches" body="Try another username or wallet address." />
+        ) : shown.map(p => {
             const open = expanded === p.userId;
             return (
               <div key={p.userId} className="border-b-[0.833px] border-[rgba(28,37,51,0.06)] last:border-b-0">
@@ -500,8 +499,7 @@ function ClaimersTable({ claimers, requirement }: { claimers: Claimer[]; require
               </div>
             );
           })}
-        </Card>
-      )}
+      </Card>
     </div>
   );
 }
