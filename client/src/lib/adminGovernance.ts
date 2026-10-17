@@ -167,6 +167,8 @@ export type Proposal = {
   signatures?: Record<string, ProposalSignature>;
   /** Set when a proposal reached its approvals but applying it failed; it can be executed again. */
   executionError?: string;
+  /** Executed invite whose email couldn't be delivered: the link and code to send yourself (signers only). */
+  inviteShare?: { link: string; code: string; emailError: string };
 };
 
 

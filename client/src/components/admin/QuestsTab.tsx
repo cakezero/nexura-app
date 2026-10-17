@@ -1,4 +1,5 @@
 "use client";
+import StudioLoader from "@/components/studio/StudioLoader";
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
@@ -326,10 +327,7 @@ export default function QuestsTab() {
         {isUser && <CreatorRewardsBanner />}
 
         {loading ? (
-          <div className="flex items-center justify-center py-20 text-[#69728a]">
-            <RefreshCw className="w-6 h-6 animate-spin mr-2" />
-            Loading quests...
-          </div>
+          <StudioLoader message="Loading quests…" />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {activeTab === "all" && (

@@ -249,12 +249,12 @@ export default function OTPModal({ isOpen, onClose, email, page }: OTPModalProps
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
         hideClose
-        className="max-w-[480px] bg-white border-none p-0 overflow-hidden rounded-[20px] shadow-[-12px_-10px_18px_5px_rgba(0,0,0,0.25),12px_10px_18px_5px_rgba(0,0,0,0.25)] flex flex-col items-center font-[family-name:var(--font-geist-sans)]"
+        className="max-w-[480px] bg-[#27134e] border-none p-0 overflow-hidden rounded-[20px] shadow-[-12px_-10px_18px_5px_rgba(0,0,0,0.25),12px_10px_18px_5px_rgba(0,0,0,0.25)] flex flex-col items-center font-[family-name:var(--font-geist-sans)]"
       >
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute right-4 top-4 z-10 text-[#69728a] hover:text-[#1c2533] transition-colors"
+          className="absolute right-4 top-4 z-10 text-white/50 hover:text-white transition-colors"
         >
           <X className="w-5 h-5" />
         </button>
@@ -274,12 +274,12 @@ export default function OTPModal({ isOpen, onClose, email, page }: OTPModalProps
         </div>
 
         {/* Heading */}
-        <h2 className="mt-[16px] text-[24px] font-bold text-[#1c2533] text-center">
+        <h2 className="mt-[16px] text-[24px] font-bold text-white text-center">
           Check your email
         </h2>
 
         {/* Subtitle */}
-        <p className="mt-[10px] max-w-[429px] px-6 text-[16px] font-light text-[#1c2533] text-center">
+        <p className="mt-[10px] max-w-[429px] px-6 text-[16px] font-light text-white text-center">
           Enter the OTP we sent to your email to complete your sign-up.
         </p>
 
@@ -300,7 +300,7 @@ export default function OTPModal({ isOpen, onClose, email, page }: OTPModalProps
                   onFocus={() => setFocusedIndex(i)}
                   onBlur={() => setFocusedIndex((cur) => (cur === i ? null : cur))}
                   onPaste={i === 0 ? handlePaste : undefined}
-                  className={`size-[65px] text-center text-[30px] font-semibold bg-transparent rounded-[8px] text-[#1c2533] caret-transparent focus:outline-none transition-all ${
+                  className={`size-[65px] text-center text-[30px] font-semibold bg-transparent rounded-[8px] text-white caret-transparent focus:outline-none transition-all ${
                     isFocused
                       ? "border-2 border-[#b65fc8]"
                       : error
@@ -316,12 +316,12 @@ export default function OTPModal({ isOpen, onClose, email, page }: OTPModalProps
           })}
         </div>
 
-        {error && <p className="text-[#e4545b] text-xs mt-2 text-center px-4">{error}</p>}
-        {resentMessage && <p className="text-[#00a87c] text-xs mt-2 text-center px-4">{resentMessage}</p>}
+        {error && <p className="text-red-400 text-xs mt-2 text-center px-4">{error}</p>}
+        {resentMessage && <p className="text-green-400 text-xs mt-2 text-center px-4">{resentMessage}</p>}
 
         {/* Resend Action */}
         <div className="mt-[24px] flex items-center justify-center gap-[18px]">
-          <p className="text-[16px] text-[#69728a] font-light">
+          <p className="text-[16px] text-[rgba(255,255,255,0.5)] font-light">
             Didn&apos;t get a code?
           </p>
           <button

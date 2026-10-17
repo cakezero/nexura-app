@@ -92,7 +92,7 @@ export default function TheHub() {
 
 
   return (
-    <div className="min-h-screen bg-[#f7f5ff] text-[#1c2533] p-4 sm:p-6 relative">
+    <div className="min-h-screen bg-black text-white p-4 sm:p-6 relative">
       <AnimatedBackground />
 
       <div className="max-w-xl mx-auto relative z-10 space-y-6">
@@ -102,13 +102,13 @@ export default function TheHub() {
           <h1 className="text-2xl sm:text-3xl font-bold">
             Welcome to Nexura Studio
           </h1>
-          <p className="text-[#69728a] max-w-2xl mx-auto">
+          <p className="text-white/60 max-w-2xl mx-auto">
             Set up a dedicated project space for your project or community on Nexura
           </p>
         </div>
 
         {/* Main Container */}
-        <Card className="bg-white border-2 border-purple-500 rounded-3xl p-5 sm:p-6 space-y-5">
+        <Card className="bg-gray-900 border-2 border-purple-500 rounded-3xl p-5 sm:p-6 space-y-5">
 
           {/* Intro */}
           <div>
@@ -119,7 +119,7 @@ export default function TheHub() {
 
           {/* Horizontal Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <Card className="bg-white border border-purple-500 rounded-2xl p-6 flex flex-col items-center justify-center text-center gap-3">
+            <Card className="bg-gray-800 border border-purple-500 rounded-2xl p-6 flex flex-col items-center justify-center text-center gap-3">
               <img
                 src="/project-icon.png"
                 alt="Project icon"
@@ -130,13 +130,13 @@ export default function TheHub() {
                 a project or builder
               </CardTitle>
 
-              <CardDescription className="text-[#69728a] max-w-xs">
+              <CardDescription className="text-white/60 max-w-xs">
                 Perfect for building a centralized project space for your dApp or protocol
               </CardDescription>
             </Card>
 
 
-            <Card className="relative bg-white border border-purple-500 rounded-2xl p-6 overflow-hidden">
+            <Card className="relative bg-gray-800 border border-purple-500 rounded-2xl p-6 overflow-hidden">
 
               {/* Blurred content */}
               <div className="flex flex-col items-center justify-center text-center gap-3 blur-sm select-none">
@@ -150,14 +150,14 @@ export default function TheHub() {
                   Community Access
                 </CardTitle>
 
-                <CardDescription className="text-[#69728a] max-w-xs">
+                <CardDescription className="text-white/60 max-w-xs">
                   Allow your team and community to collaborate securely.
                 </CardDescription>
               </div>
 
               {/* Overlay */}
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-[#1c2533] font-semibold text-lg tracking-wide">
+                <span className="text-white font-semibold text-lg tracking-wide">
                   Coming Soon
                 </span>
               </div>
@@ -171,7 +171,7 @@ export default function TheHub() {
               value={hubName}
               onChange={(e) => setHubName(e.target.value.toUpperCase())}
               placeholder="Enter your Project Name..."
-              className="bg-white border-purple-500 text-[#1c2533]"
+              className="bg-gray-800 border-purple-500 text-white"
             />
           </div>
 
@@ -179,7 +179,7 @@ export default function TheHub() {
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg">Description</CardTitle>
-              <span className={`text-xs ${description.length > 0 && (description.length < 150 || description.length > 300) ? "text-[#e4545b]" : "text-[#69728a]"}`}>
+              <span className={`text-xs ${description.length > 0 && (description.length < 150 || description.length > 300) ? "text-red-400" : "text-white/40"}`}>
                 {description.length}/300
               </span>
             </div>
@@ -188,10 +188,10 @@ export default function TheHub() {
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Describe your project or community (150-300 characters)"
               maxLength={300}
-              className="bg-white border-purple-500 text-[#1c2533] resize-none h-32"
+              className="bg-gray-800 border-purple-500 text-white resize-none h-32"
             />
             {description.length > 0 && description.length < 150 && (
-              <p className="text-xs text-[#e4545b]">
+              <p className="text-xs text-red-400">
                 Minimum 150 characters – {150 - description.length} more needed
               </p>
             )}
@@ -201,24 +201,24 @@ export default function TheHub() {
           <div className="space-y-3">
             <CardTitle className="text-lg">Project Links (Optional)</CardTitle>
             <div className="relative">
-              <Globe className="w-4 h-4 text-[#69728a] absolute left-3 top-1/2 -translate-y-1/2" />
+              <Globe className="w-4 h-4 text-white/50 absolute left-3 top-1/2 -translate-y-1/2" />
               <Input
                 value={website}
                 onChange={(e) => setWebsite(e.target.value)}
                 placeholder="Project website (e.g. https://example.com)"
-                className="bg-white border-purple-500 text-[#1c2533] pl-10"
+                className="bg-gray-800 border-purple-500 text-white pl-10"
               />
             </div>
             <div className="relative">
-              <Twitter className="w-4 h-4 text-[#69728a] absolute left-3 top-1/2 -translate-y-1/2" />
+              <Twitter className="w-4 h-4 text-white/50 absolute left-3 top-1/2 -translate-y-1/2" />
               <Input
                 value={xAccount}
                 onChange={(e) => setXAccount(e.target.value)}
                 placeholder="X account (e.g. @myproject or https://x.com/myproject)"
-                className="bg-white border-purple-500 text-[#1c2533] pl-10"
+                className="bg-gray-800 border-purple-500 text-white pl-10"
               />
             </div>
-            <p className="text-xs text-[#69728a]">
+            <p className="text-xs text-white/50">
               Discord server is now set through Discord connection after this step.
             </p>
           </div>
@@ -227,7 +227,7 @@ export default function TheHub() {
           <div className="space-y-3 w-full">
             <CardTitle className="text-lg text-center">Project Logo</CardTitle>
 
-            <label className="w-full border-2 border-dashed border-purple-500 rounded-2xl p-8 bg-white hover:border-[#8B3EFE] transition cursor-pointer block">
+            <label className="w-full border-2 border-dashed border-purple-500 rounded-2xl p-8 bg-black hover:border-[#8B3EFE] transition cursor-pointer block">
               <input
                 type="file"
                 accept="image/*"
@@ -242,19 +242,19 @@ export default function TheHub() {
                     alt="Preview"
                     className="w-32 h-32 object-cover rounded-xl"
                   />
-                  <p className="text-sm text-[#69728a]">Click to change image</p>
+                  <p className="text-sm text-white/60">Click to change image</p>
                 </div>
               ) : (
-                <div className="flex flex-col items-center justify-center text-center gap-2 text-[#69728a]">
+                <div className="flex flex-col items-center justify-center text-center gap-2 text-white/60">
                   <img
                     src="/upload-icon.png"
                     alt="Upload icon"
                     className="w-16 h-16"
                   />
-                  <p className="font-medium text-[#1c2533]">
+                  <p className="font-medium text-white">
                     Click to upload or drag and drop
                   </p>
-                  <p className="text-sm text-[#69728a]">
+                  <p className="text-sm text-white/50">
                     SVG, PNG, JPG or GIF (max. 10MB)
                   </p>
                 </div>

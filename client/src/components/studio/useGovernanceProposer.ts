@@ -47,26 +47,24 @@ export function useGovernanceProposer() {
   }, [refresh]);
 
   /**
-   * Signs the proposal with the admin's linked wallet and submits it. Throws with a readable reason.
-   * `action` can be a function, built only after the wallet has signed (e.g. when it needs an upload first).
+   * Has the connected wallet sign a studio action (EIP-712, no transaction or gas).
+   * `id` is what the action is about: a proposal ref, or a campaign id when publishing.
    */
-  const propose = async (title: string, change: string, action: ProposalAction | (() => Promise<ProposalAction>)) => {
+  const sign = async (verb: "Propose" | "Publish", title: string, id: string) => {
     if (!me) throw new Error("Your admin account is still loading. Try again in a moment.");
-    if (!gov.signerIds.includes(me.id)) throw new Error("Only signers can make proposals. Ask a signer to add you in Admin Management.");
     if (!isConnected || !address) {
       openConnectModal?.();
-      throw new Error("Connect your wallet to sign the proposal.");
+      throw new Error("Connect your wallet to sign, then try again.");
     }
     const linked = gov.signerWallets?.[me.id];
     if (linked && linked.toLowerCase() !== address.toLowerCase()) {
       throw new Error(`Switch to the wallet linked to your account (${linked.slice(0, 6)}…${linked.slice(-4)}) to sign.`);
     }
-    const ref = newProposalId();
     const message = {
       hub: me.hubName,
-      action: "Propose",
+      action: verb,
       proposal: title,
-      proposalId: ref,
+      proposalId: id,
       signer: `${me.name} (${me.id})`,
       signedAt: new Date().toISOString(),
     };
@@ -76,10 +74,21 @@ export function useGovernanceProposer() {
     } catch (err) {
       // Wallet errors are long; their short message says what actually happened
       const e = err as { shortMessage?: string; message?: string };
-      throw new Error(e?.shortMessage || e?.message || "The wallet could not sign the proposal.");
+      throw new Error(e?.shortMessage || e?.message || "The wallet could not sign.");
     }
     const recovered = await recoverTypedDataAddress({ domain: SIGN_DOMAIN, types: SIGN_TYPES, primaryType: "StudioAction", message, signature });
     if (recovered.toLowerCase() !== address.toLowerCase()) throw new Error("The signature doesn't match the connected wallet.");
+    return { signature, message };
+  };
+
+  /**
+   * Signs the proposal with the admin's linked wallet and submits it. Throws with a readable reason.
+   * `action` can be a function, built only after the wallet has signed (e.g. when it needs an upload first).
+   */
+  const propose = async (title: string, change: string, action: ProposalAction | (() => Promise<ProposalAction>)) => {
+    if (me && !gov.signerIds.includes(me.id)) throw new Error("Only signers can make proposals. Ask a signer to add you in Admin Management.");
+    const ref = newProposalId();
+    const { signature, message } = await sign("Propose", title, ref);
     const resolved = typeof action === "function" ? await action() : action;
     const snap = await submitProposal({ ref, title, change, action: resolved, clientUrl: window.location.origin, signature, message });
     setGov(snap);
@@ -87,5 +96,5 @@ export function useGovernanceProposer() {
     return snap.proposals.find(p => p.id === ref) ?? null;
   };
 
-  return { gov, propose, refresh };
+  return { gov, propose, sign, refresh };
 }

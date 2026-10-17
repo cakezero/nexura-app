@@ -168,6 +168,14 @@ const campaignSchema = new Schema({
 		executedAt: { type: Date },
 		endsAt: { type: String },
 	},
+	// Wallet signature of the admin who published the campaign
+	publishSignature: {
+		address: { type: String },
+		signature: { type: String },
+		message: { type: Schema.Types.Mixed },
+		adminId: { type: String },
+		signedAt: { type: Date },
+	},
 }, { timestamps: true });
 
 export const campaign = mongoose.model("campaigns", campaignSchema);

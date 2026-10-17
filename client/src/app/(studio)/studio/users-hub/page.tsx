@@ -87,65 +87,65 @@ export default function UsersHub() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f7f5ff] text-[#1c2533] p-4 sm:p-6 relative">
+    <div className="min-h-screen bg-black text-white p-4 sm:p-6 relative">
       <AnimatedBackground />
 
       {/* Back Button */}
       <div className="w-full flex justify-start mb-4">
         <button
           onClick={() => router.push("/studio/select-role")}
-          className="inline-flex items-center gap-2 px-3 py-2 rounded-full border border-[rgba(28,37,51,0.12)] bg-white hover:bg-[#f4f1fc] text-[#1c2533] text-xs sm:text-sm"
+          className="inline-flex items-center gap-2 px-3 py-2 rounded-full border border-white/30 bg-black/30 hover:bg-black/50 text-white text-xs sm:text-sm"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
           Back to Studio
         </button>
       </div>
 
-      <div className="max-w-md mx-auto relative z-10 space-y-4 bg-[#f4f1fc] border border-[#A760FF] rounded-2xl p-5 text-center">
+      <div className="max-w-md mx-auto relative z-10 space-y-4 bg-white/[0.03] border border-[#A760FF] rounded-2xl p-5 text-center">
 
         <CardTitle className="text-base">Create User Hub</CardTitle>
 
         {profileLoading ? (
           <div className="flex flex-col items-center justify-center py-6 gap-3">
-            <Loader2 className="w-5 h-5 text-[#8a3ffc] animate-spin" />
-            <p className="text-[#69728a] text-xs">Fetching your profile...</p>
+            <Loader2 className="w-5 h-5 text-purple-400 animate-spin" />
+            <p className="text-white/50 text-xs">Fetching your profile...</p>
           </div>
         ) : avatar ? (
           <img src={avatar} alt={name} className="w-16 h-16 mx-auto rounded-full object-cover border-2 border-purple-500" />
         ) : (
-          <div className="w-16 h-16 mx-auto rounded-full bg-white border-2 border-purple-500 flex items-center justify-center text-[#69728a] text-xs">
+          <div className="w-16 h-16 mx-auto rounded-full bg-gray-800 border-2 border-purple-500 flex items-center justify-center text-white/40 text-xs">
             No avatar
           </div>
         )}
 
-        <p className="text-[#69728a] text-xs">
+        <p className="text-white/60 text-xs">
           Your hub will be created using your Nexura profile.
         </p>
 
         {profileError && (
           <div className="flex items-start gap-3 bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-left">
-            <AlertTriangle className="w-5 h-5 text-[#e4545b] mt-0.5 flex-shrink-0" />
-            <p className="text-[#e4545b] text-sm">{profileError}</p>
+            <AlertTriangle className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" />
+            <p className="text-red-300 text-sm">{profileError}</p>
           </div>
         )}
 
         {!profileLoading && !profileError && (
           <>
-          <div className="bg-white border border-purple-500/30 rounded-xl p-4 text-left space-y-2">
+          <div className="bg-gray-900 border border-purple-500/30 rounded-xl p-4 text-left space-y-2">
             <div className="flex justify-between">
-              <span className="text-[#69728a] text-xs">Username</span>
-              <span className="text-[#1c2533] text-sm font-mono">{name || "—"}</span>
+              <span className="text-white/50 text-xs">Username</span>
+              <span className="text-white text-sm font-mono">{name || "—"}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-[#69728a] text-xs">Avatar</span>
-              <span className="text-[#1c2533] text-sm">{avatar ? "✓ Loaded" : "—"}</span>
+              <span className="text-white/50 text-xs">Avatar</span>
+              <span className="text-white text-sm">{avatar ? "✓ Loaded" : "—"}</span>
             </div>
           </div>
 
           <div className="text-left space-y-1">
             <div className="flex items-center justify-between">
-              <span className="text-[#69728a] text-xs">Short Bio</span>
-              <span className={`text-[10px] ${description.length < 50 || description.length > 100 ? "text-[#e4545b]" : "text-[#69728a]"}`}>
+              <span className="text-white/60 text-xs">Short Bio</span>
+              <span className={`text-[10px] ${description.length < 50 || description.length > 100 ? "text-red-400" : "text-white/40"}`}>
                 {description.length}/100
               </span>
             </div>
@@ -154,10 +154,10 @@ export default function UsersHub() {
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Tell people about yourself... (50-100 characters)"
               maxLength={100}
-              className={`bg-white border-purple-500 text-[#1c2533] h-24 ${description.length > 0 && (description.length < 50 || description.length > 100) ? "border-red-500/50" : ""}`}
+              className={`bg-gray-800 border-purple-500 text-white h-24 ${description.length > 0 && (description.length < 50 || description.length > 100) ? "border-red-500/50" : ""}`}
             />
             {description.length > 0 && description.length < 50 && (
-              <p className="text-[10px] text-[#e4545b]">
+              <p className="text-[10px] text-red-400">
                 Minimum 50 characters required. {50 - description.length} more needed.
               </p>
             )}

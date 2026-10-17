@@ -19,7 +19,7 @@ interface ResetPasswordModalProps {
 }
 
 const cardClass =
-  "max-w-[600px] bg-white border-none p-0 rounded-[20px] shadow-[-12px_-10px_18px_5px_rgba(0,0,0,0.25),12px_10px_18px_5px_rgba(0,0,0,0.25)] flex flex-col items-center font-[family-name:var(--font-geist-sans)] scale-[0.36] [@media(min-height:381px)]:scale-[0.46] [@media(min-height:461px)]:scale-[0.62] [@media(min-height:601px)]:scale-[0.8]";
+  "max-w-[600px] bg-[#27134e] border-none p-0 rounded-[20px] shadow-[-12px_-10px_18px_5px_rgba(0,0,0,0.25),12px_10px_18px_5px_rgba(0,0,0,0.25)] flex flex-col items-center font-[family-name:var(--font-geist-sans)] scale-[0.36] [@media(min-height:381px)]:scale-[0.46] [@media(min-height:461px)]:scale-[0.62] [@media(min-height:601px)]:scale-[0.8]";
 
 function IconBadge() {
   return (
@@ -31,7 +31,7 @@ function IconBadge() {
 
 function CloseButton({ onClose }: { onClose: () => void }) {
   return (
-    <button onClick={onClose} className="absolute right-4 top-4 z-10 text-[#69728a] hover:text-[#1c2533] transition-colors">
+    <button onClick={onClose} className="absolute right-4 top-4 z-10 text-white/50 hover:text-white transition-colors">
       <X className="w-5 h-5" />
     </button>
   );
@@ -261,11 +261,11 @@ export default function ResetPasswordModal({ isOpen, onClose, email, type, onRes
           <CloseButton onClose={onClose} />
           <IconBadge />
 
-          <DialogTitle className="mt-[16px] text-[24px] font-bold text-[#1c2533] text-center">
+          <DialogTitle className="mt-[16px] text-[24px] font-bold text-white text-center">
             Check your email
           </DialogTitle>
 
-          <p className="mt-[10px] max-w-[429px] px-6 text-[16px] font-light text-[#1c2533] text-center">
+          <p className="mt-[10px] max-w-[429px] px-6 text-[16px] font-light text-white text-center">
             Enter the OTP we sent to your email to continue resetting your password.
           </p>
 
@@ -285,7 +285,7 @@ export default function ResetPasswordModal({ isOpen, onClose, email, type, onRes
                     onFocus={() => setFocusedIndex(i)}
                     onBlur={() => setFocusedIndex((cur) => (cur === i ? null : cur))}
                     onPaste={i === 0 ? handlePaste : undefined}
-                    className={`size-[65px] text-center text-[30px] font-semibold bg-transparent rounded-[8px] text-[#1c2533] caret-transparent focus:outline-none transition-all ${
+                    className={`size-[65px] text-center text-[30px] font-semibold bg-transparent rounded-[8px] text-white caret-transparent focus:outline-none transition-all ${
                       isFocused
                         ? "border-2 border-[#b65fc8]"
                         : error
@@ -301,11 +301,11 @@ export default function ResetPasswordModal({ isOpen, onClose, email, type, onRes
             })}
           </div>
 
-          {error && <p className="text-[#e4545b] text-xs mt-2 text-center px-4">{error}</p>}
-          {resentMessage && <p className="text-[#00a87c] text-xs mt-2 text-center px-4">{resentMessage}</p>}
+          {error && <p className="text-red-400 text-xs mt-2 text-center px-4">{error}</p>}
+          {resentMessage && <p className="text-green-400 text-xs mt-2 text-center px-4">{resentMessage}</p>}
 
           <div className="mt-[24px] flex items-center justify-center gap-[18px]">
-            <p className="text-[16px] text-[#69728a] font-light">Didn&apos;t get a code?</p>
+            <p className="text-[16px] text-[rgba(255,255,255,0.5)] font-light">Didn&apos;t get a code?</p>
             <button
               onClick={handleResend}
               disabled={!canResend || resending}
@@ -333,36 +333,36 @@ export default function ResetPasswordModal({ isOpen, onClose, email, type, onRes
           <CloseButton onClose={onClose} />
           <IconBadge />
 
-          <DialogTitle className="mt-[16px] text-[24px] font-bold text-[#1c2533] text-center">
+          <DialogTitle className="mt-[16px] text-[24px] font-bold text-white text-center">
             OTP Confirmed
           </DialogTitle>
 
-          <p className="mt-[10px] max-w-[404px] px-6 text-[16px] font-light text-[#1c2533] text-center leading-snug">
+          <p className="mt-[10px] max-w-[404px] px-6 text-[16px] font-light text-white text-center leading-snug">
             Your verification code was confirmed successfully.
             <br />
             Create a new password for your account.
           </p>
 
           {error && (
-            <div className="mt-4 mx-[35px] rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-[#e4545b]">
+            <div className="mt-4 mx-[35px] rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
               {error}
             </div>
           )}
 
           <div className="mt-[16px] w-full px-[35px]">
-            <label className="block text-[18px] font-bold text-[#1c2533] mb-[12px]">New Password</label>
+            <label className="block text-[18px] font-bold text-white mb-[12px]">New Password</label>
             <div className="relative w-full">
               <input
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter your new password..."
-                className="w-full h-[44px] pl-4 pr-[48px] bg-[rgba(6,2,16,0.5)] border border-[#8a3efe] rounded-[16px] text-[#1c2533] text-[16px] font-bold placeholder:text-[#69728a] placeholder:font-bold focus:outline-none"
+                className="w-full h-[44px] pl-4 pr-[48px] bg-[rgba(6,2,16,0.5)] border border-[#8a3efe] rounded-[16px] text-white text-[16px] font-bold placeholder:text-[rgba(255,255,255,0.4)] placeholder:font-bold focus:outline-none"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword((current) => !current)}
-                className="absolute right-[18px] top-1/2 -translate-y-1/2 text-[#69728a] hover:text-[#1c2533] transition-colors"
+                className="absolute right-[18px] top-1/2 -translate-y-1/2 text-[rgba(255,255,255,0.6)] hover:text-white transition-colors"
               >
                 {showPassword ? <EyeOff className="size-[18px]" /> : <Eye className="size-[18px]" />}
               </button>
@@ -375,29 +375,29 @@ export default function ResetPasswordModal({ isOpen, onClose, email, type, onRes
                 {ok ? (
                   <Check className="size-[20px] text-[#00e1a2]" strokeWidth={2.5} />
                 ) : (
-                  <span className="flex size-[20px] items-center justify-center text-[#69728a]">
+                  <span className="flex size-[20px] items-center justify-center text-[rgba(255,255,255,0.6)]">
                     <span className="size-[4px] rounded-full bg-current" />
                   </span>
                 )}
-                <span className={ok ? "text-[#00e1a2]" : "text-[#69728a]"}>{label}</span>
+                <span className={ok ? "text-[#00e1a2]" : "text-[rgba(255,255,255,0.6)]"}>{label}</span>
               </div>
             ))}
           </div>
 
           <div className="mt-[16px] w-full px-[35px]">
-            <label className="block text-[18px] font-bold text-[#1c2533] mb-[12px]">Confirm New Password</label>
+            <label className="block text-[18px] font-bold text-white mb-[12px]">Confirm New Password</label>
             <div className="relative w-full">
               <input
                 type={showConfirmPassword ? "text" : "password"}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Confirm your new password..."
-                className="w-full h-[44px] pl-4 pr-[48px] bg-[rgba(6,2,16,0.5)] border border-[#8a3efe] rounded-[16px] text-[#1c2533] text-[16px] font-bold placeholder:text-[#69728a] placeholder:font-bold focus:outline-none"
+                className="w-full h-[44px] pl-4 pr-[48px] bg-[rgba(6,2,16,0.5)] border border-[#8a3efe] rounded-[16px] text-white text-[16px] font-bold placeholder:text-[rgba(255,255,255,0.4)] placeholder:font-bold focus:outline-none"
               />
               <button
                 type="button"
                 onClick={() => setShowConfirmPassword((current) => !current)}
-                className="absolute right-[18px] top-1/2 -translate-y-1/2 text-[#69728a] hover:text-[#1c2533] transition-colors"
+                className="absolute right-[18px] top-1/2 -translate-y-1/2 text-[rgba(255,255,255,0.6)] hover:text-white transition-colors"
               >
                 {showConfirmPassword ? <EyeOff className="size-[18px]" /> : <Eye className="size-[18px]" />}
               </button>

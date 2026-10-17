@@ -1,9 +1,12 @@
 "use client";
 
-/** Centered loading state for Studio pages: a spinning purple ring with a message under it. */
-export default function StudioLoader({ message, error }: { message: string; error?: string }) {
+/**
+ * Centered loading state for Studio pages: a spinning purple ring with a message under it.
+ * `compact` fits inside a card or table; the default fills the page area.
+ */
+export default function StudioLoader({ message, error, compact = false }: { message: string; error?: string; compact?: boolean }) {
   return (
-    <div className="flex flex-1 min-h-[60vh] w-full flex-col items-center justify-center gap-4 px-4 text-center" role="status" aria-live="polite">
+    <div className={`flex w-full flex-col items-center justify-center gap-4 px-4 text-center ${compact ? "py-10" : "flex-1 min-h-[60vh]"}`} role="status" aria-live="polite">
       {error ? (
         <p className="text-sm font-medium text-[#e4545b]">{error}</p>
       ) : (

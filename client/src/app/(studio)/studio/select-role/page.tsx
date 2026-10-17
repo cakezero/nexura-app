@@ -19,7 +19,7 @@ export default function SelectRole() {
   };
 
   return (
-    <div className="min-h-screen bg-transparent text-[#1c2533] flex flex-col relative overflow-hidden font-geist">
+    <div className="min-h-screen bg-transparent text-white flex flex-col relative overflow-hidden font-geist">
       {/* Background Gradients */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden flex justify-center items-start opacity-80 z-0">
         <img 
@@ -36,7 +36,7 @@ export default function SelectRole() {
         <div className="w-full flex justify-start mb-3">
           <button
             onClick={() => router.push("/studio")}
-            className="inline-flex items-center gap-2 px-3 py-2 rounded-full border border-[rgba(28,37,51,0.12)] bg-white hover:bg-[#f4f1fc] text-[#1c2533] text-xs"
+            className="inline-flex items-center gap-2 px-3 py-2 rounded-full border border-white/30 bg-black/30 hover:bg-black/50 text-white text-xs"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             Back to Explore
@@ -44,9 +44,9 @@ export default function SelectRole() {
         </div>
         
         {/* ORGANIZATION TOOL Badge */}
-        <div className="flex items-center gap-2.5 bg-white border-2 border-[#572082] rounded-full px-3.5 py-1.5 mb-5">
+        <div className="flex items-center gap-2.5 bg-[#370953] border-2 border-[#572082] rounded-full px-3.5 py-1.5 mb-5">
           <div className="size-2 rounded-full bg-[#B077E8] shrink-0" />
-          <span className="text-[#1c2533] text-[10px] font-semibold tracking-wider uppercase">
+          <span className="text-white text-[10px] font-semibold tracking-wider uppercase">
             ORGANIZATION TOOL
           </span>
         </div>
@@ -57,13 +57,13 @@ export default function SelectRole() {
         </h1>
 
         {/* Subtitle */}
-        <p className="text-sm font-medium text-[#69728a] mb-10 text-center leading-relaxed">
+        <p className="text-sm font-medium text-white/60 mb-10 text-center leading-relaxed">
           Create a dedicated hub for yourself as a User or Project
         </p>
 
         {/* "You are?" and Cards container */}
         <div className="flex flex-col items-start w-full max-w-lg">
-          <h2 className="text-base font-bold text-[#1c2533] mb-4">
+          <h2 className="text-base font-bold text-white mb-4">
             You are?
           </h2>
 
@@ -74,8 +74,8 @@ export default function SelectRole() {
               onClick={() => setActiveRole("project")}
               className={`flex-none w-full max-w-[260px] h-[180px] rounded-2xl p-0 flex flex-col items-center justify-center text-center border-2 transition-all duration-200 cursor-pointer overflow-hidden relative
                 ${activeRole === "project"
-                  ? "bg-white border-[#A760FF]"
-                  : "bg-white border-[rgba(167,96,255,0.1)] hover:border-[#A760FF]/50"
+                  ? "bg-[#1C0B32] border-[#A760FF]"
+                  : "bg-[#0E061A] border-[rgba(167,96,255,0.1)] hover:border-[#A760FF]/50"
                 }`}
             >
               <img
@@ -83,10 +83,10 @@ export default function SelectRole() {
                 alt="Project"
                 className="size-14 mb-3 object-cover pointer-events-none"
               />
-              <span className="text-sm font-bold text-[#3d485c] mb-1">
+              <span className="text-sm font-bold text-white/90 mb-1">
                 a project
               </span>
-              <span className="text-[11px] font-medium text-[#69728a] px-3 max-w-[240px] leading-snug">
+              <span className="text-[11px] font-medium text-white/60 px-3 max-w-[240px] leading-snug">
                 A project or team looking to plan, launch, and grow structured community engagement.
               </span>
             </button>
@@ -97,8 +97,8 @@ export default function SelectRole() {
               onClick={() => setActiveRole("user")}
               className={`flex-none w-full max-w-[260px] h-[180px] rounded-2xl p-0 flex flex-col items-center justify-center text-center border-2 transition-all duration-200 cursor-pointer overflow-hidden relative
                 ${activeRole === "user"
-                  ? "bg-white border-[#A760FF]"
-                  : "bg-white border-[rgba(167,96,255,0.1)] hover:border-[#A760FF]/50"
+                  ? "bg-[#1C0B32] border-[#A760FF]"
+                  : "bg-[#0E061A] border-[rgba(167,96,255,0.1)] hover:border-[#A760FF]/50"
                 }`}
             >
               <img
@@ -106,10 +106,10 @@ export default function SelectRole() {
                 alt="User"
                 className="size-14 mb-3 object-cover pointer-events-none"
               />
-              <span className="text-sm font-bold text-[#1c2533] mb-1">
+              <span className="text-sm font-bold text-white mb-1">
                 a Nexura user
               </span>
-              <span className="text-[11px] font-medium text-[#69728a] px-3 max-w-[240px] leading-snug">
+              <span className="text-[11px] font-medium text-white/60 px-3 max-w-[240px] leading-snug">
                 An individual creator or contributor looking to share ideas or connect
               </span>
             </button>
@@ -121,10 +121,10 @@ export default function SelectRole() {
           <button
             onClick={handleContinue}
             disabled={!activeRole}
-            className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-transparent border text-[#1c2533] font-semibold text-xs transition-all duration-200
+            className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-transparent border text-white font-semibold text-xs transition-all duration-200
               ${activeRole
                 ? "border-white hover:bg-purple-600 hover:border-purple-600 hover:shadow-[0_0_20px_rgba(131,58,253,0.7)] hover:scale-[1.03] active:scale-[0.98]"
-                : "border-[rgba(28,37,51,0.12)] text-[#98a0b4] cursor-not-allowed"
+                : "border-white/20 text-white/30 cursor-not-allowed"
               }`}
           >
             Continue

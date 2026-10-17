@@ -1,4 +1,5 @@
 "use client";
+import StudioLoader from "@/components/studio/StudioLoader";
 
 import { useState, useEffect, useCallback } from "react";
 import { Card } from "../ui/card";
@@ -538,10 +539,7 @@ export default function CampaignsTab() {
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center py-20 text-[#69728a]">
-            <RefreshCw className="w-6 h-6 animate-spin mr-2" />
-            Loading campaigns...
-          </div>
+          <StudioLoader message="Loading campaigns…" />
         ) : (
           <div className="grid grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-5">
             {activeTab === "all" && isSuperAdmin && (
