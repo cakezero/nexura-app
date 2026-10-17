@@ -27,6 +27,7 @@ import { cvModel } from "@/models/cv.models";
 import { token } from "@/models/tokens.model";
 import { bannedUser } from "@/models/bannedUser.model";
 import { REDIS } from "@/utils/redis.utils";
+import { fetchWithRetry } from "@/utils/resilience";
 
 const buildWalletUsernameBase = (address: string) =>
 	`${address.slice(0, 4)}...${address.slice(-4)}`;
@@ -168,7 +169,8 @@ export const disconnectX = async (req: GlobalRequest, res: GlobalResponse) => {
 			return;
 		}
 
-		await fetch("https://api.x.com/2/oauth2/revoke", {
+		// Revoking twice is harmless, so a brief failure is retried
+		await fetchWithRetry("https://api.x.com/2/oauth2/revoke", {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/x-www-form-urlencoded",
@@ -177,7 +179,7 @@ export const disconnectX = async (req: GlobalRequest, res: GlobalResponse) => {
 				token: userToken.refreshToken,
 				clientId: X_API_CLIENT_ID,
 			}),
-		});
+		}, { retries: 2, label: "X token revoke" });
 
 		await token.deleteOne({ userId: xId });
 

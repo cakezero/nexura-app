@@ -3,6 +3,7 @@ import logger from "@/config/logger";
 import { hub, hubAdmin } from "@/models/hub.model";
 import { hubGovernance, governanceProposal } from "@/models/governance.model";
 import { campaign } from "@/models/campaign.model";
+import { OTP } from "@/models/otp.model";
 import { parseDate } from "@/utils/dates";
 import { createHubInvite } from "@/utils/hubInvite";
 import { applyCampaignUpdate, prepareCampaignSaveBody } from "@/controllers/hub.controller";
@@ -184,6 +185,15 @@ async function validateAction(ctx: Ctx, me: { id: string; role: Role }, raw: any
       if (tRole === "superadmin" && me.role !== "owner") throw new HttpError(FORBIDDEN, "only the Owner can revoke a Super Admin");
       return { kind: "revoke", adminId: String(t._id), adminName: t.name };
     }
+    case "revokeInvite": {
+      const id = typeof raw.inviteId === "string" ? raw.inviteId : "";
+      const inv = /^[a-f0-9]{24}$/i.test(id) ? await OTP.findById(id).select("hubId email role").lean() as any : null;
+      if (!inv || String(inv.hubId) !== ctx.hubId) throw new HttpError(NOT_FOUND, "invitation not found in your hub");
+      const role: BackendRole = inv.role === "superadmin" ? "superadmin" : "admin";
+      if (role === "superadmin" && me.role !== "owner") throw new HttpError(FORBIDDEN, "only the Owner can revoke a Super Admin invitation");
+      if (pending.some(p => p.action?.kind === "revokeInvite" && p.action.inviteId === id)) throw new HttpError(BAD_REQUEST, "revoking this invitation is already proposed");
+      return { kind: "revokeInvite", inviteId: id, email: String(inv.email ?? ""), role };
+    }
     case "signer": {
       const t = target(raw.adminId);
       const id = String(t._id);
@@ -265,7 +275,7 @@ async function validateAction(ctx: Ctx, me: { id: string; role: Role }, raw: any
       return { kind: "editCampaign", campaignId: id, campaignTitle: String(body.title ?? c.title ?? ""), changes: body };
     }
     default:
-      throw new HttpError(BAD_REQUEST, "unknown action");
+      throw new HttpError(BAD_REQUEST, "this kind of change isn't supported by the server yet; it needs the latest server update");
   }
 }
 
@@ -316,6 +326,19 @@ async function runAction(ctx: Ctx, action: any, proposalRef: string): Promise<{ 
       (gov.signerWallets as unknown as Map<string, string>).delete(action.adminId);
       gov.markModified("signerWallets");
       break;
+    }
+    case "revokeInvite": {
+      const inv = await OTP.findById(action.inviteId).select("hubId").lean() as any;
+      if (inv) {
+        if (String(inv.hubId) !== ctx.hubId) throw new Error("the invitation belongs to another hub");
+        await OTP.findByIdAndDelete(action.inviteId);
+        return;
+      }
+      // Gone already: fine if it expired, but if they accepted, revoking the invite wouldn't remove them
+      if (ctx.admins.some(a => String(a.email ?? "").toLowerCase() === String(action.email).toLowerCase())) {
+        throw new Error(`${action.email} already accepted the invitation; propose revoking their access instead`);
+      }
+      return;
     }
     case "signer": {
       const t = ctx.adminById(action.adminId);

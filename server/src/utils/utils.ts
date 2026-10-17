@@ -12,6 +12,7 @@ import { announceMilestone } from "./announce";
 import { GuildMember } from "discord.js";
 import client from "../../client";
 import axios from "axios";
+import { OUTBOUND_TIMEOUT_MS, withRetry } from "./resilience";
 
 export const padNumber = (numberToBePadded: number) => {
 	return numberToBePadded.toString().padStart(3, "0");
@@ -516,11 +517,12 @@ export const JWT = {
 		return jwt.sign({ id }, JWT_SECRET, { expiresIn });
 	},
 
+	/** Verifies a session token. Single-purpose tokens (e.g. password reset links) are refused here. */
 	verify: (jwtToken: string) => {
 		return new Promise((resolve, reject) => {
 			jwt.verify(jwtToken, JWT_SECRET, (error, decodedText) => {
 				if (error) reject(error.message);
-        else if (typeof decodedText === "object") {
+        else if (typeof decodedText === "object" && !(decodedText as any).purpose) {
 					resolve(decodedText);
 				} else {
 					reject("Invalid JWT payload");
@@ -528,6 +530,32 @@ export const JWT = {
 			});
 		});
 	},
+
+	/** Signs a token that only works for one purpose (never as a session). */
+	signFor: (id: any, purpose: string, expiresIn: StringValue) => jwt.sign({ id, purpose }, JWT_SECRET, { expiresIn }),
+
+	/** Verifies a single-purpose token; resolves its id and issue time (ms). */
+	verifyFor: (jwtToken: string, purpose: string) => {
+		return new Promise<{ id: string; issuedAt: number }>((resolve, reject) => {
+			jwt.verify(jwtToken, JWT_SECRET, (error, decoded) => {
+				if (error) reject(error.message);
+				else if (typeof decoded === "object" && (decoded as any).purpose === purpose && (decoded as any).id) {
+					resolve({ id: String((decoded as any).id), issuedAt: Number((decoded as any).iat ?? 0) * 1000 });
+				} else {
+					reject("Invalid JWT payload");
+				}
+			});
+		});
+	},
+};
+
+/** When a password changes, sessions issued before this moment stop working (whole seconds, like JWT iat). */
+export const passwordChangeMark = () => new Date(Math.floor(Date.now() / 1000) * 1000);
+
+/** True when a session token was issued before the account's last password change. */
+export const issuedBeforePasswordChange = (decoded: { iat?: number }, account: { passwordChangedAt?: Date | string | null }) => {
+	if (!account?.passwordChangedAt || !decoded?.iat) return false;
+	return decoded.iat * 1000 < new Date(account.passwordChangedAt).getTime();
 };
 
 export const getRefreshToken = (id: any) => {
@@ -562,14 +590,17 @@ export const checkPayment = async (userAddress: string) => {
 }
 
 export const getAmountPaid = async (txHash: string) => {
-	const provider = new ethers.JsonRpcProvider(chain.rpcUrls.default.http[0]);
+	// RPC reads get a time limit and are retried on brief failures
+	const request = new ethers.FetchRequest(chain.rpcUrls.default.http[0]!);
+	request.timeout = OUTBOUND_TIMEOUT_MS;
+	const provider = new ethers.JsonRpcProvider(request);
 
-	const tx = await provider.getTransaction(txHash);
+	const tx = await withRetry(() => provider.getTransaction(txHash), { label: "RPC getTransaction" });
 	if (!tx) {
 		throw new Error("Transaction not found");
   }
 
-  const block = await provider.getBlock(tx.blockNumber as number);
+  const block = await withRetry(() => provider.getBlock(tx.blockNumber as number), { label: "RPC getBlock" });
 
   const timestamp = new Date(Number(block!.timestamp) * 1000).toLocaleDateString("en-US", { timeZone: "Africa/Lagos" });
 

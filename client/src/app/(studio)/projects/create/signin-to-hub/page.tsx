@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import { useRouter } from "next/navigation";
 import { projectApiRequest, storeProjectSession } from "@/lib/projectApi";
@@ -20,6 +20,17 @@ export default function SignInToHub() {
   const [showResetFlow, setShowResetFlow] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
   const [resetLoading, setResetLoading] = useState(false);
+
+  // Explains why they landed here (e.g. their access was removed by an approved proposal)
+  useEffect(() => {
+    try {
+      const reason = sessionStorage.getItem("nexura:signed-out-reason");
+      if (!reason) return;
+      sessionStorage.removeItem("nexura:signed-out-reason");
+      toast({ title: "You were signed out", description: reason });
+    } catch { /* ignore */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function handleSignIn() {
     if (!email || !password) {

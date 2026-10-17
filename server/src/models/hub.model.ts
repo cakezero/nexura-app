@@ -130,6 +130,11 @@ const hubAdminSchema = new mongoose.Schema({
   lastActiveAt: {
     type: Date,
     default: null,
+  },
+  // Sessions issued before this stop working (set when the password is reset)
+  passwordChangedAt: {
+    type: Date,
+    default: null,
   }
 }, { timestamps: true });
 

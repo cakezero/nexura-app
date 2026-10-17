@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getStoredProjectToken } from "@/lib/projectApi";
+import { PROJECT_SESSION_EVENT, getStoredProjectToken, isProjectSessionActive } from "@/lib/projectApi";
 import { GOVERNANCE_EVENT, awaitingMyVote, fetchGovernance, isGovernanceUnavailable, markNotificationsRead, type Proposal } from "@/lib/adminGovernance";
 
 const POLL_MS = 30_000;
@@ -18,6 +18,8 @@ export function useProposalNotifications() {
   const refresh = useCallback(async () => {
     // Only project hub admins have governance (studio user hubs don't)
     if (!getStoredProjectToken() || unavailable.current) return;
+    // Nothing is shown once the session has expired; they see it again after signing in
+    if (!isProjectSessionActive()) { setItems([]); return; }
     try {
       setItems(awaitingMyVote(await fetchGovernance()));
     } catch (err) {
@@ -32,10 +34,12 @@ export function useProposalNotifications() {
     const onChange = () => { refresh(); };
     const onFocus = () => { if (document.visibilityState === "visible") refresh(); };
     window.addEventListener(GOVERNANCE_EVENT, onChange);
+    window.addEventListener(PROJECT_SESSION_EVENT, onChange);
     document.addEventListener("visibilitychange", onFocus);
     return () => {
       clearInterval(timer);
       window.removeEventListener(GOVERNANCE_EVENT, onChange);
+      window.removeEventListener(PROJECT_SESSION_EVENT, onChange);
       document.removeEventListener("visibilitychange", onFocus);
     };
   }, [refresh]);

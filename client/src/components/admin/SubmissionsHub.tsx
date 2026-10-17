@@ -9,10 +9,13 @@ import { projectApiRequest } from "../../lib/projectApi";
 import { TASKS } from "../../types/admin";
 import StudioLoader from "../studio/StudioLoader";
 import { scrollToTop } from "../../lib/scrollToTop";
+import { useUrlState } from "../../hooks/use-url-state";
+import { useLiveRefresh } from "../../hooks/use-live-refresh";
 import { StatsOverview } from "./StatsOverview";
 import CampaignSubmissions, { type CampaignSubmission } from "./CampaignSubmissions";
 
 type LiveStatus = "Active" | "Upcoming" | "Ended";
+const LIST_FILTERS = ["all", "Active", "Upcoming", "Ended"] as const;
 
 type SubmissionCampaign = {
   _id: string; title: string; projectCoverImage?: string; starts_at: string; ends_at: string; status: LiveStatus;
@@ -111,6 +114,8 @@ export default function SubmissionsHub(props: SubmissionsHubProps) {
   const open = (id: string | null) => {
     const url = new URL(window.location.href);
     if (id) url.searchParams.set("campaign", id); else url.searchParams.delete("campaign");
+    // A different campaign opens on its default tabs
+    url.searchParams.delete("view"); url.searchParams.delete("review");
     window.history.pushState(null, "", url.toString());
     setCampaignId(id);
     scrollToTop();
@@ -126,25 +131,28 @@ function CampaignList({ refreshKey, onOpen }: { refreshKey: number; onOpen: (id:
   const [campaigns, setCampaigns] = useState<SubmissionCampaign[] | null>(null);
   const [error, setError] = useState("");
   const [unavailable, setUnavailable] = useState(false);
-  const [filter, setFilter] = useState<"all" | LiveStatus>("all");
+  const [filter, setFilter] = useUrlState<"all" | LiveStatus>("status", "all", LIST_FILTERS);
   const [refreshing, setRefreshing] = useState(false);
 
-  const load = useCallback(async () => {
-    setRefreshing(true);
+  /** `quiet` refreshes in the background, without the spinner or replacing the list with an error. */
+  const load = useCallback(async (quiet = false) => {
+    if (!quiet) setRefreshing(true);
     try {
       const res = await projectApiRequest<{ campaigns?: SubmissionCampaign[] }>({ method: "GET", endpoint: "/hub/submission-campaigns" });
       setCampaigns(res.campaigns ?? []);
       setError("");
       setUnavailable(false);
     } catch (err) {
+      if (quiet) return;
       if (isMissingEndpoint(err)) { setUnavailable(true); setCampaigns([]); }
       else setError(errorMessage(err, "Campaigns could not be loaded."));
     } finally {
-      setRefreshing(false);
+      if (!quiet) setRefreshing(false);
     }
   }, []);
 
   useEffect(() => { load(); }, [load, refreshKey]);
+  useLiveRefresh(() => load(true));
 
   if (!campaigns) return <StudioLoader message="Fetching your campaigns…" error={error} />;
 
@@ -154,7 +162,7 @@ function CampaignList({ refreshKey, onOpen }: { refreshKey: number; onOpen: (id:
         <h1 className="text-[28px] font-semibold text-[#1c2533]">Submissions</h1>
         <p className="text-[#69728a] text-sm mt-1">Pick a campaign to review its submissions and see how participants are doing.</p>
       </div>
-      <button onClick={load} title="Refresh" className="h-10 w-10 shrink-0 inline-flex items-center justify-center rounded-full text-[#3d485c] hover:bg-[#efeafb] transition">
+      <button onClick={() => load()} title="Refresh" className="h-10 w-10 shrink-0 inline-flex items-center justify-center rounded-full text-[#3d485c] hover:bg-[#efeafb] transition">
         <RefreshCw className={cn("w-5 h-5", refreshing && "animate-spin")} />
       </button>
     </div>
@@ -185,7 +193,7 @@ function CampaignList({ refreshKey, onOpen }: { refreshKey: number; onOpen: (id:
             {totalPending > 0 && <span className="text-[#c27c00] font-semibold"> {totalPending} waiting for review.</span>}
           </p>
         </div>
-        <button onClick={load} title="Refresh" className="h-10 w-10 shrink-0 inline-flex items-center justify-center rounded-full text-[#3d485c] hover:bg-[#efeafb] transition">
+        <button onClick={() => load()} title="Refresh" className="h-10 w-10 shrink-0 inline-flex items-center justify-center rounded-full text-[#3d485c] hover:bg-[#efeafb] transition">
           <RefreshCw className={cn("w-5 h-5", refreshing && "animate-spin")} />
         </button>
       </div>
@@ -251,23 +259,26 @@ function CampaignView(props: SubmissionsHubProps & { campaignId: string; onBack:
   const { campaignId, onBack, refreshKey } = props;
   const [data, setData] = useState<CampaignDetails | null>(null);
   const [error, setError] = useState("");
-  const [tab, setTab] = useState<"submissions" | "claimers">("submissions");
+  const [tab, setTab] = useUrlState<"submissions" | "claimers">("view", "submissions", ["submissions", "claimers"]);
   const [refreshing, setRefreshing] = useState(false);
 
-  const load = useCallback(async () => {
-    setRefreshing(true);
+  /** `quiet` refreshes in the background, without the spinner or error message. */
+  const load = useCallback(async (quiet = false) => {
+    if (!quiet) setRefreshing(true);
     try {
       const res = await projectApiRequest<CampaignDetails>({ method: "GET", endpoint: "/hub/campaign-submission-details", params: { id: campaignId } });
       setData(res);
       setError("");
     } catch (err) {
+      if (quiet) return;
       setError(isMissingEndpoint(err) ? "This campaign isn't available at the moment. Please try again later." : errorMessage(err, "The campaign could not be loaded."));
     } finally {
-      setRefreshing(false);
+      if (!quiet) setRefreshing(false);
     }
   }, [campaignId]);
 
   useEffect(() => { load(); }, [load, refreshKey]);
+  useLiveRefresh(() => load(true));
 
   const back = (
     <button onClick={onBack} className="inline-flex items-center gap-2 h-9 px-4 rounded-full bg-[#f7f4fe] border-[0.833px] border-[rgba(28,37,51,0.15)] text-[13px] font-semibold text-[#1c2533] hover:bg-[#efeafb] transition self-start">
@@ -300,7 +311,7 @@ function CampaignView(props: SubmissionsHubProps & { campaignId: string; onBack:
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between gap-3">
         {back}
-        <button onClick={load} title="Refresh" className="h-10 w-10 shrink-0 inline-flex items-center justify-center rounded-full text-[#3d485c] hover:bg-[#efeafb] transition">
+        <button onClick={() => load()} title="Refresh" className="h-10 w-10 shrink-0 inline-flex items-center justify-center rounded-full text-[#3d485c] hover:bg-[#efeafb] transition">
           <RefreshCw className={cn("w-5 h-5", refreshing && "animate-spin")} />
         </button>
       </div>
@@ -356,7 +367,7 @@ function CampaignView(props: SubmissionsHubProps & { campaignId: string; onBack:
             setSearchTerm={props.setSearchTerm}
             handleView={id => { const t = data.submissions.find(s => s._id === id); if (t) props.onOpenSubmission(t); }}
             handleAction={props.handleAction}
-            onRefresh={load}
+            onRefresh={() => load()}
           />
         </div>
       ) : (

@@ -4,6 +4,7 @@ import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { emitSessionChange } from "../lib/session";
 import { buildUrl, apiRequestV2 } from "../lib/queryClient";
 import { useToast } from "./use-toast";
+import { resilientFetch } from "@/lib/resilientFetch";
 
 const STORAGE_KEY = "nexura:wallet";
 
@@ -125,7 +126,7 @@ export function useWallet() {
   );
 
   const disconnect = useCallback(async () => {
-    try { await fetch(buildUrl("/api/user/logout"), { method: "POST" }); } catch {}
+    try { await resilientFetch(buildUrl("/api/user/logout"), { method: "POST" }); } catch {}
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem("nexura:token");
     localStorage.removeItem("user_profile");

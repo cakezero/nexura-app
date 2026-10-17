@@ -2,6 +2,8 @@
 import StudioLoader from "@/components/studio/StudioLoader";
 
 import { useState, useEffect, useCallback } from "react";
+import { useUrlState } from "@/hooks/use-url-state";
+import { useLiveRefresh } from "@/hooks/use-live-refresh";
 import { Card } from "../ui/card";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -67,8 +69,10 @@ function editedAgo(iso?: string): string {
   return `Edited ${new Date(t).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`;
 }
 
+const CAMPAIGN_TABS = ["all", "active", "upcoming", "drafts", "completed"] as const;
+
 export default function CampaignsTab() {
-  const [activeTab, setActiveTab] = useState<"all" | "active" | "upcoming" | "drafts" | "completed">("all");
+  const [activeTab, setActiveTab] = useUrlState("tab", "all", CAMPAIGN_TABS);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -106,26 +110,32 @@ export default function CampaignsTab() {
       .catch(() => {});
   }, []);
 
-  const fetchCampaigns = useCallback(async () => {
-    setLoading(true);
+  /** `quiet` refreshes in the background, without the loading state or error toasts. */
+  const fetchCampaigns = useCallback(async (quiet = false) => {
+    if (!quiet) setLoading(true);
     try {
       const res = await projectApiRequest<{ hubCampaigns?: Campaign[] }>({
         method: "GET",
         endpoint: "/hub/get-campaigns",
       });
-      setCampaigns(res.hubCampaigns ?? []);
+      const next = res.hubCampaigns ?? [];
+      // Keep the same list when nothing changed, so reward balances aren't re-read every refresh
+      setCampaigns(prev => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
     } catch (err: unknown) {
+      if (quiet) return;
       const msg = err instanceof Error ? err.message : "Failed to load campaigns.";
       toast({ title: "Error", description: msg, variant: "destructive" });
       setCampaigns([]);
     } finally {
-      setLoading(false);
+      if (!quiet) setLoading(false);
     }
   }, [toast]);
 
   useEffect(() => {
     fetchCampaigns();
   }, [fetchCampaigns]);
+
+  useLiveRefresh(() => fetchCampaigns(true));
 
   const nowMs = Date.now() + serverOffset;
   const now = new Date(nowMs);
@@ -517,7 +527,7 @@ export default function CampaignsTab() {
             variant="ghost"
             size="icon"
             className="text-[#69728a] hover:text-[#1c2533] hover:bg-[rgba(138,63,252,0.06)]"
-            onClick={fetchCampaigns}
+            onClick={() => fetchCampaigns()}
             disabled={loading}
           >
             <RefreshCw className={`w-5 h-5 ${loading ? "animate-spin" : ""}`} />

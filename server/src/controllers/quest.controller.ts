@@ -1352,12 +1352,11 @@ export const saveQuestWithMiniQuests = async (req: GlobalRequest, res: GlobalRes
       const questData = { ...qd };
 
       if (qd.quest && qd._id) {
-        if (questData.quest) {
-          questData.quest = new mongoose.Types.ObjectId(questData.quest);
-        }
+        // Only tasks of this quest can be updated, and they can't be moved to another quest
+        questData.quest = new mongoose.Types.ObjectId(questId);
         createdMiniQuests.push({
           updateOne: {
-            filter: { _id: new mongoose.Types.ObjectId(qd._id) },
+            filter: { _id: new mongoose.Types.ObjectId(qd._id), quest: new mongoose.Types.ObjectId(questId) },
             update: {
               $set: {
                 ...questData,

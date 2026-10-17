@@ -45,6 +45,7 @@ import {
 } from "@/models/questsCompleted.models";
 import { atomIds, GRAPHQL_API_URL, RELIC_CONTRACT } from "@/utils/constants";
 import { GraphQLClient } from "graphql-request";
+import { resilientFetch } from "@/utils/resilience";
 import { checksumAddress, formatEther, parseAbi, parseEther, type Address } from "viem";
 import { campaign, campaignCompleted } from "@/models/campaign.model";
 import { dailySignIn } from "@/models/dailySignIn.model";
@@ -61,7 +62,8 @@ import { xpLog } from "@/models/xpLog.model";
 import { formatDate } from "date-fns";
 import { ensureQuestStarted } from "./quest.controller";
 
-const client = new GraphQLClient(GRAPHQL_API_URL);
+// Time limit + retries on brief failures (see resilience)
+const client = new GraphQLClient(GRAPHQL_API_URL, { fetch: resilientFetch });
 
 export const home = async (req: GlobalRequest, res: GlobalResponse) => {
   res.send("hi!");
