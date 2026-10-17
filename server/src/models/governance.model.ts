@@ -49,6 +49,8 @@ const governanceProposalSchema = new Schema({
 	resolvedAt: { type: Date, default: null },
 	resolvedCount: { type: Number, default: null },
 	executionError: { type: String, default: null },
+	// Admins who marked this proposal's notification as read
+	readBy: [{ type: Schema.Types.ObjectId, ref: "hub-admins" }],
 	// Executed invite whose email couldn't be delivered: the link and code for a signer to pass on
 	inviteShare: {
 		type: new Schema({ link: String, code: String, emailError: String }, { _id: false }),

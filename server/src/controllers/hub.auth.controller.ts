@@ -23,7 +23,7 @@ import {
   ADMIN_DISCORD_REDIRECT_URI,
   ADMIN_DISCORD_CLIENT_REDIRECT_URI,
 } from "@/utils/env.utils";
-import { hubAdmin, hub, userHubAdmin, userHub } from "@/models/hub.model";
+import { hubAdmin, hub, userHubAdmin, userHub, touchHubAdminActivity } from "@/models/hub.model";
 import { user } from "@/models/user.model";
 import bcrypt from "bcrypt";
 import mongoose from "mongoose";
@@ -68,6 +68,7 @@ export const signIn = async (req: GlobalRequest, res: GlobalResponse) => {
 		}
 
 		const id = adminExists._id.toString();
+		touchHubAdminActivity(id);
 
 		const accessToken = JWT.sign(id);
 		const refreshToken = getRefreshToken(id);
@@ -374,6 +375,7 @@ export const hubAdminSignUp = async (req: GlobalRequest, res: GlobalResponse) =>
 		const admin = await hubAdmin.create(req.body);
 
 		const id = admin._id.toString();
+		touchHubAdminActivity(id);
 
 		const accessToken = JWT.sign(id);
 		const refreshToken = getRefreshToken(id);
@@ -472,6 +474,7 @@ export const resetPassword = async (req: GlobalRequest, res: GlobalResponse) => 
 		await OTP.deleteOne({ _id: otp._id });
 
 		const id = adminExists._id.toString();
+		touchHubAdminActivity(id);
 		const accessToken = JWT.sign(id);
 		const refreshToken = getRefreshToken(id);
 
@@ -546,6 +549,7 @@ export const userHubSignIn = async (req: GlobalRequest, res: GlobalResponse) => 
 		}
 
 		const id = adminExists._id.toString();
+		touchHubAdminActivity(id);
 
     // Auto-create hub if admin has none
     let hubId = (adminExists as any).hub;
@@ -799,6 +803,7 @@ export const userHubResetPassword = async (req: GlobalRequest, res: GlobalRespon
 		await OTP.deleteOne({ _id: otp._id });
 
 		const id = adminExists._id.toString();
+		touchHubAdminActivity(id);
 		const accessToken = JWT.sign(id);
 		const refreshToken = getRefreshToken(id);
 

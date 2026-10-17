@@ -314,7 +314,7 @@ export default function Page() {
     return "saved";
   };
 
-  /** Published campaign: the edits go to Admin Management as a signed proposal and apply once the signers approve. */
+  /** Published campaign: the edits go to Admin Management as a signed proposal, applied when a signer executes it after approval. */
   const handleSaveLive = async (c: PublishedCampaign) => {
     const tasks = c.stages.flatMap(s => s.tasks);
     if (tasks.length === 0) throw new Error("A live campaign needs at least one task.");
@@ -356,7 +356,7 @@ export default function Page() {
 
     let p;
     try {
-      p = await propose(`Edit campaign: ${title}`, "Applies the edited details, journey and tasks once approved", buildAction);
+      p = await propose(`Edit campaign: ${title}`, "Applies the edited details, journey and tasks when executed", buildAction);
     } catch (err) {
       // Campaign edit proposals aren't accepted (404 or an unknown proposal type)
       const status = (err as { status?: number })?.status;
@@ -368,7 +368,7 @@ export default function Page() {
     }
     toast(p?.status === "executed"
       ? { title: "Changes applied", description: `Approved. ${title} is updated in the app.` }
-      : { title: "Proposal sent", description: "Signers can approve the changes in Admin Management. They apply once approved." });
+      : { title: "Proposal sent", description: "Signers can approve it in Admin Management. Once approved, any signer can execute it to apply the changes." });
     router.push("/studio-dashboard/campaigns-tab");
   };
 

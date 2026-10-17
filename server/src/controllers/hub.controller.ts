@@ -417,7 +417,9 @@ export const getHubAdmins = async (req: GlobalRequest, res: GlobalResponse) => {
       return;
     }
 
-    const admins = await hubAdmin.find({ hub: req.admin.hub }).select("_id name email role createdAt lastActiveAt").lean();
+    const found = await hubAdmin.find({ hub: req.admin.hub }).select("_id name email role createdAt updatedAt lastActiveAt").lean() as any[];
+    // Last seen: recorded activity, or for people not seen since tracking began, their account's latest update
+    const admins = found.map(({ updatedAt, ...a }) => ({ ...a, lastActiveAt: a.lastActiveAt ?? updatedAt ?? a.createdAt ?? null }));
 
     // Also fetch pending invites for this hub
     const now = new Date();

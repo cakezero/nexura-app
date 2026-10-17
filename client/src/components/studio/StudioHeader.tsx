@@ -6,8 +6,8 @@ import { useStudioWallet } from "./useStudioWallet";
 import { ChainLogo, NETWORKS, NetworkList, POPOVER, POPOVER_TITLE, getInjectedWallet, switchWalletChain, type NetworkId } from "@/components/admin/CreateNewCampaign";
 import { getNetwork } from "@/lib/runtimeNetwork";
 import { usePathname, useRouter } from "next/navigation";
-import { formatDateTime } from "@/lib/adminGovernance";
 import { OPEN_PROPOSALS_EVENT, useProposalNotifications } from "./useProposalNotifications";
+import NotificationsPanel from "./NotificationsPanel";
 
 const NEXURA_MAIN_APP_URL = "https://nexura.intuition.box/discover";
 
@@ -36,7 +36,7 @@ export default function StudioHeader({ title }: { title: string }) {
     if (eth && net) switchWalletChain(eth, net.chainId).catch(() => {});
   };
   const [bellOpen, setBellOpen] = useState(false);
-  const notifications = useProposalNotifications();
+  const { items: notifications, unread, markRead } = useProposalNotifications();
   const router = useRouter();
   const pathname = usePathname();
   const openProposal = () => {
@@ -73,47 +73,19 @@ export default function StudioHeader({ title }: { title: string }) {
         {/* Bell */}
         <div ref={bellRef} style={{ position: "relative" }}>
           <button
-            aria-label={notifications.length ? `Notifications, ${notifications.length} need attention` : "Notifications"} aria-expanded={bellOpen}
+            aria-label={unread ? `Notifications, ${unread} unread` : "Notifications"} aria-expanded={bellOpen}
             onClick={() => { setBellOpen(o => !o); setWalletOpen(false); }}
             style={{ position: "relative", width: 37.99, height: 37.99, background: "#f7f5ff", border: "1px solid rgba(28,37,51,0.09)", borderRadius: 40, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
           >
             <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2.5A4 4 0 005 6.5V10.5L3.5 12.5h11L13 10.5V6.5A4 4 0 009 2.5z" stroke="#6B7280" strokeWidth="1.3"/><path d="M7.5 14.5a1.5 1.5 0 003 0" stroke="#6B7280" strokeWidth="1.3" strokeLinecap="round"/></svg>
-            {notifications.length > 0 && (
+            {unread > 0 && (
               <span style={{ position: "absolute", top: -5, left: 20.7, minWidth: 19, height: 19, padding: "0 5px", borderRadius: 10, background: "#e4545b", border: "1.667px solid #faf9ff", color: "white", fontSize: 11, fontWeight: 700, lineHeight: "15.7px", textAlign: "center", boxSizing: "border-box" }}>
-                {notifications.length > 9 ? "9+" : notifications.length}
+                {unread > 9 ? "9+" : unread}
               </span>
             )}
           </button>
           {bellOpen && (
-            <div style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, width: 300, background: "white", borderRadius: 14, border: "1px solid #E5E7EB", boxShadow: "0 8px 30px rgba(0,0,0,0.10)", zIndex: 200, overflow: "hidden" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderBottom: "1px solid #F3F4F6" }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: "#1c2533" }}>Notifications</span>
-              </div>
-{notifications.length === 0 ? (
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "28px 16px", gap: 8 }}>
-                <div style={{ width: 40, height: 40, borderRadius: 20, background: "#f7f4fe", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 2.5A4.5 4.5 0 005.5 7v4.5L4 13.5h12L14.5 11.5V7A4.5 4.5 0 0010 2.5z" stroke="#8a3ffc" strokeWidth="1.3"/><path d="M8 15.5a2 2 0 004 0" stroke="#8a3ffc" strokeWidth="1.3" strokeLinecap="round"/></svg>
-                </div>
-                <span style={{ fontSize: 13, fontWeight: 600, color: "#1c2533" }}>You're all caught up</span>
-                <span style={{ fontSize: 12, color: "#767a8c", textAlign: "center", lineHeight: "18px" }}>All notifications have been read. New activity will appear here.</span>
-              </div>
-              ) : (
-                <div style={{ maxHeight: 340, overflowY: "auto", padding: 5 }}>
-                  {notifications.map(n => (
-                    <button key={n.id} onClick={openProposal}
-                      onMouseEnter={e => { e.currentTarget.style.background = "#f7f4fe"; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
-                      style={{ width: "100%", display: "flex", gap: 10, alignItems: "flex-start", padding: "10px 11px", borderRadius: 12, border: "none", background: "transparent", cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}>
-                      <span style={{ width: 8, height: 8, borderRadius: 4, background: "#8a3ffc", marginTop: 6, flexShrink: 0 }} />
-                      <span style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
-                        <span style={{ fontSize: 12.5, fontWeight: 600, color: "#1c2533", lineHeight: "18px" }}>Signature needed: {n.title}</span>
-                        <span style={{ fontSize: 11.5, color: "#69728a", lineHeight: "16px" }}>Proposed by {n.proposedBy.name} · {formatDateTime(n.createdAt)}</span>
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            <NotificationsPanel items={notifications} unread={unread} onOpen={openProposal} onMarkRead={markRead} onViewAll={openProposal} />
           )}
         </div>
 

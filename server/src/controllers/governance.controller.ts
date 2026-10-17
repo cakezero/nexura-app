@@ -376,11 +376,17 @@ async function runAction(ctx: Ctx, action: any, proposalRef: string): Promise<{ 
   await gov.save();
 }
 
-/** Executes or rejects the proposal when a threshold is reached. Execution failures are kept so it can be retried. */
-async function settle(ctx: Ctx, proposal: any) {
+/**
+ * Settles a pending proposal. Reaching the approvals only makes it ready: the change is applied
+ * when a signer executes it with their wallet (`execute`), as in Safe. Rejection is automatic:
+ * at the rejection threshold, or once it can no longer get enough approvals.
+ * Execution failures are kept so it can be retried.
+ */
+async function settle(ctx: Ctx, proposal: any, execute = false) {
   if (proposal.status !== "pending") return;
   const { approvals, rejections } = tally(ctx, proposal);
   if (approvals >= ctx.thresholds.approval) {
+    if (!execute) { await proposal.save(); return; } // ready, waiting for a signer to execute
     try {
       const share = await runAction(ctx, proposal.action, proposal.ref);
       proposal.inviteShare = share ?? null;
@@ -392,12 +398,31 @@ async function settle(ctx: Ctx, proposal: any) {
       logger.error("governance execution failed:", err);
       proposal.executionError = err?.message || "the change could not be applied";
     }
-  } else if (rejections >= ctx.thresholds.rejection) {
+  } else if (rejections >= ctx.thresholds.rejection || cannotPass(ctx, proposal)) {
     proposal.status = "rejected";
     proposal.resolvedAt = new Date();
     proposal.resolvedCount = rejections;
   }
   await proposal.save();
+}
+
+/**
+ * True when the signers who haven't voted yet can't bring the approvals up to the threshold,
+ * e.g. 2 signers needing 2 approvals with one approval and one rejection. Such a proposal fails
+ * right away instead of waiting forever.
+ */
+function cannotPass(ctx: Ctx, proposal: any): boolean {
+  const { approvals, votes } = tally(ctx, proposal);
+  const notVoted = [...ctx.signerIds].filter(id => !votes.has(id)).length;
+  return approvals + notVoted < ctx.thresholds.approval;
+}
+
+/** Fails pending proposals that can no longer pass, e.g. after a vote, a signer leaving or a threshold change. */
+async function rejectUnpassable(ctx: Ctx) {
+  const pending = await governanceProposal.find({ hub: ctx.hubId, status: "pending" });
+  for (const p of pending) {
+    if (cannotPass(ctx, p)) await settle(ctx, p);
+  }
 }
 
 // ─── Response shape (matches the studio client) ──────────────────────────────
@@ -431,10 +456,12 @@ function serializeProposal(ctx: Ctx, p: any, meId: string) {
     executionError: p.executionError ?? undefined,
     // The code lets someone register with that email, so only signers see it
     inviteShare: p.inviteShare && ctx.signerIds.has(meId) ? p.inviteShare : undefined,
+    readByMe: (p.readBy ?? []).some((id: unknown) => String(id) === meId),
   };
 }
 
 async function governanceState(ctx: Ctx, meId: string) {
+  await rejectUnpassable(ctx);
   const proposals = await governanceProposal.find({ hub: ctx.hubId }).sort({ createdAt: -1 }).limit(200).lean();
   const wallets = ctx.gov.signerWallets as unknown as Map<string, string>;
   return {
@@ -542,10 +569,29 @@ export const executeGovernanceProposal = async (req: GlobalRequest, res: GlobalR
 
     const sig = await verifySignature(ctx, me, "execute", { ref: proposal.ref, title: proposal.title }, req.body);
     proposal.signatures.push(sig as any);
-    await settle(ctx, proposal);
+    await settle(ctx, proposal, true);
     const fresh = await loadContext(ctx.hubId);
     res.status(OK).json(await governanceState(fresh, me.id));
   } catch (error) {
     handleError(res, error, "error executing proposal");
+  }
+};
+
+/** POST /hub/governance/notifications/read { refs?: string[] }: marks proposal notifications read for me (all when refs is omitted). */
+export const markGovernanceNotificationsRead = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const ctx = await loadContext(hubIdOf(req));
+    const me = await requireMe(req, ctx);
+    const refs = req.body?.refs;
+    const filter: Record<string, unknown> = { hub: ctx.hubId };
+    if (Array.isArray(refs)) {
+      const clean = refs.map(String).filter(r => /^[a-z0-9-]{6,64}$/i.test(r)).slice(0, 200);
+      if (!clean.length) throw new HttpError(BAD_REQUEST, "no notifications to mark as read");
+      filter.ref = { $in: clean };
+    }
+    await governanceProposal.updateMany(filter, { $addToSet: { readBy: me.id } });
+    res.status(OK).json(await governanceState(ctx, me.id));
+  } catch (error) {
+    handleError(res, error, "error marking notifications as read");
   }
 };
