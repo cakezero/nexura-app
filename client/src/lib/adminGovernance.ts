@@ -45,18 +45,35 @@ export type TeamMember = {
 export const PRESENCE_HEARTBEAT_MS = 60 * 1000;
 const ONLINE_WINDOW_MS = 2 * PRESENCE_HEARTBEAT_MS + 15 * 1000;
 
-/** "online", or how long ago they were last active ("5m ago"), or null if never seen. */
+/** "just now", "5 minutes ago", "2 days ago" … */
+export function timeAgo(iso?: string | null, now = Date.now()): string {
+  const t = iso ? new Date(iso).getTime() : NaN;
+  if (isNaN(t)) return "";
+  const min = Math.floor(Math.max(0, now - t) / 60000);
+  if (min < 1) return "just now";
+  const hr = Math.floor(min / 60), days = Math.floor(hr / 24);
+  return min < 60 ? plural(min, "minute") : hr < 24 ? plural(hr, "hour") : days < 7 ? plural(days, "day")
+    : days < 30 ? plural(Math.floor(days / 7), "week") : days < 365 ? plural(Math.floor(days / 30), "month") : plural(Math.floor(days / 365), "year");
+}
+
+const plural = (n: number, unit: string) => `${n} ${unit}${n === 1 ? "" : "s"} ago`;
+
+/** "Online now", or WhatsApp-style "Last seen 12 minutes ago" / "3 days ago"; null only without any timestamp. */
 export function presenceOf(lastActiveAt?: string | null, now = Date.now()): { online: boolean; label: string } | null {
   const t = lastActiveAt ? new Date(lastActiveAt).getTime() : NaN;
   if (isNaN(t)) return null;
   const ago = Math.max(0, now - t);
   if (ago <= ONLINE_WINDOW_MS) return { online: true, label: "Online now" };
-  const min = Math.round(ago / 60000);
-  if (min < 60) return { online: false, label: `Last seen ${min}m ago` };
-  const hr = Math.round(min / 60);
-  if (hr < 24) return { online: false, label: `Last seen ${hr}h ago` };
-  const days = Math.round(hr / 24);
-  return { online: false, label: days < 30 ? `Last seen ${days}d ago` : `Last seen ${new Date(t).toLocaleDateString(undefined, { dateStyle: "medium" })}` };
+  const min = Math.floor(ago / 60000);
+  const hr = Math.floor(min / 60);
+  const days = Math.floor(hr / 24);
+  const when = min < 60 ? plural(Math.max(1, min), "minute")
+    : hr < 24 ? plural(hr, "hour")
+    : days < 7 ? plural(days, "day")
+    : days < 30 ? plural(Math.floor(days / 7), "week")
+    : days < 365 ? plural(Math.floor(days / 30), "month")
+    : plural(Math.floor(days / 365), "year");
+  return { online: false, label: `Last seen ${when}` };
 }
 
 export const ROLE_LABEL: Record<StudioRole, string> = {
@@ -189,6 +206,8 @@ export type Proposal = {
   executionError?: string;
   /** Executed invite whose email couldn't be delivered: the link and code to send yourself (signers only). */
   inviteShare?: { link: string; code: string; emailError: string };
+  /** I marked its notification as read. */
+  readByMe?: boolean;
 };
 
 
@@ -216,6 +235,10 @@ export const fetchGovernance = () =>
 
 export const submitProposal = (body: { ref: string; title: string; change: string; action: ProposalAction; clientUrl: string } & SignedPayload) =>
   projectApiRequest<GovernanceSnapshot>({ method: "POST", endpoint: "/hub/governance/proposals", data: body });
+
+/** Marks notifications read for me: the given proposals, or all of them. */
+export const markNotificationsRead = (refs?: string[]) =>
+  projectApiRequest<GovernanceSnapshot>({ method: "POST", endpoint: "/hub/governance/notifications/read", data: refs ? { refs } : {} });
 
 export const submitVote = (ref: string, body: { vote: Vote } & SignedPayload) =>
   projectApiRequest<GovernanceSnapshot>({ method: "POST", endpoint: `/hub/governance/proposals/${encodeURIComponent(ref)}/vote`, data: body });

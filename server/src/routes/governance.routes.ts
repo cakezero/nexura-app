@@ -3,6 +3,7 @@ import {
   createGovernanceProposal,
   executeGovernanceProposal,
   getGovernance,
+  markGovernanceNotificationsRead,
   voteOnGovernanceProposal,
 } from "@/controllers/governance.controller";
 
@@ -14,6 +15,7 @@ router
   .get("/", getGovernance)
   .post("/proposals", createGovernanceProposal)
   .post("/proposals/:ref/vote", voteOnGovernanceProposal)
-  .post("/proposals/:ref/execute", executeGovernanceProposal);
+  .post("/proposals/:ref/execute", executeGovernanceProposal)
+  .post("/notifications/read", markGovernanceNotificationsRead);
 
 export default router;

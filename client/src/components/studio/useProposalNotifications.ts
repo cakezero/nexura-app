@@ -2,11 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getStoredProjectToken } from "@/lib/projectApi";
-import { GOVERNANCE_EVENT, awaitingMyVote, fetchGovernance, isGovernanceUnavailable, type Proposal } from "@/lib/adminGovernance";
+import { GOVERNANCE_EVENT, awaitingMyVote, fetchGovernance, isGovernanceUnavailable, markNotificationsRead, type Proposal } from "@/lib/adminGovernance";
 
 const POLL_MS = 30_000;
 
-/** Proposals waiting for the signed-in signer's approval or rejection, for the header notification bell. */
+/**
+ * Proposals waiting for the signed-in signer's approval or rejection, for the header notification bell.
+ * Read state is stored on the server per admin, so it's the same on every device.
+ */
 export function useProposalNotifications() {
   const [items, setItems] = useState<Proposal[]>([]);
   // Stops polling when the connected API doesn't have the governance endpoints
@@ -37,7 +40,19 @@ export function useProposalNotifications() {
     };
   }, [refresh]);
 
-  return items;
+  /** Marks the given notifications read (all when omitted). Updates the list right away and syncs with the server. */
+  const markRead = useCallback(async (refs?: string[]) => {
+    const target = refs ? new Set(refs) : null;
+    setItems(prev => prev.map(p => (!target || target.has(p.id) ? { ...p, readByMe: true } : p)));
+    try {
+      setItems(awaitingMyVote(await markNotificationsRead(refs)));
+    } catch {
+      refresh(); // put the real state back
+    }
+  }, [refresh]);
+
+  const unread = items.filter(p => !p.readByMe).length;
+  return { items, unread, markRead };
 }
 
 /** Event the bell fires to switch an already-open Admin Management page to its Proposals tab. */

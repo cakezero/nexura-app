@@ -2,6 +2,7 @@
 import StudioLoader from "@/components/studio/StudioLoader";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { CheckCircle2, Clock, XCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAccount, useSignTypedData } from "wagmi";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
@@ -15,7 +16,7 @@ import { OPEN_PROPOSALS_EVENT } from "../studio/useProposalNotifications";
 import {
   type BackendRole, type GovernanceSnapshot, type Proposal, type ProposalAction, type ProposalStatus, type SignedPayload,
   type StudioRole, type TeamMember, type Vote,
-  PERMISSION_COUNT, PERMISSION_GROUPS, PRESENCE_HEARTBEAT_MS, ROLE_LABEL, ROLE_SUMMARY, presenceOf,
+  PERMISSION_COUNT, PERMISSION_GROUPS, PRESENCE_HEARTBEAT_MS, ROLE_LABEL, ROLE_SUMMARY, presenceOf, timeAgo,
   EMPTY_SNAPSHOT, apiHost, assignableRoles, isGovernanceUnavailable, can, canManageMember, fetchGovernance, formatDateTime, minApprovalThreshold, newProposalId,
   notifyGovernanceChanged, permissionCount, studioRole, submitExecution, submitProposal, submitVote, tally,
 } from "../../lib/adminGovernance";
@@ -158,6 +159,61 @@ function Toast({ tone, title, body, onClose }: { tone: "executed" | "rejected"; 
       <div className="min-w-0">
         <p className="text-[13.5px] font-semibold leading-[20.9px] text-[#1c2533]">{title}</p>
         <p className="pt-[2px] text-[12.5px] leading-[19.4px] text-[#69728a]">{body}</p>
+      </div>
+    </div>
+  );
+}
+
+type ConfirmationSigner = { id: string; name: string; role: string; isMe: boolean; vote?: "approve" | "reject"; signature?: { address: string; signedAt: string } };
+
+const SIGNER_CHIPS_SHOWN = 4;
+const MAX_PROGRESS_SEGMENTS = 6;
+
+/**
+ * Safe-style summary: a short progress bar, "1 of 2 confirmations" and a chip per signer.
+ * Large teams show the first few signers (those who voted first, then you) and a "+N more" toggle.
+ */
+function Confirmations({ approvals, needed, signers }: { approvals: number; needed: number; signers: ConfirmationSigner[] }) {
+  const [expanded, setExpanded] = useState(false);
+  const rank = (sg: ConfirmationSigner) => (sg.vote ? 0 : sg.isMe ? 1 : 2);
+  const ordered = [...signers].sort((a, b) => rank(a) - rank(b));
+  const hidden = Math.max(0, ordered.length - SIGNER_CHIPS_SHOWN);
+  const visible = expanded || hidden === 0 ? ordered : ordered.slice(0, SIGNER_CHIPS_SHOWN);
+  return (
+    <div className="flex flex-wrap items-center gap-x-[14px] gap-y-[8px] min-w-0">
+      <div className="flex items-center gap-[8px]">
+        {needed <= MAX_PROGRESS_SEGMENTS ? (
+          <div className="flex gap-[3px]" aria-hidden>
+            {Array.from({ length: needed }, (_, i) => (
+              <span key={i} className={`h-[6px] w-[18px] rounded-full ${i < approvals ? "bg-[#00a87c]" : "bg-[#e9e5f5]"}`} />
+            ))}
+          </div>
+        ) : (
+          <div className="h-[6px] w-[90px] rounded-full bg-[#e9e5f5] overflow-hidden" aria-hidden>
+            <div className="h-full rounded-full bg-[#00a87c]" style={{ width: `${Math.min(100, (approvals / needed) * 100)}%` }} />
+          </div>
+        )}
+        <span className="text-[12.5px] font-semibold text-[#3d485c] whitespace-nowrap">{Math.min(approvals, needed)} of {needed} confirmations</span>
+      </div>
+      <div className="flex flex-wrap items-center gap-[6px]">
+        {visible.map(sg => {
+          const state = sg.vote === "approve" ? "Approved" : sg.vote === "reject" ? "Rejected" : "Hasn't signed yet";
+          const Icon = sg.vote === "approve" ? CheckCircle2 : sg.vote === "reject" ? XCircle : Clock;
+          const iconColor = sg.vote === "approve" ? "text-[#00a87c]" : sg.vote === "reject" ? "text-[#e4545b]" : "text-[#98a0b4]";
+          return (
+            <span key={sg.id} title={`${sg.name}${sg.isMe ? " (you)" : ""} · ${sg.role} · ${state}${sg.signature ? ` · signed with ${sg.signature.address.slice(0, 6)}…${sg.signature.address.slice(-4)}` : ""}`}
+              className="inline-flex items-center gap-[6px] h-[28px] pl-[8px] pr-[11px] rounded-[8px] bg-[#f8f7fb] border-[0.833px] border-solid border-[rgba(28,37,51,0.08)] text-[12.5px] font-medium text-[#3d485c]">
+              <Icon className={`size-[15px] shrink-0 ${iconColor}`} strokeWidth={2.2} />
+              {sg.name}{sg.isMe && <span className="text-[#98a0b4]">(you)</span>}
+            </span>
+          );
+        })}
+        {hidden > 0 && (
+          <button onClick={() => setExpanded(v => !v)}
+            className="h-[28px] px-[11px] rounded-[8px] text-[12.5px] font-semibold text-[#6e2bd8] hover:bg-[rgba(138,63,252,0.08)]">
+            {expanded ? "Show less" : `+${hidden} more`}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -317,7 +373,7 @@ export default function AdminManagement() {
       setToastMsg({ tone: "executed", title: "Proposal executed", body: p.inviteShare ? "Invitation created. The email couldn't be delivered, so copy the link on the proposal and send it yourself." : `${p.title} was applied` });
       if (p.action.kind !== "thresholds") fetchTeam();
     } else if (p.status === "rejected") {
-      setToastMsg({ tone: "rejected", title: "Proposal rejected", body: "It reached the rejection threshold" });
+      setToastMsg({ tone: "rejected", title: "Proposal rejected", body: (p.resolvedCount ?? 0) >= snap.thresholds.rejection ? "It reached the rejection threshold" : "It can no longer get enough approvals to pass" });
     } else if (p.executionError) {
       toast({ title: "Execution failed", description: explainExecutionError(p.executionError), variant: "destructive" });
     }
@@ -579,8 +635,9 @@ export default function AdminManagement() {
                         </td>
                         <td className={tdStyle}>
                           {(() => {
-                            const presence = isMe ? { online: true, label: "Online now" } : presenceOf(m.lastActiveAt, now);
-                            if (!presence) return <Pill tone="grey" dot>Not active yet</Pill>;
+                            // Older API responses have no activity time; joining is then the latest thing we know
+                            const presence = (isMe ? { online: true, label: "Online now" } : presenceOf(m.lastActiveAt ?? m.createdAt, now))
+                              ?? { online: false, label: "Last seen recently" };
                             return <Pill tone={presence.online ? "green" : "grey"} dot>{presence.label}</Pill>;
                           })()}
                         </td>
@@ -694,103 +751,78 @@ export default function AdminManagement() {
                 {visibleProposals.map(p => {
                   const { approvals, rejections } = tally(p, signerIds);
                   const myVote = p.votes[meId];
+                  const ready = p.status === "pending" && approvals >= thresholds.approval;
+                  const failed = !!p.executionError;
+                  const iProposed = p.proposedBy.id === meId;
+                  const busy = executing === p.id || signing === p.id;
                   const statusPill = p.status === "pending"
-                    ? (executing === p.id ? <Pill tone="amber" dot>Executing…</Pill> : p.executionError ? <Pill tone="red" dot>Execution failed</Pill> : <Pill tone="amber" dot>Pending</Pill>)
+                    ? (executing === p.id ? <Pill tone="amber" dot>Executing…</Pill>
+                      : failed ? <Pill tone="red" dot>Execution failed</Pill>
+                      : ready ? <Pill tone="green" dot>Ready to execute</Pill>
+                      : <Pill tone="amber" dot>Pending</Pill>)
                     : p.status === "executed" ? <Pill tone="green" dot>Executed</Pill> : <Pill tone="red" dot>Rejected</Pill>;
                   return (
-                    <article key={p.id} className="bg-white border-[0.833px] border-solid border-[rgba(28,37,51,0.09)] rounded-[40px] p-[20px]">
+                    <article key={p.id} className="bg-white border-[0.833px] border-solid border-[rgba(28,37,51,0.09)] rounded-[32px] px-[22px] py-[20px]">
                       <div className="flex items-start justify-between gap-4">
                         <div className="min-w-0">
-                          <h3 className="text-[16px] font-semibold leading-[18.4px] tracking-[-0.32px]">{p.title}</h3>
-                          <p className="pt-[3px] text-[12.5px] leading-[19.4px] text-[#69728a]">Proposed by {p.proposedBy.name} · {formatDateTime(p.createdAt)}</p>
+                          <h3 className="text-[16px] font-semibold leading-[22px] tracking-[-0.32px]">{p.title}</h3>
+                          <p className="pt-[2px] text-[12.5px] leading-[19.4px] text-[#69728a]">Proposed by {p.proposedBy.name} · {timeAgo(p.createdAt)}</p>
                         </div>
                         <div className="shrink-0">{statusPill}</div>
                       </div>
-                      <p className="pt-[12px] text-[13.5px] leading-[20.9px] text-[#69728a]">Change: <span className="text-[#1c2533]">{p.change}</span></p>
+                      <p className="pt-[10px] text-[13.5px] leading-[20.9px] text-[#3d485c]">{p.change}</p>
 
                       {p.status === "pending" ? (
                         <>
-                          <div className="pt-[14px] flex flex-col gap-[8px]">
-                            {([["Approvals", approvals, thresholds.approval, "#00a87c"], ["Rejections", rejections, thresholds.rejection, "#e4545b"]] as const).map(([label, n, of, color]) => (
-                              <div key={label} className="flex items-center gap-[8px]">
-                                <span className="w-[88px] shrink-0 text-[13px] font-semibold leading-[20.15px]">{label}</span>
-                                <div className="flex-1 h-[8px] rounded-[20px] bg-[#efeafb] overflow-hidden">
-                                  <div className="h-full rounded-[20px] transition-[width]" style={{ width: `${Math.min(100, (n / of) * 100)}%`, background: color }} />
-                                </div>
-                                <span className={`w-[70px] shrink-0 text-right text-[12.5px] leading-[19.4px] ${MONO}`}>{n} of {of}</span>
-                              </div>
-                            ))}
-                          </div>
-                          <div className="flex flex-wrap gap-[8px] pt-[16px]">
-                            {signers.map(s => {
-                              const v = p.votes[s._id];
-                              const sig = p.signatures?.[s._id];
-                              const tone = v === "approve" ? "green" : v === "reject" ? "red" : "grey";
-                              return (
-                                <span key={s._id} title={sig ? `Signed by ${sig.address} · ${formatDateTime(sig.signedAt)}` : "Not signed yet"}>
-                                  <Pill tone={tone}>
-                                    <span>{v === "approve" ? "✓" : v === "reject" ? "✕" : "…"}</span>
-                                    <span className={MONO}>{s.name}</span>
-                                    <span>· {ROLE_LABEL[roleOf(s)]}</span>
-                                    {sig && <span className={`${MONO} opacity-70`}>· {sig.address.slice(0, 6)}…{sig.address.slice(-4)}</span>}
-                                  </Pill>
+                          <div className="mt-[16px] pt-[14px] border-t-[0.833px] border-solid border-[rgba(28,37,51,0.08)] flex flex-wrap items-center justify-between gap-x-[16px] gap-y-[12px]">
+                            <Confirmations
+                              approvals={approvals}
+                              needed={thresholds.approval}
+                              signers={signers.map(sg => ({
+                                id: sg._id, name: sg.name, role: ROLE_LABEL[roleOf(sg)], isMe: sg._id === meId,
+                                vote: p.votes[sg._id], signature: p.signatures?.[sg._id],
+                              }))}
+                            />
+                            <div className="flex items-center gap-[8px] ml-auto">
+                              {ready ? (
+                                (amSigner || iProposed) ? (
+                                  <button disabled={busy} onClick={() => executeProposal(p)} title="Confirm with your wallet to apply this change"
+                                    className="inline-flex items-center gap-[8px] h-[36px] px-[16px] rounded-[40px] bg-[#8b3efe] text-white text-[13px] font-semibold hover:bg-[#7c2ff0] disabled:opacity-50">
+                                    {signing === p.id ? "Check your wallet…" : executing === p.id ? "Executing…" : failed ? "Try again" : "Execute"}
+                                  </button>
+                                ) : <span className="text-[12.5px] text-[#69728a]">Waiting for a signer to execute</span>
+                              ) : !amSigner && !iProposed ? (
+                                <span className="text-[12.5px] text-[#69728a]">Only signers can vote</span>
+                              ) : iProposed || myVote ? (
+                                <span className={`text-[12.5px] font-semibold ${myVote === "reject" ? "text-[#e4545b]" : "text-[#00a87c]"}`}>
+                                  {myVote === "reject" ? "You rejected" : "You approved"} · waiting for others
                                 </span>
-                              );
-                            })}
+                              ) : (
+                                <>
+                                  <button disabled={busy} onClick={() => castVote(p, "reject")}
+                                    className="inline-flex items-center gap-[6px] h-[36px] px-[14px] rounded-[40px] bg-white border-[0.833px] border-solid border-[rgba(228,84,91,0.45)] text-[#e4545b] text-[13px] font-semibold hover:bg-[rgba(248,113,113,0.08)] disabled:opacity-50">
+                                    Reject
+                                  </button>
+                                  <button disabled={busy} onClick={() => castVote(p, "approve")}
+                                    className="inline-flex items-center gap-[6px] h-[36px] px-[16px] rounded-[40px] bg-[#00a87c] text-white text-[13px] font-semibold hover:bg-[#009670] disabled:opacity-50">
+                                    {signing === p.id ? "Check your wallet…" : "Approve"}
+                                  </button>
+                                </>
+                              )}
+                            </div>
                           </div>
-                          {(() => {
-                            const ready = approvals >= thresholds.approval;
-                            const iProposed = p.proposedBy.id === meId;
-                            const busy = executing === p.id || signing === p.id;
-                            if (ready) {
-                              const failed = !!p.executionError;
-                              return (
-                                <div className={`mt-[16px] flex flex-wrap items-center justify-between gap-[12px] px-[16px] py-[12px] rounded-[24px] border-[0.833px] border-solid ${failed ? "bg-[rgba(248,113,113,0.1)] border-[rgba(228,84,91,0.4)]" : "bg-[rgba(0,225,162,0.1)] border-[rgba(0,168,124,0.3)]"}`}>
-                                  <div className="min-w-0 max-w-[720px]">
-                                    <p className={`text-[13px] font-semibold ${failed ? "text-[#e4545b]" : "text-[#00875a]"}`}>
-                                      {failed ? "Execution failed · nothing was changed" : `Confirmed by ${approvals} of ${signers.length} signer${signers.length === 1 ? "" : "s"} · ready to execute`}
-                                    </p>
-                                    <p className="pt-[2px] text-[12.5px] leading-[19.4px] text-[#3d485c]">
-                                      {failed ? explainExecutionError(p.executionError!) : "Execute signs the final confirmation with your wallet and applies the change."}
-                                    </p>
-                                  </div>
-                                  {(amSigner || iProposed) && (
-                                    <button disabled={busy} onClick={() => executeProposal(p)} className="inline-flex items-center gap-[8px] min-h-[34px] px-[14px] py-[7px] rounded-[40px] bg-[#8b3efe] text-white text-[13px] font-semibold hover:bg-[#7c2ff0] disabled:opacity-50">
-                                      {signing === p.id ? "Check your wallet…" : executing === p.id ? "Executing…" : failed ? "Try again" : "Execute"}
-                                    </button>
-                                  )}
-                                </div>
-                              );
-                            }
-                            return (
-                              <div className="flex flex-wrap items-center gap-[8px] pt-[16px]">
-                                {iProposed ? (
-                                  <span className="text-[13px] font-semibold text-[#00a87c]">You proposed and signed this{amSigner ? " · your approval is counted" : ""}. Waiting for the other signers.</span>
-                                ) : !amSigner ? (
-                                  <span className="text-[13px] text-[#69728a]">Only signers can approve or reject proposals.</span>
-                                ) : myVote ? (
-                                  <span className={`text-[13px] font-semibold ${myVote === "approve" ? "text-[#00a87c]" : "text-[#e4545b]"}`}>You {myVote === "approve" ? "approved" : "rejected"} this with your wallet.</span>
-                                ) : (
-                                  <>
-                                    <button disabled={busy} onClick={() => castVote(p, "approve")} className="inline-flex items-center gap-[8px] min-h-[34px] px-[12px] py-[7px] rounded-[40px] bg-[#00a87c] text-white text-[13px] font-semibold drop-shadow-[0px_8px_11px_rgba(138,63,252,0.25)] hover:bg-[#009670] disabled:opacity-50">
-                                      <img src={`${ICON}/approve.svg`} alt="" className="size-[16px]" />{signing === p.id ? "Check your wallet…" : "Approve"}
-                                    </button>
-                                    <button disabled={busy} onClick={() => castVote(p, "reject")} className="inline-flex items-center gap-[8px] min-h-[34px] px-[12px] py-[7px] rounded-[40px] bg-[#e4545b] text-white text-[13px] font-semibold hover:bg-[#d4444b] disabled:opacity-50">
-                                      <img src={`${ICON}/dismiss.svg`} alt="" className="size-[14px]" />Reject
-                                    </button>
-                                    <span className="text-[12px] text-[#69728a]">Your wallet will ask you to sign.</span>
-                                  </>
-                                )}
-                              </div>
-                            );
-                          })()}
+                          {ready && failed && (
+                            <p className="pt-[10px] text-[12.5px] leading-[19.4px] text-[#e4545b]">{explainExecutionError(p.executionError!)}</p>
+                          )}
                         </>
                       ) : (
                         <>
                           <p className="pt-[10px] text-[12.5px] leading-[19.4px] text-[#69728a]">
                             {p.status === "executed"
                               ? `Approved ${formatDateTime(p.resolvedAt)} with ${p.resolvedCount ?? approvals} approval${(p.resolvedCount ?? approvals) === 1 ? "" : "s"}.`
-                              : `Rejected ${formatDateTime(p.resolvedAt)} after ${p.resolvedCount ?? rejections} rejection${(p.resolvedCount ?? rejections) === 1 ? "" : "s"}.`}
+                              : (p.resolvedCount ?? rejections) >= thresholds.rejection
+                                ? `Rejected ${formatDateTime(p.resolvedAt)} after ${p.resolvedCount ?? rejections} rejection${(p.resolvedCount ?? rejections) === 1 ? "" : "s"}.`
+                                : `Rejected ${formatDateTime(p.resolvedAt)}: with ${p.resolvedCount ?? rejections} rejection${(p.resolvedCount ?? rejections) === 1 ? "" : "s"}, it could no longer reach ${thresholds.approval} approvals.`}
                           </p>
                           {p.status === "executed" && p.inviteShare && <InviteShareBox share={p.inviteShare} email={p.action.kind === "invite" ? p.action.email : ""} />}
                         </>

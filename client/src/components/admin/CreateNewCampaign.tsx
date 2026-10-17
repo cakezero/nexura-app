@@ -3076,7 +3076,7 @@ export default function CreateNewCampaign({
               <div style={{ padding: "16px 24px", display: "flex", flexDirection: "column", gap: 15.99 }}>
                 <div style={{ fontSize: 14, color: "#3d485c", lineHeight: "21.7px" }}>
                   {mode === "live"
-                    ? `This campaign is published, so your changes to ${campaignName.trim() || "this campaign"} go to Admin Management as a proposal. You will sign it with your wallet, and the changes apply once the signers approve.`
+                    ? `This campaign is published, so your changes to ${campaignName.trim() || "this campaign"} go to Admin Management as a proposal. You will sign it with your wallet. Once enough signers approve, any signer can execute it to apply the changes.`
                     : <>Once published, {campaignName.trim() || "Untitled campaign"} moves to Upcoming and appears on the public page, but participants cannot join until it starts. {rewardsEnabled ? "Reward amounts and reserved participant funds become locked. You can still increase the pool later." : ""}</>}
                 </div>
                 <div style={{ background: "rgba(138,63,252,0.1)", border: "1px solid rgba(155,124,255,0.24)", borderRadius: 40, padding: "21px 16.83px", display: mode === "live" ? "none" : "flex", gap: 12, alignItems: "flex-start" }}>
