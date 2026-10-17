@@ -26,6 +26,103 @@ async function campaignScope(hubId: string): Promise<{ filter: Record<string, un
   return { filter: isSystem ? { hub: { $ne: null } } : { hub: hubId }, isSystem };
 }
 
+// ─── Fraud hints shown to reviewers ───────────────────────────────────────────
+const NEW_ACCOUNT_MS = 7 * 24 * 60 * 60 * 1000;
+const X_HOSTS = new Set(["x.com", "twitter.com", "mobile.twitter.com", "mobile.x.com"]);
+
+/** Comparable form of a submitted link: x.com/twitter.com treated alike, no query, hash or trailing slash. */
+function normalizeLink(raw: unknown): string {
+  const text = String(raw ?? "").trim();
+  try {
+    const u = new URL(text);
+    const host = u.hostname.replace(/^www\./, "").toLowerCase();
+    return `${X_HOSTS.has(host) ? "x.com" : host}${u.pathname.replace(/\/+$/, "").toLowerCase()}`;
+  } catch {
+    return ""; // free text (e.g. feedback) isn't compared
+  }
+}
+
+/** Author handle of an X post link (x.com/<handle>/status/<id>), lowercase. */
+function xHandleOf(raw: unknown): string | null {
+  try {
+    const u = new URL(String(raw ?? "").trim());
+    if (!X_HOSTS.has(u.hostname.replace(/^www\./, "").toLowerCase())) return null;
+    const [handle, kind] = u.pathname.split("/").filter(Boolean);
+    // x.com/i/status/<id> links don't name the author
+    return handle && kind === "status" && handle.toLowerCase() !== "i" ? handle.toLowerCase() : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Comparable form of any submission: a link (see normalizeLink), or free text such as a survey
+ * answer, feedback or a transaction hash, lowercased with spacing and punctuation collapsed.
+ * Very short text ("yes", "done") isn't compared, since many people legitimately write it.
+ */
+function submissionKey(raw: unknown): string {
+  const link = normalizeLink(raw);
+  if (link) return `link:${link}`;
+  const text = String(raw ?? "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+  return text.length >= 12 ? `text:${text}` : "";
+}
+
+const MIN_ANSWER_CHARS = 15;
+
+/** Platform a task's proof should come from, by task tag; null when any link or text is fine. */
+function expectedPlatform(tag: string): { label: string; hosts: string[] } | null {
+  if (/-x$/.test(tag) || tag === "like") return { label: "an X link", hosts: [...X_HOSTS] };
+  if (/discord/.test(tag)) return { label: "a Discord link", hosts: ["discord.com", "discord.gg", "discordapp.com", "ptb.discord.com", "canary.discord.com"] };
+  return null;
+}
+
+type FraudHint = {
+  kind: "duplicate-link" | "duplicate-answer" | "wrong-platform" | "short-answer" | "x-mismatch" | "no-x-linked" | "new-account" | "rejected-before";
+  label: string;
+};
+
+function fraudHints(s: any, u: any, usersByKey: Map<string, Set<string>>, now: number): FraudHint[] {
+  const hints: FraudHint[] = [];
+  const raw = String(s.submissionLink ?? "").trim();
+  const tag = String(s.taskType ?? "");
+  const key = submissionKey(raw);
+  const others = key ? (usersByKey.get(key)?.size ?? 1) - 1 : 0;
+  if (others > 0) {
+    const who = `${others} other ${others === 1 ? "person" : "people"}`;
+    hints.push(key.startsWith("link:")
+      ? { kind: "duplicate-link", label: `Same link submitted by ${who}` }
+      : { kind: "duplicate-answer", label: `Same answer as ${who}` });
+  }
+
+  // Proof from the wrong place, e.g. a non-X link for an X task
+  const platform = expectedPlatform(tag);
+  if (platform) {
+    let host = "";
+    try { host = new URL(raw).hostname.replace(/^www\./, "").toLowerCase(); } catch { /* not a link */ }
+    if (!platform.hosts.includes(host)) hints.push({ kind: "wrong-platform", label: host ? `Link is on ${host}, expected ${platform.label}` : `Not a link, expected ${platform.label}` });
+  } else if (!/^https?:\/\//i.test(raw) && !/^0x[0-9a-f]{8,}$/i.test(raw) && raw.length < MIN_ANSWER_CHARS) {
+    // Written answers (surveys, feedback) that say almost nothing
+    hints.push({ kind: "short-answer", label: raw ? `Very short answer (${raw.length} characters)` : "Empty answer" });
+  }
+
+  // Only comments and quotes are the person's own post, so only those links carry their handle
+  const handle = xHandleOf(s.submissionLink);
+  const linked = String(u?.socialProfiles?.x?.connected ? u?.socialProfiles?.x?.username ?? "" : "").replace(/^@/, "").toLowerCase();
+  const ownPostTask = /comment|quote/i.test(String(s.taskType ?? ""));
+  if (handle && ownPostTask) {
+    if (!linked) hints.push({ kind: "no-x-linked", label: "No X account linked on Nexura" });
+    else if (handle !== linked) hints.push({ kind: "x-mismatch", label: `Posted by @${handle}, linked X is @${linked}` });
+  }
+
+  const created = u?.createdAt ? new Date(u.createdAt).getTime() : NaN;
+  if (!isNaN(created) && now - created < NEW_ACCOUNT_MS) {
+    const days = Math.max(0, Math.floor((now - created) / 86400000));
+    hints.push({ kind: "new-account", label: days === 0 ? "Account created today" : `Account ${days} day${days === 1 ? "" : "s"} old` });
+  }
+  if ((s.rejectedCount ?? 0) > 0) hints.push({ kind: "rejected-before", label: `Rejected ${s.rejectedCount}× before` });
+  return hints;
+}
+
 /** Live status from the dates, matching the Campaigns tab. */
 function liveStatus(c: any): "Active" | "Upcoming" | "Ended" {
   const now = Date.now();
@@ -139,7 +236,7 @@ export const getCampaignSubmissionDetails = async (req: GlobalRequest, res: Glob
     const claimerIds = claims.map(j => String(j.user));
     const userIds = [...new Set([...claimerIds, ...subs.map(s => String(s.user))])].filter(u => mongoose.Types.ObjectId.isValid(u));
     const [users, overall] = await Promise.all([
-      user.find({ _id: { $in: userIds } }).select("username address profilePic").lean() as Promise<any[]>,
+      user.find({ _id: { $in: userIds } }).select("username address profilePic socialProfiles.x createdAt").lean() as Promise<any[]>,
       computeRetention(claimerIds),
     ]);
     const userById = new Map(users.map(u => [String(u._id), u]));
@@ -179,10 +276,29 @@ export const getCampaignSubmissionDetails = async (req: GlobalRequest, res: Glob
       };
     }).sort((a, b) => new Date(b.claimedAt).getTime() - new Date(a.claimedAt).getTime());
 
+    // Grouping: each task's stage and position in the campaign
+    const stageOfTask = new Map<string, { index: number; name: string }>();
+    stages.forEach((st, index) => st.taskIds.forEach(tid => stageOfTask.set(tid, { index, name: st.name })));
+
+    // Fraud hint: the same link or answer submitted by more than one person in this campaign
+    const usersByKey = new Map<string, Set<string>>();
+    for (const s of subs) {
+      const key = submissionKey(s.submissionLink);
+      if (!key) continue;
+      if (!usersByKey.has(key)) usersByKey.set(key, new Set());
+      usersByKey.get(key)!.add(String(s.user));
+    }
+
     const submissions = subs.map(s => {
       const q = questById.get(String(s.miniQuestId));
       const u = userById.get(String(s.user));
+      const stage = stageOfTask.get(String(s.miniQuestId));
       return {
+        questId: String(s.miniQuestId),
+        stageIndex: stage?.index ?? null,
+        stageName: stage?.name ?? "",
+        taskOrder: q?.order ?? 0,
+        flags: fraudHints(s, u, usersByKey, now),
         _id: String(s._id),
         submissionLink: s.submissionLink,
         page: s.page,

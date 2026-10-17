@@ -5,6 +5,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAccount, useSignTypedData } from "wagmi";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
+import { useStudioWallet } from "../studio/useStudioWallet";
+import { useSilentWalletConnect } from "../studio/useSilentWalletConnect";
 import { recoverTypedDataAddress } from "viem";
 import { getStoredProjectInfo, projectApiRequest } from "../../lib/projectApi";
 import { useToast } from "../../hooks/use-toast";
@@ -13,7 +15,7 @@ import { OPEN_PROPOSALS_EVENT } from "../studio/useProposalNotifications";
 import {
   type BackendRole, type GovernanceSnapshot, type Proposal, type ProposalAction, type ProposalStatus, type SignedPayload,
   type StudioRole, type TeamMember, type Vote,
-  PERMISSION_COUNT, PERMISSION_GROUPS, ROLE_LABEL, ROLE_SUMMARY,
+  PERMISSION_COUNT, PERMISSION_GROUPS, PRESENCE_HEARTBEAT_MS, ROLE_LABEL, ROLE_SUMMARY, presenceOf,
   EMPTY_SNAPSHOT, apiHost, assignableRoles, isGovernanceUnavailable, can, canManageMember, fetchGovernance, formatDateTime, minApprovalThreshold, newProposalId,
   notifyGovernanceChanged, permissionCount, studioRole, submitExecution, submitProposal, submitVote, tally,
 } from "../../lib/adminGovernance";
@@ -224,12 +226,18 @@ export default function AdminManagement() {
   const [busyInvite, setBusyInvite] = useState<string | null>(null);
   const [executing, setExecuting] = useState<string | null>(null);
   const [signing, setSigning] = useState<string | null>(null);
-  const { address: walletAddress, isConnected: walletConnected } = useAccount();
+  const { address: liveAddress, isConnected: walletConnected } = useAccount();
+  const sessionWallet = useStudioWallet();
+  const silentConnect = useSilentWalletConnect();
   const { signTypedDataAsync } = useSignTypedData();
   const { openConnectModal } = useConnectModal();
 
-  const fetchTeam = useCallback(async () => {
-    setLoading(true);
+  // Ticks with the team refresh so "Last seen" and online status stay current
+  const [now, setNow] = useState(() => Date.now());
+
+  /** `quiet` refreshes in the background (statuses), without the loading state or error toasts. */
+  const fetchTeam = useCallback(async (quiet = false) => {
+    if (!quiet) setLoading(true);
     try {
       const [team, me] = await Promise.all([
         projectApiRequest<{ admins?: TeamMember[]; pendingInvites?: PendingInvite[] }>({ method: "GET", endpoint: "/hub/hub-admins" }),
@@ -243,15 +251,22 @@ export default function AdminManagement() {
         if (me.hub.name) setHubName(String(me.hub.name));
       }
       if (me?.admin?._id) setMeId(String(me.admin._id));
+      setNow(Date.now());
     } catch (err: unknown) {
-      toast({ title: "Error", description: err instanceof Error ? err.message : "Failed to load your team.", variant: "destructive" });
+      if (!quiet) toast({ title: "Error", description: err instanceof Error ? err.message : "Failed to load your team.", variant: "destructive" });
     } finally {
-      setLoading(false);
+      if (!quiet) setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => { fetchTeam(); }, [fetchTeam]);
+
+  // Keep everyone's status current while the page is open
+  useEffect(() => {
+    const id = setInterval(() => { if (document.visibilityState === "visible") fetchTeam(true); }, PRESENCE_HEARTBEAT_MS);
+    return () => clearInterval(id);
+  }, [fetchTeam]);
 
   // Deep link from the notification bell: ?tab=proposals
   useEffect(() => {
@@ -329,11 +344,13 @@ export default function AdminManagement() {
    * wallet on an admin's first signature, and afterwards only accepts that wallet for them.
    */
   const signAction = async (verb: "Propose" | "Approve" | "Reject" | "Execute", proposal: Pick<Proposal, "id" | "title">): Promise<SignedPayload> => {
-    if (!walletConnected || !walletAddress) {
+    const linked = gov.signerWallets?.[meId];
+    // The header may show a remembered address without a live connection: restore it silently first
+    const walletAddress = (walletConnected && liveAddress) ? liveAddress : await silentConnect(linked ?? sessionWallet.address);
+    if (!walletAddress) {
       openConnectModal?.();
       throw new Error("Connect your wallet to sign. Signing proves the action came from you.");
     }
-    const linked = gov.signerWallets?.[meId];
     if (linked && linked.toLowerCase() !== walletAddress.toLowerCase()) {
       throw new Error(`Switch to the wallet linked to your account (${linked.slice(0, 6)}…${linked.slice(-4)}) to sign.`);
     }
@@ -345,7 +362,7 @@ export default function AdminManagement() {
       signer: `${me?.name ?? "Admin"} (${meId})`,
       signedAt: new Date().toISOString(),
     };
-    const signature = await signTypedDataAsync({ domain: SIGN_DOMAIN, types: SIGN_TYPES, primaryType: "StudioAction", message });
+    const signature = await signTypedDataAsync({ account: walletAddress as `0x${string}`, domain: SIGN_DOMAIN, types: SIGN_TYPES, primaryType: "StudioAction", message });
     const recovered = await recoverTypedDataAddress({ domain: SIGN_DOMAIN, types: SIGN_TYPES, primaryType: "StudioAction", message, signature });
     if (recovered.toLowerCase() !== walletAddress.toLowerCase()) throw new Error("The signature doesn't match the connected wallet.");
     return { signature, message };
@@ -561,7 +578,11 @@ export default function AdminManagement() {
                           </div>
                         </td>
                         <td className={tdStyle}>
-                          {isMe ? <Pill tone="green" dot>Online now</Pill> : <Pill tone="grey" dot>Status unavailable</Pill>}
+                          {(() => {
+                            const presence = isMe ? { online: true, label: "Online now" } : presenceOf(m.lastActiveAt, now);
+                            if (!presence) return <Pill tone="grey" dot>Not active yet</Pill>;
+                            return <Pill tone={presence.online ? "green" : "grey"} dot>{presence.label}</Pill>;
+                          })()}
                         </td>
                         <td className={`${tdStyle} text-[13.5px] leading-[20.9px] text-[#69728a] whitespace-nowrap`}>{formatDateTime(m.createdAt)}</td>
                         <td className={`${tdStyle} text-right`}>

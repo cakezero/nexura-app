@@ -37,7 +37,27 @@ export type TeamMember = {
   email?: string;
   role: BackendRole;
   createdAt?: string;
+  /** Last time they used the studio (server-recorded); drives the online status. */
+  lastActiveAt?: string | null;
 };
+
+/** Studio heartbeat interval; someone counts as online within two of these. */
+export const PRESENCE_HEARTBEAT_MS = 60 * 1000;
+const ONLINE_WINDOW_MS = 2 * PRESENCE_HEARTBEAT_MS + 15 * 1000;
+
+/** "online", or how long ago they were last active ("5m ago"), or null if never seen. */
+export function presenceOf(lastActiveAt?: string | null, now = Date.now()): { online: boolean; label: string } | null {
+  const t = lastActiveAt ? new Date(lastActiveAt).getTime() : NaN;
+  if (isNaN(t)) return null;
+  const ago = Math.max(0, now - t);
+  if (ago <= ONLINE_WINDOW_MS) return { online: true, label: "Online now" };
+  const min = Math.round(ago / 60000);
+  if (min < 60) return { online: false, label: `Last seen ${min}m ago` };
+  const hr = Math.round(min / 60);
+  if (hr < 24) return { online: false, label: `Last seen ${hr}h ago` };
+  const days = Math.round(hr / 24);
+  return { online: false, label: days < 30 ? `Last seen ${days}d ago` : `Last seen ${new Date(t).toLocaleDateString(undefined, { dateStyle: "medium" })}` };
+}
 
 export const ROLE_LABEL: Record<StudioRole, string> = {
   owner: "Owner",

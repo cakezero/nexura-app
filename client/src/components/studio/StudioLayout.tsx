@@ -5,7 +5,8 @@ import { usePathname, useRouter } from "next/navigation";
 import StudioBackground from "@/components/StudioBackground";
 import StudioSidebar from "./StudioSidebar";
 import StudioHeader from "./StudioHeader";
-import { isProjectSignedIn } from "@/lib/projectApi";
+import { isProjectSignedIn, projectApiRequest } from "@/lib/projectApi";
+import { PRESENCE_HEARTBEAT_MS } from "@/lib/adminGovernance";
 
 type TabType = "hubProfile" | "campaignSubmissions" | "adminManagement" | "campaignsTab" | "campaignsFlow";
 
@@ -48,6 +49,18 @@ export default function StudioLayout({ children, title = "Nexura Studio", hideHe
     if (!isProjectSignedIn()) {
       router.push("/studio");
     }
+  }, []);
+
+  // Heartbeat: any authenticated request records activity, so teammates see this admin online
+  useEffect(() => {
+    if (!isProjectSignedIn()) return;
+    const ping = () => {
+      if (document.visibilityState !== "visible") return;
+      projectApiRequest({ method: "GET", endpoint: "/hub/me" }).catch(() => {});
+    };
+    const id = setInterval(ping, PRESENCE_HEARTBEAT_MS);
+    document.addEventListener("visibilitychange", ping);
+    return () => { clearInterval(id); document.removeEventListener("visibilitychange", ping); };
   }, []);
 
   return (

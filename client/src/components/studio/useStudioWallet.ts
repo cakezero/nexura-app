@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useAccount, useDisconnect } from "wagmi";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
+import { useSilentWalletConnect } from "./useSilentWalletConnect";
 
 // Set when the wallet is disconnected inside the studio, so the main-app session address is not shown again
 const HIDDEN_KEY = "nexura:studio-wallet-hidden";
@@ -37,6 +38,13 @@ export function useStudioWallet() {
     try { hidden = localStorage.getItem(HIDDEN_KEY); } catch {}
     setSessionAddress(addr && addr.toLowerCase() !== hidden?.toLowerCase() ? addr : null);
   }, []);
+
+  // The shown session address needs a live wallet connection to sign: restore it without a popup
+  const silentConnect = useSilentWalletConnect();
+  useEffect(() => {
+    if (sessionAddress && !isConnected) silentConnect(sessionAddress).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionAddress]);
 
   // A fresh connection clears any earlier studio disconnect
   useEffect(() => {

@@ -2,7 +2,7 @@ import logger from "@/config/logger";
 import { admin } from "@/models/admin.model";
 import mongoose from "mongoose";
 import { bannedUser } from "@/models/bannedUser.model";
-import { hubAdmin, userHubAdmin } from "@/models/hub.model";
+import { hubAdmin, touchHubAdminActivity, userHubAdmin } from "@/models/hub.model";
 import { user } from "@/models/user.model";
 import { resolveAdminCampaignHub } from "@/utils/adminCampaignHub";
 import { BAD_REQUEST, INTERNAL_SERVER_ERROR, UNAUTHORIZED, FORBIDDEN } from "@/utils/status.utils";
@@ -64,6 +64,7 @@ export const authenticateHubAdmin = async (req: GlobalRequest, res: GlobalRespon
     req.id = id as string;
     req.adminName = superAdminExists.name;
   	req.admin = superAdminExists;
+    touchHubAdminActivity(String(superAdminExists._id), (superAdminExists as any).lastActiveAt);
 
 		next();
 	} catch (error: any) {
@@ -170,6 +171,7 @@ export const authenticateHubAdmin2 = async (req: GlobalRequest, res: GlobalRespo
     req.adminName = exists.name;
     req.admin = exists;
     req.token = token;
+    touchHubAdminActivity(String(exists._id), (exists as any).lastActiveAt);
 
 		next();
 	} catch (error: any) {
