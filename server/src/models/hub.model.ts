@@ -125,10 +125,23 @@ const hubAdminSchema = new mongoose.Schema({
   pendingTxHash: {
     type: String,
     default: null,
+  },
+  // Last authenticated studio request, for the team's online status
+  lastActiveAt: {
+    type: Date,
+    default: null,
   }
 }, { timestamps: true });
 
 export const hubAdmin = mongoose.model("hub-admins", hubAdminSchema);
+
+const ACTIVITY_WRITE_INTERVAL_MS = 30 * 1000;
+
+/** Records that a studio admin is active. Writes at most every 30 seconds and never blocks the request. */
+export function touchHubAdminActivity(id: string, lastActiveAt?: Date | null) {
+  if (lastActiveAt && Date.now() - new Date(lastActiveAt).getTime() < ACTIVITY_WRITE_INTERVAL_MS) return;
+  hubAdmin.updateOne({ _id: id }, { $set: { lastActiveAt: new Date() } }).catch(() => {});
+}
 
 const userHubSchema = new Schema({
   systemKey: {

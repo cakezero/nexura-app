@@ -10,7 +10,7 @@ import { TASKS } from "../../types/admin";
 import StudioLoader from "../studio/StudioLoader";
 import { scrollToTop } from "../../lib/scrollToTop";
 import { StatsOverview } from "./StatsOverview";
-import CampaignSubmissions from "./CampaignSubmissions";
+import CampaignSubmissions, { type CampaignSubmission } from "./CampaignSubmissions";
 
 type LiveStatus = "Active" | "Upcoming" | "Ended";
 
@@ -35,7 +35,6 @@ type Claimer = {
   meetsRequirement: boolean | null; history: StageHistory[];
 };
 
-type CampaignSubmission = TASKS & { taskTitle?: string; nexuraUsername?: string; address?: string; rejectedCount?: number };
 
 type CampaignDetails = {
   campaign: {
@@ -58,9 +57,9 @@ const STATUS_PILL: Record<LiveStatus, string> = {
 
 const fmtDate = (iso?: string | null) => {
   const d = iso ? new Date(iso) : null;
-  return d && !isNaN(d.getTime()) ? d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "—";
+  return d && !isNaN(d.getTime()) ? d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "No date";
 };
-const shortAddress = (a: string) => (a && a.length > 12 ? `${a.slice(0, 6)}…${a.slice(-4)}` : a || "—");
+const shortAddress = (a: string) => (a && a.length > 12 ? `${a.slice(0, 6)}…${a.slice(-4)}` : a || "No wallet");
 const retentionColor = (r: number | null) => (r === null ? "#98a0b4" : r >= 75 ? "#00a87c" : r >= 40 ? "#c27c00" : "#e4545b");
 const errorMessage = (err: unknown, fallback: string) => (err instanceof Error && err.message ? err.message : fallback);
 /** The Submissions endpoints answer 404 when they aren't available. */
@@ -191,7 +190,7 @@ function CampaignList({ refreshKey, onOpen }: { refreshKey: number; onOpen: (id:
         </button>
       </div>
 
-      <div className="flex gap-6 border-b-[0.833px] border-[rgba(28,37,51,0.09)] overflow-x-auto">
+      <div className="flex gap-6 border-b-[0.833px] border-[rgba(28,37,51,0.09)] overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {(["all", "Active", "Upcoming", "Ended"] as const).map(f => (
           <button key={f} onClick={() => setFilter(f)}
             className={cn("pb-3 px-1 text-[15px] font-medium whitespace-nowrap border-b-2 -mb-px transition",
@@ -292,7 +291,7 @@ function CampaignView(props: SubmissionsHubProps & { campaignId: string; onBack:
     { k: "Completed all tasks", v: String(stats.completedAllTasks), sub: stats.participants ? `${Math.round((stats.completedAllTasks / stats.participants) * 100)}% of participants` : "no participants yet" },
     ...(c.hasRewards ? [{ k: "Rewards claimed", v: String(stats.claimedReward), sub: `${c.rewardPool} TRUST pool` }] : []),
     {
-      k: "Average retention", v: stats.averageRetention === null ? "—" : `${stats.averageRetention}%`,
+      k: "Average retention", v: stats.averageRetention === null ? "No data yet" : `${stats.averageRetention}%`,
       sub: stats.averageOverallRetention !== null ? `of claimers · ${stats.averageOverallRetention}% overall on Nexura` : "of people who claimed",
     },
   ];
@@ -355,9 +354,6 @@ function CampaignView(props: SubmissionsHubProps & { campaignId: string; onBack:
             loading={props.loading || refreshing}
             searchTerm={props.searchTerm}
             setSearchTerm={props.setSearchTerm}
-            selectedUsers={props.selectedUsers}
-            viewedSubmissions={props.viewedSubmissions}
-            toggleUserSelection={props.toggleUserSelection}
             handleView={id => { const t = data.submissions.find(s => s._id === id); if (t) props.onOpenSubmission(t); }}
             handleAction={props.handleAction}
             onRefresh={load}
@@ -375,7 +371,7 @@ function RetentionCell({ rate, detail, below }: { rate: number | null; detail: s
   return (
     <div className="flex flex-col gap-1 min-w-0">
       <span className="text-xs font-semibold" style={{ color: retentionColor(rate) }}>
-        {rate === null ? "—" : `${rate}%`}
+        {rate === null ? "No data yet" : `${rate}%`}
         <span className="text-[#98a0b4] font-medium"> · {detail}</span>
         {below && <span className="text-[#e4545b] font-medium"> · below target</span>}
       </span>

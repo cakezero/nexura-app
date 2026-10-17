@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useAccount, useSignTypedData } from "wagmi";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { recoverTypedDataAddress } from "viem";
+import { useSilentWalletConnect } from "./useSilentWalletConnect";
 import { projectApiRequest } from "@/lib/projectApi";
 import {
   EMPTY_SNAPSHOT, type GovernanceSnapshot, type ProposalAction,
@@ -30,9 +31,10 @@ const SIGN_TYPES = {
 export function useGovernanceProposer() {
   const [gov, setGov] = useState<GovernanceSnapshot>(EMPTY_SNAPSHOT);
   const [me, setMe] = useState<{ id: string; name: string; hubName: string } | null>(null);
-  const { address, isConnected } = useAccount();
+  const { address: liveAddress, isConnected } = useAccount();
   const { signTypedDataAsync } = useSignTypedData();
   const { openConnectModal } = useConnectModal();
+  const silentConnect = useSilentWalletConnect();
 
   const refresh = useCallback(async () => {
     try { setGov(await fetchGovernance()); }
@@ -52,11 +54,13 @@ export function useGovernanceProposer() {
    */
   const sign = async (verb: "Propose" | "Publish", title: string, id: string) => {
     if (!me) throw new Error("Your admin account is still loading. Try again in a moment.");
-    if (!isConnected || !address) {
+    const linked = gov.signerWallets?.[me.id];
+    // The header may show a remembered address without a live connection: restore it silently first
+    const address = (isConnected && liveAddress) ? liveAddress : await silentConnect(linked);
+    if (!address) {
       openConnectModal?.();
       throw new Error("Connect your wallet to sign, then try again.");
     }
-    const linked = gov.signerWallets?.[me.id];
     if (linked && linked.toLowerCase() !== address.toLowerCase()) {
       throw new Error(`Switch to the wallet linked to your account (${linked.slice(0, 6)}…${linked.slice(-4)}) to sign.`);
     }
@@ -70,7 +74,7 @@ export function useGovernanceProposer() {
     };
     let signature: `0x${string}`;
     try {
-      signature = await signTypedDataAsync({ domain: SIGN_DOMAIN, types: SIGN_TYPES, primaryType: "StudioAction", message });
+      signature = await signTypedDataAsync({ account: address as `0x${string}`, domain: SIGN_DOMAIN, types: SIGN_TYPES, primaryType: "StudioAction", message });
     } catch (err) {
       // Wallet errors are long; their short message says what actually happened
       const e = err as { shortMessage?: string; message?: string };

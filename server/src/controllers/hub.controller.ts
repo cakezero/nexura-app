@@ -417,7 +417,7 @@ export const getHubAdmins = async (req: GlobalRequest, res: GlobalResponse) => {
       return;
     }
 
-    const admins = await hubAdmin.find({ hub: req.admin.hub }).select("_id name email role createdAt").lean();
+    const admins = await hubAdmin.find({ hub: req.admin.hub }).select("_id name email role createdAt lastActiveAt").lean();
 
     // Also fetch pending invites for this hub
     const now = new Date();
@@ -541,61 +541,128 @@ export const updateHubAdminRole = async (req: GlobalRequest, res: GlobalResponse
   }
 };
 
+class SubmissionDecisionError extends Error {
+  status: number;
+  constructor(status: number, message: string) { super(message); this.status = status; }
+}
+
+/** Approves or rejects one submission and its task completion. Throws SubmissionDecisionError with the response status. */
+async function applySubmissionDecision(submissionId: string, action: "accept" | "reject", adminName: string) {
+  const userSubmission = await submission.findById(submissionId);
+  if (!userSubmission) throw new SubmissionDecisionError(BAD_REQUEST, "submission not found");
+
+  let model;
+  let isSeasonalQuest = false;
+
+  if (userSubmission.page === "quest" || userSubmission.page === "user") {
+    isSeasonalQuest = true;
+    model = await miniQuestCompleted.findOne({ _id: userSubmission.questCompleted, status: { $in: ["pending", "retry"] } });
+    if (!model) throw new SubmissionDecisionError(NOT_FOUND, "mini quest already completed or id is invalid");
+  } else {
+    model = await campaignQuestCompleted.findOne({ _id: userSubmission.questCompleted, status: { $in: ["pending", "retry"] } });
+    if (!model) throw new SubmissionDecisionError(NOT_FOUND, "campaign quest already completed or id is invalid");
+  }
+
+  if (action === "accept") {
+    userSubmission.status = "done";
+    userSubmission.validatedBy = adminName;
+    if (isSeasonalQuest) {
+      // Seasonal mini-tasks decouple approval from completion: the user must
+      // still click "Claim XP" to finalize, so leave it claimable (not done).
+      model.status = "approved";
+      model.done = false;
+    } else {
+      model.done = true;
+      model.status = "done";
+    }
+  } else if (action === "reject") {
+    userSubmission.status = "retry";
+    userSubmission.validatedBy = adminName;
+    userSubmission.rejectedCount = (userSubmission.rejectedCount || 0) + 1;
+    model.status = "retry";
+  }
+
+  await userSubmission.save();
+  await model.save();
+  if (action === "accept" && !isSeasonalQuest) void refreshUserRetention(userSubmission.user);
+}
+
 export const validateCampaignSubmissions = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
     const { submissionId, action }: { submissionId: string; action: "reject" | "accept" } = req.body;
+    await applySubmissionDecision(submissionId, action, req.adminName);
+    res.status(NO_CONTENT).send();
+  } catch (error) {
+    if (error instanceof SubmissionDecisionError) {
+      res.status(error.status).json({ error: error.message });
+      return;
+    }
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: 'Failed to validate campaign submissions' });
+  }
+};
 
-    const userSubmission = await submission.findById(submissionId);
-    if (!userSubmission) {
-      res.status(BAD_REQUEST).json({ error: "submission not found" });
+const BULK_DECISION_LIMIT = 200;
+
+/**
+ * POST /hub/validate-campaign-submissions-bulk { submissionIds, action }: one decision for many
+ * campaign submissions. Only submissions on this hub's campaigns are touched; each is applied on
+ * its own, so one failure doesn't stop the rest. Responds with what was applied and what failed.
+ */
+export const validateCampaignSubmissionsBulk = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const { submissionIds, action } = req.body ?? {};
+    if (action !== "accept" && action !== "reject") {
+      res.status(BAD_REQUEST).json({ error: "action must be accept or reject" });
+      return;
+    }
+    const ids: string[] = Array.isArray(submissionIds)
+      ? [...new Set(submissionIds.map(String))].filter(id => mongoose.Types.ObjectId.isValid(id))
+      : [];
+    if (!ids.length) {
+      res.status(BAD_REQUEST).json({ error: "select at least one submission" });
+      return;
+    }
+    if (ids.length > BULK_DECISION_LIMIT) {
+      res.status(BAD_REQUEST).json({ error: `select at most ${BULK_DECISION_LIMIT} submissions at a time` });
       return;
     }
 
-    let model;
-    let isSeasonalQuest = false;
+    // Each submission must belong to a campaign of this hub (the system hub reviews every hub)
+    const hubDoc = await hub.findById(req.admin.hub).select("systemKey").lean() as any;
+    if (!hubDoc) {
+      res.status(NOT_FOUND).json({ error: "hub not found" });
+      return;
+    }
+    const isSystem = hubDoc.systemKey === "nexura-admin-campaigns";
+    const subs = await submission.find({ _id: { $in: ids }, page: "campaign" }).select("_id miniQuestId").lean() as any[];
+    const quests = await campaignQuest.find({ _id: { $in: subs.map(s => s.miniQuestId).filter((q: string) => mongoose.Types.ObjectId.isValid(q)) } }).select("_id campaign").lean() as any[];
+    const campaigns = await campaign.find({ _id: { $in: quests.map(q => q.campaign) } }).select("_id hub").lean() as any[];
+    const hubOfCampaign = new Map(campaigns.map(c => [String(c._id), String(c.hub)]));
+    const campaignOfQuest = new Map(quests.map(q => [String(q._id), String(q.campaign)]));
+    const allowed = new Set(subs
+      .filter(s => {
+        const campaignHub = hubOfCampaign.get(campaignOfQuest.get(String(s.miniQuestId)) ?? "");
+        return campaignHub !== undefined && (isSystem || campaignHub === String(req.admin.hub));
+      })
+      .map(s => String(s._id)));
 
-    if (userSubmission.page === "quest" || userSubmission.page === "user") {
-      isSeasonalQuest = true;
-      model = await miniQuestCompleted.findOne({ _id: userSubmission.questCompleted, status: { $in: ["pending", "retry"] } });
-      if (!model) {
-        res.status(NOT_FOUND).json({ error: "mini quest already completed or id is invalid" });
-        return
-      }
-    } else {
-      model = await campaignQuestCompleted.findOne({ _id: userSubmission.questCompleted, status: { $in: ["pending", "retry"] } });
-      if (!model) {
-        res.status(NOT_FOUND).json({ error: "campaign quest already completed or id is invalid" });
-        return
+    const applied: string[] = [];
+    const failed: Array<{ id: string; error: string }> = [];
+    for (const id of ids) {
+      if (!allowed.has(id)) { failed.push({ id, error: "not a submission on your campaigns" }); continue; }
+      try {
+        await applySubmissionDecision(id, action, req.adminName);
+        applied.push(id);
+      } catch (err: any) {
+        failed.push({ id, error: err instanceof SubmissionDecisionError ? err.message : "could not be updated" });
+        if (!(err instanceof SubmissionDecisionError)) logger.error(err);
       }
     }
-
-    if (action === "accept") {
-      userSubmission.status = "done";
-      userSubmission.validatedBy = req.adminName;
-      if (isSeasonalQuest) {
-        // Seasonal mini-tasks decouple approval from completion: the user must
-        // still click "Claim XP" to finalize, so leave it claimable (not done).
-        model.status = "approved";
-        model.done = false;
-      } else {
-        model.done = true;
-        model.status = "done";
-      }
-    } else if (action === "reject") {
-      userSubmission.status = "retry";
-      userSubmission.validatedBy = req.adminName;
-      userSubmission.rejectedCount = (userSubmission.rejectedCount || 0) + 1;
-      model.status = "retry";
-    }
-
-    await userSubmission.save();
-    await model.save();
-    if (action === "accept" && !isSeasonalQuest) void refreshUserRetention(userSubmission.user);
-
-    res.status(NO_CONTENT).send();
+    res.status(OK).json({ applied, failed });
   } catch (error) {
     logger.error(error);
-    res.status(INTERNAL_SERVER_ERROR).json({ error: 'Failed to validate campaign submissions' });
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "Failed to validate submissions" });
   }
 };
 
