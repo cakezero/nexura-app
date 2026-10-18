@@ -54,6 +54,7 @@ import {
   updateLevel,
   getNFT,
   getAmountPaid,
+	submissionProblem,
 } from "@/utils/utils";
 import chain from "@/utils/chain.utils";
 import { evaluateDailyStreak } from "@/utils/streak.utils";
@@ -1071,8 +1072,13 @@ export const updateSubmission = async (
       res.status(BAD_REQUEST).json({ error: "send the required details" });
       return;
     }
+    const linkProblem = submissionProblem(submissionLink);
+    if (linkProblem) {
+      res.status(BAD_REQUEST).json({ error: linkProblem });
+      return;
+    }
 
-    const task = await submission.findOne({ user: userId, miniQuestId });
+    const task = await submission.findOne({ user: userId, miniQuestId: String(miniQuestId) });
     if (!task) {
       res
         .status(BAD_REQUEST)
@@ -1450,9 +1456,23 @@ export const claimRelicReward = async (req: GlobalRequest, res: GlobalResponse) 
   }
 };
 
+/**
+ * The campaign task a check is about, read from the database: it must exist, belong to the campaign
+ * named in the request, and be one of the task types this check handles. Returns a reason otherwise.
+ */
+async function campaignTaskFor(taskId: unknown, campaignId: unknown, tags: string[]): Promise<any | string> {
+  if (typeof taskId !== "string" || !/^[a-f0-9]{24}$/i.test(taskId)) return "send a valid task id";
+  const task = await campaignQuest.findById(taskId).select("tag link campaign").lean() as any;
+  if (!task) return "task not found";
+  if (campaignId && String(task.campaign) !== String(campaignId)) return "that task isn't part of this campaign";
+  if (!tags.includes(String(task.tag))) return "this check doesn't apply to that task";
+  return task;
+}
+
 export const validateAtlasTask = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
-    const { id, questId, tag, page } = req.body;
+    const { id, questId, page } = req.body;
+    let tag: string = req.body.tag;
     if (!questId || !id || !tag) {
       res
         .status(BAD_REQUEST)
@@ -1461,6 +1481,16 @@ export const validateAtlasTask = async (req: GlobalRequest, res: GlobalResponse)
     }
 
     const allowedTags = ["i-follow", "i-collaborated", "i-trust", "i-interact"];
+    // On a campaign task the check comes from the task itself, never from the request
+    // (otherwise an easy check could pass for a harder task)
+    if (page === "campaign") {
+      const task = await campaignTaskFor(id, questId, allowedTags);
+      if (typeof task === "string") {
+        res.status(BAD_REQUEST).json({ error: task });
+        return;
+      }
+      tag = String(task.tag);
+    }
     if (!allowedTags.includes(tag)) {
       res.status(BAD_REQUEST).json({ error: "invalid tag" });
       return;
@@ -1625,11 +1655,27 @@ export const validatePortalTask = async (
 ) => {
   try {
     const {
-      termId,
       id,
       questId,
       page,
     }: { page: string; termId: string; id: string; questId: string } = req.body;
+    let termId: string = req.body.termId;
+
+    // On a campaign task the term to check comes from the task itself, never from the request
+    // (otherwise a stake on any term would pass)
+    if (page === "campaign") {
+      const task = await campaignTaskFor(id, questId, ["portal"]);
+      if (typeof task === "string") {
+        res.status(BAD_REQUEST).json({ error: task });
+        return;
+      }
+      const fromLink = String(task.link ?? "").split("?")[0]!.replace(/\/+$/, "").split("/").pop();
+      if (!fromLink) {
+        res.status(BAD_REQUEST).json({ error: "this task has no term to check" });
+        return;
+      }
+      termId = fromLink;
+    }
 
     const userToCheck = await user.findById(req.id);
     if (!userToCheck) {
@@ -3049,7 +3095,9 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
   let quest: any | undefined = undefined;
 
   try {
-    const { tag, id: postId, questId, page } = req.body; // get task id and store hub x id, then remove hardcoded nexura id
+    const { questId, page } = req.body; // get task id and store hub x id, then remove hardcoded nexura id
+    let tag: string = req.body.tag;
+    let postId = req.body.id;
 
     const NEXURA_ID = "1983300499597393920";
     const NEXURA_USERNAME = "NexuraXYZ";
@@ -3065,7 +3113,35 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
         res.status(NOT_FOUND).json({ error: "quest id is invalid" });
         return;
       }
+      // On a campaign task, what to check and which post both come from the task itself, never from
+      // the request. Only likes and reposts of the task's own post are checked here; follow/comment
+      // tasks are reviewed by the project from the proof people submit.
+      if (!["like", "repost"].includes(String(quest.tag))) {
+        res.status(BAD_REQUEST).json({ error: "this task is reviewed by the project; submit your proof instead" });
+        return;
+      }
+      tag = String(quest.tag);
+      const linkedPost = String(quest.link ?? "").split("?")[0]!.replace(/\/+$/, "").split("/").pop();
+      if (!linkedPost || !/^\d+$/.test(linkedPost)) {
+        res.status(BAD_REQUEST).json({ error: "this task's link doesn't point to a post on X" });
+        return;
+      }
+      postId = linkedPost;
     }
+
+    /** A passed check on a campaign task is recorded, so the task can then be completed (and only then). */
+    const verified = async () => {
+      if (page !== "quest" && quest) {
+        const existing = await campaignQuestCompleted.findOne({ user: req.id, campaignQuest: quest._id });
+        if (!existing) {
+          await campaignQuestCompleted.create({ user: req.id, campaignQuest: quest._id, campaign: quest.campaign, done: false, status: "approved" });
+        } else if (!existing.done) {
+          existing.status = "approved";
+          await existing.save();
+        }
+      }
+      res.status(OK).json({ message: "task verified", success: true });
+    };
 
     const API_URL = "https://api.twitterapi.io/twitter";
 
@@ -3083,7 +3159,7 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
           (follower: { id: string }) => follower.id === xId,
         );
         if (followFound) {
-          res.status(OK).json({ message: "task verified", success: true });
+          await verified();
           return;
         }
 
@@ -3144,7 +3220,7 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
           return;
         }
 
-        res.status(OK).json({ message: "task verified", success: true });
+        await verified();
         return;
       case "like":
         xClient = getXClient({ token: userToken.accessToken, auth: "oauth2" });
@@ -3170,7 +3246,7 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
 
         for await (const likedPost of likedPosts.users) {
           if (likedPost.id === postId) {
-            res.status(OK).json({ message: "task verified", success: true });
+            await verified();
             return;
           }
 
@@ -3196,7 +3272,7 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
           (reposter: { id: string }) => reposter.id === xId,
         );
         if (repostFound) {
-          res.status(OK).json({ message: "task verified", success: true });
+          await verified();
           return;
         }
 
@@ -3255,7 +3331,7 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
           return;
         }
 
-        res.status(OK).json({ message: "task verified", success: true });
+        await verified();
 
         return;
       case "comment":
@@ -3271,7 +3347,7 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
           (reply: { author: { id: string } }) => reply.author.id === xId,
         );
         if (commentFound) {
-          res.status(OK).json({ message: "task verified", success: true });
+          await verified();
           return;
         }
 
@@ -3332,7 +3408,7 @@ export const checkXTask = async (req: GlobalRequest, res: GlobalResponse) => {
           return;
         }
 
-        res.status(OK).json({ message: "task verified", success: true });
+        await verified();
         return;
       default:
         res.status(BAD_REQUEST).json({ error: "invalid task tag" });
@@ -3688,7 +3764,8 @@ export const checkDiscordTask = async (
     };
 
     const passDiscordTask = async (message = "validated") => {
-      await setDiscordTaskStatus(isCampaign ? "pending" : "approved");
+      // "approved" = checked and passed; "pending" is only for proof waiting on a hub's review
+      await setDiscordTaskStatus("approved");
       // Main-app quest path: claim-mini-quest requires the overall quest-
       // completion record to exist (otherwise claimQuest fails). Mirror
       // what validateTrustNameTask does for non-campaign tasks.

@@ -24,6 +24,9 @@ import { campaignQuest } from "@/models/quests.model";
 import { ethers } from "ethers";
 import { xpLog } from "@/models/xpLog.model";
 import { refreshUserRetention } from "@/utils/retention";
+import { COMPLETED_MARK, settleStageXp, syncCampaignXp } from "@/utils/campaignXp";
+import { checkTrustEligibility, creditReward } from "@/utils/campaignRewards";
+import { campaignRewardAsset, rewardAssetUnavailable } from "@/utils/rewardAssets";
 
 interface IReward {
 	xp: number;
@@ -306,6 +309,7 @@ export const createCampaign = async (
 
 		await newCampaign.save();
 		await createdHub.save();
+		await syncCampaignXp(newCampaign._id);
 
 		res.status(CREATED).json({ message: "campaign created!" });
 	} catch (error) {
@@ -342,6 +346,15 @@ export const addCampaignAddress = async (
 		if (!id) {
 			res.status(BAD_REQUEST).json({ error: "send campaign ID" });
 			return;
+		}
+		// A rewards contract can only be attached for an asset whose network has a live contract
+		{
+			const forCampaign = await campaign.findById(req.body?.id ?? req.query?.id).select("rewardAsset rewardsConfig").lean();
+			const unavailable = forCampaign ? rewardAssetUnavailable(campaignRewardAsset(forCampaign)) : null;
+			if (unavailable) {
+				res.status(FORBIDDEN).json({ error: unavailable });
+				return;
+			}
 		}
 		if (!contractAddress || !ethers.isAddress(contractAddress)) {
 			res.status(BAD_REQUEST).json({ error: "send a valid campaign contract address" });
@@ -436,11 +449,8 @@ export const joinCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
 			return;
 		}
 
-		const maxParticipants = Number((campaignToJoin as any).maxParticipants ?? 0);
-		if (maxParticipants > 0 && campaignToJoin.participants >= maxParticipants) {
-			res.status(FORBIDDEN).json({ error: "campaign participant limit reached" });
-			return;
-		}
+		// Anyone can join and earn XP: the campaign's maximum only limits TRUST reward places
+		// (first come, first served at claim time), never who can take part
 
 		const completedCampaign = await campaignCompleted.findOne({
 			user: userId,
@@ -605,7 +615,9 @@ export const updateCampaign = async (
 
 		}
 
-		const updated = await campaign.findByIdAndUpdate(id, campaignUpdateData, { new: true });
+		await campaign.findByIdAndUpdate(id, campaignUpdateData);
+		await syncCampaignXp(id);
+		const updated = await campaign.findById(id);
 
 		// Recalculate status when dates change on a live/scheduled campaign
 		if (updated && (updated.status === "Active" || updated.status === "Scheduled")) {
@@ -823,6 +835,12 @@ export const reopenCampaign = async (
 	}
 };
 
+/**
+ * "Claim" on a campaign. Anyone who joined can claim: it pays the XP they've earned so far (stage by
+ * stage), records the campaign as completed once every task is done, and pays the TRUST reward only
+ * when they're eligible (see utils/campaignRewards.ts). The answer says what was paid and, when the
+ * TRUST reward wasn't, why, so the app can tell them.
+ */
 export const claimCampaignRewards = async (
 	req: GlobalRequest,
 	res: GlobalResponse
@@ -830,92 +848,82 @@ export const claimCampaignRewards = async (
 	try {
 		const campaignId = req.query.id as string;
 
-		const userToReward = await user.findById(req.id);
-		if (!userToReward) {
-			res
-				.status(NOT_FOUND)
-				.json({ error: "id associated with user is invalid" });
+		if (!(await user.exists({ _id: req.id }))) {
+			res.status(NOT_FOUND).json({ error: "id associated with user is invalid" });
 			return;
 		}
 
 		const campaignToClaimRewards = await campaign.findById(campaignId);
 		if (!campaignToClaimRewards) {
-			res
-				.status(NOT_FOUND)
-				.json({ error: "id associated with campaign is invalid" });
+			res.status(NOT_FOUND).json({ error: "id associated with campaign is invalid" });
 			return;
 		}
 
-		const completedCampaign = await campaignCompleted.findOne({
-			campaign: campaignId,
-			user: req.id
-		});
-
-		if (!completedCampaign?.questsCompleted) {
-			res.status(FORBIDDEN).json({
-				error: "all quests must be completed before rewards can be claimed",
-			});
+		const join = await campaignCompleted.findOne({ campaign: campaignId, user: req.id });
+		if (!join) {
+			res.status(FORBIDDEN).json({ error: "join the campaign before claiming rewards" });
 			return;
 		}
 
-		// Claim once: the flag flips atomically before anything is paid, so a double click or a
-		// retried request can't reward the same person twice
-		const claimed = await campaignCompleted.findOneAndUpdate(
-			{ _id: completedCampaign._id, campaignCompleted: { $ne: true } },
-			{ $set: { campaignCompleted: true } },
-		);
-		if (!claimed) {
-			res.status(FORBIDDEN).json({ error: "campaign reward has been claimed" });
+		// 1. XP for every stage completed so far (each stage pays once). If that didn't finish cleanly,
+		// stop here: recording the completion now could cost them XP still owed
+		const { paid: xpAwarded, ok: xpSettled } = await settleStageXp(req.id, campaignToClaimRewards._id);
+		if (!xpSettled) {
+			res.status(INTERNAL_SERVER_ERROR).json({ error: "your XP couldn't be added just now, try claiming again in a moment" });
 			return;
 		}
 
-		try {
-		if (userToReward.status !== "Active") {
-			userToReward.status = "Active";
-
-			const userReferred = await referredUsers.findOne({ newUser: userToReward._id });
-			if (userReferred && userReferred.status !== "Active") {
-				userReferred.status = "Active";
-	
-				await userReferred.save();
+		// 2. Completion, counted once, when every task is done
+		if (join.questsCompleted) {
+			const completedNow = await campaignCompleted.findOneAndUpdate(
+				{ _id: join._id, campaignCompleted: { $ne: true } },
+				// The mark keeps this from ever looking like a one-lump claim from before stage payouts
+				{ $set: { campaignCompleted: true }, $addToSet: { xpStagesPaid: COMPLETED_MARK } },
+			);
+			if (completedNow) {
+				await user.updateOne({ _id: req.id }, { $inc: { campaignsCompleted: 1 }, $set: { status: "Active" } });
+				const userReferred = await referredUsers.findOne({ newUser: req.id });
+				if (userReferred && userReferred.status !== "Active") {
+					userReferred.status = "Active";
+					await userReferred.save();
+				}
 			}
 		}
 
-		const xp = campaignToClaimRewards.reward?.xp as number;
-		const trustTokens = campaignToClaimRewards.reward?.trustTokens ?? 0;
-
-		const giveTrust = campaignToClaimRewards.trustClaimed < campaignToClaimRewards.totalTrustAvailable;
-		if (giveTrust) userToReward.trustEarned += trustTokens;
-
-		userToReward.xp += xp;
-		userToReward.campaignsCompleted += 1;
-
-		const level = await updateLevel(userToReward);
-		
-		userToReward.level = level;
-
-		await xpLog.create({
-      address: userToReward.address,
-			username: userToReward.username,
-			amount: xp,
-			status: "success",
-			type: "campaign"
-    });
-
-		// Counters are incremented in place so claims landing together don't overwrite each other
-		await campaign.updateOne(
-			{ _id: campaignToClaimRewards._id },
-			{ $inc: { xpClaimed: xp, ...(giveTrust ? { trustClaimed: trustTokens } : {}) } },
-		);
-		await userToReward.save();
-		} catch (payoutError) {
-			// Nothing was paid: let them claim again
-			await campaignCompleted.updateOne({ _id: completedCampaign._id }, { $set: { campaignCompleted: false } }).catch(() => {});
-			throw payoutError;
+		// 3. TRUST, only when eligible; the reward and the place are each taken once
+		const trust = await checkTrustEligibility(req.id, campaignToClaimRewards._id);
+		let trustAwarded = 0;
+		const trustTokens = Number(campaignToClaimRewards.reward?.trustTokens ?? 0);
+		if (trust.eligible && trustTokens > 0) {
+			const won = await campaignCompleted.findOneAndUpdate(
+				{ _id: join._id, trustRewardClaimed: { $ne: true } },
+				{ $set: { trustRewardClaimed: true } },
+			);
+			if (won) {
+				// Only if the whole reward still fits in the pool (no over-paying the last place)
+				const placeTaken = await campaign.findOneAndUpdate(
+					{ _id: campaignToClaimRewards._id, $expr: { $lte: [{ $add: [{ $ifNull: ["$trustClaimed", 0] }, trustTokens] }, "$totalTrustAvailable"] } },
+					{ $inc: { trustClaimed: trustTokens } },
+				);
+				if (placeTaken) {
+					// Recorded in the campaign's asset (TRUST, USDC, …)
+					await creditReward(req.id, campaignToClaimRewards, trustTokens);
+					trustAwarded = trustTokens;
+				} else {
+					await campaignCompleted.updateOne({ _id: join._id }, { $set: { trustRewardClaimed: false } });
+					trust.eligible = false;
+					trust.reason = `All the ${trust.token} reward places for this campaign have been taken.`;
+				}
+			}
 		}
-		await refreshUserRetention(userToReward._id);
 
-		res.status(OK).json({ message: "campaign completed" });
+		await refreshUserRetention(req.id);
+
+		res.status(OK).json({
+			message: xpAwarded || trustAwarded ? "rewards claimed" : "nothing new to claim yet",
+			xpAwarded,
+			trust: { ...trust, awarded: trustAwarded, claimed: trust.claimed || trustAwarded > 0 },
+		});
 	} catch (error) {
 		logger.error(error);
 		res
@@ -1031,6 +1039,11 @@ export const publishCampaign = async (req: GlobalRequest, res: GlobalResponse) =
 				error: "set a participant limit before publishing a reward campaign",
 			});
 		}
+		// Rewards only in an asset whose rewards contract is live (only TRUST on Intuition for now)
+		if (rewardPool > 0) {
+			const unavailable = rewardAssetUnavailable(campaignRewardAsset(campaignExists));
+			if (unavailable) return res.status(FORBIDDEN).json({ error: unavailable });
+		}
 		if (rewardPool > 0 && !campaignExists.contractAddress) {
 			return res.status(FORBIDDEN).json({
 				error: "deploy and attach a rewards contract before publishing this campaign",
@@ -1116,6 +1129,7 @@ export const publishCampaign = async (req: GlobalRequest, res: GlobalResponse) =
 
 		campaignExists.status = publishedStatus;
 		await campaignExists.save();
+		await syncCampaignXp(campaignExists._id);
 
 		res.status(OK).json({ message: "campaign published" });
 	} catch (error: any) {

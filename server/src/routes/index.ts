@@ -34,7 +34,7 @@ router
   .post("/admin/reset-password", authIpLimiter, resetAdminPassword)
   .get("/admin/connect-discord", adminConnectDiscord)
   .get("/admin/discord/callback", discordAdminCallback)
-  .post("/user/sign-in", signIn)
+  .post("/user/sign-in", authIpLimiter, signIn)
 	.use("/", appRoutes)
 	.use("/admin", authenticateAdmin, adminRoutes)
 	.get("/ecosystem-quests", authenticateUser2, fetchEcosystemDapps)

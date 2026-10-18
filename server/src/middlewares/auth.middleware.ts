@@ -22,19 +22,6 @@ const PASSWORD_CHANGED = "your password was changed, kindly re-login";
 
 const fileSize = 5 * (1024 ** 2); // 5 MB
 
-const resolveUserIdFromWalletHeader = async (req: GlobalRequest): Promise<string | null> => {
-	const walletHeader = req.headers["x-wallet-address"];
-	if (typeof walletHeader !== "string") return null;
-
-	const normalized = walletHeader.trim().toLowerCase();
-	if (!/^0x[a-f0-9]{40}$/.test(normalized)) return null;
-
-	const userFound = await user.findOne({
-		address: { $regex: `^${normalized}$`, $options: "i" },
-	}).select("_id").lean();
-
-	return userFound?._id ? userFound._id.toString() : null;
-};
 
 /**
  * JWT.verify rejects with jsonwebtoken's message (a string), so only those mean the session is bad.
@@ -263,13 +250,12 @@ export const authenticateUser2 = async (req: GlobalRequest, res: GlobalResponse,
 				next();
 				return;
 			} catch {
-				// Fall through to wallet-header fallback.
+				// Not a valid session: carry on signed out
 			}
 		}
 
-		const walletUserId = await resolveUserIdFromWalletHeader(req);
-		if (walletUserId) req.id = walletUserId;
-
+		// No session = signed out. (A wallet address sent in a header used to count as that person,
+		// which let anyone act as anyone by sending their address.)
 		next();
 	} catch {
 		next();

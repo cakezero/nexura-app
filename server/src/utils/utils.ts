@@ -646,3 +646,14 @@ export const getNFT = async (walletAddress: string) => {
 
   return balance > 0n;
 }
+
+/**
+ * Why a submitted link or answer can't be stored, or null when it's fine. Submissions are shown to
+ * hub admins as links, so script links (javascript:, data:, vbscript:) are refused.
+ */
+export const submissionProblem = (value: unknown): string | null => {
+	if (typeof value !== "string" || !value.trim()) return "send your submission";
+	if (value.length > 5000) return "your submission is too long";
+	if (/^[\s\x00-\x1f]*(javascript|data|vbscript):/i.test(value)) return "that link isn't valid; use a normal web address";
+	return null;
+};

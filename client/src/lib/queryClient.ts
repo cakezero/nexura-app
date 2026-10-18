@@ -28,23 +28,8 @@ export function getStoredAccessToken() {
 function buildAuthHeaders(extra?: Record<string, string>) {
   const headers: Record<string, string> = extra ? { ...extra } : {};
   const token = getStoredAccessToken();
+  // Only a real sign-in identifies the person (the server no longer accepts a wallet address instead)
   if (token) headers["Authorization"] = `Bearer ${token}`;
-  else {
-    // If no bearer token, include the injected-wallet address (if present)
-    // so the backend can return the user/profile for that address without
-    // requiring a full token-based auth flow.
-    try {
-      const raw = localStorage.getItem("nexura:wallet");
-      if (raw) {
-        const parsed = JSON.parse(raw as string);
-        if (parsed && parsed.address) {
-          headers["x-wallet-address"] = String(parsed.address).toLowerCase();
-        }
-      }
-    } catch (e) {
-      // ignore failures reading storage
-    }
-  }
   return headers;
 }
 
