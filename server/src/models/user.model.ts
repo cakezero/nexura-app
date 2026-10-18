@@ -172,6 +172,13 @@ const userSchema = new Schema({
 		type: Number,
 		default: 0,
 	},
+	// Rewards earned in other assets, keyed "<network>:<token>" (e.g. "base:USDC"), in exact decimals
+	// (see utils/rewardAssets.ts). TRUST keeps using trustEarned.
+	rewardsEarned: {
+		type: Map,
+		of: Schema.Types.Decimal128,
+		default: {},
+	},
 	dateJoined: {
 		type: String,
 		required: true,

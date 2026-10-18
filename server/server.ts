@@ -12,6 +12,9 @@ import { startAdminActivityCron } from "@/utils/adminActivityCron";
 import { startRelicHodlCron } from "@/utils/relicHodlCron";
 import { initRedis } from "@/config/redis";
 import { configureAxiosResilience } from "@/utils/resilience";
+import { syncAllCampaignXp } from "@/utils/campaignXp";
+import { runExclusively } from "@/utils/jobLock";
+import { startTrustEligibilityCron } from "@/utils/campaignRewards";
 
 // Every outside call (Discord, X, Intuition…) gets a time limit and retries on brief failures
 configureAxiosResilience();
@@ -61,6 +64,12 @@ server.listen(port, async () => {
 
 	// Start relic hodl cron job
 	startRelicHodlCron();
+
+	// Existing Studio campaigns switch to the fixed XP (1,000 one-time / 2,500 with stages); safe to repeat
+	void runExclusively("campaign-xp-sync", 10 * 60 * 1000, syncAllCampaignXp);
+
+	// Marks participants eligible for TRUST rewards as they qualify, so the app can tell them
+	startTrustEligibilityCron();
 
 	if (BOT_TOKEN) {
 		await client.login(BOT_TOKEN);

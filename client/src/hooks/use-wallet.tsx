@@ -83,7 +83,8 @@ export function useWallet() {
         }
       } else {
         const referrer = localStorage.getItem("ref");
-        const data = await apiRequestV2("POST", "/api/user/sign-in", { address: addr, referrer });
+        // The server checks this signature to confirm the wallet is really theirs
+        const data = await apiRequestV2("POST", "/api/user/sign-in", { address: addr, referrer, message, signature });
         if (data.user) {
           localStorage.setItem("user_profile", JSON.stringify(data.user));
           localStorage.setItem("nexura:token", data.accessToken);

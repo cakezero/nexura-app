@@ -6,6 +6,7 @@ import {
 	INTERNAL_SERVER_ERROR,
 	NOT_FOUND,
 	OK,
+	UNAUTHORIZED,
 } from "@/utils/status.utils";
 import {
 	DISCORD_CLIENT_ID,
@@ -28,6 +29,7 @@ import { token } from "@/models/tokens.model";
 import { bannedUser } from "@/models/bannedUser.model";
 import { REDIS } from "@/utils/redis.utils";
 import { fetchWithRetry } from "@/utils/resilience";
+import { walletLoginProblem } from "@/utils/walletLogin";
 
 const buildWalletUsernameBase = (address: string) =>
 	`${address.slice(0, 4)}...${address.slice(-4)}`;
@@ -220,7 +222,7 @@ export const disconnectDiscord = async (req: GlobalRequest, res: GlobalResponse)
 }
 
 export const signIn = async (req: GlobalRequest, res: GlobalResponse) => {
-	const { address, referrer }: { address: string; referrer?: string } =
+	const { address, referrer, message, signature }: { address: string; referrer?: string; message?: string; signature?: string } =
 		req.body;
 
 	if (!address) {
@@ -229,6 +231,19 @@ export const signIn = async (req: GlobalRequest, res: GlobalResponse) => {
 			.json({ error: "address cannot be empty" });
 		return;
   }
+
+	// Proof that the person controls this wallet: without it anyone could sign in as any address
+	try {
+		const problem = await walletLoginProblem(address, message, signature);
+		if (problem) {
+			res.status(UNAUTHORIZED).json({ error: problem });
+			return;
+		}
+	} catch (error) {
+		logger.error(error);
+		res.status(INTERNAL_SERVER_ERROR).json({ error: "couldn't check your wallet signature just now, try again" });
+		return;
+	}
 
   const lowerCaseAddress = address.toLowerCase();
 

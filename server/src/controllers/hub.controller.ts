@@ -15,9 +15,11 @@ import { campaign } from '@/models/campaign.model';
 import { campaignQuest } from '@/models/quests.model';
 import { withSubmissionCategory } from '@/controllers/quest.controller';
 import { refreshUserRetention } from "@/utils/retention";
+import { payCompletedStageXp, syncCampaignXp } from "@/utils/campaignXp";
 import { uploadImg } from "@/utils/img.utils";
 import { uploadFile } from "@/utils/file.utils";
 import { ownsHubRecord, submissionInHub } from "@/utils/hubOwnership";
+import { campaignRewardAsset, rewardAsset } from "@/utils/rewardAssets";
 import { normalizeCampaignDateInput, normalizeCampaignDatesForResponse, parseDate } from "@/utils/dates";
 
 const DISCORD_CAMPAIGN_TAGS = new Set([
@@ -317,13 +319,16 @@ export const addHubAdmin = async (req: GlobalRequest, res: GlobalResponse) => {
   }
 };
 
+/** The hub fields an admin may edit directly (the project profile). */
+const EDITABLE_HUB_FIELDS = ["name", "description", "website", "xAccount", "logo", "document"] as const;
+
 export const updateHub = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
     const files = req.files as { [field: string]: Express.Multer.File[] } | undefined;
     const logoFile = files?.logo?.[0];
     const documentFile = files?.document?.[0];
 
-    const { name, logo } = req.body;
+    const { name } = req.body;
 
     if (logoFile?.buffer) {
       req.body.logo = await uploadImg({
@@ -356,12 +361,34 @@ export const updateHub = async (req: GlobalRequest, res: GlobalResponse) => {
       req.body.name = trimmedName;
     }
 
-    const { xpAllocated: _xp, ...safeBody } = req.body;
-    if (safeBody.website !== undefined) safeBody.website = String(safeBody.website ?? "").trim();
-    if (safeBody.xAccount !== undefined) safeBody.xAccount = String(safeBody.xAccount ?? "").trim();
-    if (safeBody.discordServer !== undefined) safeBody.discordServer = String(safeBody.discordServer ?? "").trim();
-    if (safeBody.guildId !== undefined) safeBody.guildId = String(safeBody.guildId ?? "").trim();
-    if (safeBody.document !== undefined) safeBody.document = String(safeBody.document ?? "").trim();
+    // The Nexura dashboard (platform admins, /api/admin/update-hub) keeps its full control of the Nexura hub
+    if (req.isPlatformAdmin) {
+      const { xpAllocated: _xp, ...safeBody } = req.body;
+      if (safeBody.website !== undefined) safeBody.website = String(safeBody.website ?? "").trim();
+      if (safeBody.xAccount !== undefined) safeBody.xAccount = String(safeBody.xAccount ?? "").trim();
+      if (safeBody.discordServer !== undefined) safeBody.discordServer = String(safeBody.discordServer ?? "").trim();
+      if (safeBody.guildId !== undefined) safeBody.guildId = String(safeBody.guildId ?? "").trim();
+      if (safeBody.document !== undefined) safeBody.document = String(safeBody.document ?? "").trim();
+      const updatedHub = await hub.findByIdAndUpdate(req.admin.hub, safeBody, { new: true });
+      res.status(OK).json(updatedHub);
+      return;
+    }
+
+    // Studio hubs only change their profile here. The Owner (superAdmin) changes through an approved
+    // transferOwnership proposal, payment records through the payment flow, the Discord link
+    // through the Discord connect flow, and the counters and systemKey never from the client.
+    const safeBody: Record<string, string> = {};
+    for (const field of EDITABLE_HUB_FIELDS) {
+      if (req.body[field] !== undefined) safeBody[field] = String(req.body[field] ?? "").trim();
+    }
+    // Links shown to users and Nexura admins can't carry script (javascript:, data:, vbscript:)
+    const unsafe = (["website", "xAccount", "logo", "document"] as const).find(f => /^[\s\x00-\x1f]*(javascript|data|vbscript):/i.test(safeBody[f] ?? ""));
+    if (unsafe) {
+      res.status(BAD_REQUEST).json({ error: `the ${unsafe} link isn't valid; use a normal web address` });
+      return;
+    }
+    const ignored = Object.keys(req.body ?? {}).filter(k => !(EDITABLE_HUB_FIELDS as readonly string[]).includes(k));
+    if (ignored.length) logger.warn(`updateHub: ignored fields that can't be set here: ${ignored.join(", ")} (admin ${req.id}, hub ${req.admin.hub})`);
     const updatedHub = await hub.findByIdAndUpdate(req.admin.hub, safeBody, { new: true });
     res.status(OK).json(updatedHub);
   } catch (error) {
@@ -587,7 +614,11 @@ async function applySubmissionDecision(submissionId: string, action: "accept" | 
 
   await userSubmission.save();
   await model.save();
-  if (action === "accept" && !isSeasonalQuest) void refreshUserRetention(userSubmission.user);
+  if (action === "accept" && !isSeasonalQuest) {
+    void refreshUserRetention(userSubmission.user);
+    // Pays the stage XP if this approval finished a stage
+    void payCompletedStageXp(userSubmission.user);
+  }
 }
 
 export const validateCampaignSubmissions = async (req: GlobalRequest, res: GlobalResponse) => {
@@ -781,6 +812,14 @@ export function prepareCampaignSaveBody(body: Record<string, any>): string | nul
   parseRetentionBuilderFields(body);
   body.starts_at = normalizeCampaignDateInput(body.starts_at);
   body.ends_at = normalizeCampaignDateInput(body.ends_at);
+  // The reward asset is worked out here from the reward settings, never taken from the request
+  delete body.rewardAsset;
+  const rc = body.rewardsConfig;
+  if (rc && (rc.network !== undefined || rc.token !== undefined)) {
+    const asset = rewardAsset(rc.network, rc.token);
+    if (!asset) return "that reward token isn't offered on that network";
+    body.rewardAsset = { network: asset.network, token: asset.token, chainId: asset.chainId, decimals: asset.decimals, native: asset.native, tokenAddress: asset.tokenAddress };
+  }
   const { error } = validateSaveCampaignData(body);
   return error ? `Missing required fields: ${getMissingFields(error)}` : null;
 }
@@ -864,6 +903,14 @@ export async function applyCampaignUpdate(id: string, hubFound: any, body: Recor
     }
     if ((campaignFound as any).endProposal?.endsAt && incomingEndsAt.getTime() > existingEndsAt.getTime() + 60_000) {
       throw new CampaignUpdateError(BAD_REQUEST, "this campaign is ending through an approved proposal, so its end date can't be extended");
+    }
+  }
+
+  // A published campaign keeps the asset its pool was set up in (participants were promised it)
+  if (campaignFound.status !== "Save" && body.rewardAsset && (campaignFound.contractAddress || existingPool > 0)) {
+    const current = campaignRewardAsset(campaignFound);
+    if (current.network !== body.rewardAsset.network || current.token !== body.rewardAsset.token) {
+      throw new CampaignUpdateError(BAD_REQUEST, "the reward token can't be changed after the campaign is published");
     }
   }
 
@@ -976,6 +1023,8 @@ export async function applyCampaignUpdate(id: string, hubFound: any, body: Recor
 
     await campaign.findByIdAndUpdate(id, { noOfQuests: questsToSave.length });
   }
+  // The fixed XP follows the campaign's stages (also covers approved edit proposals)
+  await syncCampaignXp(id);
 }
 
 export const saveCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
@@ -1085,6 +1134,7 @@ export const saveCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
         await campaign.findByIdAndUpdate(savedCampaignId, { noOfQuests: questsToSave.length });
       }
 
+      await syncCampaignXp(savedCampaignId);
       res.status(CREATED).json({ message: 'Campaign saved successfully', campaignId: savedCampaign._id });
       return;
     }
@@ -1217,6 +1267,7 @@ export const saveCampaignWithQuests = async (req: GlobalRequest, res: GlobalResp
       await campaignQuest.insertMany(newQuests);
     }
 
+    await syncCampaignXp(campaignId);
     res.status(NO_CONTENT).send();
   } catch (error) {
     logger.error(error);

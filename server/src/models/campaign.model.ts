@@ -143,6 +143,15 @@ const campaignSchema = new Schema({
 		default: false,
 	},
 	// What the project set on the Rewards & Funding step
+	// The asset the reward pool pays in (see utils/rewardAssets.ts); set from rewardsConfig when saved
+	rewardAsset: {
+		network: { type: String },
+		token: { type: String },
+		chainId: { type: Number },
+		decimals: { type: Number },
+		native: { type: Boolean },
+		tokenAddress: { type: String },
+	},
 	rewardsConfig: {
 		budget: { type: Number },
 		token: { type: String },
@@ -201,6 +210,20 @@ const campaignCompletedSchema = new Schema({
 	stagesCompleted: { type: Number, default: 0 },
 	stagesTotal: { type: Number, default: 0 },
 	retentionRate: { type: Number, default: null },
+	// Stage keys whose XP has been paid, and the XP paid so far (see utils/campaignXp.ts)
+	xpStagesPaid: { type: [String], default: [] },
+	xpEarned: { type: Number, default: 0 },
+	// TRUST reward eligibility (see utils/campaignRewards.ts): granted once their overall Nexura retention
+	// meets the project's minimum. It reserves no place: places go first come, first served
+	trustEligible: { type: Boolean, default: false },
+	trustEligibleAt: { type: Date, default: null },
+	trustRewardClaimed: { type: Boolean, default: false },
+	// Last check, for showing the person their own progress
+	rewardCheck: {
+		required: { type: Number, default: null },
+		current: { type: Number, default: null },
+		checkedAt: { type: Date, default: null },
+	},
 }, { timestamps: true });
 
 export const campaignCompleted = mongoose.model(
