@@ -3829,3 +3829,10 @@ body {
   animation: dapps-marquee 25s linear infinite;
   will-change: transform;
 }
+/* Studio page entrance: CSS only, so a page never stays hidden if scripts load slowly or fail */
+@keyframes studio-page-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+.studio-page-enter { animation: studio-page-enter 0.3s ease-out both; }
+@media (prefers-reduced-motion: reduce) { .studio-page-enter { animation: none; } }

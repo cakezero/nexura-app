@@ -122,6 +122,20 @@ const hubAdminSchema = new mongoose.Schema({
     type: Schema.Types.ObjectId,
     ref: 'hubs',
   },
+  // Set by the first wallet action in the hub (see utils/hubWallet.ts); sign-in then needs this wallet
+  linkedWallet: {
+    type: String,
+    default: null,
+  },
+  usernameChanges: {
+    type: Number,
+    default: 0,
+  },
+  // Google Authenticator 2-step verification (secrets are encrypted, see utils/secretBox.ts)
+  twoFactorEnabled: { type: Boolean, default: false },
+  twoFactorSecret: { type: String, default: null },
+  twoFactorPendingSecret: { type: String, default: null },
+  twoFactorLastStep: { type: Number, default: 0 },
   pendingTxHash: {
     type: String,
     default: null,

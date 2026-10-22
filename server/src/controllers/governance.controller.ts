@@ -8,7 +8,7 @@ import { parseDate } from "@/utils/dates";
 import { createHubInvite } from "@/utils/hubInvite";
 import { applyCampaignUpdate, prepareCampaignSaveBody } from "@/controllers/hub.controller";
 import { validateDiscordTaskConfig } from "@/utils/utils";
-import { BAD_REQUEST, CREATED, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_FOUND, OK } from "@/utils/status.utils";
+import { BAD_REQUEST, CONFLICT, CREATED, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_FOUND, OK } from "@/utils/status.utils";
 
 /*
  * Admin Management governance, modelled on a Safe multisig.
@@ -410,6 +410,14 @@ async function settle(ctx: Ctx, proposal: any, execute = false) {
   const { approvals, rejections } = tally(ctx, proposal);
   if (approvals >= ctx.thresholds.approval) {
     if (!execute) { await proposal.save(); return; } // ready, waiting for a signer to execute
+    const staleLock = new Date(Date.now() - 2 * 60 * 1000);
+    const locked = await governanceProposal.updateOne(
+      { _id: proposal._id, status: "pending", $or: [{ executingAt: null }, { executingAt: { $lt: staleLock } }] },
+      { $set: { executingAt: new Date() } }
+    );
+    if (!locked.modifiedCount) throw new HttpError(CONFLICT, "this proposal is already being executed");
+    proposal.executingAt = null;
+    proposal.markModified("executingAt");
     try {
       const share = await runAction(ctx, proposal.action, proposal.ref);
       proposal.inviteShare = share ?? null;

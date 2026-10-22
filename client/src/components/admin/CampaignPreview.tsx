@@ -7,12 +7,14 @@ import { ArrowLeft, ExternalLink, ImageIcon, Pencil } from "lucide-react";
 import StudioLoader from "../studio/StudioLoader";
 import { projectApiRequest, getStoredProjectInfo } from "../../lib/projectApi";
 import { TASK_CATALOG } from "./CreateNewCampaign";
+import { campaignXpTotal, stageXpShares } from "../../lib/campaignXp";
 
 type PreviewQuest = { _id: string; quest?: string; link?: string; stage?: string; order?: number; points?: number; taskTypeId?: string };
 type PreviewCampaign = {
   _id: string; title?: string; description?: string; status?: string; starts_at?: string; ends_at?: string;
   projectCoverImage?: string; rewardsEnabled?: boolean; maxParticipants?: number;
   reward?: { xp?: number; pool?: number; trustTokens?: number };
+  rewardAsset?: { token?: string; network?: string };
   stages?: { key: string; name: string; returnDays?: number; allocationPct?: number | null }[];
 };
 
@@ -68,6 +70,14 @@ export default function CampaignPreview() {
   const loose = quests.filter(q => !stages.some(st => st.key === q.stage)).sort(byOrder);
   if (loose.length) stages.push({ key: "_other", name: stages.length ? "Other tasks" : "Tasks", tasks: loose });
 
+  // XP is paid per stage (1,000 for a one-time campaign, 2,500 split across retention stages); stages
+  // without tasks don't count, as on the server
+  const paidStages = stages.filter(st => st.tasks.length > 0);
+  const xpShares = stageXpShares(paidStages.length);
+  const stageXp = (key: string) => { const i = paidStages.findIndex(st => st.key === key); return i >= 0 ? xpShares[i] : 0; };
+  const totalXp = paidStages.length ? campaignXpTotal(paidStages.length) : Number(c.reward?.xp ?? 0);
+  const rewardToken = c.rewardAsset?.token || "TRUST";
+
   const cover = c.projectCoverImage && c.projectCoverImage !== "pending" ? c.projectCoverImage : null;
   const pool = Number(c.reward?.pool ?? 0);
   const taskCount = quests.length;
@@ -101,11 +111,11 @@ export default function CampaignPreview() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className={stat}><p className={label}>Starts</p><p className="text-sm font-semibold mt-1">{fmtDate(c.starts_at)}</p></div>
         <div className={stat}><p className={label}>Ends</p><p className="text-sm font-semibold mt-1">{fmtDate(c.ends_at)}</p></div>
-        <div className={stat}><p className={label}>Total XP</p><p className="text-sm font-semibold mt-1">{Number(c.reward?.xp ?? 0)} XP</p></div>
+        <div className={stat}><p className={label}>Total XP</p><p className="text-sm font-semibold mt-1">{totalXp.toLocaleString()} XP</p></div>
         <div className={stat}>
           <p className={label}>Rewards</p>
           <p className="text-sm font-semibold mt-1">
-            {pool > 0 ? `${pool} TRUST pool${c.maxParticipants ? ` · ${c.maxParticipants} participants` : ""}` : c.rewardsEnabled ? "On" : "Off"}
+            {pool > 0 ? `${pool} ${rewardToken} pool${c.maxParticipants ? ` · ${c.maxParticipants} participants` : ""}` : c.rewardsEnabled ? "On" : "Off"}
           </p>
         </div>
       </div>
@@ -120,6 +130,7 @@ export default function CampaignPreview() {
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <p className="text-[15px] font-semibold min-w-0">
                 <span className="text-[#8a3ffc] mr-1.5">Stage {si + 1}</span>{st.name}
+                {stageXp(st.key) > 0 && <span className="ml-2 text-xs font-semibold text-[#8a3ffc]">{stageXp(st.key).toLocaleString()} XP</span>}
               </p>
               {st.key !== "_other" && (
                 <span className="text-xs text-[#69728a]">
@@ -143,7 +154,6 @@ export default function CampaignPreview() {
                       </a>
                     )}
                   </div>
-                  <span className="shrink-0 text-xs font-semibold text-[#8a3ffc]">{Number(q.points ?? 0)} XP</span>
                 </div>
               );
             })}

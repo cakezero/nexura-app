@@ -2,6 +2,7 @@ import { blockLockedCampaignStage } from "@/middlewares/campaignStageLock";
 import { Router } from "express";
 import {
 	claimEcosystemQuest,
+	submitEcosystemQuest,
 	performCampaignQuest,
 	setTimer,
 	submitQuest,
@@ -19,6 +20,7 @@ const router = Router();
 
 router
 	.post("/claim-ecosystem-quest", claimEcosystemQuest)
+	.post("/submit-ecosystem-quest", submitEcosystemQuest)
   .post("/set-timer", setTimer)
 	.post("/create-mini-quest", createMiniQuest)
 	.post("/start-quest", startQuest)

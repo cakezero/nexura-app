@@ -30,6 +30,7 @@ import { bannedUser } from "@/models/bannedUser.model";
 import { REDIS } from "@/utils/redis.utils";
 import { fetchWithRetry } from "@/utils/resilience";
 import { walletLoginProblem } from "@/utils/walletLogin";
+import { issueLinkTicket } from "@/models/linkTicket.model";
 
 const buildWalletUsernameBase = (address: string) =>
 	`${address.slice(0, 4)}...${address.slice(-4)}`;
@@ -81,7 +82,8 @@ export const discordCallback = async (req: GlobalRequest, res: GlobalResponse) =
 			}
 		});
 
-		res.redirect(DISCORD_CLIENT_REDIRECT_URI + `?discord_id=${id}&username=${username}`);
+		const ticket = await issueLinkTicket("discord", id, username);
+		res.redirect(DISCORD_CLIENT_REDIRECT_URI + `?ticket=${ticket}&username=${encodeURIComponent(username)}`);
 	} catch (error: any) {
 		logger.error(error);
 		console.error("DISCORD TOKEN ERROR STATUS:", error.response?.status)
@@ -134,7 +136,8 @@ export const xCallback = async (req: GlobalRequest, res: GlobalResponse) => {
 			await userExists.save();
 		}
 
-		res.redirect(X_CLIENT_REDIRECT_URI + `?x_id=${id}&username=${username}`);
+		const ticket = await issueLinkTicket("x", id, username);
+		res.redirect(X_CLIENT_REDIRECT_URI + `?ticket=${ticket}&username=${encodeURIComponent(username)}`);
 	} catch (error: any) {
 		logger.error(error);
 		console.error("X TOKEN ERROR STATUS:", error.response?.status)
@@ -353,7 +356,7 @@ export const signIn = async (req: GlobalRequest, res: GlobalResponse) => {
 			}
 		}
 
-		res.status(INTERNAL_SERVER_ERROR).json({ error: error?.message || "Error signing user in" });
+		res.status(INTERNAL_SERVER_ERROR).json({ error: "Error signing user in" });
 	}
 };
 

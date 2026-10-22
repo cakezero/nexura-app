@@ -128,13 +128,13 @@ async function throwIfNotOk(res: Response): Promise<void> {
     if (String(msg).includes("access to this hub has been removed")) {
       clearProjectSession();
       try { sessionStorage.setItem("nexura:signed-out-reason", "Your access to this hub was removed."); } catch { /* ignore */ }
-      setTimeout(() => { window.location.href = "/projects/create/signin-to-hub"; }, 100);
+      setTimeout(() => { window.location.href = "/studio/sign-in"; }, 100);
     }
 
     // Force logout if hub is banned
     if (res.status === 403 && String(msg).includes("this hub has been banned")) {
       clearProjectSession();
-      setTimeout(() => { window.location.href = "/projects/create/signin-to-hub"; }, 100);
+      setTimeout(() => { window.location.href = "/studio/sign-in"; }, 100);
     }
 
     throw new ApiError(toUserFriendlyErrorMessage(String(msg)), res.status);

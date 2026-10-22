@@ -29,4 +29,4 @@ export function useProjectSession() {
 }
 
 /** Where an admin signs in to the studio again. */
-export const STUDIO_SIGN_IN_URL = "/projects/create/signin-to-hub";
+export const STUDIO_SIGN_IN_URL = "/studio/sign-in";

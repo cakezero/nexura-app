@@ -51,11 +51,11 @@ export default function StudioSidebar({
 
   const sidebarItems: NavItem[] = [
     { title: "Profile", icon: "/studio-sidebar/profile.svg", iconSize: 14.76, id: "hubProfile" },
-    { title: "Campaigns", short: "Campaigns", icon: "/studio-sidebar/campaigns.svg", id: "campaignsTab", badge: campaignCount ? String(campaignCount) : undefined },
-    { title: "Submissions", short: "Submissions", icon: "/studio-sidebar/submissions.svg", id: "campaignSubmissions" },
     ...(adminRole === "superadmin" ? [
       { title: "Admin Management", short: "Admins", icon: "/studio-sidebar/admin.svg", id: "adminManagement" as TabType },
     ] : []),
+    { title: "Campaigns", short: "Campaigns", icon: "/studio-sidebar/campaigns.svg", id: "campaignsTab", badge: campaignCount ? String(campaignCount) : undefined },
+    { title: "Submissions", short: "Submissions", icon: "/studio-sidebar/submissions.svg", id: "campaignSubmissions" },
   ];
 
   const loadCampaignCount = () =>

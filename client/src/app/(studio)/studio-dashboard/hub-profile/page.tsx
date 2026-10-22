@@ -1,12 +1,12 @@
 "use client";
 
-import StudioLayout from "@/components/studio/StudioLayout";
-import HubProfile from "../../_components/HubProfile";
+import { Suspense } from "react";
+import ProfilePage from "@/components/studio/profile/ProfilePage";
 
 export default function Page() {
   return (
-    <StudioLayout title="Project Profile">
-      <HubProfile />
-    </StudioLayout>
+    <Suspense fallback={null}>
+      <ProfilePage />
+    </Suspense>
   );
 }

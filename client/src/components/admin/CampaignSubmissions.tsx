@@ -275,7 +275,7 @@ export default function CampaignSubmissions({ tasks, loading, searchTerm, setSea
                           {view === "reviewed" && <StatusPill status={t.status} />}
                           {view === "reviewed" && t.validatedBy && <span className="text-[11px] text-[#98a0b4]">by {t.validatedBy}</span>}
                         </div>
-                        {feedback ? (
+                        {feedback || !/^https?:\/\//i.test(t.submissionLink.trim()) ? (
                           <p className="text-[13px] text-[#3d485c] bg-[#f7f4fe] rounded-2xl px-3 py-2 whitespace-pre-wrap break-words line-clamp-3">{t.submissionLink}</p>
                         ) : (
                           <a href={t.submissionLink} target="_blank" rel="noopener noreferrer"

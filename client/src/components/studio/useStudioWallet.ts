@@ -1,12 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useAccount, useDisconnect } from "wagmi";
+import { useAccount, useDisconnect, useReconnect } from "wagmi";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { useSilentWalletConnect } from "./useSilentWalletConnect";
 
 // Set when the wallet is disconnected inside the studio, so the main-app session address is not shown again
 const HIDDEN_KEY = "nexura:studio-wallet-hidden";
+const SYNC_KEY = "nexura:studio-wallet-sync";
+
+function broadcast(msg: { type: "connect" | "disconnect"; address?: string }) {
+  try { localStorage.setItem(SYNC_KEY, JSON.stringify({ ...msg, at: Date.now() })); } catch { /* storage unavailable */ }
+}
 
 /** Address the person signed in with on the main app (or used to create the hub). */
 function getSessionWalletAddress(): string | null {
@@ -46,10 +51,32 @@ export function useStudioWallet() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionAddress]);
 
-  // A fresh connection clears any earlier studio disconnect
+  // A fresh connection clears any earlier studio disconnect, and tells the other open tabs
   useEffect(() => {
-    if (isConnected) { try { localStorage.removeItem(HIDDEN_KEY); } catch {} }
-  }, [isConnected]);
+    if (isConnected && address) {
+      try { localStorage.removeItem(HIDDEN_KEY); } catch {}
+      broadcast({ type: "connect", address });
+    }
+  }, [isConnected, address]);
+
+  // Another tab connected or disconnected: follow it
+  const { reconnect } = useReconnect();
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== SYNC_KEY || !e.newValue) return;
+      try {
+        const msg = JSON.parse(e.newValue) as { type: "connect" | "disconnect"; address?: string };
+        if (msg.type === "disconnect") {
+          setSessionAddress(null);
+          if (isConnected) disconnect();
+        } else if (!isConnected) {
+          reconnect();
+        }
+      } catch { /* ignore malformed messages */ }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, [isConnected, disconnect, reconnect]);
 
   const connect = useCallback(() => { openConnectModal?.(); }, [openConnectModal]);
 
@@ -58,6 +85,7 @@ export function useStudioWallet() {
     if (shown) { try { localStorage.setItem(HIDDEN_KEY, shown); } catch {} }
     setSessionAddress(null);
     if (isConnected) disconnect();
+    broadcast({ type: "disconnect" });
   }, [isConnected, address, sessionAddress, disconnect]);
 
   return {

@@ -81,9 +81,9 @@ export async function submissionInHub(req: any, submissionId: unknown): Promise<
   if (!validId(submissionId)) return false;
   const s = await submission.findById(submissionId).select("hub page miniQuestId").lean() as any;
   if (!s) return false;
+  if (s.page === "campaign") return validId(s.miniQuestId) && campaignQuestInHub(req, s.miniQuestId);
+  if (s.page === "quest" || s.page === "user") return validId(s.miniQuestId) && miniQuestInHub(req, s.miniQuestId);
   if (req.admin?.hub && sameId(s.hub, req.admin.hub)) return true;
-  if (s.page === "campaign" && validId(s.miniQuestId) && await campaignQuestInHub(req, s.miniQuestId)) return true;
-  if ((s.page === "quest" || s.page === "user") && validId(s.miniQuestId) && await miniQuestInHub(req, s.miniQuestId)) return true;
   return reachesAllHubs(req);
 }
 

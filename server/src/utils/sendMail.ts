@@ -17,6 +17,7 @@ import {
   SMTP_SECURE,
   RESEND_API_KEY,
   RESEND_FROM,
+  trustedOrigin,
 } from "./env.utils";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -121,7 +122,7 @@ transporter.use("compile", hbs(options));
 
 export const sendEmailToAdmin = async (email: string, code: string, origin?: string) => {
   try {
-    const baseUrl = origin || ADMIN_URL;
+    const baseUrl = trustedOrigin(origin, ADMIN_URL);
     const signUpUrl = `${baseUrl.replace(/\/$/, "")}/?email=${encodeURIComponent(email)}`;
     await sendMailWithRetry({
       from: EMAIL_USER,
@@ -156,7 +157,6 @@ export const resetEmail = async (email: string, link: string) => {
 
 export const resetPasswordOTPEmail = async (email: string, code: string) => {
   try {
-    console.log(`[TEST] OTP for ${email}: ${code}`);
     await sendMailWithRetry({
       from: EMAIL_USER,
       to: email,
@@ -174,7 +174,7 @@ export const resetPasswordOTPEmail = async (email: string, code: string) => {
 
 export const sendAdminResetEmail = async (email: string, token: string, origin?: string) => {
   try {
-    const baseUrl = (origin || ADMIN_URL).replace(/\/$/, "");
+    const baseUrl = trustedOrigin(origin, ADMIN_URL).replace(/\/$/, "");
     const link = `${baseUrl}/?reset=1&token=${encodeURIComponent(token)}`;
 
     await sendMailWithRetry({
@@ -193,7 +193,7 @@ export const sendAdminResetEmail = async (email: string, token: string, origin?:
 
 export const addHubAdminEmail = async (email: string, code: string, origin?: string) => {
   try {
-    const baseUrl = origin || CLIENT_URL;
+    const baseUrl = trustedOrigin(origin, CLIENT_URL);
     const signUpUrl = `${baseUrl}/studio/register?email=${encodeURIComponent(email)}`;
     logger.info(`Sending admin invite to ${email} with link ${signUpUrl}`);
     await deliverInvite({

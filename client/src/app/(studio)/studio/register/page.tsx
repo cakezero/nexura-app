@@ -205,7 +205,7 @@ export default function AdminSignUp() {
 
         <p className="mt-4 text-center text-xs text-white/30">
           Already have access?{" "}
-          <Link href="/projects/create/signin-to-hub" className="text-purple-400 hover:underline">
+          <Link href="/studio/sign-in" className="text-purple-400 hover:underline">
             Sign in
           </Link>
         </p>
