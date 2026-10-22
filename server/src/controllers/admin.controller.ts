@@ -9,13 +9,14 @@ import { BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND, NO_CONTENT, OK, UNAUTHOR
 import { campaign as campaignModel, campaignCompleted, campaign } from "@/models/campaign.model";
 import { generateOTP, getRefreshToken, hashPassword, JWT, passwordChangeMark, startOfDayUTC, updateLevel, validateQuestData } from "@/utils/utils";
 import { sendAdminResetEmail, sendEmailToAdmin } from "@/utils/sendMail";
-import { campaignQuestCompleted, miniQuestCompleted, questCompleted } from "@/models/questsCompleted.models";
+import { campaignQuestCompleted, ecosystemQuestCompleted, miniQuestCompleted, questCompleted } from "@/models/questsCompleted.models";
 import { submission } from "@/models/submission.model";
 import { user } from "@/models/user.model";
 import { hub, hubAdmin, userHub, userHubAdmin } from "@/models/hub.model";
 import { bannedUser } from "@/models/bannedUser.model";
 import { ecosystemQuest } from "@/models/quests.model";
 import { REDIS } from "@/utils/redis.utils";
+import { revokeToken } from "@/models/revokedToken.model";
 import { uploadImg } from "@/utils/img.utils";
 import { xpLog } from "@/models/xpLog.model";
 import { ADMIN_CAMPAIGN_SYSTEM_KEY } from "@/utils/adminCampaignHub";
@@ -549,7 +550,7 @@ export const adminLogout = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
     const { token } = req;
 
-    await REDIS.set({ key: `logout:${token}`, data: { token }, ttl: 7 * 24 * 60 * 60 });
+    await revokeToken(token!);
 
     res.clearCookie("refreshToken");
 
@@ -1435,6 +1436,12 @@ export const markTask = async (req: GlobalRequest, res: GlobalResponse) => {
 				return
 			}
 
+		} else if (submissionToBeVerified.page === "ecosystem") {
+			model = await ecosystemQuestCompleted.findOne({ _id: submissionToBeVerified.questCompleted, status: { $in: ["pending", "retry"] } });
+			if (!model) {
+				res.status(NOT_FOUND).json({ error: "ecosystem quest already completed or is invalid" });
+				return
+			}
 		} else {
 			model = await campaignQuestCompleted.findOne({ _id: submissionToBeVerified.questCompleted, status: { $in: ["pending", "retry"] } });
 			if (!model) {
@@ -2059,7 +2066,7 @@ export const publishAdminQuest = async (req: GlobalRequest, res: GlobalResponse)
     res.status(OK).json({ message: "Quest published successfully!" });
   } catch (error: any) {
     logger.error("Error publishing quest: " + error);
-    res.status(INTERNAL_SERVER_ERROR).json({ error: error?.message || "Error publishing quest" });
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "Error publishing quest" });
   }
 };
 

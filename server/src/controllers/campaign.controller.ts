@@ -452,21 +452,19 @@ export const joinCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
 		// Anyone can join and earn XP: the campaign's maximum only limits TRUST reward places
 		// (first come, first served at claim time), never who can take part
 
-		const completedCampaign = await campaignCompleted.findOne({
-			user: userId,
-			campaign: id,
-		});
-		if (!completedCampaign) {
-			const joined = new campaignCompleted({ user: userId, campaign: id });
-
-			campaignToJoin.participants += 1;
-
+		const joinResult = await campaignCompleted.updateOne(
+			{ user: userId, campaign: id },
+			{ $setOnInsert: { user: userId, campaign: id } },
+			{ upsert: true }
+		);
+		if (joinResult.upsertedCount) {
 			if (
 				campaignToJoin.trustClaimed < campaignToJoin.totalTrustAvailable &&
 				campaignToJoin.contractAddress
 			) {
 				const onchainStartDate = await getCampaignContractStartDate(campaignToJoin.contractAddress);
 				if (Number.isFinite(onchainStartDate) && onchainStartDate * 1000 > now.getTime()) {
+					await campaignCompleted.deleteOne({ _id: joinResult.upsertedId });
 					res.status(FORBIDDEN).json({
 						error: "Rewards start later on-chain. An admin must update or redeploy the contract.",
 					});
@@ -480,8 +478,7 @@ export const joinCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
 				});
 			}
 
-			await campaignToJoin.save();
-			await joined.save();
+			await campaign.updateOne({ _id: campaignToJoin._id }, { $inc: { participants: 1 } });
 
 			res.status(OK).json({ message: "campaign joined" });
 			return;
@@ -516,6 +513,11 @@ export const updateCampaign = async (
 		}
 		if (String(existingCampaign.hub) !== String(req.admin.hub)) {
 			res.status(FORBIDDEN).json({ error: "you are not allowed to update this campaign" });
+			return;
+		}
+		// A published campaign only changes through an approved "editCampaign" proposal in Admin Management
+		if (existingCampaign.status !== "Save" && !req.isPlatformAdmin) {
+			res.status(FORBIDDEN).json({ error: "this campaign is published, so changes need an approved proposal in Admin Management" });
 			return;
 		}
 
@@ -1032,6 +1034,11 @@ export const publishCampaign = async (req: GlobalRequest, res: GlobalResponse) =
 			signedAt: new Date(String(req.body.message.signedAt)),
 		};
 
+		// The cover must actually be stored, not just shown in the builder
+		if (!campaignExists.projectCoverImage || campaignExists.projectCoverImage === "pending") {
+			return res.status(BAD_REQUEST).json({ error: "add a cover image before publishing; it wasn't saved yet" });
+		}
+
 		const rewardPool = Number(campaignExists.reward?.pool ?? 0);
 		const maxParticipants = Number((campaignExists as any).maxParticipants ?? 0);
 		if (rewardPool > 0 && maxParticipants <= 0) {
@@ -1134,7 +1141,7 @@ export const publishCampaign = async (req: GlobalRequest, res: GlobalResponse) =
 		res.status(OK).json({ message: "campaign published" });
 	} catch (error: any) {
 		logger.error(error);
-		res.status(INTERNAL_SERVER_ERROR).json({ error: error?.message || "error publishing campaign" });
+		res.status(INTERNAL_SERVER_ERROR).json({ error: "error publishing campaign" });
 	}
 };
 

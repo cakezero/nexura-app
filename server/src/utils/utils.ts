@@ -332,6 +332,13 @@ const DISCORD_TASK_TAG_REQUIRES_ROLE = new Set([
  * don't surface as "this quest is missing a discord channel to verify".
  */
 export const validateDiscordTaskConfig = (task: Record<string, any>) => {
+	const link = String(task?.link ?? "").trim();
+	if (link && !/^https?:\/\//i.test(link)) {
+		if (/^[a-z][a-z0-9+.-]*:/i.test(link) && !/^[^:/]+:\d+/.test(link)) {
+			return { success: false as const, error: "task links must be web addresses (http:// or https://)" };
+		}
+		task.link = `https://${link}`;
+	}
 	const tag = String(task?.tag ?? "").trim().toLowerCase();
 	const category = String(task?.category ?? "").trim().toLowerCase();
 	const isDiscord =
@@ -397,7 +404,7 @@ export const validateEcosystemQuestData = (reqData: any) => {
 export const validateHubData = (reqData: any) => {
 	const hubSchema = z.object({
 		name: z.string().trim(),
-    description: z.string().trim().min(150).max(300),
+    description: z.string().trim().max(300),
 		website: z.string().trim().optional(),
 		xAccount: z.string().trim().optional(),
 		discordServer: z.string().trim().optional(),
@@ -600,11 +607,26 @@ export const getAmountPaid = async (txHash: string) => {
 		throw new Error("Transaction not found");
   }
 
-  const block = await withRetry(() => provider.getBlock(tx.blockNumber as number), { label: "RPC getBlock" });
+  if (tx.blockNumber == null) {
+		throw new Error("Transaction is not confirmed yet");
+  }
 
-  const timestamp = new Date(Number(block!.timestamp) * 1000).toLocaleDateString("en-US", { timeZone: "Africa/Lagos" });
+  const [block, receipt] = await Promise.all([
+    withRetry(() => provider.getBlock(tx.blockNumber as number), { label: "RPC getBlock" }),
+    withRetry(() => provider.getTransactionReceipt(txHash), { label: "RPC getTransactionReceipt" }),
+  ]);
 
-	return { from: tx.from, value: formatEther(tx.value), timestamp };
+  const blockTime = Number(block!.timestamp) * 1000;
+  const timestamp = new Date(blockTime).toLocaleDateString("en-US", { timeZone: "Africa/Lagos" });
+
+	return {
+		from: tx.from,
+		to: tx.to ?? "",
+		value: formatEther(tx.value),
+		timestamp,
+		blockTime,
+		success: receipt?.status === 1,
+	};
 }
 
 export const validateCreateLesson = (reqData: any) => {

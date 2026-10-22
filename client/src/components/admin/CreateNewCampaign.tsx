@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { scrollToTop } from "@/lib/scrollToTop";
 import SignInPrompt from "@/components/studio/SignInPrompt";
+import StudioHeader from "@/components/studio/StudioHeader";
 import { STUDIO_SIGN_IN_URL, useProjectSession } from "@/components/studio/useProjectSession";
 import { readUrlParam, writeUrlParam } from "@/hooks/use-url-state";
 
@@ -9,7 +10,7 @@ import { readUrlParam, writeUrlParam } from "@/hooks/use-url-state";
 const DEFAULT_RETENTION_REQUIREMENT = "90";
 const COVER_TYPES = ["image/svg+xml", "image/png", "image/jpeg", "image/gif"];
 const COVER_MAX_BYTES = 5 * 1024 * 1024; // the server rejects uploads over 5MB
-const NEXURA_MAIN_APP_URL = "https://nexura.intuition.box/discover";
+import { MAIN_APP_URL as NEXURA_MAIN_APP_URL } from "@/lib/mainAppUrl";
 const TEMPLATES = [
   {
     id: "tpl1", months: 3, stageCount: 5, retentionPct: 75, name: "Template 1", badge: "Retention",
@@ -429,83 +430,7 @@ function Header({ saveState = "idle", saveError, activeChain, onChainChange, wal
   /** False once the studio session has expired: the wallet and notifications ask to sign in again. */
   signedIn?: boolean; onSignIn?: () => void;
 }) {
-  const walletAddress = signedIn ? connectedAddress : null;
-  const [signInOpen, setSignInOpen] = useState(false);
-  const signInRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!signInOpen) return;
-    const onDown = (e: MouseEvent) => { if (signInRef.current && !signInRef.current.contains(e.target as Node)) setSignInOpen(false); };
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
-  }, [signInOpen]);
-  useEffect(() => { if (signedIn) setSignInOpen(false); }, [signedIn]);
-  const [theme, setTheme] = useState<"light" | "dark">("light");
-  const [walletOpen, setWalletOpen] = useState(false);
-  const [bellOpen, setBellOpen] = useState(false);
-  const walletRef = useRef<HTMLDivElement>(null);
-  const bellRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!bellOpen) return;
-    const onDown = (e: MouseEvent) => { if (bellRef.current && !bellRef.current.contains(e.target as Node)) setBellOpen(false); };
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setBellOpen(false); };
-    document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown", onKey);
-    return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("keydown", onKey); };
-  }, [bellOpen]);
-  useEffect(() => {
-    if (!walletOpen) return;
-    const onDown = (e: MouseEvent) => { if (walletRef.current && !walletRef.current.contains(e.target as Node)) setWalletOpen(false); };
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setWalletOpen(false); };
-    document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown", onKey);
-    return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("keydown", onKey); };
-  }, [walletOpen]);
-  const activeNetwork = NETWORKS.find(c => c.id === activeChain) || NETWORKS[0];
-  useEffect(() => { if (!walletAddress) setWalletOpen(false); }, [walletAddress]);
-
-  return (
-    <div style={{ height: 52, background: "#ffffff", borderBottom: "0.833px solid rgba(28,37,51,0.19)", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 36px", flexShrink: 0, position: "sticky", top: 0, zIndex: 100 }}>
-      <span style={{ fontSize: 20, fontWeight: 600, color: "#1c2533", lineHeight: "20.93px" }}>Campaigns</span>
-
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        {/* Theme toggle pill */}
-        <div style={{ display: "flex", alignItems: "center", background: "#f7f4fe", border: "1px solid rgba(28,37,51,0.09)", borderRadius: 999, padding: "2.833px", gap: 2 }}>
-          <button onClick={() => setTheme("light")} style={{ width: 26, height: 26, borderRadius: 999, border: "none", background: theme === "light" ? "#8a3ffc" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <svg width="14" height="14" viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="7.5" r="3" stroke={theme === "light" ? "white" : "#6B7280"} strokeWidth="1.3"/><path d="M7.5 1v2M7.5 12v2M1 7.5h2M12 7.5h2M2.8 2.8l1.4 1.4M10.8 10.8l1.4 1.4M2.8 12.2l1.4-1.4M10.8 4.2l1.4-1.4" stroke={theme === "light" ? "white" : "#6B7280"} strokeWidth="1.3" strokeLinecap="round"/></svg>
-          </button>
-          <button onClick={() => setTheme("dark")} style={{ width: 26, height: 26, borderRadius: 999, border: "none", background: theme === "dark" ? "#8a3ffc" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <svg width="14" height="14" viewBox="0 0 15 15" fill="none"><path d="M12.5 9A5.5 5.5 0 016 2.5a5.5 5.5 0 000 11A5.5 5.5 0 0012.5 9z" stroke={theme === "dark" ? "white" : "#6B7280"} strokeWidth="1.3"/></svg>
-          </button>
-        </div>
-
-        {/* Bell */}
-        <div ref={bellRef} style={{ position: "relative" }}>
-          <button
-            aria-label="Notifications" aria-expanded={bellOpen}
-            onClick={() => { setBellOpen(o => !o); setWalletOpen(false); }}
-            style={{ width: 37.99, height: 37.99, background: "#f7f5ff", border: "1px solid rgba(28,37,51,0.09)", borderRadius: 40, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
-          >
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2.5A4 4 0 005 6.5V10.5L3.5 12.5h11L13 10.5V6.5A4 4 0 009 2.5z" stroke="#6B7280" strokeWidth="1.3"/><path d="M7.5 14.5a1.5 1.5 0 003 0" stroke="#6B7280" strokeWidth="1.3" strokeLinecap="round"/></svg>
-          </button>
-          {bellOpen && !signedIn && <SignInPrompt what="see your notifications" onSignIn={() => { setBellOpen(false); onSignIn?.(); }} />}
-          {bellOpen && signedIn && (
-            <div style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, width: 300, background: "white", borderRadius: 14, border: "1px solid #E5E7EB", boxShadow: "0 8px 30px rgba(0,0,0,0.10)", zIndex: 200, overflow: "hidden" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderBottom: "1px solid #F3F4F6" }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: "#1c2533" }}>Notifications</span>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "28px 16px", gap: 8 }}>
-                <div style={{ width: 40, height: 40, borderRadius: 20, background: "#f7f4fe", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 2.5A4.5 4.5 0 005.5 7v4.5L4 13.5h12L14.5 11.5V7A4.5 4.5 0 0010 2.5z" stroke="#8a3ffc" strokeWidth="1.3"/><path d="M8 15.5a2 2 0 004 0" stroke="#8a3ffc" strokeWidth="1.3" strokeLinecap="round"/></svg>
-                </div>
-                <span style={{ fontSize: 13, fontWeight: 600, color: "#1c2533" }}>You're all caught up</span>
-                <span style={{ fontSize: 12, color: "#767a8c", textAlign: "center", lineHeight: "18px" }}>All notifications have been read. New campaign activity will appear here.</span>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Auto-save chip — "Saving…" while the draft is saved, then the real result */}
-        {saveState !== "idle" && saveState !== "skipped" && (() => {
+  const chip = saveState !== "idle" && saveState !== "skipped" && (() => {
           const tone = saveState === "saving" ? { bg: "rgba(28,37,51,0.05)", bd: "rgba(28,37,51,0.16)", fg: "#6b7280" }
             : saveState === "saved" ? { bg: "rgba(0,229,192,0.1)", bd: "#00e5c0", fg: "#00875a" }
             : { bg: "rgba(245,158,11,0.14)", bd: "rgba(194,124,0,0.3)", fg: "#c27c00" };
@@ -525,63 +450,8 @@ function Header({ saveState = "idle", saveError, activeChain, onChainChange, wal
             <span style={{ fontSize: 12, fontWeight: 500, color: tone.fg, whiteSpace: "nowrap" }}>{text}</span>
           </div>
           );
-        })()}
-
-        {/* Wallet: connect button until a wallet is connected, then address + network menu */}
-        {!walletAddress ? (
-          <div ref={signInRef} style={{ position: "relative" }}>
-          <button
-            onClick={() => { setBellOpen(false); if (!signedIn) { setSignInOpen(o => !o); return; } onConnectWallet?.(); }}
-            style={{ display: "flex", alignItems: "center", gap: 8, background: "linear-gradient(165.12deg, #7C3AED 0%, #6b21d8 100%)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 999, padding: "0 16px", cursor: "pointer", height: 38, whiteSpace: "nowrap" as const, fontFamily: "inherit" }}
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="1.75" y="3.5" width="12.5" height="9.5" rx="2" stroke="white" strokeWidth="1.3"/><path d="M1.75 6h12.5" stroke="white" strokeWidth="1.3"/><circle cx="11" cy="9.5" r="0.9" fill="white"/></svg>
-            <span style={{ fontSize: 12.8, fontWeight: 600, color: "#f7f5ff" }}>Connect wallet</span>
-          </button>
-          {signInOpen && <SignInPrompt what="connect your wallet" onSignIn={() => { setSignInOpen(false); onSignIn?.(); }} />}
-          </div>
-        ) : (
-        <div ref={walletRef} style={{ position: "relative" }}>
-          <button
-            aria-haspopup="listbox" aria-expanded={walletOpen} aria-label={`Wallet on ${activeNetwork.name}. Switch network`}
-            onClick={() => { setWalletOpen(o => !o); setBellOpen(false); }}
-            style={{ display: "flex", alignItems: "center", gap: 7, background: "linear-gradient(165.12deg, #7C3AED 0%, #6b21d8 100%)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 999, padding: "6.833px 10px 6.833px 12.833px", cursor: "pointer", height: 38 }}
-          >
-            <div style={{ width: 6.99, height: 6.99, borderRadius: "50%", background: "#3fd9b8", flexShrink: 0 }} />
-            <span style={{ fontSize: 12.5, color: "#f7f5ff", fontFamily: "monospace", flex: 1, whiteSpace: "nowrap" }}>{shortAddress(walletAddress)}</span>
-            <span style={{ display: "inline-flex", padding: 1.5, borderRadius: "50%", background: "white", flexShrink: 0 }}><ChainLogo logo={activeNetwork.logo} size={16} /></span>
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true" style={{ flexShrink: 0, transform: walletOpen ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}><path d="M3 4.5l3 3 3-3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          </button>
-          {walletOpen && (
-            <>
-              <div style={{ ...POPOVER, right: 0, width: 210, borderRadius: 16, padding: 5 }}>
-                <div style={{ ...POPOVER_TITLE, fontSize: 10.5, padding: "6px 9px 4px" }}>Network</div>
-                <NetworkList value={activeChain} onSelect={id => { onChainChange(id); setWalletOpen(false); }} />
-                <div style={{ borderTop: "1px solid rgba(28,37,51,0.07)", marginTop: 3, paddingTop: 3 }}>
-                  <button onClick={() => { setWalletOpen(false); onDisconnectWallet?.(); }}
-                    onMouseEnter={e => { e.currentTarget.style.background = "rgba(239,68,68,0.06)"; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
-                    style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, padding: "6px 9px", borderRadius: 10, border: "none", background: "transparent", cursor: "pointer", fontFamily: "inherit" }}>
-                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6 14H3.5A1.5 1.5 0 012 12.5v-9A1.5 1.5 0 013.5 2H6M10.5 11.5L14 8l-3.5-3.5M14 8H6" stroke="#EF4444" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    <span style={{ fontSize: 12.5, fontWeight: 600, color: "#EF4444" }}>Disconnect wallet</span>
-                  </button>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-        )}
-
-        {/* Back to Main App */}
-        <button
-          onClick={() => { window.location.href = NEXURA_MAIN_APP_URL; }}
-          style={{ display: "flex", alignItems: "center", gap: 10, background: "#000000", border: "1px solid #000000", borderRadius: 999, padding: "0 17px", cursor: "pointer", height: 38, whiteSpace: "nowrap" }}
-        >
-          <svg width="16" height="16" viewBox="0 0 14 14" fill="none"><path d="M6 3H3a1 1 0 00-1 1v7a1 1 0 001 1h7a1 1 0 001-1V8" stroke="white" strokeWidth="1.3" strokeLinecap="round"/><path d="M9 2h3v3M12 2L7 7" stroke="white" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          <span style={{ fontSize: 12.8, fontWeight: 600, color: "#f7f5ff" }}>Back to Main App</span>
-        </button>
-      </div>
-    </div>
-  );
+        })();
+  return <StudioHeader title="Campaigns" network={activeChain} onNetworkChange={onChainChange} extra={chip} />;
 }
 
 // ─── WIZARD PROGRESS BAR ──────────────────────────────────────────────────────
@@ -1881,6 +1751,8 @@ export default function CreateNewCampaign({
                 <span style={{ fontSize: 12.5, color: "#69728a", lineHeight: "18.75px", paddingLeft: 6 }}>
                   {coverPreview
                     ? "Click the image to replace it. Wide banner images look best; edges may be cropped to fit."
+                    : mode === "live"
+                    ? "This campaign has no saved cover image yet. Add one here and it's saved with your changes, so you only do it once."
                     : "Use a wide banner image for best results: at least 1200 × 300 px, ideally 1600 × 400 px (4:1). Keep logos and text near the centre, as the edges may be cropped."}
                 </span>
               )}

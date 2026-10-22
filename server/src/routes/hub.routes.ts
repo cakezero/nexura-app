@@ -14,8 +14,9 @@ import {
 import { authenticateHubAdmin, authenticateHubAdmin2 } from "@/middlewares/auth.middleware";
 import { fetchHubCampaigns, publishCampaign } from "@/controllers/campaign.controller";
 import { requireStudioPayment } from "@/controllers/studioPayment.controller";
-import { validateCampaignSubmissions, validateCampaignSubmissionsBulk, getCampaignSubmissions, getHub, getHubAdmins, updateIds } from "@/controllers/hub.controller";
+import { validateCampaignSubmissions, validateCampaignSubmissionsBulk, getCampaignSubmissions, getHub, getHubAdmins, updateIds, checkUsernameAvailable, changeUsername } from "@/controllers/hub.controller";
 import { getSubmissionCampaigns, getCampaignSubmissionDetails } from "@/controllers/submissions.controller";
+import { disableTwoFactor, enableTwoFactor, setupTwoFactor, verifyTwoFactorLogin } from "@/controllers/twoFactor.controller";
 import { getRetentionDraft, saveRetentionDraft } from "@/controllers/retentionDraft.controller";
 import hubAppRoutes from "./hub.app.routes";
 import { attemptGuard, authIpLimiter, codeSendLimiter } from "@/middlewares/authGuard";
@@ -33,6 +34,12 @@ router
   .post("/validate-campaign-submissions", authenticateHubAdmin2, validateCampaignSubmissions)
   .post("/validate-campaign-submissions-bulk", authenticateHubAdmin2, validateCampaignSubmissionsBulk)
   .get("/me", authenticateHubAdmin2, getHub)
+  .get("/username-available", authenticateHubAdmin2, checkUsernameAvailable)
+  .post("/2fa/setup", authenticateHubAdmin2, setupTwoFactor)
+  .post("/2fa/enable", authenticateHubAdmin2, enableTwoFactor)
+  .post("/2fa/disable", authenticateHubAdmin2, disableTwoFactor)
+  .post("/2fa/verify-login", authIpLimiter, verifyTwoFactorLogin)
+  .patch("/username", authenticateHubAdmin2, changeUsername)
   .get("/retention-draft", authenticateHubAdmin2, getRetentionDraft)
   .put("/retention-draft", authenticateHubAdmin2, saveRetentionDraft)
   .get("/hub-admins", authenticateHubAdmin2, getHubAdmins)

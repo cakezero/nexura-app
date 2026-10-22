@@ -1,167 +1,238 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import Link from "next/link";
 import { useAccount } from "wagmi";
+import { usePathname, useRouter } from "next/navigation";
 import { useStudioWallet } from "./useStudioWallet";
 import { ChainLogo, NETWORKS, NetworkList, POPOVER, POPOVER_TITLE, getInjectedWallet, switchWalletChain, type NetworkId } from "@/components/admin/CreateNewCampaign";
-import { getNetwork } from "@/lib/runtimeNetwork";
-import { usePathname, useRouter } from "next/navigation";
+import { useStudioNetwork } from "@/lib/studioNetwork";
 import { OPEN_PROPOSALS_EVENT, useProposalNotifications } from "./useProposalNotifications";
 import NotificationsPanel from "./NotificationsPanel";
 import { STUDIO_SIGN_IN_URL, useProjectSession } from "./useProjectSession";
 import SignInPrompt from "./SignInPrompt";
+import { clearProjectSession, projectApiRequest } from "@/lib/projectApi";
 
-const NEXURA_MAIN_APP_URL = "https://nexura.intuition.box/discover";
+import { MAIN_APP_URL as NEXURA_MAIN_APP_URL } from "@/lib/mainAppUrl";
 
-function shortAddress(a: string): string { return a.length > 12 ? `${a.slice(0, 6)}…${a.slice(-4)}` : a; }
+const shortAddress = (a: string) => (a.length > 12 ? `${a.slice(0, 6)}…${a.slice(-4)}` : a);
+
+type Menu = "network" | "bell" | "wallet" | "avatar" | "signin-bell" | "signin-wallet" | null;
 
 /**
- * Shared header for the studio + user dashboards: page title, notifications bell,
- * wallet connect / address menu and a "Back to Main App" button.
- * Mirrors the header used on the Create Campaign page.
+ * The one header used across Nexura Studio: sign up / sign in, the dashboard pages, Profile and the
+ * campaign builder. Network, wallet and notifications come from shared state, so they are the same
+ * on every page and in every open tab.
  */
-export default function StudioHeader({ title }: { title: string }) {
+export default function StudioHeader({ title, showLogo = false, network: controlledNetwork, onNetworkChange, extra }: {
+  title?: string;
+  /** Show the Nexura logo instead of a page title (sign up, sign in). */
+  showLogo?: boolean;
+  /** The campaign builder drives the network from the campaign's reward network. */
+  network?: NetworkId;
+  onNetworkChange?: (id: NetworkId) => void;
+  /** Extra controls shown before the wallet, e.g. the builder's save status. */
+  extra?: ReactNode;
+}) {
   const { address: connectedAddress, connect: connectWallet, disconnect: disconnectWallet } = useStudioWallet();
-  // An expired session hides the wallet and notifications until the admin signs in again
   const signedIn = useProjectSession();
-  const walletAddress = signedIn ? connectedAddress : null;
-  const [signInFor, setSignInFor] = useState<"bell" | "wallet" | null>(null);
+  // Dashboard pages show the wallet only while the Studio session is valid; sign up / sign in always can
+  const walletAddress = signedIn || showLogo ? connectedAddress : null;
+  const needsSignIn = !signedIn && !showLogo;
   const { chainId } = useAccount();
-  const [walletOpen, setWalletOpen] = useState(false);
-  const [network, setNetwork] = useState<NetworkId>(getNetwork() === "mainnet" ? "intuition" : "intuition-testnet");
-  // Follow the network the connected wallet is on
-  useEffect(() => {
-    const match = NETWORKS.find(n => n.chainId === chainId);
-    if (match) setNetwork(match.id);
-  }, [chainId]);
-  const activeNetwork = NETWORKS.find(n => n.id === network) || NETWORKS[0];
-  const changeNetwork = (id: NetworkId) => {
-    setNetwork(id);
-    const eth = getInjectedWallet();
-    const net = NETWORKS.find(n => n.id === id);
-    if (eth && net) switchWalletChain(eth, net.chainId).catch(() => {});
-  };
-  const [bellOpen, setBellOpen] = useState(false);
+  const [sharedNetwork, setSharedNetwork] = useStudioNetwork();
+  const network = controlledNetwork ?? sharedNetwork;
+  const [open, setOpen] = useState<Menu>(null);
+  const [theme, setTheme] = useState<"light" | "dark">("light");
   const { items: allNotifications, unread: allUnread, markRead } = useProposalNotifications();
   const notifications = signedIn ? allNotifications : [];
   const unread = signedIn ? allUnread : 0;
   const router = useRouter();
   const pathname = usePathname();
-  const goSignIn = () => { setSignInFor(null); router.push(STUDIO_SIGN_IN_URL); };
+  const ref = useRef<HTMLDivElement>(null);
+
+  // Follow the network the connected wallet is on
+  useEffect(() => {
+    const match = NETWORKS.find(n => n.chainId === chainId);
+    if (match) { setSharedNetwork(match.id); if (controlledNetwork && match.id !== controlledNetwork) onNetworkChange?.(match.id); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chainId]);
+
+  // The builder's chosen network becomes the shared one too
+  useEffect(() => { if (controlledNetwork) setSharedNetwork(controlledNetwork); }, [controlledNetwork, setSharedNetwork]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(null); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(null); };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("keydown", onKey); };
+  }, [open]);
+  useEffect(() => { if (!walletAddress && open === "wallet") setOpen(null); }, [walletAddress, open]);
+
+  const active = NETWORKS.find(n => n.id === network) || NETWORKS[0];
+  const toggle = (m: Exclude<Menu, null>) => setOpen(o => (o === m ? null : m));
+
+  const changeNetwork = (id: NetworkId) => {
+    setOpen(null);
+    setSharedNetwork(id);
+    onNetworkChange?.(id);
+    const eth = getInjectedWallet();
+    const net = NETWORKS.find(n => n.id === id);
+    if (eth && net?.chainId) switchWalletChain(eth, net.chainId).catch(() => {});
+  };
+
   const openProposal = () => {
-    setBellOpen(false);
+    setOpen(null);
     if (pathname?.includes("/studio-dashboard/admin-management")) window.dispatchEvent(new Event(OPEN_PROPOSALS_EVENT));
     else router.push("/studio-dashboard/admin-management?tab=proposals");
   };
-  const walletRef = useRef<HTMLDivElement>(null);
-  const bellRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!bellOpen && !signInFor) return;
-    const onDown = (e: MouseEvent) => {
-      const t = e.target as Node;
-      if (bellRef.current?.contains(t) || walletRef.current?.contains(t)) return;
-      setBellOpen(false); setSignInFor(null);
-    };
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") { setBellOpen(false); setSignInFor(null); } };
-    document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown", onKey);
-    return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("keydown", onKey); };
-  }, [bellOpen, signInFor]);
-  // Signing back in closes the prompt
-  useEffect(() => { if (signedIn) setSignInFor(null); else setBellOpen(false); }, [signedIn]);
-  useEffect(() => {
-    if (!walletOpen) return;
-    const onDown = (e: MouseEvent) => { if (walletRef.current && !walletRef.current.contains(e.target as Node)) setWalletOpen(false); };
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setWalletOpen(false); };
-    document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown", onKey);
-    return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("keydown", onKey); };
-  }, [walletOpen]);
-  useEffect(() => { if (!walletAddress) setWalletOpen(false); }, [walletAddress]);
+  // Disconnecting the wallet also ends the Studio session: connecting again means signing in again
+  const disconnectAndSignOut = async () => {
+    setOpen(null);
+    disconnectWallet();
+    if (!signedIn) return;
+    try { await projectApiRequest({ method: "POST", endpoint: "/hub/logout" }); } catch { /* ends locally either way */ }
+    clearProjectSession();
+    router.push(STUDIO_SIGN_IN_URL);
+  };
+
+  const menuItem = "flex w-full items-center gap-[9px] rounded-[10px] px-[9px] py-[7px] text-left text-[12.5px] font-semibold text-[#1c2533] hover:bg-[#f7f4fe]";
 
   return (
-    <div style={{ height: 52, background: "#ffffff", borderBottom: "0.833px solid rgba(28,37,51,0.19)", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 36px", flexShrink: 0, position: "sticky", top: 0, zIndex: 100 }}>
-      <span style={{ fontSize: 20, fontWeight: 600, color: "#1c2533", lineHeight: "20.93px", whiteSpace: "nowrap" }}>{title}</span>
+    <header
+      className="sticky top-0 z-[100] flex h-[60px] w-full shrink-0 items-center justify-between gap-3 border-b-[0.833px] border-[rgba(28,37,51,0.19)] bg-[rgba(255,255,255,0.29)] px-4 backdrop-blur-[8px] sm:px-[36px]"
+      style={{ fontFamily: "Geist, var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif" }}
+    >
+      {showLogo ? (
+        <Link href="/studio" aria-label="Nexura Studio home" className="block h-[28px] w-[110px] shrink-0">
+          <img src="/studio-auth/logo.png" alt="Nexura" className="h-full w-full object-cover" />
+        </Link>
+      ) : (
+        <span className="truncate whitespace-nowrap text-[20px] font-semibold leading-[20.93px] text-[#1c2533]">{title}</span>
+      )}
 
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        {/* Bell */}
-        <div ref={bellRef} style={{ position: "relative" }}>
+      <div ref={ref} className="flex items-center gap-[10px]">
+        {/* Network */}
+        <div className="relative hidden sm:block">
           <button
-            aria-label={unread ? `Notifications, ${unread} unread` : "Notifications"} aria-expanded={bellOpen}
-            onClick={() => {
-              setWalletOpen(false);
-              if (!signedIn) { setSignInFor(s => (s === "bell" ? null : "bell")); return; }
-              setBellOpen(o => !o);
-            }}
-            style={{ position: "relative", width: 37.99, height: 37.99, background: "#f7f5ff", border: "1px solid rgba(28,37,51,0.09)", borderRadius: 40, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+            type="button" aria-haspopup="listbox" aria-expanded={open === "network"} onClick={() => toggle("network")}
+            className="flex items-center gap-[9px] rounded-[999px] border-[1.25px] border-[rgba(28,37,51,0.15)] bg-white px-[16px] py-[8px] drop-shadow-[0px_3px_5px_rgba(0,0,0,0.17)]"
+          >
+            <ChainLogo logo={active.logo} size={16} />
+            <span className="whitespace-nowrap text-[13.5px] font-semibold text-[#1c2533]">{active.name}</span>
+            <img src="/studio-auth/chevron-down.svg" alt="" width={15.9961} height={15.9961} className={`shrink-0 transition-transform ${open === "network" ? "rotate-180" : ""}`} />
+          </button>
+          {open === "network" && (
+            <div style={{ ...POPOVER, right: 0, width: 220, borderRadius: 16, padding: 5 }}>
+              <div style={{ ...POPOVER_TITLE, fontSize: 10.5, padding: "6px 9px 4px" }}>Network</div>
+              <NetworkList value={network} onSelect={changeNetwork} />
+            </div>
+          )}
+        </div>
+
+        {/* Theme */}
+        <div role="radiogroup" aria-label="Theme" className="hidden h-[38px] items-center gap-[2px] rounded-[999px] border border-[rgba(28,37,51,0.09)] bg-[#f7f4fe] p-[2.833px] md:flex">
+          {(["light", "dark"] as const).map(t => (
+            <button
+              key={t} type="button" role="radio" aria-checked={theme === t} aria-label={t === "light" ? "Light theme" : "Dark theme"}
+              onClick={() => setTheme(t)}
+              className={`flex size-[26px] items-center justify-center rounded-[999px] ${theme === t ? "bg-[#8a3ffc]" : ""}`}
+            >
+              <img src={t === "light" ? "/studio-auth/sun.svg" : "/studio-auth/moon.svg"} alt="" width={14} height={14} />
+            </button>
+          ))}
+        </div>
+
+        {/* Notifications */}
+        <div className="relative">
+          <button
+            type="button" aria-label={unread ? `Notifications, ${unread} unread` : "Notifications"} aria-expanded={open === "bell" || open === "signin-bell"}
+            onClick={() => toggle(signedIn ? "bell" : "signin-bell")}
+            className="relative flex size-[37.99px] items-center justify-center rounded-[40px] border border-[rgba(28,37,51,0.09)] bg-[#f7f5ff]"
           >
             <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2.5A4 4 0 005 6.5V10.5L3.5 12.5h11L13 10.5V6.5A4 4 0 009 2.5z" stroke="#6B7280" strokeWidth="1.3"/><path d="M7.5 14.5a1.5 1.5 0 003 0" stroke="#6B7280" strokeWidth="1.3" strokeLinecap="round"/></svg>
             {unread > 0 && (
-              <span style={{ position: "absolute", top: -5, left: 20.7, minWidth: 19, height: 19, padding: "0 5px", borderRadius: 10, background: "#e4545b", border: "1.667px solid #faf9ff", color: "white", fontSize: 11, fontWeight: 700, lineHeight: "15.7px", textAlign: "center", boxSizing: "border-box" }}>
+              <span className="absolute left-[20.7px] top-[-5px] box-border h-[19px] min-w-[19px] rounded-[10px] border-[1.667px] border-[#faf9ff] bg-[#e4545b] px-[5px] text-center text-[11px] font-bold leading-[15.7px] text-white">
                 {unread > 9 ? "9+" : unread}
               </span>
             )}
           </button>
-          {signInFor === "bell" && <SignInPrompt what="see your notifications" onSignIn={goSignIn} />}
-          {bellOpen && signedIn && (
+          {open === "signin-bell" && <SignInPrompt what="see your notifications" onSignIn={() => { setOpen(null); router.push(STUDIO_SIGN_IN_URL); }} />}
+          {open === "bell" && signedIn && (
             <NotificationsPanel items={notifications} unread={unread} onOpen={openProposal} onMarkRead={markRead} onViewAll={openProposal} />
           )}
         </div>
 
-        {/* Wallet: connect button until a wallet is connected, then address + menu */}
-        <div ref={walletRef} style={{ position: "relative" }}>
+        {extra}
+
+        {/* Wallet */}
+        <div className="relative">
           {!walletAddress ? (
             <button
-              onClick={() => {
-                setBellOpen(false);
-                if (!signedIn) { setSignInFor(s => (s === "wallet" ? null : "wallet")); return; }
-                connectWallet();
-              }}
-              style={{ display: "flex", alignItems: "center", gap: 8, background: "linear-gradient(165.12deg, #7C3AED 0%, #6b21d8 100%)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 999, padding: "0 16px", cursor: "pointer", height: 38, whiteSpace: "nowrap", fontFamily: "inherit" }}
+              type="button" onClick={() => { if (needsSignIn) { toggle("signin-wallet"); return; } setOpen(null); connectWallet(); }}
+              className="flex h-[38px] items-center gap-[8px] whitespace-nowrap rounded-[999px] border border-[rgba(255,255,255,0.08)] pl-[12.833px] pr-[12px] py-[6.833px]"
+              style={{ backgroundImage: "linear-gradient(164.92deg, rgb(124, 58, 237) 0%, rgb(107, 33, 216) 100%)" }}
             >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="1.75" y="3.5" width="12.5" height="9.5" rx="2" stroke="white" strokeWidth="1.3"/><path d="M1.75 6h12.5" stroke="white" strokeWidth="1.3"/><circle cx="11" cy="9.5" r="0.9" fill="white"/></svg>
-              <span style={{ fontSize: 12.8, fontWeight: 600, color: "#f7f5ff" }}>Connect wallet</span>
+              <img src="/studio-auth/wallet.svg" alt="" className="size-[15.996px] shrink-0" />
+              <span className="text-[12.5px] font-semibold text-[#f7f5ff]">Connect wallet</span>
             </button>
           ) : (
             <button
-              aria-haspopup="listbox" aria-expanded={walletOpen} aria-label={`Wallet on ${activeNetwork.name}. Switch network`}
-              onClick={() => { setWalletOpen(o => !o); setBellOpen(false); }}
-              style={{ display: "flex", alignItems: "center", gap: 7, background: "linear-gradient(165.12deg, #7C3AED 0%, #6b21d8 100%)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 999, padding: "6.833px 10px 6.833px 12.833px", cursor: "pointer", height: 38 }}
+              type="button" aria-haspopup="menu" aria-expanded={open === "wallet"} onClick={() => toggle("wallet")}
+              className="flex h-[38px] items-center gap-[9px] rounded-[999px] border-[1.25px] border-[#e3def3] px-[16px] py-[8px]"
+              style={{ backgroundImage: "linear-gradient(167.98deg, rgb(124, 58, 237) 0%, rgb(107, 33, 216) 100%)" }}
             >
-              <div style={{ width: 6.99, height: 6.99, borderRadius: "50%", background: "#3fd9b8", flexShrink: 0 }} />
-              <span style={{ fontSize: 12.5, color: "#f7f5ff", fontFamily: "monospace", flex: 1, whiteSpace: "nowrap" }}>{shortAddress(walletAddress)}</span>
-              <span style={{ display: "inline-flex", padding: 1.5, borderRadius: "50%", background: "white", flexShrink: 0 }}><ChainLogo logo={activeNetwork.logo} size={16} /></span>
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true" style={{ flexShrink: 0, transform: walletOpen ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}><path d="M3 4.5l3 3 3-3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              <span className="size-[7.988px] shrink-0 rounded-[3.994px] bg-[#00e1a2] shadow-[0px_0px_0px_3px_rgba(0,225,162,0.2)]" />
+              <span className="whitespace-nowrap text-[13.5px] font-semibold text-white">{shortAddress(walletAddress)}</span>
+              <img src="/studio-auth/chevron-down-white.svg" alt="" className={`size-[15.996px] shrink-0 transition-transform ${open === "wallet" ? "rotate-180" : ""}`} />
             </button>
           )}
-          {signInFor === "wallet" && <SignInPrompt what="connect your wallet" onSignIn={goSignIn} />}
-          {walletOpen && walletAddress && (
+          {open === "signin-wallet" && <SignInPrompt what="connect your wallet" onSignIn={() => { setOpen(null); router.push(STUDIO_SIGN_IN_URL); }} />}
+          {open === "wallet" && walletAddress && (
             <div style={{ ...POPOVER, right: 0, width: 210, borderRadius: 16, padding: 5 }}>
               <div style={{ ...POPOVER_TITLE, fontSize: 10.5, padding: "6px 9px 4px" }}>Network</div>
-              <NetworkList value={network} onSelect={id => { changeNetwork(id); setWalletOpen(false); }} />
-              <div style={{ borderTop: "1px solid rgba(28,37,51,0.07)", marginTop: 3, paddingTop: 3 }}>
-              <button onClick={() => { setWalletOpen(false); disconnectWallet(); }}
-                onMouseEnter={e => { e.currentTarget.style.background = "rgba(239,68,68,0.06)"; }}
-                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
-                style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, padding: "6px 9px", borderRadius: 10, border: "none", background: "transparent", cursor: "pointer", fontFamily: "inherit" }}>
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6 14H3.5A1.5 1.5 0 012 12.5v-9A1.5 1.5 0 013.5 2H6M10.5 11.5L14 8l-3.5-3.5M14 8H6" stroke="#EF4444" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                <span style={{ fontSize: 12.5, fontWeight: 600, color: "#EF4444" }}>Disconnect wallet</span>
-              </button>
+              <NetworkList value={network} onSelect={changeNetwork} />
+              <div className="mt-[3px] border-t border-[rgba(28,37,51,0.07)] pt-[3px]">
+                <button type="button" onClick={disconnectAndSignOut} className={`${menuItem} text-[#EF4444] hover:bg-[rgba(239,68,68,0.06)]`}>
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6 14H3.5A1.5 1.5 0 012 12.5v-9A1.5 1.5 0 013.5 2H6M10.5 11.5L14 8l-3.5-3.5M14 8H6" stroke="#EF4444" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  Disconnect wallet
+                </button>
               </div>
             </div>
           )}
         </div>
 
-        {/* Back to Main App */}
-        <button
-          onClick={() => { window.location.href = NEXURA_MAIN_APP_URL; }}
-          style={{ display: "flex", alignItems: "center", gap: 10, background: "#000000", border: "1px solid #000000", borderRadius: 999, padding: "0 17px", cursor: "pointer", height: 38, whiteSpace: "nowrap" }}
-        >
-          <svg width="16" height="16" viewBox="0 0 14 14" fill="none"><path d="M6 3H3a1 1 0 00-1 1v7a1 1 0 001 1h7a1 1 0 001-1V8" stroke="white" strokeWidth="1.3" strokeLinecap="round"/><path d="M9 2h3v3M12 2L7 7" stroke="white" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          <span style={{ fontSize: 12.8, fontWeight: 600, color: "#f7f5ff" }}>Back to Main App</span>
-        </button>
+        {/* Account */}
+        <div className="relative">
+          <button
+            type="button" aria-label="Account menu" aria-haspopup="menu" aria-expanded={open === "avatar"} onClick={() => toggle("avatar")}
+            className="relative flex size-[38px] shrink-0 items-center justify-center rounded-full bg-[#6a4dff]"
+          >
+            <img src="/studio-auth/user.svg" alt="" className="size-[15.2px]" />
+            <span className="absolute left-[2.54px] top-0 size-[35.467px] rounded-full border-[0.633px] border-[rgba(255,255,255,0.1)]">
+              <span className={`absolute left-[25.96px] top-[28.5px] size-[7.6px] rounded-full border-[1.267px] border-[#111317] ${signedIn ? "bg-[#22c55e]" : "bg-[#98a0b4]"}`} />
+            </span>
+          </button>
+          {open === "avatar" && (
+            <div role="menu" style={{ ...POPOVER, right: 0, width: 200, borderRadius: 16, padding: 5 }}>
+              {signedIn ? (
+                <>
+                  <Link role="menuitem" href="/studio-dashboard/hub-profile" onClick={() => setOpen(null)} className={menuItem}>Profile</Link>
+                  <a role="menuitem" href={NEXURA_MAIN_APP_URL} className={menuItem}>Back to Main App</a>
+                </>
+              ) : (
+                <>
+                  <Link role="menuitem" href={STUDIO_SIGN_IN_URL} onClick={() => setOpen(null)} className={menuItem}>Sign in</Link>
+                  <a role="menuitem" href={NEXURA_MAIN_APP_URL} className={menuItem}>Back to Main App</a>
+                </>
+              )}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </header>
   );
 }

@@ -15,6 +15,7 @@ import { configureAxiosResilience } from "@/utils/resilience";
 import { syncAllCampaignXp } from "@/utils/campaignXp";
 import { runExclusively } from "@/utils/jobLock";
 import { startTrustEligibilityCron } from "@/utils/campaignRewards";
+import { stripOperators } from "@/middlewares/stripOperators";
 
 // Every outside call (Discord, X, Intuition…) gets a time limit and retries on brief failures
 configureAxiosResilience();
@@ -23,9 +24,10 @@ const server = express();
 
 server.use(cors({ origin: SERVER_ENV.ALLOWED_ORIGINS }));
 server.use(helmet());
-server.set("trust proxy", true);
+server.set("trust proxy", Number(process.env.TRUST_PROXY_HOPS ?? 1));
 server.use(express.json());
 server.use(express.urlencoded({ extended: true }));
+server.use(stripOperators);
 
 // Never write passwords, codes or tokens to the logs
 const SECRET_KEYS = /pass(word)?|code|otp|token|secret|signature|authorization|private/i;

@@ -10,6 +10,11 @@ export const environment = process.env.ENVIRONMENT as "development" | "productio
 const normalizedNetwork = process.env.NETWORK?.trim().toLowerCase();
 export const network: "testnet" | "mainnet" = normalizedNetwork === "mainnet" ? "mainnet" : "testnet";
 export const STUDIO_FEE_CONTRACT = network === "mainnet" ? "0xF26c210FAa3a7d3cB4107F222C5d994D064DCBa6" : "0xbb8AB9bfFDf563067F849f52e8E810d0084FfEB4";
+export const STREAK_RESTORE_CONTRACT = network === "mainnet" ? "0x48f4462FcbB1E6cc49D23Ff8Da58a38Adc0998a1" : "0x564885ee83Aa8565Da47F38186079cD552Cf60De";
+export const STUDIO_PAYMENTS_ENABLED = process.env.STUDIO_PAYMENTS_ENABLED?.trim().toLowerCase() === "true";
+export const STUDIO_CAMPAIGN_FEE = network === "mainnet" ? "1000" : "1";
+export const PROXY_FEE_CONTRACT = (process.env.PROXY_FEE_CONTRACT?.trim()
+  || (network === "mainnet" ? "0x2e753a81720e9F47f3b11E1f854D3B44D81280CD" : "")) as string;
 export const JWT_SECRET = process.env.JWT_SECRET as string;
 export const REFRESH_SECRET = process.env.REFRESH_SECRET as string;
 export const DISCORD_ADMIN_HUB_CLIENT_REDIRECT_URI = process.env.DISCORD_ADMIN_HUB_CLIENT_REDIRECT_URI as string;
@@ -44,6 +49,16 @@ export const SERVER_ENV = z
       ),
   })
   .parse(process.env);
+
+export function trustedOrigin(requested: unknown, fallback: string): string {
+  if (typeof requested !== "string") return fallback;
+  try {
+    const origin = new URL(requested).origin;
+    return SERVER_ENV.ALLOWED_ORIGINS.some((allowed) => new URL(allowed).origin === origin) ? origin : fallback;
+  } catch {
+    return fallback;
+  }
+}
 
 export const IPAPI_TOKEN = process.env.IPAPI_TOKEN as string;
 export const PRIVATE_KEY = process.env.PRIVATE_KEY as `0x${string}`;

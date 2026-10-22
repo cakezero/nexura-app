@@ -6,7 +6,8 @@ import { server } from '@/models/server.model';
 import { addHubAdminEmail } from '@/utils/sendMail';
 import { createHubInvite, InviteError } from '@/utils/hubInvite';
 import { BAD_REQUEST, INTERNAL_SERVER_ERROR, CREATED, OK, NO_CONTENT, NOT_FOUND, FORBIDDEN } from '@/utils/status.utils';
-import { CLIENT_URL } from '@/utils/env.utils';
+import { CLIENT_URL, STUDIO_PAYMENTS_ENABLED } from '@/utils/env.utils';
+import { launchFeeProblem } from '@/controllers/studioPayment.controller';
 import { generateOTP, validateHubData, getMissingFields, validateCampaignData, validateCampaignQuestData, validateSaveCampaignData, validateUserHubData, validateDiscordTaskConfig } from '@/utils/utils';
 import logger from '@/config/logger';
 import { submission } from '@/models/submission.model';
@@ -17,7 +18,7 @@ import { withSubmissionCategory } from '@/controllers/quest.controller';
 import { refreshUserRetention } from "@/utils/retention";
 import { payCompletedStageXp, syncCampaignXp } from "@/utils/campaignXp";
 import { uploadImg } from "@/utils/img.utils";
-import { uploadFile } from "@/utils/file.utils";
+import { FileTypeError, uploadFile } from "@/utils/file.utils";
 import { ownsHubRecord, submissionInHub } from "@/utils/hubOwnership";
 import { campaignRewardAsset, rewardAsset } from "@/utils/rewardAssets";
 import { normalizeCampaignDateInput, normalizeCampaignDatesForResponse, parseDate } from "@/utils/dates";
@@ -165,7 +166,7 @@ export const createHub = async (req: GlobalRequest, res: GlobalResponse) => {
     logger.error(error);
     res
       .status(INTERNAL_SERVER_ERROR)
-      .json({ error: error?.message || "Error creating hub" });
+      .json({ error: "Error creating hub" });
   }
 };
 
@@ -175,7 +176,7 @@ export const getHub = async (req: GlobalRequest, res: GlobalResponse) => {
     // If hub exists but pendingTxHash isn't on it, fall back to admin's stored hash
     const adminHash = (req.admin as any).pendingTxHash ?? null;
     const pendingTxHash = hubFound?.pendingTxHash ?? adminHash;
-    const adminInfo = { _id: req.id, name: req.admin.name, email: req.admin.email, role: req.admin.role };
+    const adminInfo = { _id: req.id, name: req.admin.name, email: req.admin.email, role: req.admin.role, usernameChanges: (req.admin as any).usernameChanges ?? 0, usernameChangesAllowed: MAX_USERNAME_CHANGES, twoFactorEnabled: !!(req.admin as any).twoFactorEnabled };
     res.status(OK).json({ hub: hubFound ? { ...hubFound, pendingTxHash } : { pendingTxHash }, admin: adminInfo });
   } catch (error) {
     logger.error(error);
@@ -186,6 +187,13 @@ export const getHub = async (req: GlobalRequest, res: GlobalResponse) => {
 export const savePaymentHash = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
     const { txHash } = req.body;
+    if (txHash && STUDIO_PAYMENTS_ENABLED) {
+      const problem = await launchFeeProblem(txHash);
+      if (problem) {
+        res.status(BAD_REQUEST).json({ error: problem });
+        return;
+      }
+    }
     if (req.admin.hub) {
       // Hub exists — save on hub
       if (txHash) {
@@ -206,23 +214,35 @@ export const savePaymentHash = async (req: GlobalRequest, res: GlobalResponse) =
 
 export const updateIds = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
-    const { verifiedId, guildId, discordServer, discordSessionId } = req.body;
+    const { guildId, discordSessionId } = req.body;
     const normalizedGuildId = String(guildId ?? "").trim();
-    const normalizedDiscordServer = String(discordServer ?? "").trim();
     const normalizedDiscordSessionId = String(discordSessionId ?? "").trim();
-
-    const updatePayload: Record<string, any> = {
-      verifiedId,
-      guildId: normalizedGuildId,
-      discordConnected: true,
-    };
-    if (normalizedDiscordServer) updatePayload.discordServer = normalizedDiscordServer;
-    if (normalizedDiscordSessionId) updatePayload.discordSessionId = normalizedDiscordSessionId;
 
     // userHubAdmin has userId field; hubAdmin has role field
     const isUserHub = !!(req.admin as any).userId;
-    const adminHubId = String((req.admin as any).hub ?? "");
-    console.log("[updateIds] isUserHub:", isUserHub, "hubId:", adminHubId, "payload:", JSON.stringify(updatePayload));
+
+    if (!isUserHub && (req.admin as any).role !== "superadmin") {
+      res.status(FORBIDDEN).json({ error: "only a Super Admin can connect the hub's Discord server" });
+      return;
+    }
+
+    const session = mongoose.Types.ObjectId.isValid(normalizedDiscordSessionId)
+      ? await server.findById(normalizedDiscordSessionId).select("servers").lean() as any
+      : null;
+    const chosen = /^\d{5,25}$/.test(normalizedGuildId)
+      ? session?.servers?.find((s: any) => String(s?.id) === normalizedGuildId)
+      : null;
+    if (!chosen) {
+      res.status(BAD_REQUEST).json({ error: "reconnect Discord and choose one of your servers" });
+      return;
+    }
+
+    const updatePayload: Record<string, any> = {
+      guildId: normalizedGuildId,
+      discordServer: String(chosen.name ?? "").trim(),
+      discordSessionId: normalizedDiscordSessionId,
+      discordConnected: true,
+    };
 
     // Note: with the schema no longer enforcing guildId uniqueness, we no
     // longer $unset other hubs' guildId here — multiple hubs may legitimately
@@ -392,6 +412,10 @@ export const updateHub = async (req: GlobalRequest, res: GlobalResponse) => {
     const updatedHub = await hub.findByIdAndUpdate(req.admin.hub, safeBody, { new: true });
     res.status(OK).json(updatedHub);
   } catch (error) {
+    if (error instanceof FileTypeError) {
+      res.status(BAD_REQUEST).json({ error: error.message });
+      return;
+    }
     logger.error(error);
     res.status(INTERNAL_SERVER_ERROR).json({ error: 'Failed to update hub' });
   }
@@ -824,6 +848,28 @@ export function prepareCampaignSaveBody(body: Record<string, any>): string | nul
   return error ? `Missing required fields: ${getMissingFields(error)}` : null;
 }
 
+const CAMPAIGN_SAVE_FIELDS = [
+  "title", "description", "starts_at", "ends_at", "maxParticipants", "reward", "projectCoverImage",
+  "stages", "rewardsEnabled", "rewardsConfig", "rewardAsset", "templateId", "builderState",
+] as const;
+
+export function pickCampaignSaveFields(body: Record<string, any>): Record<string, any> {
+  const picked: Record<string, any> = {};
+  for (const key of CAMPAIGN_SAVE_FIELDS) if (body[key] !== undefined) picked[key] = body[key];
+  return picked;
+}
+
+const CAMPAIGN_SERVER_FIELDS = [
+  "_id", "status", "hub", "creator", "contractAddress", "rewardsDeployment", "xpClaimed", "trustClaimed",
+  "participants", "deletedAt", "discordLaunchGuildId", "endProposal", "publishSignature", "rewardAsset",
+];
+
+export function withoutServerCampaignFields(body: Record<string, any> | undefined): Record<string, any> {
+  const copy: Record<string, any> = { ...(body ?? {}) };
+  for (const key of CAMPAIGN_SERVER_FIELDS) delete copy[key];
+  return copy;
+}
+
 /** A rejected campaign update, with the HTTP status to answer it with. */
 export class CampaignUpdateError extends Error {
   constructor(public status: number, message: string) { super(message); }
@@ -850,7 +896,8 @@ export async function applyCampaignUpdate(id: string, hubFound: any, body: Recor
     ? body.nameOfProject.trim()
     : "";
 
-  const { campaignQuests: _cq, isDraft: _d, existingCoverImage: _e, hubCoverImage: _h, nameOfProject: _n, coverImage: newCoverImage, ...updateFields } = body;
+  const newCoverImage = body.coverImage;
+  const updateFields = pickCampaignSaveFields(body);
 
   // A cover uploaded after the first save replaces the stored one
   if (typeof newCoverImage === "string" && newCoverImage) updateFields.projectCoverImage = newCoverImage;
@@ -1090,7 +1137,7 @@ export const saveCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
       ]);
       const reward = req.body.reward ?? {};
       const body = {
-        ...req.body,
+        ...pickCampaignSaveFields(req.body),
         project_image: hubFound.logo ?? "pending",
         project_name: hubFound.name ?? req.body.nameOfProject ?? "",
         sub_title: req.body.description ?? "",
@@ -1147,7 +1194,7 @@ export const saveCampaign = async (req: GlobalRequest, res: GlobalResponse) => {
       return;
     }
     logger.error(error);
-    res.status(INTERNAL_SERVER_ERROR).json({ error: error?.message || 'Failed to save campaign' });
+    res.status(INTERNAL_SERVER_ERROR).json({ error: 'Failed to save campaign' });
   }
 }
 
@@ -1162,7 +1209,7 @@ export const uploadCampaignCover = async (req: GlobalRequest, res: GlobalRespons
     res.status(OK).json({ url });
   } catch (error: any) {
     logger.error(error);
-    res.status(INTERNAL_SERVER_ERROR).json({ error: error?.message || "Failed to upload the cover image" });
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "Failed to upload the cover image" });
   }
 };
 
@@ -1201,8 +1248,7 @@ export const saveCampaignWithQuests = async (req: GlobalRequest, res: GlobalResp
         folder: "cover-images",
         maxSize: 2 * 1024 ** 2
       });
-      // A new campaign always belongs to the admin's own hub
-      const savedCampaign = await campaign.create({ ...req.body, hub: req.admin.hub, creator: req.id });
+      const savedCampaign = await campaign.create({ ...withoutServerCampaignFields(req.body), hub: req.admin.hub, creator: req.id });
 
       campaignId = savedCampaign._id.toString();
     } else {
@@ -1212,9 +1258,12 @@ export const saveCampaignWithQuests = async (req: GlobalRequest, res: GlobalResp
         return;
       }
 
-      // The hub and creator never change through an edit
-      const { hub: _hub, creator: _creator, ...campaignData } = req.body.campaignData ?? {};
-      await campaign.findByIdAndUpdate(id, campaignData, { new: true });
+      if (campaignFound.status !== "Save" && !req.isPlatformAdmin) {
+        res.status(FORBIDDEN).json({ error: "this campaign is published, so changes need an approved proposal in Admin Management" });
+        return;
+      }
+
+      await campaign.findByIdAndUpdate(id, withoutServerCampaignFields(req.body.campaignData), { new: true });
     }
 
     const { error: questError } = validateCampaignQuestData(req.body.questData);
@@ -1289,6 +1338,11 @@ export const deleteCampaignQuest = async (req: GlobalRequest, res: GlobalRespons
       return;
     }
 
+    if (await taskOnPublishedCampaign(questToBeDeleted, req)) {
+      res.status(FORBIDDEN).json({ error: "this campaign is published, so changes need an approved proposal in Admin Management" });
+      return;
+    }
+
     await campaignQuest.findByIdAndDelete(id);
 
     res.status(NO_CONTENT).send();
@@ -1296,6 +1350,12 @@ export const deleteCampaignQuest = async (req: GlobalRequest, res: GlobalRespons
     logger.error(error);
     res.status(INTERNAL_SERVER_ERROR).json({ error: "error deleting campaign quest" });
   }
+}
+
+async function taskOnPublishedCampaign(task: any, req: GlobalRequest): Promise<boolean> {
+  if (req.isPlatformAdmin) return false;
+  const parent = await campaign.findById(task.campaign).select("status").lean() as any;
+  return !!parent && parent.status !== "Save";
 }
 
 export const updateCamapaignQuest = async (req: GlobalRequest, res: GlobalResponse) => {
@@ -1312,8 +1372,12 @@ export const updateCamapaignQuest = async (req: GlobalRequest, res: GlobalRespon
       return;
     }
 
-    // A task can't be moved to another campaign
-    const { _id: _ignoredId, campaign: _ignoredCampaign, ...changes } = req.body ?? {};
+    if (await taskOnPublishedCampaign(exists, req)) {
+      res.status(FORBIDDEN).json({ error: "this campaign is published, so changes need an approved proposal in Admin Management" });
+      return;
+    }
+
+    const { _id: _ignoredId, campaign: _ignoredCampaign, guildId: _ignoredGuild, ...changes } = req.body ?? {};
     await campaignQuest.findByIdAndUpdate(id, changes);
 
     res.status(NO_CONTENT).send();
@@ -1408,7 +1472,7 @@ export const createUserHub = async (req: GlobalRequest, res: GlobalResponse) => 
     logger.error(error);
     res
       .status(INTERNAL_SERVER_ERROR)
-      .json({ error: error?.message || "Error creating user hub" });
+      .json({ error: "Error creating user hub" });
   }
 };
 
@@ -1446,7 +1510,7 @@ export const updateUserHub = async (req: GlobalRequest, res: GlobalResponse) => 
     res.status(OK).json({ message: "user hub updated!", hub: updated });
   } catch (error: any) {
     logger.error(error);
-    res.status(INTERNAL_SERVER_ERROR).json({ error: error?.message || "Error updating user hub" });
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "Error updating user hub" });
   }
 };
 
@@ -1478,7 +1542,7 @@ export const deleteUserHub = async (req: GlobalRequest, res: GlobalResponse) => 
     res.status(OK).json({ message: "user hub deleted successfully" });
   } catch (error: any) {
     logger.error(error);
-    res.status(INTERNAL_SERVER_ERROR).json({ error: error?.message || "Error deleting user hub" });
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "Error deleting user hub" });
   }
 };
 
@@ -1501,6 +1565,57 @@ export const getUserProfileByWallet = async (req: GlobalRequest, res: GlobalResp
     res.status(OK).json({ username: userFound.username, profilePic: userFound.profilePic || "" });
   } catch (error: any) {
     logger.error(error);
-    res.status(INTERNAL_SERVER_ERROR).json({ error: error?.message || "Error fetching user profile" });
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "Error fetching user profile" });
+  }
+};
+
+const USERNAME_RULE = /^[a-zA-Z0-9_.]{3,30}$/;
+export const MAX_USERNAME_CHANGES = 2;
+
+async function usernameTaken(name: string, exceptId?: string) {
+  const found = await hubAdmin.findOne({ name, ...(exceptId ? { _id: { $ne: exceptId } } : {}) })
+    .collation({ locale: "en", strength: 2 }).select("_id").lean();
+  return !!found;
+}
+
+export const checkUsernameAvailable = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const username = String(req.query.username ?? "").trim();
+    if (!USERNAME_RULE.test(username)) {
+      res.status(OK).json({ available: false, reason: "Use 3 to 30 letters, numbers, dots or underscores." });
+      return;
+    }
+    const taken = await usernameTaken(username, req.id);
+    res.status(OK).json({ available: !taken, reason: taken ? "That username is taken." : null });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error checking username" });
+  }
+};
+
+export const changeUsername = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const username = String(req.body?.username ?? "").trim();
+    if (!USERNAME_RULE.test(username)) {
+      res.status(BAD_REQUEST).json({ error: "Use 3 to 30 letters, numbers, dots or underscores." });
+      return;
+    }
+    if (await usernameTaken(username, req.id)) {
+      res.status(BAD_REQUEST).json({ error: "That username is taken." });
+      return;
+    }
+    const updated = await hubAdmin.findOneAndUpdate(
+      { _id: req.id, $or: [{ usernameChanges: { $lt: MAX_USERNAME_CHANGES } }, { usernameChanges: null }] },
+      { $set: { name: username }, $inc: { usernameChanges: 1 } },
+      { new: true }
+    ).select("name usernameChanges").lean() as any;
+    if (!updated) {
+      res.status(FORBIDDEN).json({ error: `You can change your username only ${MAX_USERNAME_CHANGES} times.` });
+      return;
+    }
+    res.status(OK).json({ name: updated.name, usernameChanges: updated.usernameChanges, changesLeft: Math.max(0, MAX_USERNAME_CHANGES - updated.usernameChanges) });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error changing username" });
   }
 };

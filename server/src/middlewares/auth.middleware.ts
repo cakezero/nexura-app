@@ -8,6 +8,8 @@ import { resolveAdminCampaignHub } from "@/utils/adminCampaignHub";
 import { BAD_REQUEST, INTERNAL_SERVER_ERROR, UNAUTHORIZED, FORBIDDEN } from "@/utils/status.utils";
 import { JWT, issuedBeforePasswordChange } from "@/utils/utils";
 import { REDIS } from "@/utils/redis.utils";
+import { isTokenRevoked } from "@/models/revokedToken.model";
+import { stripOperators } from "./stripOperators";
 import multer from "multer";
 import { updateAdminLastActivity } from "@/utils/adminActivityCron";
 
@@ -39,10 +41,26 @@ const sendAuthError = (res: GlobalResponse, error: unknown) => {
 	}
 };
 
-export const upload = multer({
+const multerUpload = multer({
 	storage: multer.memoryStorage(),
 	limits: { fileSize }
 });
+
+export const upload = {
+	single: (name: string) => [multerUpload.single(name), stripOperators],
+	fields: (fields: multer.Field[]) => [multerUpload.fields(fields), stripOperators],
+	array: (name: string, max?: number) => [multerUpload.array(name, max), stripOperators],
+	none: () => [multerUpload.none(), stripOperators],
+};
+
+async function hubIsBanned(adminDoc: any): Promise<boolean> {
+  const ids = new Set<string>([String(adminDoc._id)]);
+  if (adminDoc.hub) {
+    const teammates = await hubAdmin.find({ hub: adminDoc.hub }).select("_id").lean();
+    for (const t of teammates) ids.add(String(t._id));
+  }
+  return !!(await bannedUser.exists({ userId: { $in: [...ids] } }));
+}
 
 export const authenticateHubAdmin = async (req: GlobalRequest, res: GlobalResponse, next: GlobalNextFunction) => {
 	try {
@@ -72,9 +90,7 @@ export const authenticateHubAdmin = async (req: GlobalRequest, res: GlobalRespon
       return;
     }
 
-    // Check if hub is banned
-    const isBanned = await bannedUser.findOne({ userId: superAdminExists._id }).lean();
-    if (isBanned) {
+    if (await hubIsBanned(superAdminExists)) {
       res.status(FORBIDDEN).json({ error: "this hub has been banned" });
       return;
     }
@@ -102,15 +118,9 @@ export const authenticateUserHub = async (req: GlobalRequest, res: GlobalRespons
   
       const token = authHeader.split(" ")[1]!;
   
-      // Redis logout check — non-fatal if Redis is unreachable
-      try {
-        const loggedOut = await REDIS.get(`logout:${token}`);
-        if (loggedOut) {
-          res.status(BAD_REQUEST).json({ error: "admin is logged out, kindly login again" });
-          return;
-        }
-      } catch (redisErr) {
-        logger.warn("Redis unavailable in authenticateUserHub, skipping logout check");
+      if (await isTokenRevoked(token)) {
+        res.status(BAD_REQUEST).json({ error: "admin is logged out, kindly login again" });
+        return;
       }
 
       const { id } = await JWT.verify(token) as decodedDataType;
@@ -151,15 +161,9 @@ export const authenticateHubAdmin2 = async (req: GlobalRequest, res: GlobalRespo
 
     const token = authHeader.split(" ")[1]!;
 
-    // Redis logout check — non-fatal if Redis is unreachable
-    try {
-      const loggedOut = await REDIS.get(`logout:${token}`);
-      if (loggedOut) {
-        res.status(BAD_REQUEST).json({ error: "admin is logged out, kindly login again" });
-        return;
-      }
-    } catch (redisErr) {
-      logger.warn("Redis unavailable in authenticateHubAdmin2, skipping logout check");
+    if (await isTokenRevoked(token)) {
+      res.status(BAD_REQUEST).json({ error: "admin is logged out, kindly login again" });
+      return;
     }
 
     const decoded = await JWT.verify(token) as decodedDataType;
@@ -176,6 +180,10 @@ export const authenticateHubAdmin2 = async (req: GlobalRequest, res: GlobalRespo
     }
     if (issuedBeforePasswordChange(decoded, exists as any)) {
       res.status(UNAUTHORIZED).json({ error: PASSWORD_CHANGED });
+      return;
+    }
+    if (await hubIsBanned(exists)) {
+      res.status(FORBIDDEN).json({ error: "this hub has been banned" });
       return;
     }
 
@@ -203,15 +211,9 @@ export const authenticateUser = async (req: GlobalRequest, res: GlobalResponse, 
 
     const token = authHeader.split(" ")[1]!;
 
-    // Redis logout check — non-fatal if Redis is unreachable
-    try {
-      const userLoggedOut = await REDIS.get(`logout:${token}`);
-      if (userLoggedOut) {
-        res.status(BAD_REQUEST).json({ error: "user is logged out, kindly login again" });
-        return;
-      }
-    } catch (redisErr) {
-      logger.warn("Redis unavailable in authenticateUser, skipping logout check");
+    if (await isTokenRevoked(token)) {
+      res.status(BAD_REQUEST).json({ error: "user is logged out, kindly login again" });
+      return;
     }
 
 		const { id } = await JWT.verify(token) as decodedDataType;
@@ -274,8 +276,7 @@ export const authenticateAdmin = async (req: GlobalRequest, res: GlobalResponse,
 
     const token = authHeader.split(" ")[1]!;
 
-    const adminLoggedOut = await REDIS.get(`logout:${token}`);
-    if (adminLoggedOut) {
+    if (await isTokenRevoked(token)) {
       res.status(BAD_REQUEST).json({ error: "admin is logged out, kindly login again" });
       return;
     }
