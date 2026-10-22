@@ -34,7 +34,7 @@ type Claimer = {
   /** Stages completed out of all stages on this campaign. */
   retentionRate: number | null;
   /** Average across the person's settled campaigns on Nexura. */
-  overallRetention: number | null; overallCampaigns: number;
+  nexuraScore: number | null; nexuraScoreCampaigns: number;
   meetsRequirement: boolean | null; history: StageHistory[];
 };
 
@@ -42,10 +42,10 @@ type Claimer = {
 type CampaignDetails = {
   campaign: {
     _id: string; title: string; projectCoverImage?: string; starts_at: string; ends_at: string; status: LiveStatus;
-    hasRewards: boolean; rewardPool: number; maxParticipants: number; retentionRequirementPct: number | null; totalTasks: number;
+    hasRewards: boolean; rewardPool: number; maxParticipants: number; nexuraScoreRequirementPct: number | null; totalTasks: number;
   };
   stats: {
-    participants: number; completedAllTasks: number; claimedReward: number; averageRetention: number | null; averageOverallRetention: number | null;
+    participants: number; completedAllTasks: number; claimedReward: number; averageRetention: number | null; averageNexuraScore: number | null;
     meetingRequirement: number | null; pendingSubmissions: number; approvedSubmissions: number; rejectedSubmissions: number;
   };
   participants: Claimer[];
@@ -303,7 +303,7 @@ function CampaignView(props: SubmissionsHubProps & { campaignId: string; onBack:
     ...(c.hasRewards ? [{ k: "Rewards claimed", v: String(stats.claimedReward), sub: `${c.rewardPool} TRUST pool` }] : []),
     {
       k: "Average retention", v: stats.averageRetention === null ? "No data yet" : `${stats.averageRetention}%`,
-      sub: stats.averageOverallRetention !== null ? `of claimers · ${stats.averageOverallRetention}% overall on Nexura` : "of people who claimed",
+      sub: stats.averageNexuraScore !== null ? `of claimers · ${stats.averageNexuraScore}% average Nexura score` : "of people who claimed",
     },
   ];
 
@@ -371,7 +371,7 @@ function CampaignView(props: SubmissionsHubProps & { campaignId: string; onBack:
           />
         </div>
       ) : (
-        <ClaimersTable claimers={data.participants} requirement={c.retentionRequirementPct} />
+        <ClaimersTable claimers={data.participants} requirement={c.nexuraScoreRequirementPct} />
       )}
     </div>
   );
@@ -424,7 +424,7 @@ function ClaimersTable({ claimers, requirement }: { claimers: Claimer[]; require
           <button onClick={() => setBelowOnly(v => !v)}
             className={cn("h-8 px-3 rounded-full text-xs font-semibold transition border-[0.833px] self-start md:self-auto",
               belowOnly ? "bg-[#8B3EFE] text-white border-transparent" : "bg-white text-[#3d485c] border-[rgba(28,37,51,0.15)] hover:bg-[#f7f4fe]")}>
-            Below {requirement}% retention
+            Below {requirement}% Nexura score
           </button>
         )}
       </div>
@@ -432,7 +432,7 @@ function ClaimersTable({ claimers, requirement }: { claimers: Claimer[]; require
       <Card className="bg-white border-[0.833px] border-[rgba(28,37,51,0.09)] rounded-[28px] shadow-none overflow-hidden">
         {/* The columns always show, so it's clear what is recorded for each claimer */}
         <div className={cn("grid grid-cols-2 gap-x-4 gap-y-1 px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#98a0b4] border-b-[0.833px] border-[rgba(28,37,51,0.09)]", cols)}>
-          <span>Nexura username</span><span>Wallet address</span><span>Campaign retention</span><span>Overall retention</span><span>Claimed on</span><span className="hidden md:block" />
+          <span>Nexura username</span><span>Wallet address</span><span>Campaign retention</span><span>Nexura score</span><span>Claimed on</span><span className="hidden md:block" />
         </div>
         {shown.length === 0 ? (
           claimers.length === 0
@@ -468,8 +468,8 @@ function ClaimersTable({ claimers, requirement }: { claimers: Claimer[]; require
                       </span>
                     )}
                   </div>
-                  <RetentionCell rate={p.retentionRate} detail={`${p.stagesCompleted}/${p.stagesTotal} stages`} below={p.meetsRequirement === false} />
-                  <RetentionCell rate={p.overallRetention} detail={p.overallCampaigns ? `${p.overallCampaigns} campaign${p.overallCampaigns === 1 ? "" : "s"}` : "no finished campaigns"} />
+                  <RetentionCell rate={p.retentionRate} detail={`${p.stagesCompleted}/${p.stagesTotal} stages`} />
+                  <RetentionCell rate={p.nexuraScore} below={p.meetsRequirement === false} detail={p.nexuraScoreCampaigns ? `${p.nexuraScoreCampaigns} campaign${p.nexuraScoreCampaigns === 1 ? "" : "s"}` : "no finished campaigns"} />
                   <span className="inline-flex items-center gap-1 rounded-full bg-[rgba(0,225,162,0.16)] text-[#00a87c] px-2.5 py-1 text-[11px] font-semibold w-fit">
                     <CheckCircle2 className="w-3.5 h-3.5" /> {fmtDate(p.claimedAt)}
                   </span>

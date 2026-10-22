@@ -1,25 +1,20 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useAccount, useSignMessage } from "wagmi";
 import AuthShell, { type StepState } from "./AuthShell";
 import {
   Card, CardText, CardTitle, CodeInput, ErrorText, Field, GoogleAuthenticatorRow, PasswordInput, PrimaryButton,
-  StrengthBar, TextInput, TextLink, WalletBanner, errorMessage, passwordOk,
+  PasswordMatch, StrengthBar, TextInput, TextLink, WalletBanner, errorMessage, passwordOk,
 } from "./AuthUI";
 import { useStudioWallet } from "../useStudioWallet";
+import { useWalletProof } from "./useWalletProof";
 import { projectApiRequest, storeProjectSession } from "@/lib/projectApi";
 import { useToast } from "@/hooks/use-toast";
 
 type Step = "signin" | "twofa" | "reset-email" | "reset-code" | "reset-password" | "reset-done";
 
 type Admin = { _id: string; name: string; email: string; role: string; hub?: string };
-type WalletProof = { address: string; message: string; signature: string; at: number };
-// The server accepts a login signature for 10 minutes; sign again a little before that
-const PROOF_TTL_MS = 9 * 60 * 1000;
-const SIGN_TIMEOUT_MS = 90 * 1000;
-
 type SignInResponse = {
   accessToken?: string; token?: string; admin?: Admin;
   twoFactorRequired?: boolean; twoFactorToken?: string;
@@ -34,9 +29,7 @@ export default function SignInFlow() {
   const params = useSearchParams();
   const { toast } = useToast();
   const { connect } = useStudioWallet();
-  const { address: liveAddress, isConnected } = useAccount();
-  const { signMessageAsync } = useSignMessage();
-  const address = isConnected && liveAddress ? liveAddress : null;
+  const { address, verified, signing, signError, sign, getProof, clearProof } = useWalletProof({ signOnConnect: true });
   const [step, setStep] = useState<Step>(params.get("reset") ? "reset-email" : "signin");
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
@@ -49,45 +42,8 @@ export default function SignInFlow() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [resendIn, setResendIn] = useState(0);
-  const [proof, setProof] = useState<WalletProof | null>(null);
-  const [signing, setSigning] = useState(false);
-  const [walletError, setWalletError] = useState("");
-  const signingFor = useRef<string | null>(null);
-
-  // Signs the login message as soon as a wallet connects, so Sign in itself never opens the wallet
-  const signWallet = useCallback(async (addr: string): Promise<WalletProof | null> => {
-    if (signingFor.current === addr) return null;
-    signingFor.current = addr;
-    setSigning(true); setWalletError("");
-    const message = `Nexura Wallet Login
-Address: ${addr}
-Nonce: ${Date.now()}`;
-    try {
-      const signature = await Promise.race([
-        signMessageAsync({ message }),
-        new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout")), SIGN_TIMEOUT_MS)),
-      ]);
-      const next = { address: addr, message, signature, at: Date.now() };
-      setProof(next);
-      return next;
-    } catch (err) {
-      setWalletError((err as Error)?.message === "timeout"
-        ? "Your wallet didn't respond. Open it and try Sign again."
-        : "Sign the message in your wallet to verify it.");
-      return null;
-    } finally {
-      signingFor.current = null;
-      setSigning(false);
-    }
-  }, [signMessageAsync]);
-
-  useEffect(() => {
-    if (!address) { setProof(null); setWalletError(""); return; }
-    if (proof?.address !== address) { setProof(null); void signWallet(address); }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [address]);
-
-  const verified = !!proof && proof.address === address && Date.now() - proof.at < PROOF_TTL_MS;
+  const [wrongWallet, setWrongWallet] = useState("");
+  useEffect(() => { setWrongWallet(""); }, [address]);
 
   useEffect(() => {
     try {
@@ -123,11 +79,11 @@ Nonce: ${Date.now()}`;
     e.preventDefault();
     const email = identifier.trim();
     if (!email || !password) return setError("Enter your username or email and your password.");
-    if (!address) { setWalletError("Connect your wallet first."); connect(); return; }
-    if (signing) return setWalletError("Approve the signature in your wallet first.");
-    const current = verified ? proof : await signWallet(address);
+    if (!address) { setError("Connect your wallet first."); connect(); return; }
+    if (signing) return setError("Approve the signature in your wallet first.");
+    const current = await getProof();
     if (!current) return;
-    setBusy(true); setError(""); setWalletError("");
+    setBusy(true); setError(""); setWrongWallet("");
     try {
       const { message, signature } = current;
       const res = await projectApiRequest<SignInResponse>({
@@ -144,8 +100,8 @@ Nonce: ${Date.now()}`;
     } catch (err) {
       const msg = errorMessage(err, "Those details didn't match an account.");
       // A wrong wallet is rejected before the signature is used, so it stays valid; otherwise sign again next time
-      if (/you connected|switch to the wallet|linked to this studio/i.test(msg)) setWalletError(msg);
-      else { setProof(null); setError(msg); }
+      if (/you connected|switch to the wallet|linked to this studio/i.test(msg)) setWrongWallet(msg);
+      else { clearProof(); setError(msg); }
     } finally { setBusy(false); }
   };
 
@@ -222,24 +178,20 @@ Nonce: ${Date.now()}`;
       {step === "signin" && (
         <form onSubmit={signIn} noValidate className="flex w-full justify-center pt-[20px] lg:pt-[18px]">
           <Card shadow="soft">
-            <WalletBanner address={address} onConnect={connect} verified={verified} signing={signing} onSign={() => address && signWallet(address)} />
-            <ErrorText>{walletError}</ErrorText>
+            <WalletBanner address={address} onConnect={connect} verified={verified} signing={signing} onSign={() => address && sign(address)} wrongWallet={wrongWallet} />
+            <ErrorText>{signError}</ErrorText>
             <div className="pt-[14px]"><CardTitle>Sign in</CardTitle></div>
-            <CardText>Enter your account details to open your studio.</CardText>
             <Field label="Username or email" className="pt-[16px]">
               <TextInput value={identifier} onChange={e => setIdentifier(e.target.value)} autoComplete="username" placeholder="you@project.xyz" />
             </Field>
             <Field label="Password">
-              <PasswordInput withShow value={password} onChange={e => setPassword(e.target.value)} placeholder="Your password" autoComplete="current-password" />
+              <PasswordInput withShow value={password} onChange={e => setPassword(e.target.value)} autoComplete="current-password" />
             </Field>
             <div className="flex w-full justify-end pb-[12px] pt-[8px]">
               <TextLink onClick={() => { setResetEmail(identifier.includes("@") ? identifier.trim() : ""); go("reset-email"); }}>Forgot password?</TextLink>
             </div>
             <PrimaryButton type="submit" disabled={busy || signing}>{busy ? "Signing in…" : "Sign in"}</PrimaryButton>
             <ErrorText>{error}</ErrorText>
-            <p className="w-full pt-[14px] text-center text-[13.5px] leading-[20.925px] text-[#5b6478]">
-              New to Nexura Studio? <a href="/studio/sign-up" className="font-semibold text-[#8a3ffc]">Create account</a>
-            </p>
           </Card>
         </form>
       )}
@@ -248,7 +200,6 @@ Nonce: ${Date.now()}`;
         <form onSubmit={e => { e.preventDefault(); verifyTwoFactor(); }} className="flex w-full justify-center pt-[24px] lg:pt-[48px]">
           <Card>
             <div className="pt-[20px]"><CardTitle>Two-step verification</CardTitle></div>
-            <CardText>Open Google Authenticator and enter the 6-digit code for Nexura Studio.</CardText>
             <div className="w-full pt-[24px]"><GoogleAuthenticatorRow /></div>
             <CodeInput value={totp} onChange={setTotp} onComplete={v => verifyTwoFactor(v)} className="pt-[18px]" />
             <PrimaryButton type="submit" disabled={busy} className="mt-[20px]">{busy ? "Checking…" : "Verify and sign in"}</PrimaryButton>
@@ -262,7 +213,6 @@ Nonce: ${Date.now()}`;
         <form onSubmit={requestReset} noValidate className="flex w-full justify-center pt-[24px] lg:pt-[56px]">
           <Card>
             <CardTitle>Reset your password</CardTitle>
-            <CardText>Enter the email on your account and we will send a code.</CardText>
             <Field label="Email" className="pb-[16px] pt-[24px]">
               <TextInput round="soft" type="email" value={resetEmail} onChange={e => setResetEmail(e.target.value)} placeholder="you@project.xyz" autoComplete="email" />
             </Field>
@@ -276,7 +226,7 @@ Nonce: ${Date.now()}`;
         <form onSubmit={e => { e.preventDefault(); confirmCode(); }} className="flex w-full justify-center pt-[24px] lg:pt-[56px]">
           <Card>
             <CardTitle>Check your email</CardTitle>
-            <CardText>We sent a 6-digit code to {resetEmail.trim().toLowerCase()}.</CardText>
+            <CardText>{resetEmail.trim().toLowerCase()}</CardText>
             <CodeInput value={resetCode} onChange={setResetCode} onComplete={v => confirmCode(v)} />
             <PrimaryButton type="submit" className="mt-[20px]">Verify</PrimaryButton>
             <ErrorText>{error}</ErrorText>
@@ -291,13 +241,13 @@ Nonce: ${Date.now()}`;
         <form onSubmit={updatePassword} noValidate className="flex w-full justify-center pt-[24px] lg:pt-[48px]">
           <Card>
             <CardTitle>Choose a new password</CardTitle>
-            <CardText>Pick something you have not used before.</CardText>
             <Field label="Password" className="pt-[24px]">
-              <PasswordInput round="soft" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="At least 8 characters" autoComplete="new-password" />
+              <PasswordInput round="soft" value={newPassword} onChange={e => setNewPassword(e.target.value)} autoComplete="new-password" />
               <StrengthBar password={newPassword} />
             </Field>
             <Field label="Confirm password" className="py-[16px]">
-              <PasswordInput round="soft" value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="Re-enter password" autoComplete="new-password" />
+              <PasswordInput round="soft" value={confirm} onChange={e => setConfirm(e.target.value)} autoComplete="new-password" />
+              <PasswordMatch password={newPassword} confirm={confirm} />
             </Field>
             <PrimaryButton type="submit" disabled={busy} className="mt-[10px]">{busy ? "Updating…" : "Update password"}</PrimaryButton>
             <ErrorText>{error}</ErrorText>
@@ -309,8 +259,7 @@ Nonce: ${Date.now()}`;
         <div className="flex w-full justify-center pt-[24px] lg:pt-[64px]">
           <Card shadow="softer">
             <CardTitle>Password updated</CardTitle>
-            <CardText className="pb-[24px]">You can sign in with your new password.</CardText>
-            <PrimaryButton type="button" onClick={() => { setPassword(""); setIdentifier(resetEmail.trim()); go("signin"); }}>Back to sign in</PrimaryButton>
+            <PrimaryButton type="button" className="mt-[20px]" onClick={() => { setPassword(""); setIdentifier(resetEmail.trim()); go("signin"); }}>Back to sign in</PrimaryButton>
           </Card>
         </div>
       )}

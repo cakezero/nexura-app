@@ -27,7 +27,8 @@ export default function ProfilePage() {
   const { toast } = useToast();
   const p = useStudioProfile();
   const requested = params.get("tab");
-  const tab: ProfileTab = isTab(requested) ? requested : "profile";
+  const tabs = TABS.filter(t => t.id !== "accounts" || p.canSeeAccounts);
+  const tab: ProfileTab = isTab(requested) && tabs.some(t => t.id === requested) ? requested : "profile";
 
   const go = (t: ProfileTab) => router.replace(`${pathname}?tab=${t}`, { scroll: false });
 
@@ -48,7 +49,7 @@ export default function ProfilePage() {
 
           <div className="mt-[24px] grid min-h-[560px] grid-cols-1 overflow-hidden rounded-[40px] border-[1.25px] border-[rgba(28,37,51,0.09)] bg-white md:grid-cols-[240px_1fr]">
             <nav aria-label="Profile sections" className="flex flex-row gap-[4px] overflow-x-auto border-b-[1.25px] border-[rgba(28,37,51,0.09)] px-[20px] py-[16px] md:flex-col md:border-b-0 md:border-r-[1.25px] md:py-[28px]">
-              {TABS.map(t => {
+              {tabs.map(t => {
                 const active = tab === t.id;
                 return (
                   <button

@@ -1287,12 +1287,12 @@ function RewardsStep(props: {
         ) : (
           <p className="mt-3 rounded-full bg-[#E9FBF3] px-4 py-2 text-[13px] text-[#0F9F6E]">Your reward pool of {money(props.participantPool)} can serve up to {props.capacity.toLocaleString("en-US")} recipients at the $2 per stage minimum.</p>
         )}
-        <label className="mt-4 block text-[13px] font-medium">Retention Requirement</label>
+        <label className="mt-4 block text-[13px] font-medium">Nexura Score Requirement</label>
         <div className="mt-2 flex h-12 max-w-[180px] items-center rounded-full bg-[#F4F1FC] px-4">
           <input type="number" min={0} max={100} value={props.retentionReq} onChange={(e) => props.onRetention(Number(e.target.value))} className="w-full bg-transparent outline-none" />
           <span>%</span>
         </div>
-        <p className="mt-2 text-[12px] text-[#98A0B3]">The campaign-level retention a participant must clear to be reward-eligible.</p>
+        <p className="mt-2 text-[12px] text-[#98A0B3]">The Nexura score a participant needs to be reward-eligible.</p>
       </section>
 
       <section className="mt-4 rounded-[28px] bg-white p-5 md:p-6">

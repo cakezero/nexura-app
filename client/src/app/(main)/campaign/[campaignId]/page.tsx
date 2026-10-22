@@ -637,7 +637,7 @@ export default function CampaignEnvironment() {
                           : eligibility.eligible
                           ? `You're eligible for the ${rewardToken} reward.`
                           : eligibility.required !== null && (eligibility.current ?? 0) < eligibility.required
-                          ? `${rewardToken} reward: your Nexura retention is ${eligibility.current ?? 0}% of the ${eligibility.required}% needed.`
+                          ? `${rewardToken} reward: your Nexura score is ${eligibility.current ?? 0}% of the ${eligibility.required}% needed.`
                           : eligibility.reason}
                       </p>
                     )}

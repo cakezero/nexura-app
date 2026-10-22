@@ -505,7 +505,7 @@ export const fetchCampaignQuests = async (req: GlobalRequest, res: GlobalRespons
 		const campaignQuestsMarkedAsDone = campaignQuestsCompleted.filter((c_q: { done: boolean }) => c_q.done === true);
 
 		// Finishing every task no longer releases the TRUST reward on its own: that waits for
-		// eligibility (overall retention + open stages done, see utils/campaignRewards.ts)
+		// eligibility (Nexura score + open stages done, see utils/campaignRewards.ts)
 		if (currentCampaign.noOfQuests === campaignQuestsMarkedAsDone.length && completedCampaign && !completedCampaign.questsCompleted) {
 			completedCampaign.questsCompleted = true;
 			await completedCampaign.save();

@@ -10,7 +10,7 @@ import { computeRetention } from "@/utils/retention";
 /*
  * TRUST (monetary) reward eligibility. Anyone can join a campaign and earn its XP; only eligible
  * participants can claim the TRUST reward. Someone is eligible once they joined the campaign and
- * their overall Nexura retention meets the minimum the project set (no minimum = no requirement).
+ * their Nexura score meets the minimum the project set (no minimum = no requirement).
  * Being eligible doesn't reserve a place: places go first come, first served to eligible people
  * who claim while places are left. Once eligible they stay eligible (on-chain campaigns are told the
  * wallet may claim at that moment). A scheduled job re-checks participants so people find out
@@ -22,9 +22,9 @@ const CHECK_INTERVAL_MS = 10 * 60 * 1000;
 export type TrustEligibility = {
   hasTrustReward: boolean;
   joined: boolean;
-  /** The project's minimum overall Nexura retention (%), or null when it set none */
+  /** The project's minimum Nexura score (%), or null when it set none */
   required: number | null;
-  /** The person's overall Nexura retention (%), or null before any campaign counts */
+  /** The person's Nexura score (%), or null before any campaign counts */
   current: number | null;
   /** Eligible and places are still left, so they can claim now */
   eligible: boolean;
@@ -41,9 +41,9 @@ const CAMPAIGN_FIELDS = "reward totalTrustAvailable trustClaimed contractAddress
 export const campaignHasTrust = (c: any) =>
   Number(c?.reward?.trustTokens ?? 0) > 0 || (!!c?.contractAddress && Number(c?.totalTrustAvailable ?? 0) > 0);
 
-/** The project's retention minimum, or null when it didn't set one. */
-export const retentionRequirement = (c: any): number | null => {
-  const n = Number(c?.rewardsConfig?.retentionRequirementPct);
+/** The project's minimum Nexura score, or null when it didn't set one. */
+export const nexuraScoreRequirement = (c: any): number | null => {
+  const n = Number(c?.rewardsConfig?.nexuraScoreRequirementPct ?? c?.rewardsConfig?.retentionRequirementPct);
   return Number.isFinite(n) && n > 0 ? Math.min(100, n) : null;
 };
 
@@ -53,9 +53,9 @@ const alreadyClaimed = (j: any) => !!j?.trustRewardClaimed || (!!j?.campaignComp
 /**
  * Works out whether a person can claim this campaign's TRUST reward, records what was found (so the
  * campaign page can show their progress), and grants eligibility the first time they qualify.
- * `retentionRate` can be passed in when it's already computed (the scheduled job does them in batches).
+ * `nexuraScore` can be passed in when it's already computed (the scheduled job does them in batches).
  */
-export async function checkTrustEligibility(userId: unknown, campaignId: unknown, retentionRate?: number | null): Promise<TrustEligibility> {
+export async function checkTrustEligibility(userId: unknown, campaignId: unknown, nexuraScore?: number | null): Promise<TrustEligibility> {
   // Without a real person the lookups below would match someone else's records
   if (!userId || !mongoose.Types.ObjectId.isValid(String(userId))) {
     const d = defaultRewardAsset();
@@ -63,7 +63,7 @@ export async function checkTrustEligibility(userId: unknown, campaignId: unknown
   }
   const c = await campaign.findById(campaignId).select(CAMPAIGN_FIELDS).lean() as any;
   const join = c ? await campaignCompleted.findOne({ user: userId, campaign: campaignId }).lean() as any : null;
-  const required = retentionRequirement(c);
+  const required = nexuraScoreRequirement(c);
   const asset = campaignRewardAsset(c);
   const sym = asset.token;
   const base: TrustEligibility = { hasTrustReward: campaignHasTrust(c), joined: !!join, required, current: null, eligible: false, claimed: false, reason: null, token: sym, network: asset.network };
@@ -75,10 +75,10 @@ export async function checkTrustEligibility(userId: unknown, campaignId: unknown
   if (unavailable) return { ...base, reason: unavailable };
 
   const claimed = alreadyClaimed(join);
-  const current = retentionRate !== undefined
-    ? retentionRate
-    : ((await computeRetention([String(userId)])).get(String(userId))?.rate ?? null);
-  const meetsRetention = required === null || (current ?? 0) >= required;
+  const current = nexuraScore !== undefined
+    ? nexuraScore
+    : ((await computeRetention([String(userId)])).get(String(userId))?.nexuraScore ?? null);
+  const meetsNexuraScore = required === null || (current ?? 0) >= required;
   // First come, first served: eligibility holds no place, so it only matters while places are left
   const perPerson = Number(c.reward?.trustTokens ?? 0);
   const placesLeft = Number(c.trustClaimed ?? 0) + Math.max(perPerson, 0) <= Number(c.totalTrustAvailable ?? 0)
@@ -88,13 +88,13 @@ export async function checkTrustEligibility(userId: unknown, campaignId: unknown
 
   // Once eligible, they stay eligible
   let qualified = !!join.trustEligible;
-  if (!qualified && meetsRetention && placesLeft && !claimed) qualified = await grantTrustEligibility(userId, c, join._id);
+  if (!qualified && meetsNexuraScore && placesLeft && !claimed) qualified = await grantTrustEligibility(userId, c, join._id);
 
   let reason: string | null = null;
   if (claimed) reason = `You've already claimed this campaign's ${sym} reward.`;
   else if (!placesLeft) reason = `All the ${sym} reward places for this campaign have been taken.`;
   else if (!qualified) reason = required !== null
-    ? `You need ${required}% Nexura retention to qualify for the ${sym} reward. You're at ${current ?? 0}%.`
+    ? `You need ${required}% Nexura score to qualify for the ${sym} reward. You're at ${current ?? 0}%.`
     : `Your ${sym} claim couldn't be set up yet. Try again in a few minutes.`;
   return { ...base, current, eligible: qualified && placesLeft && !claimed, claimed, reason };
 }
@@ -165,9 +165,9 @@ export async function runTrustEligibilityCheck(): Promise<void> {
       const joins = await campaignCompleted.find({ campaign: c._id, trustEligible: { $ne: true }, trustRewardClaimed: { $ne: true } })
         .select("user").lean() as any[];
       if (!joins.length) continue;
-      const rates = await computeRetention(joins.map(j => String(j.user)));
+      const scores = await computeRetention(joins.map(j => String(j.user)));
       for (const j of joins) {
-        const r = await checkTrustEligibility(j.user, c._id, rates.get(String(j.user))?.rate ?? null);
+        const r = await checkTrustEligibility(j.user, c._id, scores.get(String(j.user))?.nexuraScore ?? null);
         if (r.eligible) granted++;
       }
     }

@@ -463,13 +463,13 @@ const STEPS = [
   { n: 5, label: "Review & Fund",     sub: "Summary & Publish" },
 ];
 
-function WizardProgress({ currentStep, onStepClick, minStep = 1 }: { currentStep: number; onStepClick?: (step: number) => void; minStep?: number }) {
+function WizardProgress({ currentStep, onStepClick, minStep = 1, maxStep = 0 }: { currentStep: number; onStepClick?: (step: number) => void; minStep?: number; maxStep?: number }) {
   return (
     <div style={{ background: "white", border: "1px solid rgba(28,37,51,0.09)", borderRadius: 40, height: 68, display: "flex", alignItems: "center", padding: "0 6px", gap: 0, minWidth: 0, overflow: "hidden" }}>
       {STEPS.map((step, idx) => {
-        const completed = step.n < currentStep;
         const active    = step.n === currentStep;
-        // Steps before minStep show as done but can't be reopened
+        // Steps already reached (before or after this one) stay done and can be reopened, except those before minStep
+        const completed = !active && (step.n < currentStep || step.n <= maxStep);
         const clickable = completed && step.n >= minStep && !!onStepClick;
         const isWide    = step.n === 4; // "Rewards & Funding" is wider
 
@@ -481,7 +481,7 @@ function WizardProgress({ currentStep, onStepClick, minStep = 1 }: { currentStep
             <div
               role={clickable ? "button" : undefined}
               tabIndex={clickable ? 0 : undefined}
-              title={clickable ? `Go back to ${step.label}` : undefined}
+              title={clickable ? step.label : undefined}
               onClick={clickable ? () => onStepClick!(step.n) : undefined}
               onKeyDown={clickable ? (e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onStepClick!(step.n); } }) : undefined}
               style={{
@@ -889,7 +889,7 @@ export type PublishedCampaign = {
   coverImage: File | null;
   /** Each task's `title` is its Task Description: the text participants see in the main app. */
   stages: Array<{ id: string; name: string; returnDays: number; tasks: Array<TaskEntry & { title: string }>; allocationPct: number | null }>;
-  rewards: null | { budget: number; token: TokenSymbol; network: NetworkId; validationRewardsOn: boolean; curatorRewardsOn: boolean; curatorAddress: string | null; recipients: number; retentionRequirementPct: number; participantPool: number; totalPaid: number; paymentTxHash: string | null };
+  rewards: null | { budget: number; token: TokenSymbol; network: NetworkId; validationRewardsOn: boolean; curatorRewardsOn: boolean; curatorAddress: string | null; recipients: number; nexuraScoreRequirementPct: number; participantPool: number; totalPaid: number; paymentTxHash: string | null };
   /** Raw builder state, saved with the draft so it reopens exactly where it was left. */
   builder: BuilderState;
 };
@@ -905,6 +905,8 @@ export type BuilderState = {
   rewardBudget: string; rewardNetwork: NetworkId; rewardToken: TokenSymbol; rewardRecipients: string;
   retentionRequirement: string; stageAlloc: Record<string, string>;
   paidKey: string | null; paymentTxHash: string | null;
+  /** The furthest step reached, so a reopened draft can jump forward again. */
+  furthestStep?: number;
 };
 /** What the wallet is asked to pay when "Pay campaign total" is clicked. */
 export type CampaignPayment = {
@@ -974,6 +976,8 @@ export default function CreateNewCampaign({
   const [showJourneyTpl, setShowJourneyTpl] = useState(false);
   const [journeyCadence, setJourneyCadence] = useState<"daily" | "weekly">(init?.journeyCadence ?? "weekly");
   const goToStep = (step: number) => { setCurrentStep(step); scrollToTop(); };
+  const [furthestStep, setFurthestStep] = useState(() => Math.max(init?.furthestStep ?? 0, init?.step ?? 0, currentStep));
+  useEffect(() => { setFurthestStep(f => Math.max(f, currentStep)); }, [currentStep]);
   // Every step opens at the top (the Studio scrolls inside its <main> panel, not the window)
   useEffect(() => { scrollToTop(); writeUrlParam("step", currentStep > 1 ? String(currentStep) : null); }, [currentStep]);
 
@@ -1131,6 +1135,16 @@ export default function CreateNewCampaign({
   const isPaid = mode === "live" || (paidKey !== null && paidKey === paymentKey);
   const rewardsValid = priceKnown && budgetNum > 0 && recipientsNum > 0 && !recipientsOverCapacity && Math.abs(totalAllocated - 100) < 0.05 && !stageAllocErrors.some(Boolean);
   const canContinueToReview = rewardsValid && isPaid;
+  /** Opens a step from the progress bar, forward too, as far as the filled-in steps allow. */
+  function jumpToStep(n: number) {
+    if (n > currentStep) {
+      const journeyOk = stages.length > 0 && stages.every(st => st.tasks.length > 0);
+      if (n >= 4 && !journeyOk) n = 3;
+      if (n === 4 && !rewardsEnabled) n = 5;
+      if (n === 5 && rewardsEnabled && !canContinueToReview) n = 4;
+    }
+    goToStep(n);
+  }
   const activeNetworkInfo = NETWORKS.find(n => n.id === rewardNetwork) || NETWORKS[0];
 
   async function handlePay() {
@@ -1182,9 +1196,11 @@ export default function CreateNewCampaign({
   useEffect(() => {
     if (currentStep !== 4) return;
     const ids = stages.map(st => st.id);
-    const known = Object.keys(stageAlloc);
-    const same = ids.length === known.length && ids.every(id => id in stageAlloc);
-    if (same) return;
+    // Keep the split already entered; only a stage without a share starts the split over
+    if (ids.every(id => id in stageAlloc)) {
+      if (Object.keys(stageAlloc).length !== ids.length) setStageAlloc(Object.fromEntries(ids.map(id => [id, stageAlloc[id]])));
+      return;
+    }
     const tplSplit = TEMPLATES.find(t => t.id === selectedTemplateId)?.structure.map(x => x.pct);
     const split = tplSplit && tplSplit.length === ids.length ? tplSplit : templateSplit(ids.length, maxPerRecipient);
     const next: Record<string, string> = {};
@@ -1207,12 +1223,12 @@ export default function CreateNewCampaign({
       name: campaignName.trim(), description: campaignDescription.trim(), coverImage: coverFile, startDate, endDate, rewardsEnabled,
       templateId: selectedTemplateId,
       stages: stages.map(st => ({ id: st.id, name: st.name, returnDays: st.returnDays, tasks: st.tasks.map(t => ({ ...t, title: t.description.trim() || t.name })), allocationPct: rewardsEnabled ? (Number(stageAlloc[st.id]) || 0) : null })),
-      rewards: rewardsEnabled ? { budget: budgetNum, token: rewardToken, network: rewardNetwork, validationRewardsOn, curatorRewardsOn, curatorAddress: projectCurator?.address ?? null, recipients: recipientsNum, retentionRequirementPct: Number(retentionRequirement) || 0, participantPool: participantPoolTokens, totalPaid: isPaid && totalPaymentDue !== null ? totalPaymentDue : 0, paymentTxHash: isPaid ? paymentTxHash : null } : null,
+      rewards: rewardsEnabled ? { budget: budgetNum, token: rewardToken, network: rewardNetwork, validationRewardsOn, curatorRewardsOn, curatorAddress: projectCurator?.address ?? null, recipients: recipientsNum, nexuraScoreRequirementPct: Number(retentionRequirement) || 0, participantPool: participantPoolTokens, totalPaid: isPaid && totalPaymentDue !== null ? totalPaymentDue : 0, paymentTxHash: isPaid ? paymentTxHash : null } : null,
       builder: {
         version: 1, step: currentStep, templateId: selectedTemplateId, journeyCadence, rewardsEnabled,
         name: campaignName, description: campaignDescription, startDate, endDate, stages,
         rewardBudget, rewardNetwork, rewardToken, rewardRecipients, retentionRequirement, stageAlloc,
-        paidKey, paymentTxHash,
+        paidKey, paymentTxHash, furthestStep,
       },
     };
   }
@@ -1652,7 +1668,7 @@ export default function CreateNewCampaign({
 
           {/* Wizard progress */}
           <div style={{ marginTop: 20 }}>
-            <WizardProgress currentStep={2} onStepClick={goToStep} minStep={templateLocked ? 2 : 1} />
+            <WizardProgress currentStep={2} onStepClick={jumpToStep} minStep={templateLocked ? 2 : 1} maxStep={furthestStep} />
           </div>
 
           {/* Rewards toggle */}
@@ -1844,7 +1860,7 @@ export default function CreateNewCampaign({
 
           {/* Wizard progress */}
           <div style={{ marginTop: 20 }}>
-            <WizardProgress currentStep={3} onStepClick={goToStep} minStep={templateLocked ? 2 : 1} />
+            <WizardProgress currentStep={3} onStepClick={jumpToStep} minStep={templateLocked ? 2 : 1} maxStep={furthestStep} />
           </div>
 
           {/* Rewards toggle */}
@@ -2332,7 +2348,7 @@ export default function CreateNewCampaign({
             </button>
 
             <div style={{ marginTop: 20 }}>
-              <WizardProgress currentStep={4} onStepClick={goToStep} minStep={templateLocked ? 2 : 1} />
+              <WizardProgress currentStep={4} onStepClick={jumpToStep} minStep={templateLocked ? 2 : 1} maxStep={furthestStep} />
             </div>
 
             {/* Heading */}
@@ -2505,20 +2521,20 @@ export default function CreateNewCampaign({
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16, paddingTop: 16 }}>
                       {/* Field 1: the requirement */}
                       <div style={{ display: "flex", flexDirection: "column", gap: 7, minWidth: 0 }}>
-                        {label("Retention Requirement")}
+                        {label("Nexura Score Requirement")}
                         <div style={{ ...box, position: "relative" as const }}>
-                          <input inputMode="numeric" aria-label="Retention requirement percent" value={retentionRequirement}
+                          <input inputMode="numeric" aria-label="Nexura score requirement percent" value={retentionRequirement}
                             onChange={e => { const v = e.target.value.replace(/[^0-9]/g, ""); setRetentionRequirement(v === "" ? "" : String(Math.min(100, Number(v)))); }}
                             placeholder="0"
                             style={{ width: "100%", height: "100%", background: "transparent", border: "none", outline: "none", padding: "0 44px 0 18px", fontSize: 14, color: "#1c2533", fontFamily: "inherit", boxSizing: "border-box" as const }} />
                           <span style={{ position: "absolute" as const, right: 18, top: "50%", transform: "translateY(-50%)", fontSize: 13, fontWeight: 600, color: "#69728a", pointerEvents: "none" as const }}>%</span>
                         </div>
-                        {help("The campaign-level retention a participant must clear to be reward-eligible.")}
+                        {help("The Nexura score a participant needs to be reward-eligible.")}
                       </div>
                       {/* Field 2: Nexura users who meet it */}
                       <div style={{ display: "flex", flexDirection: "column", gap: 7, minWidth: 0 }}>
                         {label("Eligible Nexura Users")}
-                        <div aria-live="polite" title={hasStats ? `${fmtNum(eligible)} of ${fmtNum(stats!.totalUsers)} Nexura users have ${req}% retention or higher` : undefined}
+                        <div aria-live="polite" title={hasStats ? `${fmtNum(eligible)} of ${fmtNum(stats!.totalUsers)} Nexura users have a Nexura score of ${req}% or higher` : undefined}
                           style={{ ...box, gap: 10, padding: "0 18px", background: hasStats ? "white" : "rgba(228,84,91,0.06)", border: hasStats ? "1.25px solid rgba(28,37,51,0.15)" : "1.25px solid rgba(228,84,91,0.34)", whiteSpace: "nowrap" as const, overflow: "hidden" }}>
                           {hasStats ? (
                             <>
@@ -2528,11 +2544,11 @@ export default function CreateNewCampaign({
                           ) : (
                             <>
                               <FigmaIcon name="rowWarn" />
-                              <span style={{ fontSize: 13, fontWeight: 500, color: "#e4545b", overflow: "hidden", textOverflow: "ellipsis" }}>User retention data unavailable</span>
+                              <span style={{ fontSize: 13, fontWeight: 500, color: "#e4545b", overflow: "hidden", textOverflow: "ellipsis" }}>Nexura score data unavailable</span>
                             </>
                           )}
                         </div>
-                        {help(hasStats ? `Nexura users whose retention is ${req}% or higher right now.` : "Counts appear here once Nexura retention data is available.")}
+                        {help(hasStats ? `Nexura users with a Nexura score of ${req}% or higher right now.` : "Counts appear here once Nexura score data is available.")}
                       </div>
                     </div>
                   );
@@ -2726,7 +2742,7 @@ export default function CreateNewCampaign({
             </button>
 
             <div style={{ marginTop: 20 }}>
-              <WizardProgress currentStep={5} onStepClick={goToStep} minStep={templateLocked ? 2 : 1} />
+              <WizardProgress currentStep={5} onStepClick={jumpToStep} minStep={templateLocked ? 2 : 1} maxStep={furthestStep} />
             </div>
 
             {/* Heading */}
