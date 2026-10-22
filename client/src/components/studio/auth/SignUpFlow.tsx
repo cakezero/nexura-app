@@ -1,14 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import AuthShell, { type StepState } from "./AuthShell";
 import {
   Card, CardText, CardTitle, CodeInput, ErrorText, Field, PageTitle, PasswordInput, PrimaryButton,
-  StrengthBar, TextArea, TextInput, TextLink, WalletBanner, errorMessage, passwordOk,
+  PasswordMatch, StrengthBar, TextArea, TextInput, TextLink, WalletBanner, errorMessage, passwordOk,
 } from "./AuthUI";
 import { useStudioWallet } from "../useStudioWallet";
+import { useWalletProof } from "./useWalletProof";
 import { apiRequestV2, getStoredAccessToken } from "@/lib/queryClient";
 import { projectApiRequest, storeProjectSession } from "@/lib/projectApi";
 import { initialsLogo } from "./initialsLogo";
@@ -26,7 +26,10 @@ const DESCRIPTION_MAX = 300;
 
 export default function SignUpFlow() {
   const router = useRouter();
-  const { address, connect } = useStudioWallet();
+  const { connect } = useStudioWallet();
+  const { address, verified, signing, signError, sign, getProof, clearProof } = useWalletProof();
+  // Set once the account exists, so a retry after a failed hub step doesn't sign up twice
+  const account = useRef<{ token: string; hub: string } | null>(null);
   const [step, setStep] = useState<Step>("account");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -71,6 +74,7 @@ export default function SignUpFlow() {
   };
 
   const verify = async (value = code) => {
+    if (busy) return;
     if (value.length !== 6) return setError("Enter the 6-digit code from your email.");
     setBusy(true); setError("");
     try {
@@ -94,17 +98,28 @@ export default function SignUpFlow() {
     const about = description.trim();
     if (!name) return setError("Add your project name.");
     if (about.length > DESCRIPTION_MAX) return setError(`Keep your description under ${DESCRIPTION_MAX} characters.`);
+    if (busy) return;
+    if (!address) { setError("Connect your wallet from the top bar to continue."); connect(); return; }
     setBusy(true); setError("");
     try {
-      const res = await projectApiRequest<{ accessToken?: string; admin?: { _id: string; name: string; email: string; role: string; hub: string } }>({
-        method: "POST", endpoint: "/hub/sign-up",
-        data: { name: username.trim(), email: cleanEmail, password, authToken: getStoredAccessToken() },
-      });
-      if (!res.accessToken) throw new Error("Your account was created, but signing in failed. Sign in to continue.");
-      storeProjectSession(res.accessToken, {
-        email: res.admin?.email || cleanEmail, name: res.admin?.name || username.trim(),
-        role: res.admin?.role || "superadmin", adminId: res.admin?._id || "", hub: res.admin?.hub || "", walletAddress: address ?? "",
-      });
+      if (!account.current) {
+        // The wallet signed here becomes the only one that can sign in to this studio
+        const proof = await getProof();
+        if (!proof) return;
+        const res = await projectApiRequest<{ accessToken?: string; admin?: { _id: string; name: string; email: string; role: string; hub: string } }>({
+          method: "POST", endpoint: "/hub/sign-up",
+          data: {
+            name: username.trim(), email: cleanEmail, password, authToken: getStoredAccessToken(),
+            walletAddress: proof.address, message: proof.message, signature: proof.signature,
+          },
+        });
+        if (!res.accessToken) throw new Error("Your account was created, but signing in failed. Sign in to continue.");
+        account.current = { token: res.accessToken, hub: res.admin?.hub || "" };
+        storeProjectSession(res.accessToken, {
+          email: res.admin?.email || cleanEmail, name: res.admin?.name || username.trim(),
+          role: res.admin?.role || "superadmin", adminId: res.admin?._id || "", hub: res.admin?.hub || "", walletAddress: proof.address,
+        });
+      }
 
       const fd = new FormData();
       fd.append("name", name);
@@ -115,6 +130,7 @@ export default function SignUpFlow() {
 
       router.push("/studio-dashboard/hub-profile?welcome=1");
     } catch (err) {
+      if (!account.current) clearProof();
       setError(errorMessage(err, "We couldn't create your studio. Try again."));
     } finally { setBusy(false); }
   };
@@ -130,7 +146,7 @@ export default function SignUpFlow() {
       {step === "account" && (
         <form onSubmit={submitAccount} noValidate className="flex w-full max-w-[500px] flex-col items-start pb-[24px] pt-[4px]">
           <WalletBanner address={address} onConnect={connect} />
-          <PageTitle title="Create your account" subtitle="Choose how you will sign in to Nexura Studio." />
+          <PageTitle title="Create your account" />
           <Field label="Username" className="pt-[18px]">
             <TextInput value={username} onChange={e => setUsername(e.target.value)} placeholder="e.g. studio_lead" autoComplete="username" />
           </Field>
@@ -138,17 +154,15 @@ export default function SignUpFlow() {
             <TextInput type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@project.xyz" autoComplete="email" />
           </Field>
           <Field label="Password">
-            <PasswordInput value={password} onChange={e => setPassword(e.target.value)} placeholder="At least 8 characters" autoComplete="new-password" />
+            <PasswordInput value={password} onChange={e => setPassword(e.target.value)} autoComplete="new-password" />
             <StrengthBar password={password} />
           </Field>
           <Field label="Confirm password" className="py-[16px]">
-            <PasswordInput value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="Re-enter password" autoComplete="new-password" />
+            <PasswordInput value={confirm} onChange={e => setConfirm(e.target.value)} autoComplete="new-password" />
+            <PasswordMatch password={password} confirm={confirm} />
           </Field>
           <PrimaryButton type="submit" disabled={busy}>{busy ? "Sending code…" : "Continue"}</PrimaryButton>
           <ErrorText>{error}</ErrorText>
-          <p className="w-full pt-[14px] text-center text-[13.5px] leading-[20.925px] text-[#5b6478]">
-            Already have an account? <Link href="/studio/sign-in" className="font-semibold text-[#8a3ffc]">Sign in</Link>
-          </p>
         </form>
       )}
 
@@ -156,7 +170,7 @@ export default function SignUpFlow() {
         <form onSubmit={e => { e.preventDefault(); verify(); }} className="flex w-full justify-center pt-[24px] lg:pt-[48px]">
           <Card className="gap-[12px]">
             <div className="pt-[20px]"><CardTitle>Check your email</CardTitle></div>
-            <CardText className="pt-0">We sent a 6-digit code to <b className="font-bold">{cleanEmail}</b>.</CardText>
+            <CardText className="pt-0"><b className="font-bold">{cleanEmail}</b></CardText>
             <CodeInput value={code} onChange={setCode} onComplete={v => verify(v)} />
             <PrimaryButton type="submit" disabled={busy}>{busy ? "Checking…" : "Verify"}</PrimaryButton>
             <ErrorText>{error}</ErrorText>
@@ -169,7 +183,9 @@ export default function SignUpFlow() {
 
       {step === "project" && (
         <form onSubmit={createStudio} noValidate className="flex w-full max-w-[500px] flex-col items-start pb-[24px] pt-[4px]">
-          <PageTitle title="Tell us about your project" subtitle="Short project details and description" />
+          <WalletBanner address={address} onConnect={connect} verified={verified} signing={signing} onSign={() => address && sign(address)} />
+          <ErrorText>{signError}</ErrorText>
+          <PageTitle title="Your project" />
           <Field label="Project name" className="pt-[18px]">
             <TextInput value={projectName} onChange={e => setProjectName(e.target.value)} placeholder="e.g. Intuition Labs" />
           </Field>

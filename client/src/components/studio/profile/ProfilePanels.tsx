@@ -140,7 +140,7 @@ export function StudioSetupPanel({ p, go }: { p: StudioProfile; go: (t: ProfileT
         {action("project", "Set up", () => go("project"))}
       </Row>
       <Row title="Connect your socials" text={`${p.linkedSocials} of 3 linked. Link at least two.`}>
-        {action("socials", "Set up", () => go("accounts"))}
+        {isDone("socials") || p.isOwner ? action("socials", "Set up", () => go("accounts")) : null}
       </Row>
       <Row title="Invite an admin" text="Add Super admins and admins to your studio.">
         {action("admin", "Add Admin", () => router.push("/studio-dashboard/admin-management"))}
@@ -197,9 +197,9 @@ export function ConnectedAccountsPanel({ p }: { p: StudioProfile }) {
   };
 
   const rows = [
-    { key: "x" as const, title: "X (Twitter)", connected: p.socials.x, handle: p.hub?.xAccount ? `@${p.hub.xAccount.replace(/^@/, "")}` : "", connect: connectX },
-    { key: "discord" as const, title: "Discord", connected: p.socials.discord, handle: p.hub?.discordServer ?? "", connect: () => beginStudioDiscordConnect("/studio-dashboard/hub-profile?tab=accounts") },
-    { key: "telegram" as const, title: "Telegram", connected: p.socials.telegram, handle: p.hub?.telegramHandle ?? "", connect: connectTelegram },
+    { key: "x" as const, title: "X (Twitter)", text: "Connect your project's X account so X tasks can be verified.", connected: p.socials.x, handle: p.hub?.xAccount ? `@${p.hub.xAccount.replace(/^@/, "")}` : "", connect: connectX },
+    { key: "discord" as const, title: "Discord", text: "Connect your project's Discord server so Discord tasks can be verified.", connected: p.socials.discord, handle: p.hub?.discordServer ?? "", connect: () => beginStudioDiscordConnect("/studio-dashboard/hub-profile?tab=accounts") },
+    { key: "telegram" as const, title: "Telegram", text: "Connect your project's Telegram group or channel so Telegram tasks can be verified.", connected: p.socials.telegram, handle: p.hub?.telegramHandle ?? "", connect: connectTelegram },
   ];
 
   return (
@@ -207,17 +207,17 @@ export function ConnectedAccountsPanel({ p }: { p: StudioProfile }) {
       <PanelTitle>Connected accounts</PanelTitle>
       <div className="w-full pt-[8px]">
         {rows.map(r => (
-          <Row key={r.key} title={r.title} text={r.connected ? "Link it so participants can verify your project." : "Link it so we can verify your project."}>
+          <Row key={r.key} title={r.title} text={r.text}>
             {r.connected ? (
               <>
                 <img src="/studio-profile/verified.svg" alt="Verified" className="size-[24px]" />
                 <Value>{r.handle || "Connected"}</Value>
-                <SmallButton variant="outline" disabled={busy === r.key} onClick={() => disconnect(r.key)}>Disconnect</SmallButton>
+                {p.isOwner && <SmallButton variant="outline" disabled={busy === r.key} onClick={() => disconnect(r.key)}>Disconnect</SmallButton>}
               </>
             ) : (
               <>
                 <Value>Not connected</Value>
-                <SmallButton disabled={busy === r.key} onClick={r.connect}>Connect</SmallButton>
+                {p.isOwner && <SmallButton disabled={busy === r.key} onClick={r.connect}>Connect</SmallButton>}
               </>
             )}
           </Row>

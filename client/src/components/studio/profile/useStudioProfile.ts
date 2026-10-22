@@ -33,6 +33,8 @@ export function useStudioProfile() {
 
   const isOwner = !!hub?.superAdmin && !!admin?._id && String(hub.superAdmin) === String(admin._id);
   const roleLabel = admin?.role === "superadmin" ? "Super Admin" : "Admin";
+  // Owner and Super Admins see the connected accounts; only the Owner changes them
+  const canSeeAccounts = isOwner || admin?.role === "superadmin";
   const socials = {
     x: !!hub?.xAccount,
     discord: !!hub?.discordConnected,
@@ -48,7 +50,7 @@ export function useStudioProfile() {
     { key: "campaign", done: campaignCount > 0 },
   ];
 
-  return { hub, admin, loading, reload, isOwner, roleLabel, socials, linkedSocials, steps, setHub, setAdmin };
+  return { hub, admin, loading, reload, isOwner, canSeeAccounts, roleLabel, socials, linkedSocials, steps, setHub, setAdmin };
 }
 
 export type StudioProfile = ReturnType<typeof useStudioProfile>;

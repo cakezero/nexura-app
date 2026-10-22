@@ -169,6 +169,14 @@ export const superAdminSignUp = async (req: GlobalRequest, res: GlobalResponse) 
       return;
     }
 
+    // The wallet that signs here is the only one that can sign in to this account
+    const { walletAddress, message, signature } = req.body;
+    const walletProblem = await walletLoginProblem(walletAddress, message, signature);
+    if (walletProblem) {
+      res.status(UNAUTHORIZED).json({ error: walletProblem, walletRequired: true });
+      return;
+    }
+
     const hashedPassword = await hashPassword(password);
 
 		const ha = await hubAdmin.create({
@@ -176,6 +184,7 @@ export const superAdminSignUp = async (req: GlobalRequest, res: GlobalResponse) 
       email: strippedEmail,
       password: hashedPassword,
       role: "superadmin",
+      linkedWallet: String(walletAddress),
     });
 
 		await verifiedEmail.findByIdAndDelete(verified._id)

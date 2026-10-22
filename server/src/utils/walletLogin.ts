@@ -49,7 +49,7 @@ export async function walletLoginProblem(address: unknown, message: unknown, sig
   // a signature can be re-encoded into a second valid form, but the message can't change
   const hash = createHash("sha256").update(`${address.toLowerCase()}|${m[2]}`).digest("hex");
   try {
-    await usedLoginSignature.create({ hash, expiresAt: new Date(signedAt + MAX_AGE_MS + CLOCK_SKEW_MS) });
+    await usedLoginSignature.create({ _id: hash, hash, expiresAt: new Date(signedAt + MAX_AGE_MS + CLOCK_SKEW_MS) });
   } catch (err: any) {
     if (err?.code === 11000) return "this login signature was already used; sign in again";
     throw err;

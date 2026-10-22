@@ -22,11 +22,11 @@ export function CardText({ children, className = "" }: { children: ReactNode; cl
   return <p className={`pt-[4px] text-[14px] leading-[21px] text-[#5b6478] ${className}`}>{children}</p>;
 }
 
-export function PageTitle({ title, subtitle }: { title: string; subtitle: string }) {
+export function PageTitle({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
     <>
       <h1 className="pt-[16px] text-[28px] font-semibold leading-[32px] tracking-[-0.98px] text-[#1c2533]">{title}</h1>
-      <p className="pt-[4px] text-[14.5px] leading-[22px] text-[#5b6478]">{subtitle}</p>
+      {subtitle && <p className="pt-[4px] text-[14.5px] leading-[22px] text-[#5b6478]">{subtitle}</p>}
     </>
   );
 }
@@ -90,6 +90,16 @@ export function StrengthBar({ password }: { password: string }) {
   );
 }
 
+export function PasswordMatch({ password, confirm }: { password: string; confirm: string }) {
+  if (!confirm) return null;
+  const ok = password === confirm;
+  return (
+    <span aria-live="polite" className={`pt-[2px] text-[12.5px] font-semibold leading-[18px] ${ok ? "text-[#00a87c]" : "text-[#e4545b]"}`}>
+      {ok ? "✓ Passwords match" : "✕ Passwords don't match"}
+    </span>
+  );
+}
+
 export function PrimaryButton({ children, className = "", ...props }: ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
     <button
@@ -110,12 +120,22 @@ export function ErrorText({ children }: { children: ReactNode }) {
   return <p role="alert" className="pt-[10px] text-[13px] leading-[19px] text-[#e4545b]">{children}</p>;
 }
 
-export function WalletBanner({ address, onConnect, className = "", verified, signing, onSign }: {
+export function WalletBanner({ address, onConnect, className = "", verified, signing, onSign, wrongWallet }: {
   address: string | null; onConnect: () => void; className?: string;
-  /** Sign-in only: whether the wallet has signed the login message yet. */
+  /** Whether the wallet has signed the login message yet. */
   verified?: boolean; signing?: boolean; onSign?: () => void;
+  /** The server's message when this wallet isn't the one linked to the account. */
+  wrongWallet?: string;
 }) {
   const short = address && address.length > 12 ? `${address.slice(0, 6)}…${address.slice(-4)}` : address;
+  if (address && wrongWallet) {
+    return (
+      <div role="alert" className={`flex w-full items-center gap-[10px] rounded-[20px] border-[1.25px] border-[rgba(228,84,91,0.45)] bg-[rgba(228,84,91,0.08)] px-[15px] py-[9px] ${className}`}>
+        <span className="flex size-[18px] shrink-0 items-center justify-center rounded-full bg-[#e4545b] text-[12px] font-bold text-white">!</span>
+        <p className="text-[13px] leading-[19.5px] text-[#1c2533]"><b className="font-bold">Wrong wallet.</b> {wrongWallet}</p>
+      </div>
+    );
+  }
   if (address && onSign && !verified) {
     return (
       <div className={`flex h-[40px] w-full items-center gap-[10px] rounded-[40px] border-[1.25px] border-[#e8e4f6] bg-[#f4f1ff] pl-[15px] pr-[4px] ${className}`}>
@@ -146,7 +166,7 @@ export function WalletBanner({ address, onConnect, className = "", verified, sig
     <div className={`flex w-full items-center gap-[10px] rounded-[40px] border-[1.25px] border-[#e8e4f6] bg-[#f4f1ff] px-[15px] py-[9px] ${className}`}>
       <img src="/studio-auth/card.svg" alt="" className="size-[17.988px] shrink-0" />
       <p className="max-w-[401px] text-[13.5px] leading-[20.25px] text-[#1c2533]">
-        <b className="font-bold">Wallet required.</b> Connect your wallet from the top bar to continue.
+        <b className="font-bold">Wallet required</b>
       </p>
       <div className="flex flex-1 justify-end">
         <button
@@ -160,7 +180,7 @@ export function WalletBanner({ address, onConnect, className = "", verified, sig
   );
 }
 
-export function GoogleAuthenticatorRow({ subtitle = "A new code appears every 30 seconds" }: { subtitle?: string }) {
+export function GoogleAuthenticatorRow({ subtitle }: { subtitle?: string }) {
   return (
     <div className="flex w-full items-center gap-[12px] rounded-[40px] border-[1.25px] border-[#e3def3] bg-[#fbfaff] px-[14px] py-[13px]">
       <span className="relative size-[36px] shrink-0 overflow-hidden rounded-[40px] bg-[#4285f4]">
@@ -168,7 +188,7 @@ export function GoogleAuthenticatorRow({ subtitle = "A new code appears every 30
       </span>
       <span className="flex flex-col">
         <span className="text-[14px] font-bold leading-[21.7px] text-[#1c2533]">Google Authenticator</span>
-        <span className="text-[12px] leading-[18.6px] text-[#5b6478]">{subtitle}</span>
+        {subtitle && <span className="text-[12px] leading-[18.6px] text-[#5b6478]">{subtitle}</span>}
       </span>
     </div>
   );

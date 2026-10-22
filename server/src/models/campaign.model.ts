@@ -157,6 +157,8 @@ const campaignSchema = new Schema({
 		token: { type: String },
 		network: { type: String },
 		recipients: { type: Number },
+		nexuraScoreRequirementPct: { type: Number },
+		// Older campaigns stored the Nexura score requirement here
 		retentionRequirementPct: { type: Number },
 		participantPool: { type: Number },
 		validationRewardsOn: { type: Boolean },
@@ -213,7 +215,7 @@ const campaignCompletedSchema = new Schema({
 	// Stage keys whose XP has been paid, and the XP paid so far (see utils/campaignXp.ts)
 	xpStagesPaid: { type: [String], default: [] },
 	xpEarned: { type: Number, default: 0 },
-	// TRUST reward eligibility (see utils/campaignRewards.ts): granted once their overall Nexura retention
+	// TRUST reward eligibility (see utils/campaignRewards.ts): granted once their Nexura score
 	// meets the project's minimum. It reserves no place: places go first come, first served
 	trustEligible: { type: Boolean, default: false },
 	trustEligibleAt: { type: Date, default: null },

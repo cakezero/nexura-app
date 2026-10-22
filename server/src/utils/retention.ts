@@ -10,9 +10,9 @@ import { parseDate } from "@/utils/dates";
  *
  * A stage counts once every task in it is done, and it stays counted (retention doesn't expire).
  * Campaign retention = completed stages / all stages, e.g. 3 of 6 stages = 50%.
- * Overall retention = the average of a person's campaign retention across the campaigns that are
+ * Nexura score = the average of a person's campaign retention across the campaigns that are
  * settled for them: the campaign has ended, or they completed every stage. A campaign still running
- * that they haven't finished doesn't pull their overall rate down yet.
+ * that they haven't finished doesn't pull their score down yet.
  */
 
 const DAY_MS = 86_400_000;
@@ -72,10 +72,10 @@ export function scoreCampaignRetention(stages: RetentionStage[], done: Map<strin
   };
 }
 
-/** Overall retention from a person's campaigns: the average over the settled ones (null if none yet). */
-export function overallRetention(campaigns: Array<{ retentionRate: number | null; settled: boolean }>) {
+/** Nexura score from a person's campaigns: the average over the settled ones (null if none yet). */
+export function nexuraScoreFrom(campaigns: Array<{ retentionRate: number | null; settled: boolean }>) {
   const rates = campaigns.filter(c => c.settled && c.retentionRate !== null).map(c => c.retentionRate as number);
-  return { rate: rates.length ? Math.round(rates.reduce((a, b) => a + b, 0) / rates.length) : null, campaigns: rates.length };
+  return { nexuraScore: rates.length ? Math.round(rates.reduce((a, b) => a + b, 0) / rates.length) : null, campaigns: rates.length };
 }
 
 const isEnded = (c: any, nowMs: number) => {
@@ -84,9 +84,9 @@ const isEnded = (c: any, nowMs: number) => {
 };
 
 export type UserCampaignRetention = { campaignId: string; stagesCompleted: number; stagesTotal: number; retentionRate: number | null; settled: boolean };
-export type UserRetention = { rate: number | null; campaigns: number; perCampaign: Map<string, UserCampaignRetention> };
+export type UserRetention = { nexuraScore: number | null; campaigns: number; perCampaign: Map<string, UserCampaignRetention> };
 
-/** Computes campaign and overall retention for these people from their task completions. */
+/** Computes campaign retention and the Nexura score for these people from their task completions. */
 export async function computeRetention(userIds: string[], nowMs = Date.now()): Promise<Map<string, UserRetention>> {
   const result = new Map<string, UserRetention>();
   if (userIds.length === 0) return result;
@@ -115,7 +115,7 @@ export async function computeRetention(userIds: string[], nowMs = Date.now()): P
     doneByUser.get(uid)!.set(String(d.campaignQuest), new Date(d.updatedAt).getTime());
   }
 
-  for (const uid of userIds) result.set(uid, { rate: null, campaigns: 0, perCampaign: new Map() });
+  for (const uid of userIds) result.set(uid, { nexuraScore: null, campaigns: 0, perCampaign: new Map() });
   for (const j of joins) {
     const uid = String(j.user);
     const cid = String(j.campaign);
@@ -131,11 +131,11 @@ export async function computeRetention(userIds: string[], nowMs = Date.now()): P
       settled: isEnded(c, nowMs) || score.stagesCompleted === score.stagesTotal,
     });
   }
-  for (const r of result.values()) Object.assign(r, overallRetention([...r.perCampaign.values()]));
+  for (const r of result.values()) Object.assign(r, nexuraScoreFrom([...r.perCampaign.values()]));
   return result;
 }
 
-/** Recomputes and stores a person's retention: on each campaign they joined, and their overall rate. Never throws. */
+/** Recomputes and stores a person's retention on each campaign they joined, and their Nexura score. Never throws. */
 export async function refreshUserRetention(userId: unknown): Promise<void> {
   try {
     const uid = String(userId ?? "");
@@ -149,7 +149,7 @@ export async function refreshUserRetention(userId: unknown): Promise<void> {
       },
     }));
     if (writes.length) await campaignCompleted.bulkWrite(writes as any);
-    await user.updateOne({ _id: uid }, { $set: { retention: { rate: r.rate, campaigns: r.campaigns, updatedAt: new Date() } } });
+    await user.updateOne({ _id: uid }, { $set: { nexuraScore: { rate: r.nexuraScore, campaigns: r.campaigns, updatedAt: new Date() } } });
   } catch (err) {
     logger.error("retention refresh failed:", err);
   }

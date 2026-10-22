@@ -19,7 +19,9 @@ import { refreshUserRetention } from "@/utils/retention";
 import { payCompletedStageXp, syncCampaignXp } from "@/utils/campaignXp";
 import { uploadImg } from "@/utils/img.utils";
 import { FileTypeError, uploadFile } from "@/utils/file.utils";
-import { ownsHubRecord, submissionInHub } from "@/utils/hubOwnership";
+import { isHubOwner, ownsHubRecord, submissionInHub } from "@/utils/hubOwnership";
+
+const OWNER_ONLY_SOCIALS = "only the studio Owner can connect or disconnect its X, Discord and Telegram";
 import { campaignRewardAsset, rewardAsset } from "@/utils/rewardAssets";
 import { normalizeCampaignDateInput, normalizeCampaignDatesForResponse, parseDate } from "@/utils/dates";
 
@@ -221,8 +223,8 @@ export const updateIds = async (req: GlobalRequest, res: GlobalResponse) => {
     // userHubAdmin has userId field; hubAdmin has role field
     const isUserHub = !!(req.admin as any).userId;
 
-    if (!isUserHub && (req.admin as any).role !== "superadmin") {
-      res.status(FORBIDDEN).json({ error: "only a Super Admin can connect the hub's Discord server" });
+    if (!isUserHub && !(await isHubOwner(req))) {
+      res.status(FORBIDDEN).json({ error: OWNER_ONLY_SOCIALS });
       return;
     }
 
@@ -307,6 +309,10 @@ export const completeHubDiscordConnect = async (req: GlobalRequest, res: GlobalR
 
 export const disconnectHubDiscord = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
+    if (!(await isHubOwner(req))) {
+      res.status(FORBIDDEN).json({ error: OWNER_ONLY_SOCIALS });
+      return;
+    }
     // Also $unset guildId and verifiedId so the unique-indexed slot is released
     // — otherwise a future hub can no longer connect to the same Discord server.
     await hub.findByIdAndUpdate(req.admin.hub, {
@@ -405,6 +411,10 @@ export const updateHub = async (req: GlobalRequest, res: GlobalResponse) => {
     const unsafe = (["website", "xAccount", "logo", "document"] as const).find(f => /^[\s\x00-\x1f]*(javascript|data|vbscript):/i.test(safeBody[f] ?? ""));
     if (unsafe) {
       res.status(BAD_REQUEST).json({ error: `the ${unsafe} link isn't valid; use a normal web address` });
+      return;
+    }
+    if (safeBody.xAccount !== undefined && !(await isHubOwner(req))) {
+      res.status(FORBIDDEN).json({ error: OWNER_ONLY_SOCIALS });
       return;
     }
     const ignored = Object.keys(req.body ?? {}).filter(k => !(EDITABLE_HUB_FIELDS as readonly string[]).includes(k));
@@ -807,7 +817,7 @@ function parseRetentionBuilderFields(body: Record<string, any>) {
         token: typeof (rc as any).token === "string" ? (rc as any).token.slice(0, 16) : undefined,
         network: typeof (rc as any).network === "string" ? (rc as any).network.slice(0, 40) : undefined,
         recipients: num((rc as any).recipients),
-        retentionRequirementPct: num((rc as any).retentionRequirementPct),
+        nexuraScoreRequirementPct: num((rc as any).nexuraScoreRequirementPct ?? (rc as any).retentionRequirementPct),
         participantPool: num((rc as any).participantPool),
         validationRewardsOn: Boolean((rc as any).validationRewardsOn),
         curatorRewardsOn: Boolean((rc as any).curatorRewardsOn),

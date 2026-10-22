@@ -25,6 +25,14 @@ export async function reachesAllHubs(req: any): Promise<boolean> {
   return h?.systemKey === ADMIN_CAMPAIGN_SYSTEM_KEY;
 }
 
+/** Whether the signed-in admin is their hub's Owner (hub.superAdmin). Platform admins count as owners. */
+export async function isHubOwner(req: any): Promise<boolean> {
+  if (req.isPlatformAdmin) return true;
+  if (!req.admin?.hub || !req.id) return false;
+  const h = await hub.findById(req.admin.hub).select("superAdmin").lean() as any;
+  return sameId(h?.superAdmin, req.id);
+}
+
 /** True when the hub id (from a record) is the request's hub, or the request reaches every hub. */
 export async function ownsHubRecord(req: any, recordHub: unknown): Promise<boolean> {
   if (req.admin?.hub && sameId(recordHub, req.admin.hub)) return true;

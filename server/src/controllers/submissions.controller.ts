@@ -9,6 +9,7 @@ import { submission } from "@/models/submission.model";
 import { parseDate } from "@/utils/dates";
 import { buildCampaignStages, computeRetention, scoreCampaignRetention } from "@/utils/retention";
 import { BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_FOUND, OK } from "@/utils/status.utils";
+import { nexuraScoreRequirement } from "@/utils/campaignRewards";
 
 /*
  * Studio "Submissions": campaign-first review and analytics.
@@ -196,7 +197,7 @@ export const getSubmissionCampaigns = async (req: GlobalRequest, res: GlobalResp
 
 /**
  * GET /hub/campaign-submission-details?id= — one campaign's submissions plus analytics for each
- * person who claimed the reward: campaign retention, overall retention and stage-by-stage history.
+ * person who claimed the reward: campaign retention, Nexura score and stage-by-stage history.
  */
 export const getCampaignSubmissionDetails = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
@@ -235,7 +236,7 @@ export const getCampaignSubmissionDetails = async (req: GlobalRequest, res: Glob
     const claims = joins.filter(j => j.campaignCompleted);
     const claimerIds = claims.map(j => String(j.user));
     const userIds = [...new Set([...claimerIds, ...subs.map(s => String(s.user))])].filter(u => mongoose.Types.ObjectId.isValid(u));
-    const [users, overall] = await Promise.all([
+    const [users, scores] = await Promise.all([
       user.find({ _id: { $in: userIds } }).select("username address profilePic socialProfiles.x createdAt").lean() as Promise<any[]>,
       computeRetention(claimerIds),
     ]);
@@ -250,13 +251,13 @@ export const getCampaignSubmissionDetails = async (req: GlobalRequest, res: Glob
     }
 
     const now = Date.now();
-    const requirement = Number(c.rewardsConfig?.retentionRequirementPct ?? 0) || null;
+    const requirement = nexuraScoreRequirement(c);
     const participants = claims.map(j => {
       const uid = String(j.user);
       const u = userById.get(uid);
       const done = doneByUser.get(uid) ?? new Map<string, number>();
       const score = scoreCampaignRetention(stages, done, new Date(j.createdAt).getTime(), now);
-      const o = overall.get(uid);
+      const o = scores.get(uid);
       return {
         userId: uid,
         username: u?.username ?? "",
@@ -269,9 +270,10 @@ export const getCampaignSubmissionDetails = async (req: GlobalRequest, res: Glob
         stagesCompleted: score.stagesCompleted,
         stagesTotal: score.stagesTotal,
         retentionRate: score.retentionRate,
-        overallRetention: o?.rate ?? null,
-        overallCampaigns: o?.campaigns ?? 0,
-        meetsRequirement: requirement !== null && score.retentionRate !== null ? score.retentionRate >= requirement : null,
+        nexuraScore: o?.nexuraScore ?? null,
+        nexuraScoreCampaigns: o?.campaigns ?? 0,
+        // The requirement is on the Nexura score, the same check the reward claim uses
+        meetsRequirement: requirement === null ? null : (o?.nexuraScore ?? 0) >= requirement,
         history: score.history,
       };
     }).sort((a, b) => new Date(b.claimedAt).getTime() - new Date(a.claimedAt).getTime());
@@ -331,7 +333,7 @@ export const getCampaignSubmissionDetails = async (req: GlobalRequest, res: Glob
         hasRewards: !!c.contractAddress && Number(c.reward?.pool ?? 0) > 0,
         rewardPool: Number(c.reward?.pool ?? 0),
         maxParticipants: Number(c.maxParticipants ?? 0),
-        retentionRequirementPct: requirement,
+        nexuraScoreRequirementPct: requirement,
         stages: stages.map(st => ({ key: st.key, name: st.name, offsetDays: st.offsetDays, totalTasks: st.taskIds.length })),
         totalTasks: quests.length,
       },
@@ -340,7 +342,7 @@ export const getCampaignSubmissionDetails = async (req: GlobalRequest, res: Glob
         completedAllTasks: joins.filter(j => j.questsCompleted).length,
         claimedReward: claims.length,
         averageRetention: avg(participants.map(p => p.retentionRate)),
-        averageOverallRetention: avg(participants.map(p => p.overallRetention)),
+        averageNexuraScore: avg(participants.map(p => p.nexuraScore)),
         meetingRequirement: requirement === null ? null : participants.filter(p => p.meetsRequirement).length,
         pendingSubmissions: submissions.filter(s => s.status === "pending").length,
         approvedSubmissions: submissions.filter(s => s.status === "done").length,
