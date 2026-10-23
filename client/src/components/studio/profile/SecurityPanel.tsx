@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Dialog, DialogActions, PanelTitle, Row, SmallButton, StatusPill, Value, maskEmail } from "./ProfileUI";
 import type { StudioProfile } from "./useStudioProfile";
-import { CodeInput, ErrorText, StrengthBar, errorMessage, passwordOk } from "../auth/AuthUI";
+import { CodeInput, ErrorText, EyeToggle, PasswordMatch, StrengthBar, errorMessage, passwordOk } from "../auth/AuthUI";
 import { clearProjectSession, projectApiRequest, storeProjectSession } from "@/lib/projectApi";
 import { useToast } from "@/hooks/use-toast";
 
@@ -15,17 +15,21 @@ const RESEND_SECONDS = 60;
 type TwoFactorSetup = { secret: string; otpauthUrl?: string; qrCodeDataUrl?: string };
 
 function DialogInput({ value, onChange, placeholder, focused }: { value: string; onChange: (v: string) => void; placeholder: string; focused?: boolean }) {
+  const [shown, setShown] = useState(false);
   return (
+    <div className="relative w-full">
     <input
-      type="password" value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} autoComplete="new-password" autoFocus={focused}
-      className="h-[45.488px] w-full rounded-[40px] border-[1.25px] border-[rgba(28,37,51,0.15)] bg-[#f4f1fc] px-[13px] py-[11px] text-[14px] text-[#1c2533] outline-none placeholder:text-[#98a0b4] focus:border-[#8a3ffc] focus:shadow-[0px_0px_0px_3px_rgba(138,63,252,0.1)]"
+      type={shown ? "text" : "password"} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} autoComplete="new-password" autoFocus={focused}
+      className="h-[45.488px] w-full rounded-[40px] border-[1.25px] border-[rgba(28,37,51,0.15)] bg-[#f4f1fc] pl-[13px] pr-[48px] py-[11px] text-[14px] text-[#1c2533] outline-none placeholder:text-[#98a0b4] focus:border-[#8a3ffc] focus:shadow-[0px_0px_0px_3px_rgba(138,63,252,0.1)]"
     />
+    <EyeToggle shown={shown} onToggle={() => setShown(s => !s)} />
+    </div>
   );
 }
 
-function ChangePasswordDialogs({ email, open, onClose }: { email: string; open: boolean; onClose: () => void }) {
+function ChangePasswordDialogs({ email, accountId, open, onClose }: { email: string; accountId?: string; open: boolean; onClose: () => void }) {
   const { toast } = useToast();
-  const [step, setStep] = useState<"verify" | "password">("verify");
+  const [step, setStep] = useState<"confirm" | "verify" | "password">("confirm");
   const [code, setCode] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -43,8 +47,8 @@ function ChangePasswordDialogs({ email, open, onClose }: { email: string; open: 
 
   useEffect(() => {
     if (!open) return;
-    setStep("verify"); setCode(""); setPassword(""); setConfirm(""); setError("");
-    void sendCode();
+    // Nothing is sent until they confirm
+    setStep("confirm"); setCode(""); setPassword(""); setConfirm(""); setError("");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
@@ -53,6 +57,17 @@ function ChangePasswordDialogs({ email, open, onClose }: { email: string; open: 
     const t = setTimeout(() => setResendIn(s => s - 1), 1000);
     return () => clearTimeout(t);
   }, [resendIn]);
+
+  const confirmSend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    try {
+      await projectApiRequest({ method: "POST", endpoint: "/hub/forgot-password", data: { email, page: "project" } });
+      setResendIn(RESEND_SECONDS);
+      setStep("verify");
+    } catch (err) { setError(errorMessage(err, "We couldn't send the code. Try again.")); }
+    finally { setBusy(false); }
+  };
 
   const submitCode = (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -67,7 +82,7 @@ function ChangePasswordDialogs({ email, open, onClose }: { email: string; open: 
     setBusy(true); setError("");
     try {
       const res = await projectApiRequest<{ accessToken?: string; token?: string; admin?: { _id: string; name: string; email: string; role: string } }>({
-        method: "POST", endpoint: "/hub/reset-password", data: { email, code, password },
+        method: "POST", endpoint: "/hub/reset-password", data: { email, code, password, accountId },
       });
       const token = res.token ?? res.accessToken;
       if (token && res.admin) {
@@ -89,12 +104,21 @@ function ChangePasswordDialogs({ email, open, onClose }: { email: string; open: 
 
   return (
     <Dialog open={open} onClose={onClose} labelledBy="change-password-title">
-      {step === "verify" ? (
+      {step === "confirm" ? (
+        <form onSubmit={confirmSend}>
+          <h3 id="change-password-title" className="px-[24px] pt-[22px] text-[24px] font-semibold leading-[32.2px] tracking-[-0.98px] text-[#1c2533]">Change your password?</h3>
+          <div className="flex flex-col px-[24px] py-[16px]">
+            <p className="text-[14px] leading-[21.7px] text-[#1c2533]">A 6-digit code will be sent to <b className="font-bold">{maskEmail(email)}</b>.</p>
+            <ErrorText>{error}</ErrorText>
+          </div>
+          <DialogActions onCancel={onClose} confirmLabel="Send code" busy={busy} />
+        </form>
+      ) : step === "verify" ? (
         <form onSubmit={submitCode}>
           <h3 id="change-password-title" className="px-[24px] pt-[22px] text-[24px] font-semibold leading-[32.2px] tracking-[-0.98px] text-[#1c2533]">Verify it’s you</h3>
           <div className="flex flex-col px-[24px] py-[16px]">
             <p className="text-[14px] leading-[21.7px] text-[#1c2533]">
-              For your security, we sent a 6-digit code to <b className="font-bold">{maskEmail(email)}</b>. Enter it to continue.
+              Enter the 6-digit code sent to <b className="font-bold">{maskEmail(email)}</b>.
             </p>
             <CodeInput value={code} onChange={setCode} onComplete={() => submitCode()} className="pt-[14px]" size="dialog" />
             <div className="flex justify-center pt-[10px] text-[14px] leading-[21.7px] text-[#1c2533]">
@@ -117,6 +141,7 @@ function ChangePasswordDialogs({ email, open, onClose }: { email: string; open: 
             <label className="flex flex-col gap-[7px] py-[2px]">
               <span className="text-[13px] font-semibold leading-[20.15px] text-[#3d485c]">Confirm password</span>
               <DialogInput value={confirm} onChange={setConfirm} placeholder="Re-enter password" />
+              <PasswordMatch password={password} confirm={confirm} />
             </label>
             <ErrorText>{error}</ErrorText>
           </div>
@@ -289,7 +314,7 @@ export default function SecurityPanel({ p }: { p: StudioProfile }) {
             : <SmallButton onClick={() => setSettingUp(true)}>Set up</SmallButton>}
         </Row>
       </div>
-      <ChangePasswordDialogs email={email} open={passwordOpen} onClose={() => setPasswordOpen(false)} />
+      <ChangePasswordDialogs email={email} accountId={p.admin?._id} open={passwordOpen} onClose={() => setPasswordOpen(false)} />
       <Dialog open={offOpen} onClose={() => setOffOpen(false)} labelledBy="turn-off-2fa-title">
         <form onSubmit={turnOff}>
           <h3 id="turn-off-2fa-title" className="px-[24px] pt-[22px] text-[24px] font-semibold leading-[32.2px] tracking-[-0.98px] text-[#1c2533]">Turn off 2-step verification</h3>

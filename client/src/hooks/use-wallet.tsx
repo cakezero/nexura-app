@@ -5,6 +5,7 @@ import { emitSessionChange } from "../lib/session";
 import { buildUrl, apiRequestV2 } from "../lib/queryClient";
 import { useToast } from "./use-toast";
 import { resilientFetch } from "@/lib/resilientFetch";
+import { clearWalletTokens, saveWalletToken } from "@/components/studio/studioWalletProof";
 
 const STORAGE_KEY = "nexura:wallet";
 
@@ -88,6 +89,8 @@ export function useWallet() {
         if (data.user) {
           localStorage.setItem("user_profile", JSON.stringify(data.user));
           localStorage.setItem("nexura:token", data.accessToken);
+          // The same wallet login counts in Nexura Studio too
+          if (data.walletToken) saveWalletToken(addr, data.walletToken);
           emitSessionChange();
         } else {
           toast({ title: "Error", description: "Error signing in.", variant: "destructive" });
@@ -131,6 +134,7 @@ export function useWallet() {
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem("nexura:token");
     localStorage.removeItem("user_profile");
+    clearWalletTokens();
     emitSessionChange();
     try { wagmiDisconnect(); } catch {}
     window.location.reload();

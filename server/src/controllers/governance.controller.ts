@@ -163,7 +163,7 @@ async function validateAction(ctx: Ctx, me: { id: string; role: Role }, raw: any
       const role: BackendRole = raw.role === "superadmin" ? "superadmin" : "admin";
       if (!EMAIL_RE.test(email)) throw new HttpError(BAD_REQUEST, "enter a valid email address");
       if (role === "superadmin" && me.role !== "owner") throw new HttpError(FORBIDDEN, "only the Owner can invite Super Admins");
-      if (await hubAdmin.exists({ email })) throw new HttpError(BAD_REQUEST, "email is already in use");
+      if (await hubAdmin.exists({ email, hub: ctx.hubId })) throw new HttpError(BAD_REQUEST, "this email is already in your studio");
       if (pending.some(p => p.action?.kind === "invite" && p.action.email === email)) throw new HttpError(BAD_REQUEST, "an invitation for this email is already pending");
       return { kind: "invite", email, role, clientUrl };
     }

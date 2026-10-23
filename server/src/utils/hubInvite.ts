@@ -38,8 +38,9 @@ export async function createHubInvite({ hubId, email, role, clientUrl, keepIfEma
   const validRole = role === "superadmin" ? "superadmin" : "admin";
   const normalizedEmail = String(email).trim().toLowerCase();
 
-  const existingAdmin = await hubAdmin.findOne({ email: normalizedEmail }).lean();
-  if (existingAdmin) throw new InviteError(BAD_REQUEST, "email is already in use");
+  // The same email may already be in other hubs; only this hub matters
+  const existingAdmin = await hubAdmin.findOne({ email: normalizedEmail, hub: hubId }).lean();
+  if (existingAdmin) throw new InviteError(BAD_REQUEST, "this email is already in your studio");
 
   let code = "";
   for (let attempt = 0; attempt < 5; attempt++) {

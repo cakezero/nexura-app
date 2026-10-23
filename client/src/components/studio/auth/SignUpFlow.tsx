@@ -8,7 +8,6 @@ import {
   PasswordMatch, StrengthBar, TextArea, TextInput, TextLink, WalletBanner, errorMessage, passwordOk,
 } from "./AuthUI";
 import { useStudioWallet } from "../useStudioWallet";
-import { useWalletProof } from "./useWalletProof";
 import { apiRequestV2, getStoredAccessToken } from "@/lib/queryClient";
 import { projectApiRequest, storeProjectSession } from "@/lib/projectApi";
 import { initialsLogo } from "./initialsLogo";
@@ -26,8 +25,7 @@ const DESCRIPTION_MAX = 300;
 
 export default function SignUpFlow() {
   const router = useRouter();
-  const { connect } = useStudioWallet();
-  const { address, verified, signing, signError, sign, getProof, clearProof } = useWalletProof();
+  const { address, connect, verified, verifying, verify: verifyWallet, token } = useStudioWallet();
   // Set once the account exists, so a retry after a failed hub step doesn't sign up twice
   const account = useRef<{ token: string; hub: string } | null>(null);
   const [step, setStep] = useState<Step>("account");
@@ -104,20 +102,20 @@ export default function SignUpFlow() {
     try {
       if (!account.current) {
         // The wallet signed here becomes the only one that can sign in to this studio
-        const proof = await getProof();
-        if (!proof) return;
+        const walletToken = token ?? (await verifyWallet());
+        if (!walletToken) { setError("Sign the message in your wallet to verify it."); return; }
         const res = await projectApiRequest<{ accessToken?: string; admin?: { _id: string; name: string; email: string; role: string; hub: string } }>({
           method: "POST", endpoint: "/hub/sign-up",
           data: {
             name: username.trim(), email: cleanEmail, password, authToken: getStoredAccessToken(),
-            walletAddress: proof.address, message: proof.message, signature: proof.signature,
+            walletToken,
           },
         });
         if (!res.accessToken) throw new Error("Your account was created, but signing in failed. Sign in to continue.");
         account.current = { token: res.accessToken, hub: res.admin?.hub || "" };
         storeProjectSession(res.accessToken, {
           email: res.admin?.email || cleanEmail, name: res.admin?.name || username.trim(),
-          role: res.admin?.role || "superadmin", adminId: res.admin?._id || "", hub: res.admin?.hub || "", walletAddress: proof.address,
+          role: res.admin?.role || "superadmin", adminId: res.admin?._id || "", hub: res.admin?.hub || "", walletAddress: address ?? "",
         });
       }
 
@@ -130,7 +128,6 @@ export default function SignUpFlow() {
 
       router.push("/studio-dashboard/hub-profile?welcome=1");
     } catch (err) {
-      if (!account.current) clearProof();
       setError(errorMessage(err, "We couldn't create your studio. Try again."));
     } finally { setBusy(false); }
   };
@@ -145,7 +142,7 @@ export default function SignUpFlow() {
     <AuthShell steps={STEP_STATES[step]} onBack={back} account="signin">
       {step === "account" && (
         <form onSubmit={submitAccount} noValidate className="flex w-full max-w-[500px] flex-col items-start pb-[24px] pt-[4px]">
-          <WalletBanner address={address} onConnect={connect} />
+          <WalletBanner address={address} onConnect={connect} verified={verified} signing={verifying} onSign={() => void verifyWallet()} />
           <PageTitle title="Create your account" />
           <Field label="Username" className="pt-[18px]">
             <TextInput value={username} onChange={e => setUsername(e.target.value)} placeholder="e.g. studio_lead" autoComplete="username" />
@@ -183,8 +180,7 @@ export default function SignUpFlow() {
 
       {step === "project" && (
         <form onSubmit={createStudio} noValidate className="flex w-full max-w-[500px] flex-col items-start pb-[24px] pt-[4px]">
-          <WalletBanner address={address} onConnect={connect} verified={verified} signing={signing} onSign={() => address && sign(address)} />
-          <ErrorText>{signError}</ErrorText>
+          <WalletBanner address={address} onConnect={connect} verified={verified} signing={verifying} onSign={() => void verifyWallet()} />
           <PageTitle title="Your project" />
           <Field label="Project name" className="pt-[18px]">
             <TextInput value={projectName} onChange={e => setProjectName(e.target.value)} placeholder="e.g. Intuition Labs" />

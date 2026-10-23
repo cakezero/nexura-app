@@ -3836,3 +3836,7 @@ body {
 }
 .studio-page-enter { animation: studio-page-enter 0.3s ease-out both; }
 @media (prefers-reduced-motion: reduce) { .studio-page-enter { animation: none; } }
+
+/* Our own show/hide button replaces the browser's password reveal eye */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear { display: none; }
