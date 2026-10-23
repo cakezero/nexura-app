@@ -8,28 +8,49 @@ import {
   PasswordMatch, StrengthBar, TextInput, TextLink, WalletBanner, errorMessage, passwordOk,
 } from "./AuthUI";
 import { useStudioWallet } from "../useStudioWallet";
-import { useWalletProof } from "./useWalletProof";
 import { projectApiRequest, storeProjectSession } from "@/lib/projectApi";
 import { useToast } from "@/hooks/use-toast";
 
-type Step = "signin" | "twofa" | "reset-email" | "reset-code" | "reset-password" | "reset-done";
+type Step = "signin" | "choose-hub" | "twofa" | "reset-email" | "reset-code" | "reset-password" | "reset-done";
 
 type Admin = { _id: string; name: string; email: string; role: string; hub?: string };
 type SignInResponse = {
   accessToken?: string; token?: string; admin?: Admin;
   twoFactorRequired?: boolean; twoFactorToken?: string;
+  hubChoiceRequired?: boolean; hubs?: HubChoice[];
 };
+type HubChoice = { accountId: string; name: string; logo: string };
 
-const SIGN_IN_STEPS: [StepState, StepState, StepState] = ["active", "todo", "todo"];
-const RESET_STEPS: [StepState, StepState, StepState] = ["done", "todo", "todo"];
+const WRONG_WALLET = /you connected|switch to the wallet|linked to this studio/i;
+
+function HubPicker({ hubs, onPick, busy }: { hubs: HubChoice[]; onPick: (id: string) => void; busy: boolean }) {
+  return (
+    <div className="flex w-full flex-col gap-[10px] pt-[16px]">
+      {hubs.map(h => (
+        <button
+          key={h.accountId} type="button" disabled={busy} onClick={() => onPick(h.accountId)}
+          className="flex h-[56px] w-full items-center gap-[12px] rounded-[20px] border-[1.25px] border-[#e3def3] bg-white px-[14px] text-left hover:border-[#8a3ffc] disabled:opacity-60"
+        >
+          {h.logo
+            ? <img src={h.logo} alt="" className="size-[32px] shrink-0 rounded-full object-cover" />
+            : <span className="flex size-[32px] shrink-0 items-center justify-center rounded-full bg-[#f4f1ff] text-[13px] font-bold text-[#8a3ffc]">{h.name.slice(0, 1)}</span>}
+          <span className="truncate text-[14.5px] font-semibold text-[#1c2533]">{h.name}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+const SIGN_IN_STEPS: StepState[] = ["active"];
+const RESET_STEPS: StepState[] = ["active"];
 const RESEND_SECONDS = 60;
 
 export default function SignInFlow() {
   const router = useRouter();
   const params = useSearchParams();
   const { toast } = useToast();
-  const { connect } = useStudioWallet();
-  const { address, verified, signing, signError, sign, getProof, clearProof } = useWalletProof({ signOnConnect: true });
+  // The wallet signed once when it connected (see useStudioWallet); sign-in sends that proof
+  const { address, connect, verified, verifying, verify, verifyFailed, token } = useStudioWallet();
   const [step, setStep] = useState<Step>(params.get("reset") ? "reset-email" : "signin");
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
@@ -43,7 +64,36 @@ export default function SignInFlow() {
   const [error, setError] = useState("");
   const [resendIn, setResendIn] = useState(0);
   const [wrongWallet, setWrongWallet] = useState("");
-  useEffect(() => { setWrongWallet(""); }, [address]);
+  const [walletNote, setWalletNote] = useState("");
+  const [hubs, setHubs] = useState<HubChoice[]>([]);
+  const [resetHubs, setResetHubs] = useState<HubChoice[]>([]);
+
+  /** Whether the connected wallet can open these details: "ok", "wrong" (banner shows why) or "unknown". */
+  const checkWallet = async (): Promise<"ok" | "wrong" | "unknown"> => {
+    const email = identifier.trim();
+    if (!address || !email || !password) return "unknown";
+    try {
+      const r = await projectApiRequest<{ status: string; error?: string }>({
+        method: "POST", endpoint: "/hub/sign-in/check", data: { email, password, walletAddress: address },
+      });
+      if (r.status === "wrongWallet") { setWrongWallet(r.error ?? "This wallet isn't linked to this studio."); return "wrong"; }
+      return r.status === "ok" ? "ok" : "unknown";
+    } catch { return "unknown"; } // a wrong password: Sign in says so
+  };
+
+  // As soon as the details and a wallet are in, check the wallet (no signature needed for that);
+  // only the right wallet is then asked to sign, so a wrong one never gets a signature request
+  useEffect(() => {
+    setWrongWallet(""); setWalletNote("");
+    if (!address || !identifier.trim() || password.length < 8) return;
+    let stale = false;
+    const t = setTimeout(async () => {
+      const result = await checkWallet();
+      if (!stale && result === "ok" && !verified) void verify();
+    }, 700);
+    return () => { stale = true; clearTimeout(t); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [address, identifier, password]);
 
   useEffect(() => {
     try {
@@ -66,7 +116,7 @@ export default function SignInFlow() {
   const finishSignIn = async (res: SignInResponse, email: string) => {
     const token = res.token ?? res.accessToken;
     if (!token) throw new Error("Signing in didn't return a session. Try again.");
-    const base = { email: res.admin?.email ?? email, role: res.admin?.role ?? "admin", adminId: res.admin?._id ?? "" };
+    const base = { email: res.admin?.email ?? email, role: res.admin?.role ?? "admin", adminId: res.admin?._id ?? "", walletAddress: address ?? "" };
     storeProjectSession(token, { ...base, name: res.admin?.name ?? email });
     try {
       const { hub } = await projectApiRequest<{ hub: Record<string, any> }>({ method: "GET", endpoint: "/hub/me" });
@@ -75,21 +125,26 @@ export default function SignInFlow() {
     router.push("/studio-dashboard/hub-profile");
   };
 
-  const signIn = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const signIn = async (e?: React.FormEvent, accountId?: string) => {
+    e?.preventDefault();
     const email = identifier.trim();
     if (!email || !password) return setError("Enter your username or email and your password.");
-    if (!address) { setError("Connect your wallet first."); connect(); return; }
-    if (signing) return setError("Approve the signature in your wallet first.");
-    const current = await getProof();
-    if (!current) return;
-    setBusy(true); setError(""); setWrongWallet("");
+    if (!address) { setWalletNote("Connect your wallet first."); connect(); return; }
+    setError(""); setWalletNote("");
+    if (!token && (await checkWallet()) === "wrong") return;
+    const walletToken = token ?? (await verify());
+    if (!walletToken) return setWalletNote(verifyFailed ? "Your wallet signed, but we couldn't confirm it right now. Try again." : "Sign the message in your wallet to verify it.");
+    setBusy(true); setWrongWallet("");
     try {
-      const { message, signature } = current;
       const res = await projectApiRequest<SignInResponse>({
         method: "POST", endpoint: "/hub/sign-in",
-        data: { email, password, role: "project", walletAddress: address, message, signature },
+        data: { email, password, role: "project", walletAddress: address, walletToken, ...(accountId ? { accountId } : {}) },
       });
+      if (res.hubChoiceRequired && res.hubs?.length) {
+        setHubs(res.hubs);
+        go("choose-hub");
+        return;
+      }
       if (res.twoFactorRequired && res.twoFactorToken) {
         setTwoFactorToken(res.twoFactorToken);
         setTotp("");
@@ -98,10 +153,10 @@ export default function SignInFlow() {
       }
       await finishSignIn(res, email);
     } catch (err) {
-      const msg = errorMessage(err, "Those details didn't match an account.");
+      const msg = errorMessage(err, "Incorrect email or password.");
       // A wrong wallet is rejected before the signature is used, so it stays valid; otherwise sign again next time
-      if (/you connected|switch to the wallet|linked to this studio/i.test(msg)) setWrongWallet(msg);
-      else { clearProof(); setError(msg); }
+      if (WRONG_WALLET.test(msg)) { setWrongWallet(msg); if (accountId) go("signin"); return; }
+      setError(msg);
     } finally { setBusy(false); }
   };
 
@@ -145,16 +200,18 @@ export default function SignInFlow() {
     go("reset-password");
   };
 
-  const updatePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const updatePassword = async (e?: React.FormEvent, resetAccountId?: string) => {
+    e?.preventDefault();
     if (!passwordOk(newPassword)) return setError("Use at least 8 characters with a number, a capital letter and a symbol.");
     if (newPassword !== confirm) return setError("The two passwords don't match.");
     setBusy(true); setError("");
     try {
-      await projectApiRequest({
+      const res = await projectApiRequest({
         method: "POST", endpoint: "/hub/reset-password",
-        data: { email: resetEmail.trim().toLowerCase(), code: resetCode, password: newPassword },
-      });
+        data: { email: resetEmail.trim().toLowerCase(), code: resetCode, password: newPassword, ...(resetAccountId ? { accountId: resetAccountId } : {}) },
+      }) as { hubChoiceRequired?: boolean; hubs?: HubChoice[] } | undefined;
+      setResetHubs([]);
+      if (res?.hubChoiceRequired && res.hubs?.length) { setResetHubs(res.hubs); return; }
       setNewPassword(""); setConfirm(""); setResetCode("");
       go("reset-done");
     } catch (err) {
@@ -166,6 +223,7 @@ export default function SignInFlow() {
 
   const back = () => {
     if (step === "signin") return router.push("/studio");
+    if (step === "choose-hub") return go("signin");
     if (step === "reset-code") return go("reset-email");
     if (step === "reset-password") return go("reset-code");
     go("signin");
@@ -178,8 +236,8 @@ export default function SignInFlow() {
       {step === "signin" && (
         <form onSubmit={signIn} noValidate className="flex w-full justify-center pt-[20px] lg:pt-[18px]">
           <Card shadow="soft">
-            <WalletBanner address={address} onConnect={connect} verified={verified} signing={signing} onSign={() => address && sign(address)} wrongWallet={wrongWallet} />
-            <ErrorText>{signError}</ErrorText>
+            <WalletBanner address={address} onConnect={connect} verified={verified} signing={verifying} wrongWallet={wrongWallet} />
+            <ErrorText>{walletNote}</ErrorText>
             <div className="pt-[14px]"><CardTitle>Sign in</CardTitle></div>
             <Field label="Username or email" className="pt-[16px]">
               <TextInput value={identifier} onChange={e => setIdentifier(e.target.value)} autoComplete="username" placeholder="you@project.xyz" />
@@ -190,10 +248,22 @@ export default function SignInFlow() {
             <div className="flex w-full justify-end pb-[12px] pt-[8px]">
               <TextLink onClick={() => { setResetEmail(identifier.includes("@") ? identifier.trim() : ""); go("reset-email"); }}>Forgot password?</TextLink>
             </div>
-            <PrimaryButton type="submit" disabled={busy || signing}>{busy ? "Signing in…" : "Sign in"}</PrimaryButton>
+            <PrimaryButton type="submit" disabled={busy}>{busy ? "Signing in…" : "Sign in"}</PrimaryButton>
             <ErrorText>{error}</ErrorText>
           </Card>
         </form>
+      )}
+
+      {step === "choose-hub" && (
+        <div className="flex w-full justify-center pt-[24px] lg:pt-[48px]">
+          <Card>
+            <CardTitle>Choose a studio</CardTitle>
+            <CardText>{hubs.length} studios use these details.</CardText>
+            <HubPicker hubs={hubs} busy={busy} onPick={id => signIn(undefined, id)} />
+            <ErrorText>{error}</ErrorText>
+            <div className="flex w-full justify-center pt-[18px]"><TextLink onClick={() => go("signin")}>Back to sign in</TextLink></div>
+          </Card>
+        </div>
       )}
 
       {step === "twofa" && (
@@ -249,7 +319,9 @@ export default function SignInFlow() {
               <PasswordInput round="soft" value={confirm} onChange={e => setConfirm(e.target.value)} autoComplete="new-password" />
               <PasswordMatch password={newPassword} confirm={confirm} />
             </Field>
-            <PrimaryButton type="submit" disabled={busy} className="mt-[10px]">{busy ? "Updating…" : "Update password"}</PrimaryButton>
+            {resetHubs.length > 0
+              ? <><CardText className="pt-[8px]">Which studio is this password for?</CardText><HubPicker hubs={resetHubs} busy={busy} onPick={id => updatePassword(undefined, id)} /></>
+              : <PrimaryButton type="submit" disabled={busy} className="mt-[10px]">{busy ? "Updating…" : "Update password"}</PrimaryButton>}
             <ErrorText>{error}</ErrorText>
           </Card>
         </form>

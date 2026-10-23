@@ -30,6 +30,8 @@ import { bannedUser } from "@/models/bannedUser.model";
 import { REDIS } from "@/utils/redis.utils";
 import { fetchWithRetry } from "@/utils/resilience";
 import { walletLoginProblem } from "@/utils/walletLogin";
+// The same signature also proves the wallet to Nexura Studio: one wallet login for both apps
+import { issueWalletToken } from "@/utils/walletToken";
 import { issueLinkTicket } from "@/models/linkTicket.model";
 
 const buildWalletUsernameBase = (address: string) =>
@@ -312,7 +314,7 @@ export const signIn = async (req: GlobalRequest, res: GlobalResponse) => {
 				maxAge: 30 * 24 * 60 * 60,
 			});
 
-			res.status(CREATED).json({ message: "user created!", accessToken, user: newUser });
+			res.status(CREATED).json({ message: "user created!", accessToken, user: newUser, walletToken: issueWalletToken(address) });
 			return;
 		}
 
@@ -330,7 +332,7 @@ export const signIn = async (req: GlobalRequest, res: GlobalResponse) => {
 			maxAge: 30 * 24 * 60 * 60,
 		});
 
-		res.status(200).json({ message: "signed in", accessToken, user: userExists });
+		res.status(200).json({ message: "signed in", accessToken, user: userExists, walletToken: issueWalletToken(address) });
 	} catch (error: any) {
 		logger.error(error);
 
@@ -348,7 +350,7 @@ export const signIn = async (req: GlobalRequest, res: GlobalResponse) => {
 						secure: true,
 						maxAge: 30 * 24 * 60 * 60,
 					});
-					res.status(200).json({ message: "signed in", accessToken, user: existingUser });
+					res.status(200).json({ message: "signed in", accessToken, user: existingUser, walletToken: issueWalletToken(address) });
 					return;
 				}
 			} catch (innerError) {

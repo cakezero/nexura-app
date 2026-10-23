@@ -11,7 +11,7 @@ import { OPEN_PROPOSALS_EVENT, useProposalNotifications } from "./useProposalNot
 import NotificationsPanel from "./NotificationsPanel";
 import { STUDIO_SIGN_IN_URL, useProjectSession } from "./useProjectSession";
 import SignInPrompt from "./SignInPrompt";
-import { clearProjectSession, projectApiRequest } from "@/lib/projectApi";
+import { clearProjectSession, getStoredProjectInfo, projectApiRequest } from "@/lib/projectApi";
 
 import { MAIN_APP_URL as NEXURA_MAIN_APP_URL } from "@/lib/mainAppUrl";
 
@@ -34,7 +34,7 @@ export default function StudioHeader({ title, showLogo = false, network: control
   /** Extra controls shown before the wallet, e.g. the builder's save status. */
   extra?: ReactNode;
 }) {
-  const { address: connectedAddress, connect: connectWallet, disconnect: disconnectWallet } = useStudioWallet();
+  const { address: connectedAddress, connect: connectWallet, disconnect: disconnectWallet, verified, verifying, verifyDeclined, verify, live } = useStudioWallet();
   const signedIn = useProjectSession();
   // Dashboard pages show the wallet only while the Studio session is valid; sign up / sign in always can
   const walletAddress = signedIn || showLogo ? connectedAddress : null;
@@ -43,6 +43,24 @@ export default function StudioHeader({ title, showLogo = false, network: control
   const [sharedNetwork, setSharedNetwork] = useStudioNetwork();
   const network = controlledNetwork ?? sharedNetwork;
   const [open, setOpen] = useState<Menu>(null);
+  // A wallet that connects or is switched to in the extension signs once to prove it is theirs
+  useEffect(() => {
+    if (signedIn && walletAddress && live && !verified && !verifying && !verifyDeclined) void verify();
+  }, [walletAddress, live, verified, verifying, verifyDeclined, verify]);
+
+  // Signed in with one wallet and switched to another in the extension: the session ends
+  useEffect(() => {
+    if (!signedIn || !live) return;
+    const signedInWith = String(getStoredProjectInfo()?.walletAddress ?? "");
+    if (!signedInWith || signedInWith.toLowerCase() === live.toLowerCase()) return;
+    void (async () => {
+      try { await projectApiRequest({ method: "POST", endpoint: "/hub/logout" }); } catch { /* ends locally either way */ }
+      clearProjectSession();
+      try { sessionStorage.setItem("nexura:signed-out-reason", "You switched wallets. Sign in with the wallet linked to your studio."); } catch { /* ignore */ }
+      router.push(STUDIO_SIGN_IN_URL);
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [signedIn, live]);
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const { items: allNotifications, unread: allUnread, markRead } = useProposalNotifications();
   const notifications = signedIn ? allNotifications : [];
@@ -185,8 +203,8 @@ export default function StudioHeader({ title, showLogo = false, network: control
               className="flex h-[38px] items-center gap-[9px] rounded-[999px] border-[1.25px] border-[#e3def3] px-[16px] py-[8px]"
               style={{ backgroundImage: "linear-gradient(167.98deg, rgb(124, 58, 237) 0%, rgb(107, 33, 216) 100%)" }}
             >
-              <span className="size-[7.988px] shrink-0 rounded-[3.994px] bg-[#00e1a2] shadow-[0px_0px_0px_3px_rgba(0,225,162,0.2)]" />
-              <span className="whitespace-nowrap text-[13.5px] font-semibold text-white">{shortAddress(walletAddress)}</span>
+              <span className={`size-[7.988px] shrink-0 rounded-[3.994px] ${verified ? "bg-[#00e1a2] shadow-[0px_0px_0px_3px_rgba(0,225,162,0.2)]" : "bg-[#f5a524] shadow-[0px_0px_0px_3px_rgba(245,165,36,0.25)]"}`} />
+              <span className="whitespace-nowrap text-[13.5px] font-semibold text-white">{verified ? shortAddress(walletAddress) : "Check your wallet"}</span>
               <img src="/studio-auth/chevron-down-white.svg" alt="" className={`size-[15.996px] shrink-0 transition-transform ${open === "wallet" ? "rotate-180" : ""}`} />
             </button>
           )}

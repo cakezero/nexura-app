@@ -20,6 +20,7 @@ import { payCompletedStageXp, syncCampaignXp } from "@/utils/campaignXp";
 import { uploadImg } from "@/utils/img.utils";
 import { FileTypeError, uploadFile } from "@/utils/file.utils";
 import { isHubOwner, ownsHubRecord, submissionInHub } from "@/utils/hubOwnership";
+import { USERNAME_RULE, usernameTaken } from "@/utils/hubAccounts";
 
 const OWNER_ONLY_SOCIALS = "only the studio Owner can connect or disconnect its X, Discord and Telegram";
 import { campaignRewardAsset, rewardAsset } from "@/utils/rewardAssets";
@@ -1579,14 +1580,7 @@ export const getUserProfileByWallet = async (req: GlobalRequest, res: GlobalResp
   }
 };
 
-const USERNAME_RULE = /^[a-zA-Z0-9_.]{3,30}$/;
 export const MAX_USERNAME_CHANGES = 2;
-
-async function usernameTaken(name: string, exceptId?: string) {
-  const found = await hubAdmin.findOne({ name, ...(exceptId ? { _id: { $ne: exceptId } } : {}) })
-    .collation({ locale: "en", strength: 2 }).select("_id").lean();
-  return !!found;
-}
 
 export const checkUsernameAvailable = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
@@ -1595,7 +1589,7 @@ export const checkUsernameAvailable = async (req: GlobalRequest, res: GlobalResp
       res.status(OK).json({ available: false, reason: "Use 3 to 30 letters, numbers, dots or underscores." });
       return;
     }
-    const taken = await usernameTaken(username, req.id);
+    const taken = await usernameTaken(username, req.admin?.hub, req.id);
     res.status(OK).json({ available: !taken, reason: taken ? "That username is taken." : null });
   } catch (error) {
     logger.error(error);
@@ -1610,7 +1604,7 @@ export const changeUsername = async (req: GlobalRequest, res: GlobalResponse) =>
       res.status(BAD_REQUEST).json({ error: "Use 3 to 30 letters, numbers, dots or underscores." });
       return;
     }
-    if (await usernameTaken(username, req.id)) {
+    if (await usernameTaken(username, req.admin?.hub, req.id)) {
       res.status(BAD_REQUEST).json({ error: "That username is taken." });
       return;
     }

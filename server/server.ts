@@ -1,3 +1,4 @@
+import { allowSharedHubEmails } from "@/utils/hubAccounts";
 import express from "express";
 import cors from "cors";
 import { Events } from "discord.js";
@@ -63,6 +64,9 @@ server.listen(port, async () => {
 	
 	// Start admin activity cron job
 	startAdminActivityCron();
+
+	// Studio emails can join several hubs: remove the old unique email index once
+	void allowSharedHubEmails();
 
 	// Start relic hodl cron job
 	startRelicHodlCron();

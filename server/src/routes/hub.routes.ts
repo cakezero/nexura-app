@@ -1,6 +1,6 @@
 import { Router } from "express";
 import {
-  signIn,
+  signIn, checkSignInWallet, proveWallet,
   hubAdminSignUp,
   forgotPassword,
   resetPassword,
@@ -47,6 +47,8 @@ router
   // --- Public routes ---
   // Sign-in and code checks are rate limited and lock out after repeated wrong attempts (see authGuard)
   .post("/sign-in", authIpLimiter, attemptGuard("hub-login"), signIn)
+  .post("/wallet-proof", authIpLimiter, proveWallet)
+  .post("/sign-in/check", authIpLimiter, attemptGuard("hub-login-check"), checkSignInWallet)
   .post("/logout", authenticateHubAdmin2, logout)
   .post("/reset-password", authIpLimiter, attemptGuard("hub-reset"), resetPassword)
   .post("/forgot-password", codeSendLimiter, forgotPassword)

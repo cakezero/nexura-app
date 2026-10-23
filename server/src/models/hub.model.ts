@@ -93,10 +93,11 @@ export const hub = mongoose.model("hubs", hubSchema, "projects");
 export const projectModel = mongoose.model("project", hubSchema, "projects");
 
 const hubAdminSchema = new mongoose.Schema({
+  // Not unique: one email can hold accounts in several hubs. The username (name) is unique instead
   email: {
     type: String,
     required: true,
-    unique: true
+    index: true,
   },
   password: {
     type: String,

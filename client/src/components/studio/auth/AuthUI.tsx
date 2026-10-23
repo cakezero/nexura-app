@@ -56,19 +56,28 @@ export function TextArea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement
   );
 }
 
-export function PasswordInput({ withShow = false, round = "pill", ...props }: InputHTMLAttributes<HTMLInputElement> & { withShow?: boolean; round?: "pill" | "soft" }) {
+/** Always-visible show/hide button for a password field. */
+export function EyeToggle({ shown, onToggle }: { shown: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button" onClick={onToggle} aria-label={shown ? "Hide password" : "Show password"} aria-pressed={shown}
+      className="absolute right-[12px] top-1/2 flex size-[30px] -translate-y-1/2 items-center justify-center rounded-full text-[#69728a] hover:text-[#8a3ffc]"
+    >
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
+        <circle cx="12" cy="12" r="3" />
+        {shown && <path d="M3 3l18 18" />}
+      </svg>
+    </button>
+  );
+}
+
+export function PasswordInput({ withShow: _withShow, round = "pill", ...props }: InputHTMLAttributes<HTMLInputElement> & { withShow?: boolean; round?: "pill" | "soft" }) {
   const [shown, setShown] = useState(false);
   return (
     <div className="relative w-full">
-      <TextInput {...props} round={round} type={shown ? "text" : "password"} className={withShow ? "pr-[70px]" : ""} />
-      {withShow && (
-        <button
-          type="button" onClick={() => setShown(s => !s)}
-          className="absolute right-[16px] top-1/2 -translate-y-1/2 text-[13px] font-semibold text-[#8a3ffc]"
-        >
-          {shown ? "Hide" : "Show"}
-        </button>
-      )}
+      <TextInput {...props} round={round} type={shown ? "text" : "password"} className="pr-[48px]" />
+      <EyeToggle shown={shown} onToggle={() => setShown(s => !s)} />
     </div>
   );
 }
@@ -130,25 +139,20 @@ export function WalletBanner({ address, onConnect, className = "", verified, sig
   const short = address && address.length > 12 ? `${address.slice(0, 6)}…${address.slice(-4)}` : address;
   if (address && wrongWallet) {
     return (
-      <div role="alert" className={`flex w-full items-center gap-[10px] rounded-[20px] border-[1.25px] border-[rgba(228,84,91,0.45)] bg-[rgba(228,84,91,0.08)] px-[15px] py-[9px] ${className}`}>
+      <div role="alert" className={`flex w-full items-center gap-[10px] rounded-[20px] border-[1.25px] border-[rgba(228,84,91,0.45)] bg-[rgba(228,84,91,0.08)] py-[9px] pl-[15px] pr-[6px] ${className}`}>
         <span className="flex size-[18px] shrink-0 items-center justify-center rounded-full bg-[#e4545b] text-[12px] font-bold text-white">!</span>
-        <p className="text-[13px] leading-[19.5px] text-[#1c2533]"><b className="font-bold">Wrong wallet.</b> {wrongWallet}</p>
+        <p className="flex-1 text-[13px] leading-[19.5px] text-[#1c2533]"><b className="font-bold">Wrong wallet.</b> {wrongWallet}</p>
+        <button type="button" onClick={onConnect} className="flex h-[34px] shrink-0 items-center rounded-[999px] bg-[#8b3efe] px-[14px] text-[13px] font-semibold text-white">Switch</button>
       </div>
     );
   }
-  if (address && onSign && !verified) {
+  if (address && signing && !verified) {
     return (
-      <div className={`flex h-[40px] w-full items-center gap-[10px] rounded-[40px] border-[1.25px] border-[#e8e4f6] bg-[#f4f1ff] pl-[15px] pr-[4px] ${className}`}>
-        <img src="/studio-auth/card.svg" alt="" className="size-[17.988px] shrink-0" />
+      <div aria-live="polite" className={`flex h-[40px] w-full items-center gap-[10px] rounded-[40px] border-[1.25px] border-[#e8e4f6] bg-[#f4f1ff] px-[15px] ${className}`}>
+        <span className={`size-[8px] shrink-0 rounded-full bg-[#f5a524] ${signing ? "animate-pulse" : ""}`} />
         <p className="flex-1 text-[13.5px] leading-[20.25px] text-[#1c2533]">
-          <b className="font-bold">{signing ? "Check your wallet" : "Verify wallet"}</b> {short}
+          <b className="font-bold">Open your wallet extension</b> to sign for {short}
         </p>
-        <button
-          type="button" onClick={onSign} disabled={signing}
-          className="flex h-[32px] items-center rounded-[999px] bg-[#8b3efe] px-[14px] text-[13px] font-semibold text-white disabled:opacity-60"
-        >
-          {signing ? "Waiting…" : "Sign"}
-        </button>
       </div>
     );
   }

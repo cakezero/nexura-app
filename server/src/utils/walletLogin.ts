@@ -10,9 +10,9 @@ import { getPublicClient } from "@/utils/account";
  *   Address: <address>
  *   Nonce: <milliseconds since 1970>
  * and the server only signs someone in when that message is for the address they claim, was signed
- * in the last 10 minutes, really comes from that wallet, and hasn't been used to sign in before.
+ * in the last 30 minutes, really comes from that wallet, and hasn't been used to sign in before.
  */
-const MAX_AGE_MS = 10 * 60 * 1000;
+const MAX_AGE_MS = 30 * 60 * 1000;
 const CLOCK_SKEW_MS = 2 * 60 * 1000;
 const LOGIN_MESSAGE = /^Nexura Wallet Login\nAddress: (0x[0-9a-fA-F]{40})\nNonce: (\d{10,16})$/;
 
