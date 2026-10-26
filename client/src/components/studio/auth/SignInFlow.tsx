@@ -8,7 +8,8 @@ import {
   PasswordMatch, StrengthBar, TextInput, TextLink, WalletBanner, errorMessage, passwordOk,
 } from "./AuthUI";
 import { useStudioWallet } from "../useStudioWallet";
-import { projectApiRequest, storeProjectSession } from "@/lib/projectApi";
+import { isProjectSessionActive, projectApiRequest, storeProjectSession } from "@/lib/projectApi";
+import { EMAIL_RE } from "@/lib/email";
 import { useToast } from "@/hooks/use-toast";
 
 type Step = "signin" | "choose-hub" | "twofa" | "reset-email" | "reset-code" | "reset-password" | "reset-done";
@@ -66,6 +67,7 @@ export default function SignInFlow() {
   const [wrongWallet, setWrongWallet] = useState("");
   const [walletNote, setWalletNote] = useState("");
   const [hubs, setHubs] = useState<HubChoice[]>([]);
+  const [remember, setRemember] = useState(false);
   const [resetHubs, setResetHubs] = useState<HubChoice[]>([]);
 
   /** Whether the connected wallet can open these details: "ok", "wrong" (banner shows why) or "unknown". */
@@ -96,6 +98,11 @@ export default function SignInFlow() {
   }, [address, identifier, password]);
 
   useEffect(() => {
+    if (!params.get("reset") && isProjectSessionActive()) router.replace("/studio-dashboard/hub-profile");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
     try {
       const reason = sessionStorage.getItem("nexura:signed-out-reason");
       if (!reason) return;
@@ -117,10 +124,10 @@ export default function SignInFlow() {
     const token = res.token ?? res.accessToken;
     if (!token) throw new Error("Signing in didn't return a session. Try again.");
     const base = { email: res.admin?.email ?? email, role: res.admin?.role ?? "admin", adminId: res.admin?._id ?? "", walletAddress: address ?? "" };
-    storeProjectSession(token, { ...base, name: res.admin?.name ?? email });
+    storeProjectSession(token, { ...base, name: res.admin?.name ?? email }, remember);
     try {
       const { hub } = await projectApiRequest<{ hub: Record<string, any> }>({ method: "GET", endpoint: "/hub/me" });
-      storeProjectSession(token, { ...base, name: hub.name ?? res.admin?.name ?? email, logo: hub.logo ?? "" });
+      storeProjectSession(token, { ...base, name: hub.name ?? res.admin?.name ?? email, logo: hub.logo ?? "" }, remember);
     } catch { /* keep the basic session if the hub can't be loaded */ }
     router.push("/studio-dashboard/hub-profile");
   };
@@ -138,7 +145,7 @@ export default function SignInFlow() {
     try {
       const res = await projectApiRequest<SignInResponse>({
         method: "POST", endpoint: "/hub/sign-in",
-        data: { email, password, role: "project", walletAddress: address, walletToken, ...(accountId ? { accountId } : {}) },
+        data: { email, password, role: "project", walletAddress: address, walletToken, remember, ...(accountId ? { accountId } : {}) },
       });
       if (res.hubChoiceRequired && res.hubs?.length) {
         setHubs(res.hubs);
@@ -165,7 +172,7 @@ export default function SignInFlow() {
     setBusy(true); setError("");
     try {
       const res = await projectApiRequest<SignInResponse>({
-        method: "POST", endpoint: "/hub/2fa/verify-login", data: { twoFactorToken, code: value },
+        method: "POST", endpoint: "/hub/2fa/verify-login", data: { twoFactorToken, code: value, remember },
       });
       await finishSignIn(res, identifier.trim());
     } catch (err) {
@@ -181,7 +188,7 @@ export default function SignInFlow() {
 
   const requestReset = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!/^\S+@\S+\.\S+$/.test(resetEmail.trim())) return setError("Enter the email on your account.");
+    if (!EMAIL_RE.test(resetEmail.trim())) return setError("Enter the email on your account.");
     setBusy(true); setError("");
     try { await sendResetCode(); setResetCode(""); go("reset-code"); }
     catch (err) { setError(errorMessage(err, "We couldn't send the code. Try again.")); }
@@ -245,7 +252,11 @@ export default function SignInFlow() {
             <Field label="Password">
               <PasswordInput withShow value={password} onChange={e => setPassword(e.target.value)} autoComplete="current-password" />
             </Field>
-            <div className="flex w-full justify-end pb-[12px] pt-[8px]">
+            <div className="flex w-full items-center justify-between gap-[12px] pb-[12px] pt-[8px]">
+              <label className="flex cursor-pointer items-center gap-[8px] text-[13.5px] leading-[20.925px] text-[#3d485c]">
+                <input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)} className="size-[16px] accent-[#8a3ffc]" />
+                Keep me signed in for 7 days
+              </label>
               <TextLink onClick={() => { setResetEmail(identifier.includes("@") ? identifier.trim() : ""); go("reset-email"); }}>Forgot password?</TextLink>
             </div>
             <PrimaryButton type="submit" disabled={busy}>{busy ? "Signing in…" : "Sign in"}</PrimaryButton>

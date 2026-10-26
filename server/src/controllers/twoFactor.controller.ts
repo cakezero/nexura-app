@@ -2,7 +2,7 @@ import QRCode from "qrcode";
 import logger from "@/config/logger";
 import { hubAdmin, touchHubAdminActivity } from "@/models/hub.model";
 import { BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_FOUND, OK, UNAUTHORIZED } from "@/utils/status.utils";
-import { JWT, getRefreshToken } from "@/utils/utils";
+import { JWT, getRefreshToken, hubSessionTtl } from "@/utils/utils";
 import { matchTotp, newTotpSecret, otpauthUrl } from "@/utils/totp";
 import { open, seal } from "@/utils/secretBox";
 
@@ -89,7 +89,7 @@ export const verifyTwoFactorLogin = async (req: GlobalRequest, res: GlobalRespon
     res.cookie("hubRefreshToken", getRefreshToken(String(admin._id)), { httpOnly: true, secure: true, maxAge: 30 * 24 * 60 * 60 });
     res.status(OK).json({
       message: "signed in!",
-      accessToken: JWT.sign(String(admin._id)),
+      accessToken: JWT.sign(String(admin._id), hubSessionTtl(req.body?.remember)),
       admin: { _id: admin._id, name: admin.name, email: admin.email, role: admin.role, hub: admin.hub },
     });
   } catch (error) {

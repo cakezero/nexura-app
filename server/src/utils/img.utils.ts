@@ -35,7 +35,8 @@ export const uploadImg = async ({
     return `https://placehold.co/256x256/7c3aed/ffffff?text=${encodeURIComponent(folder)}`;
   }
   try {
-    const image = sharp(file);
+    // Stored as JPEG: transparent areas (logos) become white, not black
+    const image = sharp(file).flatten({ background: "#ffffff" });
 
     let quality = 80;
 

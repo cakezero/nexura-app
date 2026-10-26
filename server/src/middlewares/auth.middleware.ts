@@ -72,7 +72,13 @@ export const authenticateHubAdmin = async (req: GlobalRequest, res: GlobalRespon
 			return;
     }
 
-		const decoded = await JWT.verify(authHeader.split(" ")[1]!) as decodedDataType;
+		const token = authHeader.split(" ")[1]!;
+		if (await isTokenRevoked(token)) {
+			res.status(BAD_REQUEST).json({ error: "admin is logged out, kindly login again" });
+			return;
+		}
+
+		const decoded = await JWT.verify(token) as decodedDataType;
 		const { id } = decoded;
 
     const superAdminExists = await hubAdmin.findById(id);

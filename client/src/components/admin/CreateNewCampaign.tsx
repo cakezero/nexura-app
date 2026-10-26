@@ -1,4 +1,5 @@
 "use client";
+import { NexuraScoreInfoButton } from "@/components/studio/NexuraScoreExplainer";
 import React, { useState, useRef, useEffect } from "react";
 import { scrollToTop } from "@/lib/scrollToTop";
 import SignInPrompt from "@/components/studio/SignInPrompt";
@@ -1753,7 +1754,7 @@ export default function CreateNewCampaign({
                       <span style={{ fontSize: 13, fontWeight: 500, color: "#1c2533", textAlign: "center" }}>
                         <span style={{ color: "#8b3efe" }}>Click to upload </span>OR you can drag and drop
                       </span>
-                      <span style={{ fontSize: 13, fontWeight: 300, color: "rgba(28,37,51,0.5)", textAlign: "center" }}>SVG, PNG, JPG or GIF (max. 5MB)</span>
+                      <span style={{ fontSize: 13, fontWeight: 300, color: "rgba(28,37,51,0.5)", textAlign: "center" }}>1200 × 630px landscape. SVG, PNG, JPG or GIF, up to 5 MB</span>
                     </div>
                   </>
                 )}
@@ -1766,7 +1767,7 @@ export default function CreateNewCampaign({
               ) : (
                 <span style={{ fontSize: 12.5, color: "#69728a", lineHeight: "18.75px", paddingLeft: 6 }}>
                   {coverPreview
-                    ? "Click the image to replace it. Wide banner images look best; edges may be cropped to fit."
+                    ? "Click the image to replace it. Use 1200 × 630px with the main subject in the middle: campaign cards and pages crop the edges to fit."
                     : mode === "live"
                     ? "This campaign has no saved cover image yet. Add one here and it's saved with your changes, so you only do it once."
                     : "Use a wide banner image for best results: at least 1200 × 300 px, ideally 1600 × 400 px (4:1). Keep logos and text near the centre, as the edges may be cropped."}
@@ -2521,7 +2522,7 @@ export default function CreateNewCampaign({
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16, paddingTop: 16 }}>
                       {/* Field 1: the requirement */}
                       <div style={{ display: "flex", flexDirection: "column", gap: 7, minWidth: 0 }}>
-                        {label("Nexura Score Requirement")}
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>{label("Nexura Score Requirement")}<NexuraScoreInfoButton /></div>
                         <div style={{ ...box, position: "relative" as const }}>
                           <input inputMode="numeric" aria-label="Nexura score requirement percent" value={retentionRequirement}
                             onChange={e => { const v = e.target.value.replace(/[^0-9]/g, ""); setRetentionRequirement(v === "" ? "" : String(Math.min(100, Number(v)))); }}

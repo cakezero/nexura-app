@@ -1,4 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
+import { NexuraScoreInfoButton } from "@/components/studio/NexuraScoreExplainer";
 import {
   ArrowLeft,
   ArrowRight,
@@ -1287,7 +1288,7 @@ function RewardsStep(props: {
         ) : (
           <p className="mt-3 rounded-full bg-[#E9FBF3] px-4 py-2 text-[13px] text-[#0F9F6E]">Your reward pool of {money(props.participantPool)} can serve up to {props.capacity.toLocaleString("en-US")} recipients at the $2 per stage minimum.</p>
         )}
-        <label className="mt-4 block text-[13px] font-medium">Nexura Score Requirement</label>
+        <div className="mt-4 flex items-center gap-[6px]"><label className="block text-[13px] font-medium">Nexura Score Requirement</label><NexuraScoreInfoButton /></div>
         <div className="mt-2 flex h-12 max-w-[180px] items-center rounded-full bg-[#F4F1FC] px-4">
           <input type="number" min={0} max={100} value={props.retentionReq} onChange={(e) => props.onRetention(Number(e.target.value))} className="w-full bg-transparent outline-none" />
           <span>%</span>

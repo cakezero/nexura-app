@@ -11,11 +11,13 @@ import { useUrlState } from "../../hooks/use-url-state";
 import { useLiveRefresh } from "../../hooks/use-live-refresh";
 import StudioDropdown from "../studio/StudioDropdown";
 import { OPEN_PROPOSALS_EVENT } from "../studio/useProposalNotifications";
+import { RECOMMENDED_SIGNERS } from "../studio/SignerReminder";
+import { EMAIL_RE } from "@/lib/email";
 import {
   type BackendRole, type GovernanceSnapshot, type Proposal, type ProposalAction, type ProposalStatus, type SignedPayload,
   type StudioRole, type TeamMember, type Vote,
-  PERMISSION_COUNT, PERMISSION_GROUPS, ROLE_LABEL, ROLE_SUMMARY, presenceOf, timeAgo,
-  EMPTY_SNAPSHOT, apiHost, assignableRoles, isGovernanceUnavailable, can, canManageMember, fetchGovernance, formatDateTime, minApprovalThreshold, newProposalId,
+  PERMISSION_COUNT, PERMISSION_GROUPS, ROLE_LABEL, ROLE_SUMMARY, SIGNER_PERMISSIONS, presenceOf, timeAgo,
+  EMPTY_SNAPSHOT, apiHost, assignableRoles, isGovernanceUnavailable, can, canManageMember, fetchGovernance, formatDateTime, requiredApprovals, newProposalId,
   notifyGovernanceChanged, permissionCount, studioRole, submitExecution, submitProposal, submitVote, tally,
 } from "../../lib/adminGovernance";
 
@@ -33,6 +35,12 @@ type Tab = "team" | "proposals" | "roles" | "signers";
 const TABS: Tab[] = ["team", "proposals", "roles", "signers"];
 type ProposalFilter = ProposalStatus | "all";
 const FILTERS: ProposalFilter[] = ["pending", "executed", "rejected", "all"];
+const EMPTY_PROPOSALS: Record<ProposalFilter, string> = {
+  pending: "Nothing waiting for approval",
+  executed: "Nothing approved yet",
+  rejected: "Nothing rejected",
+  all: "No proposals yet",
+};
 const ROLE_TABS: StudioRole[] = ["owner", "superadmin", "admin"];
 
 const ICON = "/admin-management";
@@ -240,6 +248,7 @@ function explainExecutionError(raw: string): string {
 
 const thStyle = "px-[12px] py-[10px] text-left text-[12px] font-semibold leading-[18.6px] tracking-[0.36px] uppercase text-[#69728a] border-b-[0.833px] border-solid border-[rgba(28,37,51,0.09)] whitespace-nowrap";
 const tdStyle = "p-[12px] h-[70px] border-b-[0.833px] border-solid border-[rgba(28,37,51,0.09)] align-middle";
+const thCenter = thStyle.replace("text-left", "text-center");
 
 // ─── Main component ──────────────────────────────────────────────────────────
 export default function AdminManagement() {
@@ -263,7 +272,6 @@ export default function AdminManagement() {
   const [roleTab, setRoleTab] = useUrlState<StudioRole>("role", "owner", ROLE_TABS);
   const [addOpen, setAddOpen] = useState(false);
   const [signerDialog, setSignerDialog] = useState<SignerDialogState | null>(null);
-  const [rulesOpen, setRulesOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
   const [managing, setManaging] = useState<TeamMember | null>(null);
   const [toastMsg, setToastMsg] = useState<{ tone: "executed" | "rejected"; title: string; body: string } | null>(null);
@@ -314,6 +322,9 @@ export default function AdminManagement() {
   const roleOf = useCallback((m: TeamMember) => studioRole(m, ownerId), [ownerId]);
   const me = admins.find(a => a._id === meId);
   const myRole: StudioRole = me ? roleOf(me) : ((getStoredProjectInfo()?.role === "superadmin") ? "superadmin" : "admin");
+  const tabs =([["team", "Team"], ["proposals", "Proposals"], ["roles", "Roles & permissions"], ["signers", "Signers"]] as [Tab, string][])
+    .filter(([id]) => id !== "proposals" || myRole !== "admin");
+  useEffect(() => { if (me && myRole === "admin" && tab === "proposals") setTab("team"); }, [me, myRole, tab, setTab]);
 
   const sortedAdmins = useMemo(() => {
     const rank: Record<StudioRole, number> = { owner: 0, superadmin: 1, admin: 2 };
@@ -477,7 +488,6 @@ export default function AdminManagement() {
     all: gov.proposals.length,
   };
   const visibleProposals = gov.proposals.filter(p => filter === "all" || p.status === filter);
-  const pendingThresholdProposal = gov.proposals.some(p => p.status === "pending" && p.action.kind === "thresholds");
 
   // Signer candidates: Super Admins who aren't signers yet and have no signer change waiting
   const pendingSignerChange = (adminId: string) =>
@@ -488,22 +498,8 @@ export default function AdminManagement() {
   const pendingNominations = gov.proposals.filter(p => p.status === "pending" && p.action.kind === "signer" && p.action.add);
   const nomineeOptions = sortedAdmins.filter(m => roleOf(m) === "superadmin" && !signerIds.has(m._id) && !pendingSignerChange(m._id));
 
-  const proposeThresholds = (approval: number, rejection: number) => {
-    if (approval === thresholds.approval && rejection === thresholds.rejection) return;
-    createProposal(
-      `Change approval rules to ${approval} approve / ${rejection} reject`,
-      [
-        approval !== thresholds.approval ? `Approvals to pass ${thresholds.approval} → ${approval}` : null,
-        rejection !== thresholds.rejection ? `Rejections to block ${thresholds.rejection} → ${rejection}` : null,
-      ].filter(Boolean).join(" · "),
-      { kind: "thresholds", approval, rejection, prevApproval: thresholds.approval, prevRejection: thresholds.rejection },
-    );
-  };
-
   const roleMembers = (r: StudioRole) => sortedAdmins.filter(a => roleOf(a) === r);
-  const signerRuleText = thresholds.approval >= signers.length
-    ? `all ${signers.length} signer${signers.length === 1 ? "" : "s"} must approve`
-    : `${thresholds.approval} of ${signers.length} signers must approve`;
+  const signerRuleText = `${thresholds.approval} of ${signers.length} signer${signers.length === 1 ? "" : "s"} must approve`;
 
   return (
     <div className="min-h-full bg-[#f7f5ff] text-[#1c2533]" style={FONT}>
@@ -527,7 +523,7 @@ export default function AdminManagement() {
 
         {/* Tabs */}
         <div role="tablist" aria-label="Admin management sections" className="flex gap-[2px] h-[45px] mt-[20px] border-b-[0.833px] border-solid border-[rgba(28,37,51,0.09)] overflow-x-auto">
-          {([["team", "Team"], ["proposals", "Proposals"], ["roles", "Roles & permissions"], ["signers", "Signers"]] as [Tab, string][]).map(([id, label]) => (
+          {tabs.map(([id, label]) => (
             <button
               key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}
               className={`px-[18px] py-[12px] text-[14px] font-semibold whitespace-nowrap border-b-[1.667px] border-solid ${tab === id ? "border-[#8a3ffc] text-[#1c2533]" : "border-transparent text-[#69728a] hover:text-[#1c2533]"}`}
@@ -561,10 +557,10 @@ export default function AdminManagement() {
               <table className="w-full min-w-[860px] border-collapse">
                 <thead>
                   <tr>
-                    <th className={`${thStyle} w-[25%]`}>Member</th>
-                    <th className={`${thStyle} w-[22%]`}>Role</th>
-                    <th className={`${thStyle} w-[22%]`}>Status</th>
-                    <th className={thStyle}>Joined</th>
+                    <th className={`${thCenter} w-[25%]`}>Member</th>
+                    <th className={`${thCenter} w-[22%]`}>Role</th>
+                    <th className={`${thCenter} w-[22%]`}>Status</th>
+                    <th className={thCenter}>Joined</th>
                     <th className={thStyle}><span className="sr-only">Actions</span></th>
                   </tr>
                 </thead>
@@ -582,7 +578,7 @@ export default function AdminManagement() {
                     return (
                       <tr key={m._id}>
                         <td className={tdStyle}>
-                          <div className="flex items-center gap-[8px]">
+                          <div className="flex items-center justify-center gap-[8px]">
                             <span className="grid place-items-center size-[36px] rounded-full bg-[rgba(138,63,252,0.1)] text-[13.5px] font-bold text-[#8a3ffc] shrink-0">{(m.name || "?").charAt(0).toUpperCase()}</span>
                             <div className="min-w-0">
                               <div className="flex items-center gap-[6px]">
@@ -594,12 +590,12 @@ export default function AdminManagement() {
                           </div>
                         </td>
                         <td className={tdStyle}>
-                          <div className="flex gap-[8px]">
+                          <div className="flex justify-center gap-[8px]">
                             <Pill tone="violet">{ROLE_LABEL[role]}</Pill>
                             {signerIds.has(m._id) && <Pill tone="green">Signer</Pill>}
                           </div>
                         </td>
-                        <td className={tdStyle}>
+                        <td className={`${tdStyle} text-center`}>
                           {(() => {
                             // Older API responses have no activity time; joining is then the latest thing we know
                             const presence = (isMe ? { online: true, label: "Online now" } : presenceOf(m.lastActiveAt ?? m.createdAt, now))
@@ -607,7 +603,7 @@ export default function AdminManagement() {
                             return <Pill tone={presence.online ? "green" : "grey"} dot>{presence.label}</Pill>;
                           })()}
                         </td>
-                        <td className={`${tdStyle} text-[13.5px] leading-[20.9px] text-[#69728a] whitespace-nowrap`}>{formatDateTime(m.createdAt)}</td>
+                        <td className={`${tdStyle} text-center text-[13.5px] leading-[20.9px] text-[#69728a] whitespace-nowrap`}>{formatDateTime(m.createdAt)}</td>
                         <td className={`${tdStyle} text-right`}>
                           {manageable && (
                             <button onClick={() => setManaging(m)} className="inline-flex items-center gap-[8px] min-h-[34px] px-[12px] py-[7px] rounded-[8px] text-[13px] font-semibold text-[#3d485c] hover:bg-[rgba(138,63,252,0.06)]">
@@ -649,10 +645,10 @@ export default function AdminManagement() {
                 <table className="w-full min-w-[760px] border-collapse">
                   <thead>
                     <tr>
-                      <th className={thStyle}>Invited email address</th>
-                      <th className={thStyle}>Role</th>
-                      <th className={thStyle}>Status</th>
-                      <th className={thStyle}>Created</th>
+                      <th className={thCenter}>Invited email address</th>
+                      <th className={thCenter}>Role</th>
+                      <th className={thCenter}>Status</th>
+                      <th className={thCenter}>Created</th>
                       <th className={thStyle}><span className="sr-only">Actions</span></th>
                     </tr>
                   </thead>
@@ -662,12 +658,12 @@ export default function AdminManagement() {
                       const canTouch = canManageMember(myRole, invRole);
                       return (
                         <tr key={inv._id}>
-                          <td className={`${tdStyle} h-[54px]`}>
+                          <td className={`${tdStyle} h-[54px] text-center`}>
                             <span className={`inline-flex px-[8px] py-[3px] rounded-[40px] bg-[#f4f1fc] border-[0.833px] border-solid border-[rgba(28,37,51,0.09)] text-[12.5px] text-[#3d485c] ${MONO}`}>{inv.email}</span>
                           </td>
-                          <td className={`${tdStyle} h-[54px]`}><Pill tone="violet">{ROLE_LABEL[invRole]}</Pill></td>
-                          <td className={`${tdStyle} h-[54px]`}><Pill tone="amber" dot>Pending — no access yet</Pill></td>
-                          <td className={`${tdStyle} h-[54px] text-[13.5px] text-[#69728a] whitespace-nowrap`}>{formatDateTime(inv.createdAt)}</td>
+                          <td className={`${tdStyle} h-[54px] text-center`}><Pill tone="violet">{ROLE_LABEL[invRole]}</Pill></td>
+                          <td className={`${tdStyle} h-[54px] text-center`}><Pill tone="amber" dot>Pending — no access yet</Pill></td>
+                          <td className={`${tdStyle} h-[54px] text-center text-[13.5px] text-[#69728a] whitespace-nowrap`}>{formatDateTime(inv.createdAt)}</td>
                           <td className={`${tdStyle} h-[54px] text-right`}>
                             {canTouch && (
                               <div className="inline-flex gap-[8px]">
@@ -693,8 +689,7 @@ export default function AdminManagement() {
         {/* ─── PROPOSALS ────────────────────────────────────────────────── */}
         {tab === "proposals" && (
           <div className="mt-[18px]">
-            <InfoBanner>Edits and sensitive actions need approval from your Owners and Super Admins before they take effect.</InfoBanner>
-            <div className="pt-[24px]">
+            <div>
               <SegmentedTabs<ProposalFilter>
                 label="Proposal status" value={filter} onChange={setFilter}
                 items={[
@@ -712,8 +707,10 @@ export default function AdminManagement() {
                   <span className="grid place-items-center size-[56px] rounded-[16px] bg-[rgba(138,63,252,0.1)]">
                     <img src={`${ICON}/proposals-empty.svg`} alt="" className="size-[26px]" />
                   </span>
-                  <p className="pt-[16px] text-[18px] font-semibold leading-[20.7px] tracking-[-0.36px]">No proposals here</p>
-                  <p className="pt-[6px] pb-[18px] text-[13.5px] leading-[20.9px] text-[#69728a]">Nothing is waiting for approval. Edit a campaign, or propose closing or disabling one, from its dashboard.</p>
+                  <p className="pt-[16px] text-[18px] font-semibold leading-[20.7px] tracking-[-0.36px]">{EMPTY_PROPOSALS[filter]}</p>
+                  {(filter === "pending" || filter === "all") && (
+                    <p className="pt-[6px] pb-[18px] text-[13.5px] leading-[20.9px] text-[#69728a]">Changes to your hub wait here until your signers approve them.</p>
+                  )}
                 </div>
               </div>
             ) : (
@@ -830,6 +827,19 @@ export default function AdminManagement() {
                 )}
               </div>
 
+              {!loading && signers.length > 0 && signers.length < RECOMMENDED_SIGNERS && (
+                <div className="mt-[16px] flex gap-[12px] items-start px-[16px] py-[14px] rounded-[24px] bg-[rgba(245,158,11,0.1)] border-[0.833px] border-solid border-[rgba(194,124,0,0.3)]">
+                  <img src={`${ICON}/warning.svg`} alt="" className="size-[18px] mt-px shrink-0" />
+                  <p className="text-[13px] leading-[20.15px] text-[#8a5a00]">
+                    <b className="font-bold">We recommend at least {RECOMMENDED_SIGNERS} signers. It&apos;s up to you.</b>{" "}
+                    {signers.length === 1
+                      ? "Right now 1 signer can approve any change alone, so if that wallet is compromised, nothing stops a harmful change."
+                      : "Right now both signers must approve every change, so if one wallet is compromised or lost, nothing can be approved and it can't be replaced."}{" "}
+                    With {RECOMMENDED_SIGNERS} or more, a compromised wallet can&apos;t approve anything alone, and the other signers can reject its proposals and replace it.
+                  </p>
+                </div>
+              )}
+
               <ul className="mt-[16px] rounded-[24px] border-[0.833px] border-solid border-[rgba(28,37,51,0.09)] overflow-hidden">
                 {signers.map((m, i) => {
                   const role = roleOf(m);
@@ -885,33 +895,14 @@ export default function AdminManagement() {
 
             {/* Required confirmations */}
             <section className="bg-white border-[0.833px] border-solid border-[rgba(28,37,51,0.09)] rounded-[40px] p-[20px] md:p-[24px]">
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <div className="max-w-[620px]">
-                  <h3 className="text-[16px] font-semibold leading-[18.4px] tracking-[-0.32px]">Required confirmations</h3>
-                  <p className="pt-[6px] text-[13px] leading-[20.15px] text-[#69728a]">
-                    Any proposal requires the confirmation of{" "}
-                    <b className="font-bold text-[#1c2533]">{thresholds.approval} out of {signers.length} signer{signers.length === 1 ? "" : "s"}</b>, and is rejected once{" "}
-                    <b className="font-bold text-[#1c2533]">{thresholds.rejection}</b> reject it. Payments never need confirmation.
-                  </p>
-                </div>
-                {canPropose && signers.length >= 2 && (
-                  <GhostButton onClick={() => setRulesOpen(true)} disabled={pendingThresholdProposal}>Change</GhostButton>
-                )}
-              </div>
+              <h3 className="text-[16px] font-semibold leading-[18.4px] tracking-[-0.32px]">Required confirmations</h3>
+              <p className="pt-[6px] text-[13px] leading-[20.15px] font-semibold text-[#1c2533]">{signerRuleText}</p>
               <div className="flex items-center gap-[10px] pt-[16px]">
                 <div className="flex-1 h-[8px] rounded-[20px] bg-[#efeafb] overflow-hidden">
                   <div className="h-full rounded-[20px] bg-[#8a3ffc]" style={{ width: `${(thresholds.approval / Math.max(1, signers.length)) * 100}%` }} />
                 </div>
                 <span className={`text-[12.5px] text-[#1c2533] ${MONO}`}>{thresholds.approval}/{signers.length}</span>
               </div>
-              {signers.length < 2 && (
-                <p className="pt-[12px] text-[12.5px] leading-[19.4px] text-[#69728a]">With one signer, its confirmation is enough. Add a signer to require a second confirmation.</p>
-              )}
-              {pendingThresholdProposal && (
-                <button onClick={() => { setTab("proposals"); setFilter("pending"); }} className="mt-[12px] inline-flex">
-                  <Pill tone="amber" dot>A change to the required confirmations is pending · View</Pill>
-                </button>
-              )}
             </section>
             {/* Ownership */}
             {(() => {
@@ -947,8 +938,12 @@ export default function AdminManagement() {
         {/* ─── ROLES & PERMISSIONS ──────────────────────────────────────── */}
         {tab === "roles" && (
           <div className="mt-[18px]">
-            <InfoBanner>Edits and sensitive actions need approval from your Owners and Super Admins before they take effect.</InfoBanner>
-            <div className="pt-[24px]">
+            {myRole === "admin" && (
+              <div className="pb-[24px]">
+                <InfoBanner>Edits and sensitive actions need approval from your Owner and signers before they take effect.</InfoBanner>
+              </div>
+            )}
+            <div>
               <SegmentedTabs<StudioRole>
                 label="Role" value={roleTab} onChange={setRoleTab}
                 items={[{ id: "owner", label: "Owner" }, { id: "superadmin", label: "Super Admin" }, { id: "admin", label: "Admin" }]}
@@ -989,7 +984,10 @@ export default function AdminManagement() {
                       return (
                         <li key={item.id} className="flex items-center gap-[8px] py-[9px] border-b-[0.833px] border-solid border-[rgba(28,37,51,0.09)]">
                           <img src={`${ICON}/${allowed ? "perm-allowed" : "perm-locked"}.svg`} alt="" className="size-[22px] shrink-0" />
-                          <span className="flex-1 text-[13.5px] leading-[20.9px]">{item.label}</span>
+                          <span className="flex-1 text-[13.5px] leading-[20.9px]">
+                            {item.label}
+                            {roleTab === "superadmin" && SIGNER_PERMISSIONS.has(item.id) && <span className="text-[#69728a]"> · if added as a signer</span>}
+                          </span>
                           <span className={`text-[12px] font-semibold leading-[18.6px] whitespace-nowrap ${allowed ? "text-[#00a87c]" : "text-[#98a0b4]"}`}>{allowed ? "Allowed" : "Not allowed"}</span>
                         </li>
                       );
@@ -1002,7 +1000,7 @@ export default function AdminManagement() {
                 {roleTab === "owner"
                   ? `Owners are always signers. Edits and closing or disabling a campaign become proposals that ${signerRuleText}. Payments don't need approval.`
                   : roleTab === "superadmin"
-                    ? `Any Super Admin can propose adding, removing or replacing a signer, but votes only once added as a signer. Edits and closing or disabling a campaign become proposals that ${signerRuleText}. Payments don't need approval.`
+                    ? `Edits and closing or disabling a campaign become proposals that ${signerRuleText}. Payments don't need approval.`
                     : `Admins are never signers. Edits and closing or disabling a campaign become proposals that ${signerRuleText}. Payments don't need approval.`}
               </InfoBanner>
             </div>
@@ -1018,13 +1016,13 @@ export default function AdminManagement() {
           currentApproval={thresholds.approval}
           onClose={() => setSignerDialog(null)}
           onGoToTeam={() => { setSignerDialog(null); setTab("team"); }}
-          onPropose={(picked, threshold) => {
+          onPropose={picked => {
             const d = signerDialog;
             setSignerDialog(null);
             if (d.mode === "add" && picked) {
-              createProposal(`Add ${picked.name} as a signer`, `Add ${picked.name} (Super Admin) · required confirmations ${thresholds.approval} → ${threshold} of ${signers.length + 1}`, { kind: "signer", adminId: picked._id, adminName: picked.name, add: true, threshold });
+              createProposal(`Add ${picked.name} as a signer`, `Add ${picked.name} (Super Admin) · ${requiredApprovals(signers.length + 1)} of ${signers.length + 1} must approve`, { kind: "signer", adminId: picked._id, adminName: picked.name, add: true });
             } else if (d.mode === "remove") {
-              createProposal(`Remove ${d.target.name} as a signer`, `Remove ${d.target.name} · required confirmations ${thresholds.approval} → ${threshold} of ${signers.length - 1}`, { kind: "signer", adminId: d.target._id, adminName: d.target.name, add: false, threshold });
+              createProposal(`Remove ${d.target.name} as a signer`, `Remove ${d.target.name} · ${requiredApprovals(signers.length - 1)} of ${signers.length - 1} must approve`, { kind: "signer", adminId: d.target._id, adminName: d.target.name, add: false });
             } else if (d.mode === "replace" && picked) {
               createProposal(`Replace ${d.target.name} with ${picked.name}`, `Signer ${d.target.name} → ${picked.name}`, { kind: "replaceSigner", oldId: d.target._id, oldName: d.target.name, newId: picked._id, newName: picked.name });
             }
@@ -1043,16 +1041,6 @@ export default function AdminManagement() {
             setTransferOpen(false);
             createProposal(`Transfer ownership to ${m.name}`, `Owner ${me?.name ?? "you"} → ${m.name} (Super Admin)`, { kind: "transferOwnership", newOwnerId: m._id });
           }}
-        />
-      )}
-
-      {rulesOpen && (
-        <ApprovalRulesDialog
-          signerCount={signers.length}
-          current={thresholds}
-          minApproval={minApprovalThreshold(signers.length)}
-          onClose={() => setRulesOpen(false)}
-          onPropose={(a, r) => { setRulesOpen(false); proposeThresholds(a, r); }}
         />
       )}
 
@@ -1099,7 +1087,7 @@ export default function AdminManagement() {
 // ─── Dialogs ────────────────────────────────────────────────────────────────
 const ROLE_HINT: Record<BackendRole, string> = {
   admin: "Validates tasks manually. Cannot create, publish, edit, disable, close or fund campaigns, and cannot make payments",
-  superadmin: "Creates, edits, publishes, funds and manages campaigns, makes payments and edits the project profile",
+  superadmin: "Creates, publishes and funds campaigns, makes payments and edits the project profile",
 };
 
 function StatTile({ label, value, suffix, hint }: { label: string; value: string; suffix?: string; hint?: string }) {
@@ -1117,16 +1105,13 @@ function StatTile({ label, value, suffix, hint }: { label: string; value: string
 
 type SignerDialogState = { mode: "add" } | { mode: "remove"; target: TeamMember } | { mode: "replace"; target: TeamMember };
 
-/** Safe-style signer change: add (with new threshold), remove (with new threshold) or replace. */
 function SignerChangeDialog({ state, candidates, signerCount, currentApproval, onClose, onGoToTeam, onPropose }: {
   state: SignerDialogState; candidates: TeamMember[]; signerCount: number; currentApproval: number;
   onClose: () => void; onGoToTeam: () => void;
-  onPropose: (picked: TeamMember | null, threshold: number) => void;
+  onPropose: (picked: TeamMember | null) => void;
 }) {
   const nextCount = state.mode === "add" ? signerCount + 1 : state.mode === "remove" ? signerCount - 1 : signerCount;
-  const minT = minApprovalThreshold(nextCount);
   const [picked, setPicked] = useState<string>(candidates[0]?._id ?? "");
-  const [threshold, setThreshold] = useState(Math.min(nextCount, Math.max(minT, currentApproval)));
   const chosen = candidates.find(c => c._id === picked) ?? null;
   const needsPick = state.mode !== "remove";
   const title = state.mode === "add" ? "Add signer" : state.mode === "remove" ? `Remove ${state.target.name}` : `Replace ${state.target.name}`;
@@ -1158,7 +1143,7 @@ function SignerChangeDialog({ state, candidates, signerCount, currentApproval, o
       title={title} onClose={onClose}
       footer={<>
         <GhostButton onClick={onClose}>Cancel</GhostButton>
-        <PrimaryButton glow disabled={needsPick && !chosen} onClick={() => onPropose(chosen, threshold)}>
+        <PrimaryButton glow disabled={needsPick && !chosen} onClick={() => onPropose(chosen)}>
           {state.mode === "remove" ? "Propose removal" : state.mode === "replace" ? "Propose replacement" : "Propose signer"}
         </PrimaryButton>
       </>}
@@ -1199,19 +1184,9 @@ function SignerChangeDialog({ state, candidates, signerCount, currentApproval, o
         </>
       )}
 
-      {state.mode !== "replace" && (
-        <div className="pt-[16px]">
-          <Stepper
-            label="Required confirmations"
-            hint={`Out of ${nextCount} signer${nextCount === 1 ? "" : "s"} after this change`}
-            value={threshold} min={minT} max={nextCount} onChange={setThreshold}
-          />
-        </div>
-      )}
-
       <div className="mt-[14px] px-[16px] py-[12px] rounded-[20px] bg-[rgba(138,63,252,0.1)] border-[0.833px] border-solid border-[rgba(138,63,252,0.24)] text-[13px] leading-[20.15px] text-[#6e2bd8]">
         This creates a proposal. It takes effect once <b>{currentApproval} of {signerCount}</b> current signer{signerCount === 1 ? "" : "s"} confirm
-        {state.mode !== "replace" && <>, then any proposal needs <b>{threshold} out of {nextCount}</b></>}.
+        {state.mode !== "replace" && <>, then any proposal needs <b>{requiredApprovals(nextCount)} out of {nextCount}</b></>}.
       </div>
     </Modal>
   );
@@ -1282,53 +1257,6 @@ function TransferOwnershipDialog({ candidates, approvalsNeeded, signerCount, onC
   );
 }
 
-function Stepper({ label, hint, value, min, max, onChange }: { label: string; hint: string; value: number; min: number; max: number; onChange: (n: number) => void }) {
-  const btn = "grid place-items-center size-[34px] rounded-full bg-white border-[0.833px] border-solid border-[rgba(28,37,51,0.15)] text-[18px] font-semibold text-[#1c2533] hover:bg-[#efeafb] disabled:opacity-40 disabled:cursor-not-allowed";
-  return (
-    <div className="flex items-center justify-between gap-4 px-[18px] py-[12px] rounded-[24px] bg-[#f7f4fe] border-[0.833px] border-solid border-[rgba(28,37,51,0.06)]">
-      <div className="min-w-0">
-        <p className="text-[13.5px] font-semibold text-[#1c2533]">{label}</p>
-        <p className="text-[12px] leading-[18px] text-[#69728a]">{hint}</p>
-      </div>
-      <div className="flex items-center gap-[10px] shrink-0">
-        <button type="button" aria-label={`Decrease ${label}`} className={btn} disabled={value <= min} onClick={() => onChange(value - 1)}>−</button>
-        <span className="w-[28px] text-center text-[20px] font-extrabold text-[#8a3ffc]">{value}</span>
-        <button type="button" aria-label={`Increase ${label}`} className={btn} disabled={value >= max} onClick={() => onChange(value + 1)}>+</button>
-      </div>
-    </div>
-  );
-}
-
-function ApprovalRulesDialog({ signerCount, current, minApproval, onClose, onPropose }: {
-  signerCount: number; current: { approval: number; rejection: number }; minApproval: number;
-  onClose: () => void; onPropose: (approval: number, rejection: number) => void;
-}) {
-  const [approval, setApproval] = useState(current.approval);
-  const [rejection, setRejection] = useState(current.rejection);
-  const changed = approval !== current.approval || rejection !== current.rejection;
-
-  return (
-    <Modal
-      title="Edit approval rules" onClose={onClose}
-      footer={<>
-        <GhostButton onClick={onClose}>Cancel</GhostButton>
-        <PrimaryButton glow disabled={!changed} onClick={() => onPropose(approval, rejection)}>Propose change</PrimaryButton>
-      </>}
-    >
-      <p className="text-[13.5px] leading-[21.6px] text-[#3d485c]">
-        Changing the rules is itself a proposal, decided under the current rules ({current.approval} to pass, {current.rejection} to block).
-      </p>
-      <div className="flex flex-col gap-[10px] pt-[16px]">
-        <Stepper label="Approvals to pass" hint={`At least ${minApproval}, at most ${signerCount}`} value={approval} min={minApproval} max={signerCount} onChange={setApproval} />
-        <Stepper label="Rejections to block" hint={`At least 1, at most ${signerCount}`} value={rejection} min={1} max={signerCount} onChange={setRejection} />
-      </div>
-      <div className="mt-[14px] px-[16px] py-[12px] rounded-[20px] bg-[rgba(138,63,252,0.1)] border-[0.833px] border-solid border-[rgba(138,63,252,0.24)] text-[13px] leading-[20.15px] text-[#6e2bd8]">
-        A proposal will pass at <b>{approval} of {signerCount}</b> approvals and be blocked at <b>{rejection} of {signerCount}</b> rejections. Below both, it stays pending.
-      </div>
-    </Modal>
-  );
-}
-
 function AddAdminDialog({ hubName, roles, existingEmails, onClose, onPropose }: {
   hubName: string; roles: BackendRole[]; existingEmails: string[];
   onClose: () => void; onPropose: (email: string, role: BackendRole) => void;
@@ -1340,7 +1268,7 @@ function AddAdminDialog({ hubName, roles, existingEmails, onClose, onPropose }: 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const clean = email.trim().toLowerCase();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean)) { setError("Enter a valid email address."); return; }
+    if (!EMAIL_RE.test(clean)) { setError("Enter a valid email address."); return; }
     if (existingEmails.some(x => x.toLowerCase() === clean)) { setError("This email is already on the team or has a pending invitation."); return; }
     onPropose(clean, role);
   };

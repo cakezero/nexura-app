@@ -36,9 +36,39 @@ export function getStoredProjectInfo(): Record<string, unknown> | null {
   }
 }
 
-export function storeProjectSession(token: string, info: Record<string, unknown>) {
+// ─── "Keep me signed in" ─────────────────────────────────────────────────────
+const SESSION_ONLY_KEY = "nexura-project:session-only";
+const ALIVE_COOKIE = "nexura-studio-alive";
+
+function browserSessionAlive(): boolean {
+  try { return document.cookie.split("; ").includes(`${ALIVE_COOKIE}=1`); } catch { return false; }
+}
+
+function setBrowserSessionCookie(on: boolean) {
+  try {
+    const secure = location.protocol === "https:" ? "; Secure" : "";
+    document.cookie = `${ALIVE_COOKIE}=${on ? "1" : ""}; Path=/; SameSite=Strict${on ? "" : "; Max-Age=0"}${secure}`;
+  } catch { /* cookies unavailable */ }
+}
+
+if (typeof window !== "undefined") {
+  try {
+    if (localStorage.getItem(SESSION_ONLY_KEY) && !browserSessionAlive()) {
+      for (const k of ["nexura-project:token", "nexura-project:info", "nexura:proj-token", SESSION_ONLY_KEY]) localStorage.removeItem(k);
+    }
+  } catch { /* storage unavailable */ }
+}
+
+export function storeProjectSession(token: string, info: Record<string, unknown>, remember?: boolean) {
   localStorage.setItem("nexura-project:token", token);
   localStorage.setItem("nexura-project:info", JSON.stringify(info));
+  if (remember === true) {
+    localStorage.removeItem(SESSION_ONLY_KEY);
+    setBrowserSessionCookie(false);
+  } else if (remember === false) {
+    setBrowserSessionCookie(true);
+    if (browserSessionAlive()) localStorage.setItem(SESSION_ONLY_KEY, "1");
+  }
   notifySessionChanged();
 }
 
@@ -89,6 +119,8 @@ export function clearProjectSession() {
   localStorage.removeItem("nexura:studio-step");
   localStorage.removeItem("nexura:studio-discord-return");
   localStorage.removeItem(EXPIRED_TOKEN_KEY);
+  localStorage.removeItem(SESSION_ONLY_KEY);
+  setBrowserSessionCookie(false);
   localStorage.removeItem("hubData");
   localStorage.removeItem("twitterData");
   clearUserSession();
@@ -120,7 +152,7 @@ async function throwIfNotOk(res: Response): Promise<void> {
       res.statusText;
 
     // The server refuses an expired or invalid token: the session is over until they sign in again
-    if (/token has expired|kindly re-?login|authorization token is missing or invalid/i.test(String(msg))) {
+    if ((res.status === 400 || res.status === 401) && /token has expired|kindly re-?login|authorization token is missing or invalid/i.test(String(msg))) {
       markProjectSessionExpired();
     }
 

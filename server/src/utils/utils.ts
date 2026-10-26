@@ -438,10 +438,12 @@ export const generateOTP = () => {
 	return code;
 };
 
+export const EMAIL_RE = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
+
 export const validateSuperAdminData = (reqData: any) => {
 	const hubSuperAdminSchema = z.object({
 		name: z.string().trim().min(3),
-		email: z.email().trim(),
+		email: z.string().trim().regex(EMAIL_RE),
     password: z.string().trim().min(8),
 	});
 
@@ -453,7 +455,7 @@ export const validateSuperAdminData = (reqData: any) => {
 export const validateHubAdminData = (reqData: any) => {
 	const hubAdminSchema = z.object({
 		name: z.string().trim().min(3),
-		email: z.email().trim(),
+		email: z.string().trim().regex(EMAIL_RE),
     password: z.string().trim().min(8),
 		code: z.string().trim().length(6),
 	});
@@ -466,7 +468,7 @@ export const validateHubAdminData = (reqData: any) => {
 export const validateUserSignUpData = (reqData: any) => {
 	const userSchema = z.object({
 		username: z.string().trim(),
-		email: z.email().trim().optional(),
+		email: z.string().trim().regex(EMAIL_RE).optional(),
 		// password: z.string().trim(),
 	});
 
@@ -517,6 +519,8 @@ export const getMissingFields = (error: z.ZodError<Record<any, unknown>>) => {
   const emptyFields = emptyFieldsArray.join(", ");
   return emptyFields;
 };
+
+export const hubSessionTtl = (remember: unknown): StringValue => (remember === true ? "7d" : "1d");
 
 export const JWT = {
   sign: (id: any, expiresInParam?: StringValue) => {

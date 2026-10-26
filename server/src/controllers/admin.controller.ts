@@ -7,7 +7,7 @@ import { lesson, lessonCompleted, miniLesson, question, questionCompleted, video
 import { admin } from "@/models/admin.model";
 import { BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND, NO_CONTENT, OK, UNAUTHORIZED, FORBIDDEN } from "@/utils/status.utils";
 import { campaign as campaignModel, campaignCompleted, campaign } from "@/models/campaign.model";
-import { generateOTP, getRefreshToken, hashPassword, JWT, passwordChangeMark, startOfDayUTC, updateLevel, validateQuestData } from "@/utils/utils";
+import { EMAIL_RE, generateOTP, getRefreshToken, hashPassword, JWT, passwordChangeMark, startOfDayUTC, updateLevel, validateQuestData } from "@/utils/utils";
 import { sendAdminResetEmail, sendEmailToAdmin } from "@/utils/sendMail";
 import { campaignQuestCompleted, ecosystemQuestCompleted, miniQuestCompleted, questCompleted } from "@/models/questsCompleted.models";
 import { submission } from "@/models/submission.model";
@@ -38,7 +38,7 @@ const normalizeAdminRole = (role: unknown): "superadmin" | "admin" =>
 	role === "superadmin" ? "superadmin" : "admin";
 
 const buildAdminInviteCode = () => generateOTP();
-const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+const isValidEmail = (value: string) => EMAIL_RE.test(value);
 
 const formatAdminRecord = (record: {
 	_id: unknown;

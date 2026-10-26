@@ -5,11 +5,12 @@ import { useRouter } from "next/navigation";
 import AuthShell, { type StepState } from "./AuthShell";
 import {
   Card, CardText, CardTitle, CodeInput, ErrorText, Field, PageTitle, PasswordInput, PrimaryButton,
-  PasswordMatch, StrengthBar, TextArea, TextInput, TextLink, WalletBanner, errorMessage, passwordOk,
+  PasswordMatch, ProfilePictureField, StrengthBar, pictureProblem, TextArea, TextInput, TextLink, WalletBanner, errorMessage, passwordOk,
 } from "./AuthUI";
 import { useStudioWallet } from "../useStudioWallet";
 import { apiRequestV2, getStoredAccessToken } from "@/lib/queryClient";
 import { projectApiRequest, storeProjectSession } from "@/lib/projectApi";
+import { EMAIL_RE } from "@/lib/email";
 import { initialsLogo } from "./initialsLogo";
 
 type Step = "account" | "verify" | "project";
@@ -37,6 +38,7 @@ export default function SignUpFlow() {
   const [projectName, setProjectName] = useState("");
   const [website, setWebsite] = useState("");
   const [description, setDescription] = useState("");
+  const [logo, setLogo] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [resendIn, setResendIn] = useState(0);
@@ -59,7 +61,7 @@ export default function SignUpFlow() {
     e.preventDefault();
     if (!address) return setError("Connect your wallet from the top bar to continue.");
     if (username.trim().length < 3) return setError("Your username needs at least 3 characters.");
-    if (!/^\S+@\S+\.\S+$/.test(cleanEmail)) return setError("Enter a valid email address.");
+    if (!EMAIL_RE.test(cleanEmail)) return setError("Enter a valid email address.");
     if (!passwordOk(password)) return setError("Use at least 8 characters with a number, a capital letter and a symbol.");
     if (password !== confirm) return setError("The two passwords don't match.");
     setBusy(true); setError("");
@@ -123,7 +125,9 @@ export default function SignUpFlow() {
       fd.append("name", name);
       fd.append("description", about);
       if (website.trim()) fd.append("website", website.trim());
-      fd.append("logo", await initialsLogo(name), "logo.png");
+      // No picture chosen: a logo from the project's initials
+      if (logo) fd.append("logo", logo, logo.name);
+      else fd.append("logo", await initialsLogo(name), "logo.png");
       await projectApiRequest({ method: "POST", endpoint: "/hub/create-hub", formData: fd });
 
       router.push("/studio-dashboard/hub-profile?welcome=1");
@@ -182,7 +186,10 @@ export default function SignUpFlow() {
         <form onSubmit={createStudio} noValidate className="flex w-full max-w-[500px] flex-col items-start pb-[24px] pt-[4px]">
           <WalletBanner address={address} onConnect={connect} verified={verified} signing={verifying} onSign={() => void verifyWallet()} />
           <PageTitle title="Your project" />
-          <Field label="Project name" className="pt-[18px]">
+          <div className="w-full pt-[18px]">
+            <ProfilePictureField file={logo} onChange={f => { const problem = pictureProblem(f); setError(problem ?? ""); if (!problem) setLogo(f); }} />
+          </div>
+          <Field label="Project name" className="pt-0">
             <TextInput value={projectName} onChange={e => setProjectName(e.target.value)} placeholder="e.g. Intuition Labs" />
           </Field>
           <Field label="Project Website">

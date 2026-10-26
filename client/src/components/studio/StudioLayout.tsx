@@ -5,7 +5,9 @@ import { usePathname, useRouter } from "next/navigation";
 import StudioBackground from "@/components/StudioBackground";
 import StudioSidebar from "./StudioSidebar";
 import StudioHeader from "./StudioHeader";
+import SignerReminder from "./SignerReminder";
 import { isProjectSignedIn, projectApiRequest } from "@/lib/projectApi";
+import { useSessionExpiryRedirect } from "./useProjectSession";
 import { PRESENCE_HEARTBEAT_MS } from "@/lib/adminGovernance";
 
 type TabType = "hubProfile" | "campaignSubmissions" | "adminManagement" | "campaignsTab" | "campaignsFlow";
@@ -51,6 +53,8 @@ export default function StudioLayout({ children, title = "Nexura Studio", hideHe
     }
   }, []);
 
+  useSessionExpiryRedirect();
+
   // Heartbeat: any authenticated request records activity, so teammates see this admin online
   useEffect(() => {
     if (!isProjectSignedIn()) return;
@@ -86,6 +90,7 @@ export default function StudioLayout({ children, title = "Nexura Studio", hideHe
           )}
         </div>
       </div>
+      <SignerReminder />
     </div>
   );
 }

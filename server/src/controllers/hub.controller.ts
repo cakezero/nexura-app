@@ -21,6 +21,8 @@ import { uploadImg } from "@/utils/img.utils";
 import { FileTypeError, uploadFile } from "@/utils/file.utils";
 import { isHubOwner, ownsHubRecord, submissionInHub } from "@/utils/hubOwnership";
 import { USERNAME_RULE, usernameTaken } from "@/utils/hubAccounts";
+import { notifyProjectChange } from "@/utils/hubNotifications";
+import { hubNotification } from "@/models/hubNotification.model";
 
 const OWNER_ONLY_SOCIALS = "only the studio Owner can connect or disconnect its X, Discord and Telegram";
 import { campaignRewardAsset, rewardAsset } from "@/utils/rewardAssets";
@@ -255,6 +257,7 @@ export const updateIds = async (req: GlobalRequest, res: GlobalResponse) => {
       await userHub.findByIdAndUpdate(req.admin.hub, updatePayload);
     } else {
       await hub.findByIdAndUpdate(req.admin.hub, updatePayload);
+      void notifyProjectChange(req, ["discord"]);
     }
 
     res.status(OK).json({ message: "ids updated successfully" });
@@ -322,6 +325,7 @@ export const disconnectHubDiscord = async (req: GlobalRequest, res: GlobalRespon
       discordServer: "",
       discordSessionId: "",
     });
+    void notifyProjectChange(req, ["discord"]);
 
     res.status(OK).json({ message: "discord disconnected" });
   } catch (error) {
@@ -418,9 +422,12 @@ export const updateHub = async (req: GlobalRequest, res: GlobalResponse) => {
       res.status(FORBIDDEN).json({ error: OWNER_ONLY_SOCIALS });
       return;
     }
+    const before = await hub.findById(req.admin.hub).select(EDITABLE_HUB_FIELDS.join(" ")).lean() as any;
     const ignored = Object.keys(req.body ?? {}).filter(k => !(EDITABLE_HUB_FIELDS as readonly string[]).includes(k));
     if (ignored.length) logger.warn(`updateHub: ignored fields that can't be set here: ${ignored.join(", ")} (admin ${req.id}, hub ${req.admin.hub})`);
     const updatedHub = await hub.findByIdAndUpdate(req.admin.hub, safeBody, { new: true });
+    // The other Owner/Super Admins hear about project settings changes (they don't go through proposals)
+    void notifyProjectChange(req, Object.keys(safeBody).filter(f => String(before?.[f] ?? "") !== safeBody[f]));
     res.status(OK).json(updatedHub);
   } catch (error) {
     if (error instanceof FileTypeError) {
@@ -1581,6 +1588,38 @@ export const getUserProfileByWallet = async (req: GlobalRequest, res: GlobalResp
 };
 
 export const MAX_USERNAME_CHANGES = 2;
+
+/** GET /hub/notifications: project settings notices for me, newest first. */
+export const getHubNotifications = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const items = await hubNotification.find({ hub: req.admin?.hub, recipients: req.id })
+      .sort({ createdAt: -1 }).limit(50).lean() as any[];
+    res.status(OK).json({
+      items: items.map(n => ({
+        id: String(n._id), kind: n.kind, actorName: n.actorName, changes: n.changes ?? [], tab: n.tab ?? "project",
+        createdAt: n.createdAt, readByMe: (n.readBy ?? []).some((r: unknown) => String(r) === String(req.id)),
+      })),
+    });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error loading notifications" });
+  }
+};
+
+/** POST /hub/notifications/read { ids?: string[] }: marks my notices read (all when ids is omitted). */
+export const markHubNotificationsRead = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const ids = Array.isArray(req.body?.ids) ? req.body.ids.filter((id: unknown) => typeof id === "string" && mongoose.Types.ObjectId.isValid(id)) : null;
+    await hubNotification.updateMany(
+      { hub: req.admin?.hub, recipients: req.id, ...(ids ? { _id: { $in: ids } } : {}) },
+      { $addToSet: { readBy: req.id } },
+    );
+    res.status(OK).json({ ok: true });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error marking notifications read" });
+  }
+};
 
 export const checkUsernameAvailable = async (req: GlobalRequest, res: GlobalResponse) => {
   try {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from "react";
 
 export function Card({ children, shadow = "strong", className = "" }: { children: ReactNode; shadow?: "strong" | "soft" | "softer"; className?: string }) {
   const drop =
@@ -139,10 +139,9 @@ export function WalletBanner({ address, onConnect, className = "", verified, sig
   const short = address && address.length > 12 ? `${address.slice(0, 6)}…${address.slice(-4)}` : address;
   if (address && wrongWallet) {
     return (
-      <div role="alert" className={`flex w-full items-center gap-[10px] rounded-[20px] border-[1.25px] border-[rgba(228,84,91,0.45)] bg-[rgba(228,84,91,0.08)] py-[9px] pl-[15px] pr-[6px] ${className}`}>
+      <div role="alert" className={`flex w-full items-center gap-[10px] rounded-[20px] border-[1.25px] border-[rgba(228,84,91,0.45)] bg-[rgba(228,84,91,0.08)] px-[15px] py-[9px] ${className}`}>
         <span className="flex size-[18px] shrink-0 items-center justify-center rounded-full bg-[#e4545b] text-[12px] font-bold text-white">!</span>
         <p className="flex-1 text-[13px] leading-[19.5px] text-[#1c2533]"><b className="font-bold">Wrong wallet.</b> {wrongWallet}</p>
-        <button type="button" onClick={onConnect} className="flex h-[34px] shrink-0 items-center rounded-[999px] bg-[#8b3efe] px-[14px] text-[13px] font-semibold text-white">Switch</button>
       </div>
     );
   }
@@ -241,6 +240,56 @@ export function CodeInput({ value, onChange, onComplete, className = "pt-[24px]"
           className={`${BOX[size]} min-w-0 flex-1 rounded-[12px] border-[1.25px] bg-white text-center text-[22px] font-semibold text-[#1c2533] outline-none focus:border-[#8a3ffc]`}
         />
       ))}
+    </div>
+  );
+}
+
+export const PICTURE_ACCEPT = "image/png,image/jpeg,image/webp";
+const PICTURE_MAX_BYTES = 5 * 1024 * 1024;
+
+/** Why this file can't be the project picture, or null. */
+export const pictureProblem = (f: File) =>
+  !PICTURE_ACCEPT.split(",").includes(f.type) ? "Use a PNG, JPG or WebP image."
+  : f.size > PICTURE_MAX_BYTES ? "Use an image up to 5 MB."
+  : null;
+
+/** Project profile picture on the create-studio step. */
+export function ProfilePictureField({ file, onChange }: { file: File | null; onChange: (f: File) => void }) {
+  const input = useRef<HTMLInputElement>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  useEffect(() => {
+    if (!file) { setPreview(null); return; }
+    const url = URL.createObjectURL(file);
+    setPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+  const open = () => input.current?.click();
+  return (
+    <div className="flex w-full items-center gap-[22px] pb-[20px] pt-[10px]">
+      <input ref={input} type="file" accept={PICTURE_ACCEPT} hidden onChange={e => { const f = e.target.files?.[0]; if (f) onChange(f); e.target.value = ""; }} />
+      <button
+        type="button" onClick={open} aria-label={preview ? "Change profile picture" : "Add profile picture"}
+        className="relative flex size-[103.984px] shrink-0 flex-col items-center justify-center gap-[4px] overflow-hidden rounded-[28px] border-[1.25px] border-dashed border-[#cfc9e6] bg-[#f4f1ff]"
+      >
+        {preview ? <img src={preview} alt="" className="absolute inset-0 size-full object-cover" /> : (
+          <>
+            <img src="/studio-auth/add-photo-plus.svg" alt="" width={21.9922} height={21.9922} />
+            <span className="text-[12px] font-semibold leading-[18.6px] text-[#8a3ffc]">Add photo</span>
+          </>
+        )}
+      </button>
+      <div className="flex min-w-[220px] flex-1 flex-col items-start">
+        <span className="text-[15px] font-bold leading-[23.25px] text-[#1c2533]">Profile picture</span>
+        <p className="max-w-[380px] pt-[4px] text-[13px] leading-[19.5px] text-[#5b6478]">Upload a 512 × 512px image of your project logo or brand mark. PNG, JPG or WebP, up to 5 MB.</p>
+        <div className="flex pt-[12px]">
+          <button
+            type="button" onClick={open}
+            className="flex h-[37.988px] items-center rounded-[999px] border-[1.25px] border-[#8a3ffc] bg-[#8a3ffc] px-[16px] text-[13.5px] font-semibold text-white drop-shadow-[0px_10px_13px_rgba(138,63,252,0.7)]"
+          >
+            {preview ? "Change picture" : "Upload picture"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

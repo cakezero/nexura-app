@@ -83,27 +83,26 @@ export const ROLE_LABEL: Record<StudioRole, string> = {
 };
 
 export const ROLE_SUMMARY: Record<StudioRole, string> = {
-  owner: "Full control, including managing and removing Super Admins.",
-  superadmin: "Creates, edits, publishes, funds and manages campaigns, makes payments and edits the project profile.",
+  owner: "Everything a Super Admin can do, and always a signer.",
+  superadmin: "Creates, publishes and funds campaigns, makes payments and edits the project profile.",
   admin: "Validates tasks manually. Cannot create, publish, edit, disable, close or fund campaigns, and cannot make payments.",
 };
 
 // ─── Permissions matrix (Roles & permissions tab) ───────────────────────────
 export type Permission =
-  | "validateTasks" | "createCampaigns" | "editCampaigns" | "publishCampaigns" | "proposeCloseDisable"
-  | "fundCampaigns" | "makePayments"
+  | "validateTasks" | "publishCampaigns" | "editCampaigns" | "proposeCloseDisable"
+  | "fundCampaigns" | "makePayments" | "withdrawRewards"
   | "editProfile"
-  | "proposeChanges" | "voteProposals"
-  | "manageAdmins" | "manageSuperAdmins";
+  | "alwaysSigner" | "proposeChanges" | "voteProposals"
+  | "manageAdmins";
 
 export const PERMISSION_GROUPS: { title: string; items: { id: Permission; label: string }[] }[] = [
   {
     title: "Campaigns",
     items: [
       { id: "validateTasks", label: "Validate tasks manually" },
-      { id: "createCampaigns", label: "Create campaigns" },
-      { id: "editCampaigns", label: "Edit campaigns" },
-      { id: "publishCampaigns", label: "Publish campaigns" },
+      { id: "publishCampaigns", label: "Create and publish campaigns" },
+      { id: "editCampaigns", label: "Edit live campaigns" },
       { id: "proposeCloseDisable", label: "Propose closing or disabling a campaign" },
     ],
   },
@@ -111,31 +110,29 @@ export const PERMISSION_GROUPS: { title: string; items: { id: Permission; label:
     title: "Money",
     items: [
       { id: "fundCampaigns", label: "Fund campaigns" },
-      { id: "makePayments", label: "Make payments and withdraw unclaimed rewards" },
+      { id: "makePayments", label: "Make payments" },
+      { id: "withdrawRewards", label: "Withdraw unclaimed rewards" },
     ],
   },
   { title: "Project", items: [{ id: "editProfile", label: "Edit the project profile" }] },
   {
     title: "Governance",
     items: [
+      { id: "alwaysSigner", label: "Always a signer" },
       { id: "proposeChanges", label: "Propose changes" },
       { id: "voteProposals", label: "Approve or reject proposals" },
     ],
   },
-  {
-    title: "Team",
-    items: [
-      { id: "manageAdmins", label: "Add and manage Admins" },
-      { id: "manageSuperAdmins", label: "Manage and remove Super Admins" },
-    ],
-  },
+  { title: "Team", items: [{ id: "manageAdmins", label: "Add and manage Admins" }] },
 ];
+
+export const SIGNER_PERMISSIONS = new Set<Permission>(["editCampaigns", "proposeCloseDisable", "proposeChanges", "voteProposals", "manageAdmins"]);
 
 const ALL_PERMISSIONS = PERMISSION_GROUPS.flatMap(g => g.items.map(i => i.id));
 
 const ROLE_PERMISSIONS: Record<StudioRole, Set<Permission>> = {
   owner: new Set(ALL_PERMISSIONS),
-  superadmin: new Set(ALL_PERMISSIONS.filter(p => p !== "manageSuperAdmins")),
+  superadmin: new Set(ALL_PERMISSIONS.filter(p => p !== "alwaysSigner")),
   admin: new Set<Permission>(["validateTasks"]),
 };
 
@@ -158,13 +155,13 @@ export function studioRole(member: Pick<TeamMember, "_id" | "role">, ownerId: st
 /** Can `actor` open Manage for `target`? Owner manages everyone else; Super Admin manages Admins only. */
 export function canManageMember(actor: StudioRole, target: StudioRole): boolean {
   if (target === "owner") return false;
-  if (target === "superadmin") return can(actor, "manageSuperAdmins");
+  if (target === "superadmin") return actor === "owner";
   return can(actor, "manageAdmins");
 }
 
 /** Roles `actor` may invite or assign. */
 export function assignableRoles(actor: StudioRole): BackendRole[] {
-  if (can(actor, "manageSuperAdmins")) return ["admin", "superadmin"];
+  if (actor === "owner") return ["admin", "superadmin"];
   if (can(actor, "manageAdmins")) return ["admin"];
   return [];
 }
@@ -272,12 +269,8 @@ export function awaitingMyVote(snap: GovernanceSnapshot): Proposal[] {
   return snap.proposals.filter(p => p.status === "pending" && !p.votes[snap.meId] && p.proposedBy.id !== snap.meId);
 }
 
-/**
- * Smallest approval threshold allowed: 2 whenever the team has 2+ signers, so one Owner or
- * Super Admin can never execute a proposal alone. A team with a single signer needs 1.
- */
-export function minApprovalThreshold(signerCount: number): number {
-  return Math.min(2, Math.max(1, signerCount));
+export function requiredApprovals(signerCount: number): number {
+  return Math.floor(Math.max(1, signerCount) / 2) + 1;
 }
 
 export function tally(p: Proposal, signerIds: Set<string>) {

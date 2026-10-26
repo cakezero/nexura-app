@@ -9,6 +9,11 @@ import { ChainLogo, NETWORKS, NetworkList, POPOVER, POPOVER_TITLE, getInjectedWa
 import { useStudioNetwork } from "@/lib/studioNetwork";
 import { OPEN_PROPOSALS_EVENT, useProposalNotifications } from "./useProposalNotifications";
 import NotificationsPanel from "./NotificationsPanel";
+import { describeNotice, useProjectNotifications } from "./useProjectNotifications";
+import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
+
+const POPPED_KEY = "nexura:studio-notices-popped";
 import { STUDIO_SIGN_IN_URL, useProjectSession } from "./useProjectSession";
 import SignInPrompt from "./SignInPrompt";
 import { clearProjectSession, getStoredProjectInfo, projectApiRequest } from "@/lib/projectApi";
@@ -63,8 +68,33 @@ export default function StudioHeader({ title, showLogo = false, network: control
   }, [signedIn, live]);
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const { items: allNotifications, unread: allUnread, markRead } = useProposalNotifications();
+  const { items: allNotices, unread: noticesUnread, markRead: markNoticesRead } = useProjectNotifications();
   const notifications = signedIn ? allNotifications : [];
-  const unread = signedIn ? allUnread : 0;
+  const notices = signedIn ? allNotices : [];
+  const unread = signedIn ? allUnread + noticesUnread : 0;
+
+  // A new project settings notice pops up once (per notice, on any device it first reaches)
+  const { toast } = useToast();
+  useEffect(() => {
+    if (!signedIn) return;
+    let popped: string[] = [];
+    try { popped = JSON.parse(localStorage.getItem(POPPED_KEY) ?? "[]"); } catch { /* ignore */ }
+    const fresh = notices.filter(n => !n.readByMe && !popped.includes(n.id));
+    if (!fresh.length) return;
+    try { localStorage.setItem(POPPED_KEY, JSON.stringify([...popped, ...fresh.map(n => n.id)].slice(-200))); } catch { /* ignore */ }
+    const newest = fresh[0];
+    const d = describeNotice(newest);
+    toast({
+      title: fresh.length > 1 ? `${fresh.length} project settings changes` : "Project settings changed",
+      description: `${d.who} ${d.what}.`,
+      action: (
+        <ToastAction altText="View changes" onClick={() => { markNoticesRead([newest.id]); router.push(`/studio-dashboard/hub-profile?tab=${newest.tab}`); }}>
+          View
+        </ToastAction>
+      ),
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [signedIn, notices]);
   const router = useRouter();
   const pathname = usePathname();
   const ref = useRef<HTMLDivElement>(null);
@@ -180,7 +210,12 @@ export default function StudioHeader({ title, showLogo = false, network: control
           </button>
           {open === "signin-bell" && <SignInPrompt what="see your notifications" onSignIn={() => { setOpen(null); router.push(STUDIO_SIGN_IN_URL); }} />}
           {open === "bell" && signedIn && (
-            <NotificationsPanel items={notifications} unread={unread} onOpen={openProposal} onMarkRead={markRead} onViewAll={openProposal} />
+            <NotificationsPanel
+              items={notifications} notices={notices} unread={unread} onOpen={openProposal} onMarkRead={markRead}
+              onMarkNoticesRead={markNoticesRead}
+              onOpenNotice={n => { setOpen(null); router.push(`/studio-dashboard/hub-profile?tab=${n.tab}`); }}
+              onViewAll={openProposal}
+            />
           )}
         </div>
 
@@ -204,21 +239,17 @@ export default function StudioHeader({ title, showLogo = false, network: control
               style={{ backgroundImage: "linear-gradient(167.98deg, rgb(124, 58, 237) 0%, rgb(107, 33, 216) 100%)" }}
             >
               <span className={`size-[7.988px] shrink-0 rounded-[3.994px] ${verified ? "bg-[#00e1a2] shadow-[0px_0px_0px_3px_rgba(0,225,162,0.2)]" : "bg-[#f5a524] shadow-[0px_0px_0px_3px_rgba(245,165,36,0.25)]"}`} />
-              <span className="whitespace-nowrap text-[13.5px] font-semibold text-white">{verified ? shortAddress(walletAddress) : "Check your wallet"}</span>
+              <span className="whitespace-nowrap text-[13.5px] font-semibold text-white">{!verified && verifying ? "Check your wallet" : shortAddress(walletAddress)}</span>
               <img src="/studio-auth/chevron-down-white.svg" alt="" className={`size-[15.996px] shrink-0 transition-transform ${open === "wallet" ? "rotate-180" : ""}`} />
             </button>
           )}
           {open === "signin-wallet" && <SignInPrompt what="connect your wallet" onSignIn={() => { setOpen(null); router.push(STUDIO_SIGN_IN_URL); }} />}
           {open === "wallet" && walletAddress && (
             <div style={{ ...POPOVER, right: 0, width: 210, borderRadius: 16, padding: 5 }}>
-              <div style={{ ...POPOVER_TITLE, fontSize: 10.5, padding: "6px 9px 4px" }}>Network</div>
-              <NetworkList value={network} onSelect={changeNetwork} />
-              <div className="mt-[3px] border-t border-[rgba(28,37,51,0.07)] pt-[3px]">
-                <button type="button" onClick={disconnectAndSignOut} className={`${menuItem} text-[#EF4444] hover:bg-[rgba(239,68,68,0.06)]`}>
-                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6 14H3.5A1.5 1.5 0 012 12.5v-9A1.5 1.5 0 013.5 2H6M10.5 11.5L14 8l-3.5-3.5M14 8H6" stroke="#EF4444" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                  Disconnect wallet
-                </button>
-              </div>
+              <button type="button" onClick={disconnectAndSignOut} className={`${menuItem} text-[#EF4444] hover:bg-[rgba(239,68,68,0.06)]`}>
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6 14H3.5A1.5 1.5 0 012 12.5v-9A1.5 1.5 0 013.5 2H6M10.5 11.5L14 8l-3.5-3.5M14 8H6" stroke="#EF4444" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                Disconnect wallet
+              </button>
             </div>
           )}
         </div>

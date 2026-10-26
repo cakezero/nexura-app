@@ -11,6 +11,8 @@ import { cn } from "@/lib/utils";
 import StudioBackground from "@/components/StudioBackground";
 import StudioSidebar from "@/components/studio/StudioSidebar";
 import StudioHeader from "@/components/studio/StudioHeader";
+import { useSessionExpiryRedirect } from "@/components/studio/useProjectSession";
+import SignerReminder from "@/components/studio/SignerReminder";
 import { apiRequest } from "@/lib/config";
 import { projectApiRequest, isProjectSignedIn } from "@/lib/projectApi";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -64,6 +66,7 @@ export default function StudioDashboard() {
       router.push("/studio");
     }
   }, []);
+  useSessionExpiryRedirect();
   const [viewedSubmissions, setViewedSubmissions] = useState<Set<string>>(new Set());
 const [campaignTasks, setCampaignTasks] = useState<TASKS[]>([]);
   const [admins, setAdmins] = useState<Admin[]>([]);
@@ -191,6 +194,7 @@ const fetchBannedUsers = async () => {
   return (
     <div className="relative min-h-screen w-full overflow-hidden">
       <StudioBackground />
+      <SignerReminder />
 
       <div className="relative z-10 flex h-screen flex-col md:flex-row">
 
