@@ -32,7 +32,7 @@ export function useStudioProfile() {
   useEffect(() => { void reload(); }, [reload]);
 
   const isOwner = !!hub?.superAdmin && !!admin?._id && String(hub.superAdmin) === String(admin._id);
-  const roleLabel = admin?.role === "superadmin" ? "Super Admin" : "Admin";
+  const roleLabel = isOwner ? "Owner" : admin?.role === "superadmin" ? "Super Admin" : "Admin";
   // Owner and Super Admins see the connected accounts; only the Owner changes them
   const canSeeAccounts = isOwner || admin?.role === "superadmin";
   const socials = {

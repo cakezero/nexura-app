@@ -7,7 +7,7 @@ import { OTP } from "@/models/otp.model";
 import { parseDate } from "@/utils/dates";
 import { createHubInvite } from "@/utils/hubInvite";
 import { applyCampaignUpdate, prepareCampaignSaveBody } from "@/controllers/hub.controller";
-import { validateDiscordTaskConfig } from "@/utils/utils";
+import { EMAIL_RE, validateDiscordTaskConfig } from "@/utils/utils";
 import { BAD_REQUEST, CONFLICT, CREATED, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_FOUND, OK } from "@/utils/status.utils";
 
 /*
@@ -44,8 +44,6 @@ class HttpError extends Error {
 // A campaign never ends immediately: an approved "end campaign" proposal gives participants this notice
 const CAMPAIGN_END_NOTICE_MS = 7 * 24 * 60 * 60 * 1000;
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const isInt = (v: unknown): v is number => typeof v === "number" && Number.isInteger(v);
 
 // ─── Context: team, signers and thresholds for one hub ───────────────────────
 async function loadContext(hubId: string) {
@@ -62,11 +60,8 @@ async function loadContext(hubId: string) {
   const signers = admins.filter(a => roleOf(a) === "owner" || (roleOf(a) === "superadmin" && nominated.has(String(a._id))));
   const signerIds = new Set(signers.map(a => String(a._id)));
   const n = Math.max(1, signers.length);
-  const clamp = (v: number | null | undefined, min: number) => Math.min(n, Math.max(min, v ?? n));
-  const thresholds = {
-    approval: clamp(gov.approvalThreshold, Math.min(2, n)),
-    rejection: clamp(gov.rejectionThreshold, 1),
-  };
+  const approval = Math.floor(n / 2) + 1;
+  const thresholds = { approval, rejection: n - approval + 1 };
   const adminById = (id: string) => admins.find(a => String(a._id) === id);
 
   return { hubId, hubDoc, admins, gov, ownerId, roleOf, signers, signerIds, thresholds, adminById };
@@ -142,22 +137,15 @@ function pendingSignerChangeFor(pending: any[], adminId: string) {
 async function validateAction(ctx: Ctx, me: { id: string; role: Role }, raw: any, clientUrl: string) {
   if (!raw || typeof raw !== "object" || typeof raw.kind !== "string") throw new HttpError(BAD_REQUEST, "action is required");
   const pending = await governanceProposal.find({ hub: ctx.hubId, status: "pending" }).select("action").lean() as any[];
-  const n = ctx.signers.length;
-  const target = (id: unknown) => {
+  const target =(id: unknown) => {
     const a = typeof id === "string" ? ctx.adminById(id) : undefined;
     if (!a) throw new HttpError(NOT_FOUND, "admin not found in your hub");
     return a;
   };
 
   switch (raw.kind) {
-    case "thresholds": {
-      const { approval, rejection } = raw;
-      if (n < 2) throw new HttpError(BAD_REQUEST, "add a second signer before changing the required confirmations");
-      if (!isInt(approval) || approval < Math.min(2, n) || approval > n) throw new HttpError(BAD_REQUEST, `approvals must be between ${Math.min(2, n)} and ${n}`);
-      if (!isInt(rejection) || rejection < 1 || rejection > n) throw new HttpError(BAD_REQUEST, `rejections must be between 1 and ${n}`);
-      if (pending.some(p => p.action?.kind === "thresholds")) throw new HttpError(BAD_REQUEST, "a change to the required confirmations is already pending");
-      return { kind: "thresholds", approval, rejection, prevApproval: ctx.thresholds.approval, prevRejection: ctx.thresholds.rejection };
-    }
+    case "thresholds":
+      throw new HttpError(BAD_REQUEST, "required confirmations are set automatically");
     case "invite": {
       const email = String(raw.email ?? "").trim().toLowerCase();
       const role: BackendRole = raw.role === "superadmin" ? "superadmin" : "admin";
@@ -199,7 +187,6 @@ async function validateAction(ctx: Ctx, me: { id: string; role: Role }, raw: any
       const id = String(t._id);
       const add = raw.add === true;
       if (pendingSignerChangeFor(pending, id)) throw new HttpError(BAD_REQUEST, "a signer change for this admin is already pending");
-      const next = add ? n + 1 : n - 1;
       if (add) {
         if (ctx.roleOf(t) !== "superadmin") throw new HttpError(BAD_REQUEST, "only Super Admins can be added as signers");
         if (ctx.signerIds.has(id)) throw new HttpError(BAD_REQUEST, "that admin is already a signer");
@@ -207,14 +194,7 @@ async function validateAction(ctx: Ctx, me: { id: string; role: Role }, raw: any
         if (ctx.roleOf(t) === "owner") throw new HttpError(FORBIDDEN, "the Owner is always a signer");
         if (!ctx.signerIds.has(id)) throw new HttpError(BAD_REQUEST, "that admin is not a signer");
       }
-      let threshold: number | undefined;
-      if (raw.threshold !== undefined && raw.threshold !== null) {
-        if (!isInt(raw.threshold) || raw.threshold < Math.min(2, next) || raw.threshold > next) {
-          throw new HttpError(BAD_REQUEST, `required confirmations must be between ${Math.min(2, next)} and ${next}`);
-        }
-        threshold = raw.threshold;
-      }
-      return { kind: "signer", adminId: id, adminName: t.name, add, ...(threshold ? { threshold } : {}) };
+      return { kind: "signer", adminId: id, adminName: t.name, add };
     }
     case "replaceSigner": {
       const oldT = target(raw.oldId);
@@ -301,8 +281,6 @@ async function runAction(ctx: Ctx, action: any, proposalRef: string): Promise<{ 
 
   switch (action.kind) {
     case "thresholds":
-      gov.approvalThreshold = action.approval;
-      gov.rejectionThreshold = action.rejection;
       break;
     case "invite": {
       // The proposal has been approved, so the invitation is created even if the email can't go out
@@ -349,7 +327,6 @@ async function runAction(ctx: Ctx, action: any, proposalRef: string): Promise<{ 
       } else {
         setSigners(signerList().filter(id => id !== action.adminId));
       }
-      if (action.threshold) gov.approvalThreshold = action.threshold;
       break;
     }
     case "replaceSigner": {
@@ -493,7 +470,9 @@ function serializeProposal(ctx: Ctx, p: any, meId: string) {
 
 async function governanceState(ctx: Ctx, meId: string) {
   await rejectUnpassable(ctx);
-  const proposals = await governanceProposal.find({ hub: ctx.hubId }).sort({ createdAt: -1 }).limit(200).lean();
+  const me = ctx.adminById(meId);
+  const seesProposals = !!me && ctx.roleOf(me) !== "admin";
+  const proposals = seesProposals ? await governanceProposal.find({ hub: ctx.hubId }).sort({ createdAt: -1 }).limit(200).lean() : [];
   const wallets = ctx.gov.signerWallets as unknown as Map<string, string>;
   return {
     ownerId: ctx.ownerId,

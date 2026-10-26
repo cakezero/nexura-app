@@ -14,7 +14,7 @@ import {
 import { authenticateHubAdmin, authenticateHubAdmin2 } from "@/middlewares/auth.middleware";
 import { fetchHubCampaigns, publishCampaign } from "@/controllers/campaign.controller";
 import { requireStudioPayment } from "@/controllers/studioPayment.controller";
-import { validateCampaignSubmissions, validateCampaignSubmissionsBulk, getCampaignSubmissions, getHub, getHubAdmins, updateIds, checkUsernameAvailable, changeUsername } from "@/controllers/hub.controller";
+import { validateCampaignSubmissions, validateCampaignSubmissionsBulk, getCampaignSubmissions, getHub, getHubAdmins, updateIds, checkUsernameAvailable, changeUsername, getHubNotifications, markHubNotificationsRead } from "@/controllers/hub.controller";
 import { getSubmissionCampaigns, getCampaignSubmissionDetails } from "@/controllers/submissions.controller";
 import { disableTwoFactor, enableTwoFactor, setupTwoFactor, verifyTwoFactorLogin } from "@/controllers/twoFactor.controller";
 import { getRetentionDraft, saveRetentionDraft } from "@/controllers/retentionDraft.controller";
@@ -59,6 +59,8 @@ router
   .get("/get-servers", fetchServers)
   .post("/admin/sign-up", authIpLimiter, attemptGuard("hub-invite"), hubAdminSignUp)
   .patch("/update-ids", authenticateHubAdmin2, updateIds)
+  .get("/notifications", authenticateHubAdmin2, getHubNotifications)
+  .post("/notifications/read", authenticateHubAdmin2, markHubNotificationsRead)
   // --- Admin Management governance (any admin; roles checked in the controller) ---
   .use("/governance", authenticateHubAdmin2, governanceRoutes)
   // --- Superadmin-only routes ---

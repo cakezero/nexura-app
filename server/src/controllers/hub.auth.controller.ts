@@ -7,7 +7,8 @@ import {
 	getRefreshToken,
 	hashPassword,
 	generateOTP,
-	passwordChangeMark
+	passwordChangeMark,
+	hubSessionTtl
 } from "@/utils/utils";
 import logger from "@/config/logger";
 import { server } from "@/models/server.model";
@@ -117,7 +118,7 @@ export const signIn = async (req: GlobalRequest, res: GlobalResponse) => {
 		const id = adminExists._id.toString();
 		touchHubAdminActivity(id);
 
-		const accessToken = JWT.sign(id);
+		const accessToken = JWT.sign(id, hubSessionTtl(req.body?.remember));
 		const refreshToken = getRefreshToken(id);
 
 		res.cookie("hubRefreshToken", refreshToken, {

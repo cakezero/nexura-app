@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PanelTitle, Row, SmallButton, StatusPill, Value } from "./ProfileUI";
 import type { StudioProfile } from "./useStudioProfile";
 import { projectApiRequest } from "@/lib/projectApi";
 import { beginStudioDiscordConnect } from "@/lib/studioDiscord";
 import { useToast } from "@/hooks/use-toast";
+import { PICTURE_ACCEPT, pictureProblem } from "../auth/AuthUI";
+import { initialsLogo } from "../auth/initialsLogo";
 import { STUDIO_X_RETURN_KEY, getAuthUrl } from "@/lib/generateXAuthUrl";
 
 export type ProfileTab = "profile" | "setup" | "accounts" | "project" | "security";
@@ -95,9 +97,12 @@ export function MyProfilePanel({ p }: { p: StudioProfile }) {
         <span className="flex size-[60px] shrink-0 items-center justify-center rounded-[40px] text-[24px] font-bold leading-[37.2px] text-white" style={{ backgroundImage: "linear-gradient(135deg, #8a3ffc 0%, #6e2bd8 100%)" }}>
           {initial}
         </span>
-        <span className="flex flex-col">
+        <span className="flex flex-col gap-[4px]">
           <span className="text-[18px] font-bold leading-[27.9px] text-[#1c2533]">{name ? `@${name}` : "Your account"}</span>
-          <span className="text-[14px] leading-[21.7px] text-[#1c2533]">{[p.hub?.name, p.roleLabel].filter(Boolean).join(" · ")}</span>
+          <span className="flex flex-wrap items-center gap-[8px]">
+            {p.hub?.name && <span className="text-[14px] leading-[21.7px] text-[#1c2533]">{p.hub.name}</span>}
+            {!p.loading && <StatusPill tone="purple">{p.roleLabel}</StatusPill>}
+          </span>
         </span>
       </div>
       <UsernameRow p={p} />
@@ -107,7 +112,7 @@ export function MyProfilePanel({ p }: { p: StudioProfile }) {
         {p.admin?.email && <StatusPill tone="green">Verified</StatusPill>}
       </Row>
       <Row title="Role" text="Your access level in this studio." last>
-        <StatusPill tone="purple">{p.isOwner ? "Owner" : p.roleLabel}</StatusPill>
+        <StatusPill tone="purple">{p.roleLabel}</StatusPill>
       </Row>
     </>
   );
@@ -145,7 +150,7 @@ export function StudioSetupPanel({ p, go }: { p: StudioProfile; go: (t: ProfileT
       <Row title="Invite an admin" text="Add Super admins and admins to your studio.">
         {action("admin", "Add Admin", () => router.push("/studio-dashboard/admin-management"))}
       </Row>
-      <Row title="Create your first campaign, quest or lesson" text="Build and launch your first campaign, quest or lesson." last>
+      <Row title="Create your first campaign" text="Build and launch your first campaign." last>
         {action("campaign", "Set up", () => router.push("/studio-dashboard/create-new-campaign"))}
       </Row>
     </>
@@ -229,6 +234,54 @@ export function ConnectedAccountsPanel({ p }: { p: StudioProfile }) {
 
 type ProjectField = "name" | "website" | "description";
 
+/** The project picture at the top of the Project tab: change it, or go back to the initials logo. */
+function ProjectPictureRow({ p }: { p: StudioProfile }) {
+  const { toast } = useToast();
+  const input = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const logo = (p.hub?.logo as string | undefined) ?? "";
+
+  const upload = async (file: Blob, filename: string, done: string) => {
+    setBusy(true);
+    try {
+      const fd = new FormData();
+      fd.append("logo", file, filename);
+      await projectApiRequest({ method: "PATCH", endpoint: "/hub/update-hub", formData: fd });
+      await p.reload();
+      toast({ title: done });
+    } catch (e: any) {
+      toast({ title: "Couldn't update the picture", description: e?.message, variant: "destructive" });
+    } finally { setBusy(false); }
+  };
+
+  const pick = (f: File) => {
+    const problem = pictureProblem(f);
+    if (problem) return toast({ title: problem, variant: "destructive" });
+    void upload(f, f.name, "Picture updated");
+  };
+  const remove = async () => upload(await initialsLogo(String(p.hub?.name ?? "")), "logo.png", "Picture removed");
+
+  return (
+    <div className="flex w-full items-center gap-[22px] pt-[20px]">
+      <input ref={input} type="file" accept={PICTURE_ACCEPT} hidden onChange={e => { const f = e.target.files?.[0]; if (f) pick(f); e.target.value = ""; }} />
+      <button
+        type="button" onClick={() => input.current?.click()} disabled={busy} aria-label="Change profile picture"
+        className="relative size-[103.984px] shrink-0 overflow-hidden rounded-[28px] border-[1.25px] border-[rgba(28,37,51,0.09)] bg-[#f4f1fc]"
+      >
+        {logo && <img src={logo} alt="" className="absolute inset-0 size-full rounded-[28px] object-cover" />}
+      </button>
+      <div className="flex min-w-[220px] flex-1 flex-col items-start">
+        <span className="text-[15px] font-bold leading-[23.25px] text-[#1c2533]">Profile picture</span>
+        <p className="max-w-[380px] pt-[4px] text-[13px] leading-[19.5px] text-[#69728a]">Upload a square 512 × 512px image of your project logo or brand mark. PNG, JPG or WebP, up to 5 MB.</p>
+        <div className="flex gap-[8px] pt-[12px]">
+          <SmallButton onClick={() => input.current?.click()} disabled={busy}>{busy ? "Saving…" : "Change picture"}</SmallButton>
+          <SmallButton variant="outline" onClick={remove} disabled={busy}>Remove</SmallButton>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function ProjectPanel({ p }: { p: StudioProfile }) {
   const { toast } = useToast();
   const [editing, setEditing] = useState<ProjectField | null>(null);
@@ -262,6 +315,7 @@ export function ProjectPanel({ p }: { p: StudioProfile }) {
   return (
     <>
       <PanelTitle>Project</PanelTitle>
+      <ProjectPictureRow p={p} />
       <div className="w-full pt-[8px]">
         {fields.map((f, i) => {
           const current = (p.hub?.[f.key] as string | undefined) ?? "";

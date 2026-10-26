@@ -51,7 +51,7 @@ export default function StudioSidebar({
 
   const sidebarItems: NavItem[] = [
     { title: "Profile", icon: "/studio-sidebar/profile.svg", iconSize: 14.76, id: "hubProfile" },
-    ...(adminRole === "superadmin" ? [
+    ...(adminRole === "superadmin" || adminRole === "owner" ? [
       { title: "Admin Management", short: "Admins", icon: "/studio-sidebar/admin.svg", id: "adminManagement" as TabType },
     ] : []),
     { title: "Campaigns", short: "Campaigns", icon: "/studio-sidebar/campaigns.svg", id: "campaignsTab", badge: campaignCount ? String(campaignCount) : undefined },
@@ -85,7 +85,9 @@ export default function StudioSidebar({
 
             // Store admin role from server
             if (admin?.role) {
-              setAdminRole(admin.role as string);
+              // The Owner is the hub's superAdmin, whatever their stored role says
+              const owner = !!hub.superAdmin && !!admin._id && String(hub.superAdmin) === String(admin._id);
+              setAdminRole(owner ? "owner" : admin.role as string);
             }
 
             // Persist so future mounts don't need the extra fetch
@@ -183,7 +185,7 @@ export default function StudioSidebar({
           </span>
           <span className="flex min-w-0 flex-1 flex-col">
             <span className="truncate text-[13px] font-semibold leading-[20.15px] text-[#232a43]">{projectHandle}</span>
-            <span className="text-[11px] leading-[17px] text-[#605d72]">{adminRole === "superadmin" ? "Super Admin" : "Admin"}</span>
+            <span className="text-[11px] leading-[17px] text-[#605d72]">{adminRole === "owner" ? "Owner" : adminRole === "superadmin" ? "Super Admin" : "Admin"}</span>
           </span>
         </button>
       </aside>
