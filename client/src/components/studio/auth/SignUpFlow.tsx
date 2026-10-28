@@ -12,6 +12,7 @@ import { apiRequestV2, getStoredAccessToken } from "@/lib/queryClient";
 import { projectApiRequest, storeProjectSession } from "@/lib/projectApi";
 import { EMAIL_RE } from "@/lib/email";
 import { initialsLogo } from "./initialsLogo";
+import CategoryPicker from "./CategoryPicker";
 
 type Step = "account" | "verify" | "project";
 
@@ -39,6 +40,7 @@ export default function SignUpFlow() {
   const [website, setWebsite] = useState("");
   const [description, setDescription] = useState("");
   const [logo, setLogo] = useState<File | null>(null);
+  const [categories, setCategories] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [resendIn, setResendIn] = useState(0);
@@ -96,6 +98,7 @@ export default function SignUpFlow() {
     e.preventDefault();
     const name = projectName.trim();
     const about = description.trim();
+    if (!categories.length) return setError("Pick at least one category.");
     if (!name) return setError("Add your project name.");
     if (about.length > DESCRIPTION_MAX) return setError(`Keep your description under ${DESCRIPTION_MAX} characters.`);
     if (busy) return;
@@ -124,6 +127,7 @@ export default function SignUpFlow() {
       const fd = new FormData();
       fd.append("name", name);
       fd.append("description", about);
+      fd.append("categories", JSON.stringify(categories));
       if (website.trim()) fd.append("website", website.trim());
       // No picture chosen: a logo from the project's initials
       if (logo) fd.append("logo", logo, logo.name);
@@ -189,7 +193,8 @@ export default function SignUpFlow() {
           <div className="w-full pt-[18px]">
             <ProfilePictureField file={logo} onChange={f => { const problem = pictureProblem(f); setError(problem ?? ""); if (!problem) setLogo(f); }} />
           </div>
-          <Field label="Project name" className="pt-0">
+          <CategoryPicker value={categories} onChange={setCategories} />
+          <Field label="Project name">
             <TextInput value={projectName} onChange={e => setProjectName(e.target.value)} placeholder="e.g. Intuition Labs" />
           </Field>
           <Field label="Project Website">

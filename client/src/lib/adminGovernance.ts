@@ -235,6 +235,9 @@ export const fetchGovernance = () =>
 export const submitProposal = (body: { ref: string; title: string; change: string; action: ProposalAction; clientUrl: string } & SignedPayload) =>
   projectApiRequest<GovernanceSnapshot>({ method: "POST", endpoint: "/hub/governance/proposals", data: body });
 
+export const checkProposal = (action: ProposalAction) =>
+  projectApiRequest<{ ok: true }>({ method: "POST", endpoint: "/hub/governance/proposals/check", data: { action } });
+
 /** Marks notifications read for me: the given proposals, or all of them. */
 export const markNotificationsRead = (refs?: string[]) =>
   projectApiRequest<GovernanceSnapshot>({ method: "POST", endpoint: "/hub/governance/notifications/read", data: refs ? { refs } : {} });

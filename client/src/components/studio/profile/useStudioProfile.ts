@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { projectApiRequest } from "@/lib/projectApi";
 
 export type HubInfo = {
-  _id?: string; name?: string; description?: string; website?: string; xAccount?: string; logo?: string;
+  _id?: string; name?: string; description?: string; categories?: string[]; website?: string; xAccount?: string; logo?: string;
   discordConnected?: boolean; discordServer?: string; superAdmin?: string;
   telegramConnected?: boolean; telegramHandle?: string; xConnected?: boolean;
 };

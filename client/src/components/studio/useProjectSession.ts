@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { PROJECT_SESSION_EVENT, clearProjectSession, getStoredProjectToken, isProjectSessionActive } from "@/lib/projectApi";
-import { useToast } from "@/hooks/use-toast";
+import { MAIN_APP_URL } from "@/lib/mainAppUrl";
 
 // How often to check whether the token has run out while the page sits open
 const CHECK_MS = 30_000;
@@ -32,14 +31,10 @@ export function useProjectSession() {
 
 export function useSessionExpiryRedirect() {
   const active = useProjectSession();
-  const router = useRouter();
-  const { toast } = useToast();
   useEffect(() => {
-    if (active || !getStoredProjectToken()) return;
-    clearProjectSession();
-    toast({ title: "Session expired", description: "Sign in again to continue." });
-    router.replace("/studio");
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (active) return;
+    if (getStoredProjectToken()) clearProjectSession();
+    window.location.replace(MAIN_APP_URL);
   }, [active]);
 }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import StudioBackground from "@/components/StudioBackground";
 import StudioSidebar from "./StudioSidebar";
 import StudioHeader from "./StudioHeader";
@@ -27,7 +27,6 @@ interface StudioLayoutProps {
  */
 export default function StudioLayout({ children, title = "Nexura Studio", hideHeader = false, bleed = false }: StudioLayoutProps) {
   const pathname = usePathname();
-  const router = useRouter();
 
   // Determine active tab from the current URL
   const deriveTab = (): TabType => {
@@ -45,13 +44,6 @@ export default function StudioLayout({ children, title = "Nexura Studio", hideHe
   useEffect(() => {
     setActiveTab(deriveTab());
   }, [pathname]);
-
-  // Auth guard
-  useEffect(() => {
-    if (!isProjectSignedIn()) {
-      router.push("/studio");
-    }
-  }, []);
 
   useSessionExpiryRedirect();
 

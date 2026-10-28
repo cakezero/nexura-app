@@ -33,6 +33,7 @@ import { walletLoginProblem } from "@/utils/walletLogin";
 // The same signature also proves the wallet to Nexura Studio: one wallet login for both apps
 import { issueWalletToken } from "@/utils/walletToken";
 import { issueLinkTicket } from "@/models/linkTicket.model";
+import { CONSENT_REQUIRED, readLegalConsent } from "@/utils/legalConsent";
 
 const buildWalletUsernameBase = (address: string) =>
 	`${address.slice(0, 4)}...${address.slice(-4)}`;
@@ -227,7 +228,7 @@ export const disconnectDiscord = async (req: GlobalRequest, res: GlobalResponse)
 }
 
 export const signIn = async (req: GlobalRequest, res: GlobalResponse) => {
-	const { address, referrer, message, signature }: { address: string; referrer?: string; message?: string; signature?: string } =
+	const { address, referrer, message, signature, consent: sentConsent }: { address: string; referrer?: string; message?: string; signature?: string; consent?: unknown } =
 		req.body;
 
 	if (!address) {
@@ -236,6 +237,12 @@ export const signIn = async (req: GlobalRequest, res: GlobalResponse) => {
 			.json({ error: "address cannot be empty" });
 		return;
   }
+
+	const consent = readLegalConsent(sentConsent);
+	if (!consent) {
+		res.status(BAD_REQUEST).json({ error: CONSENT_REQUIRED });
+		return;
+	}
 
 	// Proof that the person controls this wallet: without it anyone could sign in as any address
 	try {
@@ -291,7 +298,7 @@ export const signIn = async (req: GlobalRequest, res: GlobalResponse) => {
 
 			const userReferrer = await user.findOne({ "referral.code": referrer });
 
-			const newUser = new user({ address: lowerCaseAddress, username, referral, dateJoined, location });
+			const newUser = new user({ address: lowerCaseAddress, username, referral, dateJoined, location, legalConsent: consent });
 
 			const id = newUser._id;
 
@@ -324,6 +331,7 @@ export const signIn = async (req: GlobalRequest, res: GlobalResponse) => {
     req.id = userExists._id as unknown as string;
 
 		userExists.location = location;
+		if (userExists.legalConsent?.version !== consent.version) userExists.legalConsent = consent;
 		await userExists.save();
 
 		res.cookie("refreshToken", refreshToken, {
@@ -359,6 +367,22 @@ export const signIn = async (req: GlobalRequest, res: GlobalResponse) => {
 		}
 
 		res.status(INTERNAL_SERVER_ERROR).json({ error: "Error signing user in" });
+	}
+};
+
+export const recordConsent = async (req: GlobalRequest, res: GlobalResponse) => {
+	const consent = readLegalConsent(req.body?.consent);
+	if (!consent) {
+		res.status(BAD_REQUEST).json({ error: CONSENT_REQUIRED });
+		return;
+	}
+
+	try {
+		await user.updateOne({ _id: req.id }, { legalConsent: consent });
+		res.status(OK).json({ message: "consent recorded" });
+	} catch (error) {
+		logger.error(error);
+		res.status(INTERNAL_SERVER_ERROR).json({ error: "couldn't save your agreement just now, try again" });
 	}
 };
 

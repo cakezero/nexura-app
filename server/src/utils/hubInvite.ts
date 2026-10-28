@@ -3,6 +3,7 @@ import { hubAdmin } from "@/models/hub.model";
 import { addHubAdminEmail } from "@/utils/sendMail";
 import { generateOTP } from "@/utils/utils";
 import { CLIENT_URL } from "@/utils/env.utils";
+import { IN_ANOTHER_STUDIO, inAnotherStudio } from "@/utils/hubAccounts";
 import { BAD_REQUEST, INTERNAL_SERVER_ERROR } from "@/utils/status.utils";
 
 /** Error with the HTTP status the caller should respond with. */
@@ -38,9 +39,9 @@ export async function createHubInvite({ hubId, email, role, clientUrl, keepIfEma
   const validRole = role === "superadmin" ? "superadmin" : "admin";
   const normalizedEmail = String(email).trim().toLowerCase();
 
-  // The same email may already be in other hubs; only this hub matters
   const existingAdmin = await hubAdmin.findOne({ email: normalizedEmail, hub: hubId }).lean();
   if (existingAdmin) throw new InviteError(BAD_REQUEST, "this email is already in your studio");
+  if (await inAnotherStudio(normalizedEmail, hubId)) throw new InviteError(BAD_REQUEST, IN_ANOTHER_STUDIO);
 
   let code = "";
   for (let attempt = 0; attempt < 5; attempt++) {

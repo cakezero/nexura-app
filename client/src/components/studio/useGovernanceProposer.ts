@@ -7,7 +7,7 @@ import { useLiveRefresh } from "@/hooks/use-live-refresh";
 import { projectApiRequest } from "@/lib/projectApi";
 import {
   EMPTY_SNAPSHOT, type GovernanceSnapshot, type ProposalAction,
-  fetchGovernance, isGovernanceUnavailable, newProposalId, notifyGovernanceChanged, submitProposal,
+  checkProposal, fetchGovernance, isGovernanceUnavailable, newProposalId, notifyGovernanceChanged, submitProposal,
 } from "@/lib/adminGovernance";
 
 /**
@@ -60,6 +60,7 @@ export function useGovernanceProposer() {
    */
   const propose = async (title: string, change: string, action: ProposalAction | (() => Promise<ProposalAction>)) => {
     if (me && !gov.signerIds.includes(me.id)) throw new Error("Only signers can make proposals. Ask a signer to add you in Admin Management.");
+    if (typeof action !== "function") await checkProposal(action);
     const ref = newProposalId();
     const { signature, message } = await sign("Propose", title, ref);
     const resolved = typeof action === "function" ? await action() : action;

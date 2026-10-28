@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +14,7 @@ import StudioHeader from "@/components/studio/StudioHeader";
 import { useSessionExpiryRedirect } from "@/components/studio/useProjectSession";
 import SignerReminder from "@/components/studio/SignerReminder";
 import { apiRequest } from "@/lib/config";
-import { projectApiRequest, isProjectSignedIn } from "@/lib/projectApi";
+import { projectApiRequest } from "@/lib/projectApi";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { getStoredAdminInfo } from "@/lib/config";
 import {
@@ -43,7 +43,6 @@ type TabType = "hubProfile" | "campaignSubmissions" | "adminManagement" | "campa
 
 export default function StudioDashboard() {
   const pathname = usePathname();
-  const router = useRouter();
   const deriveTab = (): TabType => {
     if (pathname.includes("/studio-dashboard/dashboard")) return "campaignSubmissions";
     if (pathname.includes("hub-profile")) return "hubProfile";
@@ -60,12 +59,6 @@ export default function StudioDashboard() {
     setActiveTab(deriveTab());
   }, [pathname]);
 
-  // Auth guard - redirect to /studio if no valid session
-  useEffect(() => {
-    if (!isProjectSignedIn()) {
-      router.push("/studio");
-    }
-  }, []);
   useSessionExpiryRedirect();
   const [viewedSubmissions, setViewedSubmissions] = useState<Set<string>>(new Set());
 const [campaignTasks, setCampaignTasks] = useState<TASKS[]>([]);

@@ -87,6 +87,12 @@ const docsSectionsMap: any = {
     { id: "legal", title: "Terms, Policies and Disclaimer", level: 1 },
     { id: "terms-of-use", title: "Terms of Use", level: 3 },
     { id: "changes-to-terms", title: "Changes to Terms", level: 3 },
+    { id: "privacy-policy", title: "Privacy Policy", level: 3 },
+    { id: "information-we-collect", title: "Information We Collect", level: 3 },
+    { id: "how-we-share-information", title: "How We Share Information", level: 3 },
+    { id: "your-choices", title: "Your Choices and Rights", level: 3 },
+    { id: "children", title: "Children", level: 3 },
+    { id: "contact", title: "Contact", level: 3 },
   ],
 };
 
@@ -126,6 +132,8 @@ const Docs = () => {
 
   useEffect(() => {
     window.scrollTo(0, 0);
+    const id = window.location.hash.slice(1);
+    if (id) requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ block: "start" }));
   }, [slug]);
 
   return (

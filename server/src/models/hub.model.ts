@@ -37,6 +37,10 @@ const hubSchema = new Schema({
     required: false,
     default: ""
   },
+  categories: {
+    type: [String],
+    default: []
+  },
   website: {
     type: String,
     required: false,
