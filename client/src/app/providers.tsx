@@ -14,6 +14,7 @@ import { initNetworkFromServer, getNetwork } from "@/lib/runtimeNetwork";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { Toaster } from "@/components/ui/toaster";
+import LegalConsentHost from "@/components/LegalConsentHost";
 
 import "@rainbow-me/rainbowkit/styles.css";
 
@@ -86,6 +87,7 @@ export function Providers({ children }: { children: ReactNode }) {
                 {children}
               </SidebarProvider>
             </TooltipProvider>
+            <LegalConsentHost />
           </AuthProvider>
           <Toaster />
         </RainbowKitProvider>

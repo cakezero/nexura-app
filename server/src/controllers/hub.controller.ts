@@ -104,6 +104,16 @@ const getRequiredOngoingDiscordGuildIdForHub = async (hubId: unknown) => {
   return Array.from(lockedGuildIds)[0] ?? "";
 };
 
+const MAX_CATEGORIES = 5;
+
+const readCategories = (raw: unknown): string[] => {
+  let list: unknown = raw;
+  if (typeof raw === "string") { try { list = JSON.parse(raw); } catch { return []; } }
+  if (!Array.isArray(list)) return [];
+  const tags = list.filter((t): t is string => typeof t === "string").map(t => t.trim()).filter(t => t && t.length <= 30);
+  return [...new Set(tags)].slice(0, MAX_CATEGORIES);
+};
+
 export const createHub = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
     const { error } = validateHubData(req.body);
@@ -128,6 +138,7 @@ export const createHub = async (req: GlobalRequest, res: GlobalResponse) => {
           website: String(req.body.website ?? existingHubWithName.website).trim(),
           xAccount: String(req.body.xAccount ?? existingHubWithName.xAccount).trim(),
           discordServer: String(req.body.discordServer ?? existingHubWithName.discordServer).trim(),
+          ...(req.body.categories !== undefined ? { categories: readCategories(req.body.categories) } : {}),
         });
         res.status(OK).json({ message: "hub updated!" });
         return;
@@ -150,6 +161,7 @@ export const createHub = async (req: GlobalRequest, res: GlobalResponse) => {
     const createdHub = await hub.create({
       name,
       description: req.body.description ?? "",
+      categories: readCategories(req.body.categories),
       website,
       xAccount,
       discordServer,
@@ -400,6 +412,7 @@ export const updateHub = async (req: GlobalRequest, res: GlobalResponse) => {
       if (safeBody.discordServer !== undefined) safeBody.discordServer = String(safeBody.discordServer ?? "").trim();
       if (safeBody.guildId !== undefined) safeBody.guildId = String(safeBody.guildId ?? "").trim();
       if (safeBody.document !== undefined) safeBody.document = String(safeBody.document ?? "").trim();
+      if (safeBody.categories !== undefined) safeBody.categories = readCategories(safeBody.categories);
       const updatedHub = await hub.findByIdAndUpdate(req.admin.hub, safeBody, { new: true });
       res.status(OK).json(updatedHub);
       return;
@@ -422,12 +435,19 @@ export const updateHub = async (req: GlobalRequest, res: GlobalResponse) => {
       res.status(FORBIDDEN).json({ error: OWNER_ONLY_SOCIALS });
       return;
     }
-    const before = await hub.findById(req.admin.hub).select(EDITABLE_HUB_FIELDS.join(" ")).lean() as any;
-    const ignored = Object.keys(req.body ?? {}).filter(k => !(EDITABLE_HUB_FIELDS as readonly string[]).includes(k));
+    const categories = req.body.categories !== undefined ? readCategories(req.body.categories) : undefined;
+    if (categories && !categories.length) {
+      res.status(BAD_REQUEST).json({ error: "pick at least one category" });
+      return;
+    }
+    const before = await hub.findById(req.admin.hub).select([...EDITABLE_HUB_FIELDS, "categories"].join(" ")).lean() as any;
+    const ignored = Object.keys(req.body ?? {}).filter(k => k !== "categories" && !(EDITABLE_HUB_FIELDS as readonly string[]).includes(k));
     if (ignored.length) logger.warn(`updateHub: ignored fields that can't be set here: ${ignored.join(", ")} (admin ${req.id}, hub ${req.admin.hub})`);
-    const updatedHub = await hub.findByIdAndUpdate(req.admin.hub, safeBody, { new: true });
+    const updatedHub = await hub.findByIdAndUpdate(req.admin.hub, { ...safeBody, ...(categories ? { categories } : {}) }, { new: true });
     // The other Owner/Super Admins hear about project settings changes (they don't go through proposals)
-    void notifyProjectChange(req, Object.keys(safeBody).filter(f => String(before?.[f] ?? "") !== safeBody[f]));
+    const changed = Object.keys(safeBody).filter(f => String(before?.[f] ?? "") !== safeBody[f]);
+    if (categories && categories.join() !== (before?.categories ?? []).join()) changed.push("categories");
+    void notifyProjectChange(req, changed);
     res.status(OK).json(updatedHub);
   } catch (error) {
     if (error instanceof FileTypeError) {

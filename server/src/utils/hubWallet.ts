@@ -2,8 +2,6 @@ import { hubGovernance } from "@/models/governance.model";
 import { campaign } from "@/models/campaign.model";
 import { hubAdmin } from "@/models/hub.model";
 
-export const maskAddress = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
-
 /**
  * The wallet tied to a Studio admin by something they did in their hub: the wallet stored on the
  * admin, the wallet that signed their governance actions, or the wallet that signed a campaign they

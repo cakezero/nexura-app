@@ -1,5 +1,6 @@
 import { Router } from "express";
 import {
+  checkGovernanceProposal,
   createGovernanceProposal,
   executeGovernanceProposal,
   getGovernance,
@@ -14,6 +15,7 @@ const router = Router();
 router
   .get("/", getGovernance)
   .post("/proposals", createGovernanceProposal)
+  .post("/proposals/check", checkGovernanceProposal)
   .post("/proposals/:ref/vote", voteOnGovernanceProposal)
   .post("/proposals/:ref/execute", executeGovernanceProposal)
   .post("/notifications/read", markGovernanceNotificationsRead);

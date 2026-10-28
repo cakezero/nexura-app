@@ -10,6 +10,8 @@ import { useToast } from "@/hooks/use-toast";
 import { PICTURE_ACCEPT, pictureProblem } from "../auth/AuthUI";
 import { initialsLogo } from "../auth/initialsLogo";
 import { STUDIO_X_RETURN_KEY, getAuthUrl } from "@/lib/generateXAuthUrl";
+import CategoryPicker, { CategoryTags } from "../auth/CategoryPicker";
+import { MAX_HUB_CATEGORIES } from "@/lib/hubCategories";
 
 export type ProfileTab = "profile" | "setup" | "accounts" | "project" | "security";
 
@@ -282,6 +284,51 @@ function ProjectPictureRow({ p }: { p: StudioProfile }) {
   );
 }
 
+function CategoriesRow({ p }: { p: StudioProfile }) {
+  const { toast } = useToast();
+  const current = p.hub?.categories ?? [];
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<string[]>([]);
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    if (!draft.length) return toast({ title: "Pick at least one category", variant: "destructive" });
+    setSaving(true);
+    try {
+      const fd = new FormData();
+      fd.append("categories", JSON.stringify(draft));
+      await projectApiRequest({ method: "PATCH", endpoint: "/hub/update-hub", formData: fd });
+      await p.reload();
+      setEditing(false);
+      toast({ title: "Saved" });
+    } catch (e: any) {
+      toast({ title: "Couldn't save", description: e?.message, variant: "destructive" });
+    } finally { setSaving(false); }
+  };
+
+  return (
+    <Row
+      title="Categories" text={`Up to ${MAX_HUB_CATEGORIES} tags that fit your project.`}
+      below={editing ? (
+        <div className="flex w-full flex-col items-end gap-[8px]">
+          <CategoryPicker value={draft} onChange={setDraft} bare />
+          <div className="flex items-center gap-[8px]">
+            <span className="text-[12px] text-[#69728a]">{draft.length}/{MAX_HUB_CATEGORIES}</span>
+            <SmallButton onClick={save} disabled={saving}>{saving ? "Saving…" : "Save"}</SmallButton>
+            <SmallButton variant="outline" onClick={() => setEditing(false)} disabled={saving}>Cancel</SmallButton>
+          </div>
+        </div>
+      ) : current.length ? <CategoryTags tags={current} /> : "No categories yet"}
+    >
+      {!editing && (
+        <SmallButton variant="outline" onClick={() => { setDraft(current); setEditing(true); }}>
+          Edit <img src="/studio-profile/edit.svg" alt="" className="size-[12.988px]" />
+        </SmallButton>
+      )}
+    </Row>
+  );
+}
+
 export function ProjectPanel({ p }: { p: StudioProfile }) {
   const { toast } = useToast();
   const [editing, setEditing] = useState<ProjectField | null>(null);
@@ -317,6 +364,7 @@ export function ProjectPanel({ p }: { p: StudioProfile }) {
       <PanelTitle>Project</PanelTitle>
       <ProjectPictureRow p={p} />
       <div className="w-full pt-[8px]">
+        <CategoriesRow p={p} />
         {fields.map((f, i) => {
           const current = (p.hub?.[f.key] as string | undefined) ?? "";
           const isEditing = editing === f.key;

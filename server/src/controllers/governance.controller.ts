@@ -6,6 +6,7 @@ import { campaign } from "@/models/campaign.model";
 import { OTP } from "@/models/otp.model";
 import { parseDate } from "@/utils/dates";
 import { createHubInvite } from "@/utils/hubInvite";
+import { IN_ANOTHER_STUDIO, inAnotherStudio } from "@/utils/hubAccounts";
 import { applyCampaignUpdate, prepareCampaignSaveBody } from "@/controllers/hub.controller";
 import { EMAIL_RE, validateDiscordTaskConfig } from "@/utils/utils";
 import { BAD_REQUEST, CONFLICT, CREATED, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_FOUND, OK } from "@/utils/status.utils";
@@ -152,6 +153,7 @@ async function validateAction(ctx: Ctx, me: { id: string; role: Role }, raw: any
       if (!EMAIL_RE.test(email)) throw new HttpError(BAD_REQUEST, "enter a valid email address");
       if (role === "superadmin" && me.role !== "owner") throw new HttpError(FORBIDDEN, "only the Owner can invite Super Admins");
       if (await hubAdmin.exists({ email, hub: ctx.hubId })) throw new HttpError(BAD_REQUEST, "this email is already in your studio");
+      if (await inAnotherStudio(email, ctx.hubId)) throw new HttpError(BAD_REQUEST, IN_ANOTHER_STUDIO);
       if (pending.some(p => p.action?.kind === "invite" && p.action.email === email)) throw new HttpError(BAD_REQUEST, "an invitation for this email is already pending");
       return { kind: "invite", email, role, clientUrl };
     }
@@ -533,6 +535,18 @@ export const createGovernanceProposal = async (req: GlobalRequest, res: GlobalRe
     res.status(CREATED).json(await governanceState(fresh, me.id));
   } catch (error) {
     handleError(res, error, "error creating proposal");
+  }
+};
+
+export const checkGovernanceProposal = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const ctx = await loadContext(hubIdOf(req));
+    const me = await requireMe(req, ctx);
+    if (!ctx.signerIds.has(me.id)) throw new HttpError(FORBIDDEN, "only signers can make proposals; ask a signer to add you");
+    await validateAction(ctx, me, req.body?.action, "");
+    res.status(OK).json({ ok: true });
+  } catch (error) {
+    handleError(res, error, "error checking proposal");
   }
 };
 

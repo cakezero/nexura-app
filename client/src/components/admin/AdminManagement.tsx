@@ -17,7 +17,7 @@ import {
   type BackendRole, type GovernanceSnapshot, type Proposal, type ProposalAction, type ProposalStatus, type SignedPayload,
   type StudioRole, type TeamMember, type Vote,
   PERMISSION_COUNT, PERMISSION_GROUPS, ROLE_LABEL, ROLE_SUMMARY, SIGNER_PERMISSIONS, presenceOf, timeAgo,
-  EMPTY_SNAPSHOT, apiHost, assignableRoles, isGovernanceUnavailable, can, canManageMember, fetchGovernance, formatDateTime, requiredApprovals, newProposalId,
+  EMPTY_SNAPSHOT, apiHost, assignableRoles, isGovernanceUnavailable, can, canManageMember, checkProposal, fetchGovernance, formatDateTime, requiredApprovals, newProposalId,
   notifyGovernanceChanged, permissionCount, studioRole, submitExecution, submitProposal, submitVote, tally,
 } from "../../lib/adminGovernance";
 
@@ -437,6 +437,8 @@ export default function AdminManagement() {
 
   const createProposal = async (title: string, change: string, action: ProposalAction) => {
     if (!canPropose) return;
+    try { await checkProposal(action); }
+    catch (err) { if (isGovernanceUnavailable(err)) setGovUnavailable(true); else signError(err); return; }
     const ref = newProposalId();
     const ok = await signAndSubmit(ref, "Propose", { id: ref, title }, signed =>
       submitProposal({ ref, title, change, action, clientUrl: window.location.origin, ...signed }));

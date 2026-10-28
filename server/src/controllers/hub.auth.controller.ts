@@ -34,14 +34,16 @@ import { resetEmail, sendOTPConfirmEmail, resetPasswordOTPEmail } from "@/utils/
 import { OTP } from "@/models/otp.model";
 import { REDIS } from "@/utils/redis.utils";
 import { revokeToken } from "@/models/revokedToken.model";
-import { linkedHubWallet, maskAddress } from "@/utils/hubWallet";
+import { linkedHubWallet } from "@/utils/hubWallet";
 import { walletLoginProblem } from "@/utils/walletLogin";
 import { isAddress } from "viem";
 import { issueWalletToken, walletFromToken } from "@/utils/walletToken";
 import { TWO_FACTOR_PURPOSE } from "@/controllers/twoFactor.controller";
 import { verifiedEmail } from "@/models/verifiedEmail.model";
 import { bannedUser } from "@/models/bannedUser.model";
-import { USERNAME_RULE, accountsForEmail, accountsForLogin, hubChoices, usernameTaken } from "@/utils/hubAccounts";
+import { USERNAME_RULE, accountsForEmail, accountsForLogin, hubChoices, inAnotherStudio, usernameTaken } from "@/utils/hubAccounts";
+
+const WRONG_WALLET = "Switch to the wallet linked to this account to sign in.";
 
 const headers = {
 	"Content-Type": "application/x-www-form-urlencoded",
@@ -72,7 +74,7 @@ export const signIn = async (req: GlobalRequest, res: GlobalResponse) => {
 			if (usable.length === 1) adminExists = usable[0];
 			else if (usable.length > 1) { res.status(OK).json({ hubChoiceRequired: true, hubs: await hubChoices(usable) }); return; }
 			else {
-				res.status(FORBIDDEN).json({ error: wallet ? `You connected ${maskAddress(wallet)}, which isn't linked to your studios. Switch wallets to sign in.` : "Connect your wallet to sign in.", wrongWallet: !!wallet, walletRequired: !wallet });
+				res.status(FORBIDDEN).json({ error: wallet ? WRONG_WALLET : "Connect your wallet to sign in.", wrongWallet: !!wallet, walletRequired: !wallet });
 				return;
 			}
 		}
@@ -87,15 +89,14 @@ export const signIn = async (req: GlobalRequest, res: GlobalResponse) => {
 		// Every sign-in needs the connected wallet to be the one linked to the account (no signature asked).
 		// An account with no linked wallet yet takes the first wallet it signs in with
 		const linked = await linkedHubWallet(adminExists);
-		const expectedWallet = linked ? maskAddress(linked) : null;
 		// The wallet is the one proven by its token (signed once when it connected)
 		const walletAddress = await walletFromToken(req.body?.walletToken);
 		if (!walletAddress || !isAddress(walletAddress)) {
-			res.status(FORBIDDEN).json({ error: expectedWallet ? `Connect the wallet linked to this studio (${expectedWallet}) to sign in.` : "Connect your wallet to sign in.", walletRequired: true, expectedWallet });
+			res.status(FORBIDDEN).json({ error: linked ? "Connect the wallet linked to this account to sign in." : "Connect your wallet to sign in.", walletRequired: true });
 			return;
 		}
 		if (linked && String(walletAddress).toLowerCase() !== linked.toLowerCase()) {
-			res.status(FORBIDDEN).json({ error: `You connected ${maskAddress(String(walletAddress))}. Switch to the wallet linked to this studio: ${expectedWallet}.`, wrongWallet: true, expectedWallet });
+			res.status(FORBIDDEN).json({ error: WRONG_WALLET, wrongWallet: true });
 			return;
 		}
 		if (!linked) {
@@ -165,13 +166,7 @@ export const checkSignInWallet = async (req: GlobalRequest, res: GlobalResponse)
 		const linked = await Promise.all(matches.map(a => linkedHubWallet(a)));
 		const usable = matches.filter((_, i) => !linked[i] || linked[i]!.toLowerCase() === String(walletAddress).toLowerCase());
 		if (usable.length) { res.status(OK).json({ status: "ok" }); return; }
-		const expected = [...new Set(linked.filter(Boolean).map(w => maskAddress(w!)))];
-		res.status(OK).json({
-			status: "wrongWallet",
-			error: expected.length === 1
-				? `You connected ${maskAddress(String(walletAddress))}. Switch to the wallet linked to this studio: ${expected[0]}.`
-				: `You connected ${maskAddress(String(walletAddress))}, which isn't linked to your studios. Switch to: ${expected.join(", ")}.`,
-		});
+		res.status(OK).json({ status: "wrongWallet", error: WRONG_WALLET });
 	} catch (error) {
 		logger.error(error);
 		res.status(INTERNAL_SERVER_ERROR).json({ error: "couldn't check the wallet" });
@@ -467,6 +462,10 @@ export const hubAdminSignUp = async (req: GlobalRequest, res: GlobalResponse) =>
 
 		if (await hubAdmin.exists({ email: strippedEmail, hub: otp.hubId })) {
 			res.status(BAD_REQUEST).json({ error: "This email already has an account in this studio. Sign in instead." });
+			return;
+		}
+		if (await inAnotherStudio(strippedEmail, otp.hubId)) {
+			res.status(BAD_REQUEST).json({ error: "This email is already on another studio's team." });
 			return;
 		}
 		if (!USERNAME_RULE.test(trimmedName)) {

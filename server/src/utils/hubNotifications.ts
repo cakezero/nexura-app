@@ -4,7 +4,7 @@ import { hubNotification } from "@/models/hubNotification.model";
 
 /** Labels for the project settings fields, as the notice shows them. */
 export const PROJECT_FIELD_LABELS: Record<string, string> = {
-  name: "project name", description: "description", website: "website", logo: "logo", document: "document",
+  name: "project name", description: "description", categories: "categories", website: "website", logo: "logo", document: "document",
   xAccount: "X account", discord: "Discord server", telegram: "Telegram",
 };
 const SOCIAL_FIELDS = new Set(["xAccount", "discord", "telegram"]);

@@ -3,8 +3,8 @@ import logger from "@/config/logger";
 import { hub, hubAdmin } from "@/models/hub.model";
 
 /*
- * Studio accounts: one email can hold accounts in many hubs (Nexura Studio is permissionless), each
- * with its own password, wallet and 2FA. A username is unique inside a hub but may repeat across hubs.
+ * Studio accounts: each with its own password, wallet and 2FA. A username is unique inside a hub
+ * but may repeat across hubs.
  * Signing in, the password picks the account; when the same password opens several, the person picks
  * the project.
  */
@@ -19,6 +19,12 @@ export async function usernameTaken(name: string, hubId: unknown, exceptId?: str
   const found = await hubAdmin.findOne({ name, hub: hubId, ...(exceptId ? { _id: { $ne: exceptId } } : {}) })
     .collation(CASELESS).select("_id").lean();
   return !!found;
+}
+
+export const IN_ANOTHER_STUDIO = "This person is already on another studio's team and can't be invited.";
+
+export async function inAnotherStudio(email: string, hubId: unknown) {
+  return !!(await hubAdmin.exists({ email: email.trim().toLowerCase(), hub: { $ne: hubId } }));
 }
 
 export type HubChoice = { accountId: string; name: string; logo: string };
