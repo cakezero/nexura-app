@@ -50,7 +50,9 @@ export default function StudioSidebar({
   const [campaignCount, setCampaignCount] = useState<number | null>(null);
 
   const sidebarItems: NavItem[] = [
-    { title: "Project Profile", short: "Profile", icon: "/studio-sidebar/profile.svg", iconSize: 14.76, id: "hubProfile" },
+    adminRole === "admin"
+      ? { title: "My Profile", short: "Profile", icon: "/studio-sidebar/profile.svg", iconSize: 14.76, id: "accountSettings" as TabType }
+      : { title: "Profile", short: "Profile", icon: "/studio-sidebar/profile.svg", iconSize: 14.76, id: "hubProfile" as TabType },
     ...(adminRole === "superadmin" || adminRole === "owner" ? [
       { title: "Admin Management", short: "Admins", icon: "/studio-sidebar/admin.svg", id: "adminManagement" as TabType },
     ] : []),

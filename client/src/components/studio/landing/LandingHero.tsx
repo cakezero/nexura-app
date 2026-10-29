@@ -139,29 +139,39 @@ function SampleWorkspace() {
   );
 }
 
+export function HeroIntro() {
+  return (
+    <>
+      <span className="flex h-[34.648px] items-center gap-[8px] rounded-[999px] border-[1.25px] border-[#e8e4f6] bg-white px-[14px] py-[6px]">
+        <span className="size-[6.992px] rounded-[3.496px] bg-[#00e1a2]" />
+        <span className="text-[13px] font-semibold leading-[20.15px] text-[#8a3ffc]">Nexura Studio</span>
+      </span>
+      <h1 className="max-w-[880px] pt-[20px] text-center text-[40px] font-semibold leading-[1.02] tracking-[-2.38px] text-[#1c2533] sm:text-[68px] sm:leading-[69.36px]">
+        Build experiences that turn communities into{" "}
+        <span className="bg-gradient-to-r from-[#8a3ffc] to-[#3b82f6] bg-clip-text text-transparent">contributors.</span>
+      </h1>
+      <p className="max-w-[640px] pt-[20px] text-center text-[17px] leading-[29.45px] text-[#5b6478] sm:text-[19px]">
+        One workspace to create campaigns and quests, teach with lessons, review contributions, manage your team and measure what happens next.
+      </p>
+      <div className="flex justify-center gap-[12px] pt-[30px]">
+        <Link href="/studio/sign-up" className="flex h-[43.984px] items-center gap-[8px] rounded-[999px] border-[1.25px] border-[#8a3ffc] bg-[#8b3efe] px-[22px] text-[14.5px] font-semibold text-white drop-shadow-[0px_10px_13px_rgba(138,63,252,0.3)]">
+          Get started
+          <img src="/studio-landing/arrow-right.svg" alt="" className="size-[15.996px]" />
+        </Link>
+        <Link href="/studio/sign-in" className="flex h-[43.984px] items-center rounded-[999px] border-[1.25px] border-[#e8e4f6] bg-white px-[22px] text-[14.5px] font-semibold text-[#1c2533]">Sign in</Link>
+      </div>
+      <p className="pt-[18px] text-center text-[13px] leading-[20.15px] text-[#5b6478]">Made for founders, project teams and ecosystem builders.</p>
+    </>
+  );
+}
+
+export const HERO_BACKGROUND = HERO_BG;
+
 export default function LandingHero() {
   return (
     <section className="flex w-full flex-col items-center pt-[76px]" style={{ backgroundImage: HERO_BG }}>
       <div className="flex w-full max-w-[1200px] flex-col items-center px-4 sm:px-[32px]">
-        <span className="flex h-[34.648px] items-center gap-[8px] rounded-[999px] border-[1.25px] border-[#e8e4f6] bg-white px-[14px] py-[6px]">
-          <span className="size-[6.992px] rounded-[3.496px] bg-[#00e1a2]" />
-          <span className="text-[13px] font-semibold leading-[20.15px] text-[#8a3ffc]">Nexura Studio</span>
-        </span>
-        <h1 className="max-w-[880px] pt-[20px] text-center text-[40px] font-semibold leading-[1.02] tracking-[-2.38px] text-[#1c2533] sm:text-[68px] sm:leading-[69.36px]">
-          Build experiences that turn communities into{" "}
-          <span className="bg-gradient-to-r from-[#8a3ffc] to-[#3b82f6] bg-clip-text text-transparent">contributors.</span>
-        </h1>
-        <p className="max-w-[640px] pt-[20px] text-center text-[17px] leading-[29.45px] text-[#5b6478] sm:text-[19px]">
-          One workspace to create campaigns and quests, teach with lessons, review contributions, manage your team and measure what happens next.
-        </p>
-        <div className="flex justify-center gap-[12px] pt-[30px]">
-          <Link href="/studio/sign-up" className="flex h-[43.984px] items-center gap-[8px] rounded-[999px] border-[1.25px] border-[#8a3ffc] bg-[#8b3efe] px-[22px] text-[14.5px] font-semibold text-white drop-shadow-[0px_10px_13px_rgba(138,63,252,0.3)]">
-            Get started
-            <img src="/studio-landing/arrow-right.svg" alt="" className="size-[15.996px]" />
-          </Link>
-          <Link href="/studio/sign-in" className="flex h-[43.984px] items-center rounded-[999px] border-[1.25px] border-[#e8e4f6] bg-white px-[22px] text-[14.5px] font-semibold text-[#1c2533]">Sign in</Link>
-        </div>
-        <p className="pt-[18px] text-center text-[13px] leading-[20.15px] text-[#5b6478]">Made for founders, project teams and ecosystem builders.</p>
+        <HeroIntro />
         <div className="flex w-full justify-center pt-[52px]">
           <SampleWorkspace />
         </div>

@@ -47,6 +47,11 @@ export default function ProfilePage() {
     if (!p.loading && section) document.getElementById(section)?.scrollIntoView({ behavior: "smooth" });
   }, [p.loading, section]);
 
+  const isAdminOnly = !p.loading && !!p.admin && !p.isOwner && p.admin.role !== "superadmin";
+  useEffect(() => {
+    if (isAdminOnly) router.replace(ACCOUNT_SETTINGS_URL);
+  }, [isAdminOnly, router]);
+
   const go = (t: SetupTarget) => {
     if (t === "account") router.push(ACCOUNT_SETTINGS_URL);
     else document.getElementById(t)?.scrollIntoView({ behavior: "smooth" });
@@ -56,7 +61,7 @@ export default function ProfilePage() {
 
   return (
     <ProfileShell title="Profile" heading="Profile" text="Your project's public details and connected accounts.">
-      {p.loading ? (
+      {p.loading || isAdminOnly ? (
         <p className="text-[14px] text-[#69728a]">Loading your profile…</p>
       ) : (
         <>

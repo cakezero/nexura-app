@@ -199,13 +199,13 @@ export function ConnectedAccountsPanel({ p }: { p: StudioProfile }) {
   };
 
   const rows = [
-    { key: "x" as const, title: "X (Twitter)", text: "Needed to verify follow, like and repost tasks.", connected: p.socials.x, handle: p.hub?.xAccount ? `@${p.hub.xAccount.replace(/^@/, "")}` : "", connect: connectX },
-    { key: "discord" as const, title: "Discord", text: "Needed to verify join and role tasks on your server.", connected: p.socials.discord, handle: p.hub?.discordServer ?? "", connect: () => beginStudioDiscordConnect("/studio-dashboard/hub-profile?tab=accounts") },
-    { key: "telegram" as const, title: "Telegram", text: "Needed to verify join tasks in your group or channel.", connected: p.socials.telegram, handle: p.hub?.telegramHandle ?? "", connect: connectTelegram },
+    { key: "x" as const, title: "Project X account", text: "Your project's X account, not your personal one. Used to verify X tasks.", connected: p.socials.x, handle: p.hub?.xAccount ? `@${p.hub.xAccount.replace(/^@/, "")}` : "", connect: connectX },
+    { key: "discord" as const, title: "Project Discord server", text: "Your project's Discord server, not your personal account. Used to verify Discord tasks.", connected: p.socials.discord, handle: p.hub?.discordServer ?? "", connect: () => beginStudioDiscordConnect("/studio-dashboard/hub-profile?tab=accounts") },
+    { key: "telegram" as const, title: "Project Telegram", text: "Your project's Telegram group or channel, not your personal account. Used to verify Telegram tasks.", connected: p.socials.telegram, handle: p.hub?.telegramHandle ?? "", connect: connectTelegram },
   ];
 
   return (
-    <Card id="accounts" title="Connected accounts" text="Link your socials so Nexura can check participants completed your tasks.">
+    <Card id="accounts" title="Connected accounts" text="Link your project's accounts, not your personal ones. Nexura uses them to verify the tasks participants complete.">
       <div className="w-full pt-[18px]">
         {rows.map((r, i) => (
           <Row key={r.key} title={r.title} text={r.text} last={i === rows.length - 1}>
@@ -278,8 +278,8 @@ function ProjectPictureRow({ p }: { p: StudioProfile }) {
         <span className="text-[15px] font-bold leading-[23.25px] text-[#1c2533]">Profile picture</span>
         <p className="max-w-[380px] pt-[4px] text-[13px] leading-[19.5px] text-[#69728a]">Upload a square image of your project logo or brand mark. PNG, JPG or WebP, up to 5 MB.</p>
         <div className="flex gap-[8px] pt-[12px]">
-          <SmallButton onClick={open} disabled={busy}>{busy ? "Saving…" : logo ? "Change picture" : "Upload picture"}</SmallButton>
-          {logo && <SmallButton variant="outline" onClick={remove} disabled={busy}>Remove</SmallButton>}
+          <SmallButton variant="outline" className="transition-colors hover:border-[#8a3ffc] hover:bg-[#8a3ffc] hover:text-white" onClick={open} disabled={busy}>{busy ? "Saving…" : logo ? "Change picture" : "Upload picture"}</SmallButton>
+          {logo && <SmallButton variant="outline" className="transition-colors hover:border-[#8a3ffc] hover:bg-[#8a3ffc] hover:text-white" onClick={remove} disabled={busy}>Remove</SmallButton>}
         </div>
       </div>
     </div>
