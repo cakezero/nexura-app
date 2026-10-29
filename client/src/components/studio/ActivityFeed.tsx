@@ -18,7 +18,7 @@ export type FeedItem = {
 };
 
 export const CATEGORY_LABEL: Record<FeedCategory, string> = {
-  settings: "Project settings", team: "Team", proposal: "Proposals", campaign: "Campaigns",
+  settings: "Project settings", team: "Username changes", proposal: "Proposals", campaign: "Campaigns",
 };
 
 const STATUS = {

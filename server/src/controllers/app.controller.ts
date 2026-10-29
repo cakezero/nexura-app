@@ -67,6 +67,7 @@ import { lesson, lessonCompleted } from "@/models/lesson.model";
 import { xpLog } from "@/models/xpLog.model";
 import { formatDate } from "date-fns";
 import { ensureQuestStarted } from "./quest.controller";
+import { claimableStreakMilestone } from "@/utils/streakMilestones";
 
 const TX_HASH = /^0x[0-9a-fA-F]{64}$/;
 const TX_MAX_AGE_MS = 24 * 60 * 60 * 1000;
@@ -2415,26 +2416,10 @@ export const claimStreakReward = async (req: GlobalRequest, res: GlobalResponse)
 
     let dailyXpReward = await dailySignIn.findOne({ user: req.id, month });
 
-    // Check milestones from HIGHEST to LOWEST so users at higher streaks
-    // (e.g. day 15 who never claimed day 7) get the correct reward on first claim.
-    if (currentStreak >= 90 && currentDayCount < 90) {
-      streakReward = 20000;
-      dayCount = 90;
-    } else if (currentStreak >= 60 && currentDayCount < 60) {
-      streakReward = 10000;
-      dayCount = 60;
-    } else if (currentStreak >= 45 && currentDayCount < 45) {
-      streakReward = 5000;
-      dayCount = 45;
-    } else if (currentStreak >= 30 && currentDayCount < 30) {
-      streakReward = 2500;
-      dayCount = 30;
-    } else if (currentStreak >= 15 && currentDayCount < 15) {
-      streakReward = 1000;
-      dayCount = 15;
-    } else if (currentStreak >= 7 && currentDayCount < 7) {
-      streakReward = 500;
-      dayCount = 7;
+    const milestone = claimableStreakMilestone(currentStreak, currentDayCount);
+    if (milestone) {
+      streakReward = milestone.xp;
+      dayCount = milestone.day;
     }
 
     if (streakReward === 0) {
