@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { PROJECT_SESSION_EVENT, clearProjectSession, getStoredProjectToken, isProjectSessionActive } from "@/lib/projectApi";
-import { MAIN_APP_URL } from "@/lib/mainAppUrl";
+import { useAccount } from "wagmi";
+import { PROJECT_SESSION_EVENT, endProjectSession, isProjectSessionActive } from "@/lib/projectApi";
+
+const MAIN_APP_PATH = "/discover";
 
 // How often to check whether the token has run out while the page sits open
 const CHECK_MS = 30_000;
@@ -29,13 +31,23 @@ export function useProjectSession() {
   return active;
 }
 
+const WALLET_RECONNECT_MS = 3000;
+
 export function useSessionExpiryRedirect() {
   const active = useProjectSession();
+  const { status } = useAccount();
+  const [walletGone, setWalletGone] = useState(false);
+
   useEffect(() => {
-    if (active) return;
-    if (getStoredProjectToken()) clearProjectSession();
-    window.location.replace(MAIN_APP_URL);
-  }, [active]);
+    if (status !== "disconnected") { setWalletGone(false); return; }
+    const t = setTimeout(() => setWalletGone(true), WALLET_RECONNECT_MS);
+    return () => clearTimeout(t);
+  }, [status]);
+
+  useEffect(() => {
+    if (active && !walletGone) return;
+    void endProjectSession().finally(() => window.location.replace(MAIN_APP_PATH));
+  }, [active, walletGone]);
 }
 
 /** Where an admin signs in to the studio again. */
