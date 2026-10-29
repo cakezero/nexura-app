@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { useLiveRefresh } from "@/hooks/use-live-refresh";
 import { getStoredProjectInfo, projectApiRequest, getStoredProjectToken, storeProjectSession } from "@/lib/projectApi";
 
-type TabType = "hubProfile" | "campaignSubmissions" | "adminManagement" | "campaignsTab" | "campaignsFlow";
+type TabType = "hubProfile" | "accountSettings" | "campaignSubmissions" | "adminManagement" | "campaignsTab" | "campaignsFlow";
 
 type NavItem = {
   title: string;
@@ -43,14 +43,14 @@ export default function StudioSidebar({
 
   // State to hold project info
   const [projectLogo, setProjectLogo] = useState("");
-  const [logoFailed, setLogoFailed] = useState(false);
   const [projectHandle, setProjectHandle] = useState("@project");
   const [adminRole, setAdminRole] = useState<string>("");
+  const [adminName, setAdminName] = useState("");
 
   const [campaignCount, setCampaignCount] = useState<number | null>(null);
 
   const sidebarItems: NavItem[] = [
-    { title: "Profile", icon: "/studio-sidebar/profile.svg", iconSize: 14.76, id: "hubProfile" },
+    { title: "Project Profile", short: "Profile", icon: "/studio-sidebar/profile.svg", iconSize: 14.76, id: "hubProfile" },
     ...(adminRole === "superadmin" || adminRole === "owner" ? [
       { title: "Admin Management", short: "Admins", icon: "/studio-sidebar/admin.svg", id: "adminManagement" as TabType },
     ] : []),
@@ -70,7 +70,7 @@ export default function StudioSidebar({
     if (info) {
       const name = (info.name ?? info.email ?? "Project") as string;
       setProjectHandle(name);
-      if (info.logo) { setProjectLogo(info.logo as string); setLogoFailed(false); }
+      if (info.logo) { setProjectLogo(info.logo as string); }
       if (info.role) setAdminRole(info.role as string);
     }
 
@@ -81,7 +81,8 @@ export default function StudioSidebar({
             const hubName = (hub.name ?? info?.name ?? info?.email ?? "Project") as string;
             const hubLogo = (hub.logo ?? "") as string;
             setProjectHandle(hubName);
-            if (hubLogo) { setProjectLogo(hubLogo); setLogoFailed(false); }
+            if (hubLogo) { setProjectLogo(hubLogo); }
+            if (admin?.name) setAdminName(admin.name as string);
 
             // Store admin role from server
             if (admin?.role) {
@@ -107,6 +108,7 @@ export default function StudioSidebar({
 
   const routeByTab: Record<TabType, string> = {
     hubProfile: "/studio-dashboard/hub-profile",
+    accountSettings: "/studio-dashboard/account-settings",
     campaignSubmissions: "/studio-dashboard/dashboard",
     campaignsTab: "/studio-dashboard/campaigns-tab",
     campaignsFlow: "/studio-dashboard/campaigns-flow",
@@ -168,24 +170,29 @@ export default function StudioSidebar({
           })}
         </nav>
 
-        {/* Project + role -- clickable, navigates to hub profile */}
+        {/* Signed-in admin -- opens account settings */}
         <button
-          onClick={() => navigate("hubProfile")}
-          className="mt-auto mb-[14px] mx-auto flex w-[235px] items-center gap-[10px] rounded-[40px] border border-black/20 bg-[#f8f7fd] px-[11.8px] py-[9.8px] text-left transition-colors hover:bg-[#efedfb]"
+          onClick={() => navigate("accountSettings")}
+          aria-label="Account settings"
+          className={cn(
+            "mt-auto mb-[14px] mx-auto flex w-[235px] items-center gap-[10px] rounded-[40px] border border-black/20 px-[10.8px] py-[9.8px] text-left transition-colors hover:bg-[#efedfb]",
+            activeTab === "accountSettings" ? "bg-[#e7e8fc]" : "bg-[#f8f7fd]"
+          )}
         >
           <span
-            className="flex size-[26px] shrink-0 items-center justify-center overflow-hidden rounded-[7px] text-[12px] font-bold leading-[18.6px] text-white"
+            className="flex size-[26px] shrink-0 items-center justify-center rounded-[40px] text-[12px] font-bold leading-[18.6px] text-white"
             style={{ backgroundImage: "linear-gradient(120deg, #9b7cff 0%, #7c5cfc 45%, #5aa8ff 100%)" }}
           >
-            {projectLogo && !logoFailed ? (
-              <img src={projectLogo} alt="" className="size-full object-cover" onError={() => setLogoFailed(true)} />
-            ) : (
-              projectHandle.slice(0, 2).toUpperCase()
-            )}
+            {(adminName || projectHandle).slice(0, 1).toUpperCase()}
           </span>
           <span className="flex min-w-0 flex-1 flex-col">
-            <span className="truncate text-[13px] font-semibold leading-[20.15px] text-[#232a43]">{projectHandle}</span>
-            <span className="text-[11px] leading-[17px] text-[#605d72]">{adminRole === "owner" ? "Owner" : adminRole === "superadmin" ? "Super Admin" : "Admin"}</span>
+            <span className="truncate text-[13px] font-semibold leading-[20.15px] text-[#232a43]">{adminName ? `@${adminName}` : projectHandle}</span>
+            <span className="truncate text-[11px] leading-[17px] text-[#605d72]">
+              {adminRole === "owner" ? "Owner" : adminRole === "superadmin" ? "Super Admin" : "Admin"}{adminName ? ` · ${projectHandle}` : ""}
+            </span>
+          </span>
+          <span aria-hidden className="flex size-[32px] shrink-0 items-center justify-center rounded-[10px]">
+            <img src="/studio-sidebar/settings.svg" alt="" className="size-[16.992px]" />
           </span>
         </button>
       </aside>

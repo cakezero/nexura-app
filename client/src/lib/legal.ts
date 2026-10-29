@@ -1,10 +1,10 @@
 // Bump to re-ask everyone
-export const LEGAL_VERSION = "2026-10-29";
+export const LEGAL_VERSION = "2026-10-29.2";
 export const MIN_AGE = 18;
 export const TERMS_URL = "/docs/legal#terms-of-use";
 export const PRIVACY_URL = "/docs/legal#privacy-policy";
 
-export const LEGAL_UPDATED = new Date(`${LEGAL_VERSION}T00:00:00Z`)
+export const LEGAL_UPDATED = new Date(`${LEGAL_VERSION.slice(0, 10)}T00:00:00Z`)
   .toLocaleDateString("en-US", { timeZone: "UTC", month: "long", day: "numeric", year: "numeric" });
 
 export type LegalConsent = { version: string; ageConfirmed: true };

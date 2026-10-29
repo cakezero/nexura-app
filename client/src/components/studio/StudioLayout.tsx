@@ -10,7 +10,7 @@ import { isProjectSignedIn, projectApiRequest } from "@/lib/projectApi";
 import { useSessionExpiryRedirect } from "./useProjectSession";
 import { PRESENCE_HEARTBEAT_MS } from "@/lib/adminGovernance";
 
-type TabType = "hubProfile" | "campaignSubmissions" | "adminManagement" | "campaignsTab" | "campaignsFlow";
+type TabType = "hubProfile" | "accountSettings" | "campaignSubmissions" | "adminManagement" | "campaignsTab" | "campaignsFlow";
 
 interface StudioLayoutProps {
   children: React.ReactNode;
@@ -31,6 +31,7 @@ export default function StudioLayout({ children, title = "Nexura Studio", hideHe
   // Determine active tab from the current URL
   const deriveTab = (): TabType => {
     if (pathname.includes("hub-profile")) return "hubProfile";
+    if (pathname.includes("account-settings")) return "accountSettings";
     if (pathname.includes("admin-management")) return "adminManagement";
     if (pathname === "/studio-dashboard") return "campaignSubmissions";
     if (pathname.includes("campaigns-flow")) return "campaignsFlow";

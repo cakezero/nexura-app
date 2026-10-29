@@ -1,4 +1,3 @@
-import { ethers } from "ethers";
 import logger from "@/config/logger";
 import { hub, hubAdmin } from "@/models/hub.model";
 import { hubGovernance, governanceProposal } from "@/models/governance.model";
@@ -30,7 +29,7 @@ import { BAD_REQUEST, CONFLICT, CREATED, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_F
  */
 
 // ─── Signing (must match the studio client) ──────────────────────────────────
-import { SIGN_DOMAIN, SIGN_TYPES, SIGNATURE_MAX_AGE_MS } from "@/utils/studioSignature";
+import { SIGNATURE_MAX_AGE_MS, recoverStudioSigner, signatureScheme } from "@/utils/studioSignature";
 const KIND_TO_VERB = { propose: "Propose", approve: "Approve", reject: "Reject", execute: "Execute" } as const;
 type SignatureKind = keyof typeof KIND_TO_VERB;
 
@@ -83,10 +82,11 @@ function hubIdOf(req: GlobalRequest): string {
 }
 
 // ─── Signature verification ──────────────────────────────────────────────────
-type SignedBody = { signature?: unknown; message?: unknown };
+type SignedBody = { signature?: unknown; message?: unknown; scheme?: unknown };
 
 async function verifySignature(ctx: Ctx, me: { id: string; name: string }, kind: SignatureKind, proposal: { ref: string; title: string }, body: SignedBody) {
   const { signature, message } = body;
+  const scheme = signatureScheme(body.scheme);
   if (typeof signature !== "string" || !signature.startsWith("0x")) throw new HttpError(BAD_REQUEST, "a wallet signature is required");
   if (!message || typeof message !== "object") throw new HttpError(BAD_REQUEST, "the signed message is required");
   const m = message as Record<string, unknown>;
@@ -103,7 +103,7 @@ async function verifySignature(ctx: Ctx, me: { id: string; name: string }, kind:
 
   let address: string;
   try {
-    address = ethers.verifyTypedData(SIGN_DOMAIN, SIGN_TYPES, m, signature);
+    address = recoverStudioSigner(m, signature, scheme);
   } catch {
     throw new HttpError(BAD_REQUEST, "the wallet signature is not valid");
   }
@@ -126,7 +126,7 @@ async function verifySignature(ctx: Ctx, me: { id: string; name: string }, kind:
     await ctx.gov.save();
   }
 
-  return { admin: me.id, name: me.name, kind, address, signature, message: m, signedAt };
+  return { admin: me.id, name: me.name, kind, address, signature, scheme, message: m, signedAt };
 }
 
 // ─── Proposal validation (who can propose what) ──────────────────────────────

@@ -14,15 +14,27 @@ export const SIGN_TYPES = {
 };
 export const SIGNATURE_MAX_AGE_MS = 10 * 60 * 1000;
 
+// Plain-message form, for wallets that can't sign EIP-712 (must match the client)
+export const studioActionText = (m: Record<string, unknown>) =>
+  `Nexura Studio\nAction: ${m.action}\nHub: ${m.hub}\nSubject: ${m.proposal}\nID: ${m.proposalId}\nSigner: ${m.signer}\nSigned at: ${m.signedAt}`;
+
+export type SignatureScheme = "typed" | "text";
+export const signatureScheme = (scheme: unknown): SignatureScheme => (scheme === "text" ? "text" : "typed");
+
+export const recoverStudioSigner = (m: Record<string, unknown>, signature: string, scheme: SignatureScheme) =>
+  scheme === "text"
+    ? ethers.verifyMessage(studioActionText(m), signature)
+    : ethers.verifyTypedData(SIGN_DOMAIN, SIGN_TYPES, m, signature);
+
 /**
  * Checks a studio action signature (e.g. publishing a campaign) and returns the signing wallet.
  * Throws a readable message when it's missing, stale, for something else or invalid.
  */
 export function recoverStudioSignature(
-  body: { signature?: unknown; message?: unknown },
+  body: { signature?: unknown; message?: unknown; scheme?: unknown },
   expected: { action: string; targetId: string; adminId: string },
 ): string {
-  const { signature, message } = body ?? {};
+  const { signature, message, scheme } = body ?? {};
   if (typeof signature !== "string" || !signature.startsWith("0x")) throw new Error("a wallet signature is required");
   if (!message || typeof message !== "object") throw new Error("the signed message is required");
   const m = message as Record<string, unknown>;
@@ -37,7 +49,7 @@ export function recoverStudioSignature(
     throw new Error("the signature has expired, sign again");
   }
   try {
-    return ethers.verifyTypedData(SIGN_DOMAIN, SIGN_TYPES, m, signature);
+    return recoverStudioSigner(m, signature, signatureScheme(scheme));
   } catch {
     throw new Error("the wallet signature is not valid");
   }

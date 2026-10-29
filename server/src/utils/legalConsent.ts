@@ -1,4 +1,4 @@
-const VERSION = /^\d{4}-\d{2}-\d{2}$/;
+const VERSION = /^\d{4}-\d{2}-\d{2}(\.\d+)?$/;
 
 export type LegalConsent = { version: string; ageConfirmed: true; acceptedAt: Date };
 

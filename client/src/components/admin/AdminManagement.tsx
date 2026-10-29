@@ -402,8 +402,8 @@ export default function AdminManagement() {
       signedAt: new Date().toISOString(),
     };
     // Signs through the shown wallet without asking to connect it again
-    const { signature } = await signStudioAction(message, { linked: gov.signerWallets?.[meId], preferred: sessionWallet.address });
-    return { signature, message };
+    const { signature, scheme } = await signStudioAction(message, { linked: gov.signerWallets?.[meId], preferred: sessionWallet.address });
+    return { signature, scheme, message };
   };
 
   const signError = (err: unknown) => {
