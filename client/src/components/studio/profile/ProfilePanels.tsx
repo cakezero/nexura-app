@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, Row, SmallButton, StatusPill, Value } from "./ProfileUI";
 import type { StudioProfile } from "./useStudioProfile";
@@ -200,16 +200,16 @@ export function ConnectedAccountsPanel({ p }: { p: StudioProfile }) {
   };
 
   const rows = [
-    { key: "x" as const, title: "X (Twitter)", connected: p.socials.x, handle: p.hub?.xAccount ? `@${p.hub.xAccount.replace(/^@/, "")}` : "", connect: connectX },
-    { key: "discord" as const, title: "Discord", connected: p.socials.discord, handle: p.hub?.discordServer ?? "", connect: () => beginStudioDiscordConnect("/studio-dashboard/hub-profile?tab=accounts") },
-    { key: "telegram" as const, title: "Telegram", connected: p.socials.telegram, handle: p.hub?.telegramHandle ?? "", connect: connectTelegram },
+    { key: "x" as const, title: "X (Twitter)", text: "Needed to verify follow, like and repost tasks.", connected: p.socials.x, handle: p.hub?.xAccount ? `@${p.hub.xAccount.replace(/^@/, "")}` : "", connect: connectX },
+    { key: "discord" as const, title: "Discord", text: "Needed to verify join and role tasks on your server.", connected: p.socials.discord, handle: p.hub?.discordServer ?? "", connect: () => beginStudioDiscordConnect("/studio-dashboard/hub-profile?tab=accounts") },
+    { key: "telegram" as const, title: "Telegram", text: "Needed to verify join tasks in your group or channel.", connected: p.socials.telegram, handle: p.hub?.telegramHandle ?? "", connect: connectTelegram },
   ];
 
   return (
-    <Card id="accounts" title="Connected accounts" text="Link your project's socials so participants can verify it.">
+    <Card id="accounts" title="Connected accounts" text="Link your socials so Nexura can check participants completed your tasks.">
       <div className="w-full pt-[18px]">
         {rows.map((r, i) => (
-          <Row key={r.key} title={r.title} text="Link it so participants can verify your project." last={i === rows.length - 1}>
+          <Row key={r.key} title={r.title} text={r.text} last={i === rows.length - 1}>
             {r.connected ? (
               <>
                 <img src="/studio-profile/verified.svg" alt="Verified" className="size-[24px]" />
@@ -311,7 +311,7 @@ function TagsRow({ p }: { p: StudioProfile }) {
 
   return (
     <Row
-      title="Tags" text={`Up to ${MAX_HUB_CATEGORIES} tags that fit your project.`} last
+      title="Tags" text={`Choose the tags that relate to what your project does. You can choose up to ${MAX_HUB_CATEGORIES}.`}
       below={editing ? (
         <div className="flex w-full flex-col items-end gap-[8px]">
           <CategoryPicker value={draft} onChange={setDraft} bare />
@@ -341,9 +341,9 @@ export function ProjectPanel({ p }: { p: StudioProfile }) {
   const [saving, setSaving] = useState(false);
 
   const fields: { key: ProjectField; title: string; text: string; empty: string }[] = [
-    { key: "name", title: "Project name", text: "Shown on every campaign.", empty: "No name yet" },
-    { key: "website", title: "Website", text: "Linked from your campaign pages.", empty: "No website yet" },
-    { key: "description", title: "Description", text: "A short summary of your project.", empty: "No description yet" },
+    { key: "name", title: "Project name", text: "How your project appears on every campaign.", empty: "No name yet" },
+    { key: "website", title: "Website", text: "Where participants go to learn more about you.", empty: "No website yet" },
+    { key: "description", title: "Description", text: "What your project does, in a sentence or two.", empty: "No description yet" },
   ];
 
   const save = async () => {
@@ -376,46 +376,58 @@ export function ProjectPanel({ p }: { p: StudioProfile }) {
     <Card id="project" title="Project details" text="Shown on your campaigns and public pages.">
       <ProjectPictureRow p={p} />
       <div className="w-full pt-[26px]">
-        {fields.map(f => {
-          const current = (p.hub?.[f.key] as string | undefined) ?? "";
-          if (editing !== f.key) {
-            return (
-              <Row key={f.key} title={f.title} text={f.text}>
-                <Value>{current || f.empty}</Value>
-                <SmallButton variant="outline" onClick={() => { setDraft(current); setEditing(f.key); }}>
-                  Edit <img src="/studio-profile/edit.svg" alt="" className="size-[12.988px]" />
-                </SmallButton>
-              </Row>
-            );
-          }
-          if (f.key === "description") {
-            return (
-              <Row
-                key={f.key} title={f.title} text={f.text}
-                below={
-                  <div className="flex w-full flex-col items-end gap-[8px]">
-                    <textarea autoFocus value={draft} onChange={e => setDraft(e.target.value)} rows={4} maxLength={300} className={`resize-none ${inputCls}`} />
-                    {actions(`${draft.length}/300`)}
-                  </div>
-                }
-              />
-            );
-          }
-          return (
-            <Row key={f.key} title={f.title} text={f.text} align="start">
-              <div className="flex w-full flex-col items-end gap-[8px] sm:w-[399px]">
-                <input
-                  autoFocus value={draft} onChange={e => setDraft(e.target.value)} type={f.key === "website" ? "url" : "text"}
-                  onKeyDown={e => { if (e.key === "Enter") void save(); if (e.key === "Escape") setEditing(null); }}
-                  className={`h-[45.488px] min-w-[240px] ${inputCls}`}
-                />
-                {actions()}
-              </div>
-            </Row>
-          );
-        })}
-        <TagsRow p={p} />
+        {fields.map(f => (
+          <Fragment key={f.key}>
+            {fieldRow(f)}
+            {f.key === "name" && <TagsRow p={p} />}
+          </Fragment>
+        ))}
       </div>
     </Card>
   );
+
+  function fieldRow(f: (typeof fields)[number]) {
+    const current = (p.hub?.[f.key] as string | undefined) ?? "";
+    const editButton = (
+      <SmallButton variant="outline" onClick={() => { setDraft(current); setEditing(f.key); }}>
+        Edit <img src="/studio-profile/edit.svg" alt="" className="size-[12.988px]" />
+      </SmallButton>
+    );
+    // A description is too long to sit right-aligned beside its title
+    if (f.key === "description") {
+      return (
+        <Row
+          title={f.title} text={f.text} last
+          below={editing !== f.key ? (current || f.empty) : (
+            <div className="flex w-full flex-col items-end gap-[8px]">
+              <textarea autoFocus value={draft} onChange={e => setDraft(e.target.value)} rows={4} maxLength={300} className={`resize-none ${inputCls}`} />
+              {actions(`${draft.length}/300`)}
+            </div>
+          )}
+        >
+          {editing !== f.key && editButton}
+        </Row>
+      );
+    }
+    if (editing !== f.key) {
+      return (
+        <Row title={f.title} text={f.text}>
+          <Value>{current || f.empty}</Value>
+          {editButton}
+        </Row>
+      );
+    }
+    return (
+      <Row title={f.title} text={f.text} align="start">
+        <div className="flex w-full flex-col items-end gap-[8px] sm:w-[399px]">
+          <input
+            autoFocus value={draft} onChange={e => setDraft(e.target.value)} type={f.key === "website" ? "url" : "text"}
+            onKeyDown={e => { if (e.key === "Enter") void save(); if (e.key === "Escape") setEditing(null); }}
+            className={`h-[45.488px] min-w-[240px] ${inputCls}`}
+          />
+          {actions()}
+        </div>
+      </Row>
+    );
+  }
 }

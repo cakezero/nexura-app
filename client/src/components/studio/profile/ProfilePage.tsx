@@ -56,7 +56,7 @@ export default function ProfilePage() {
   const setupDone = p.steps.every(s => s.done);
 
   return (
-    <ProfileShell title="Profile" heading="Profile" text="Manage and view your project, studio details.">
+    <ProfileShell title="Profile" heading="Profile" text="Your project's public details and connected accounts.">
       {p.loading ? (
         <p className="text-[14px] text-[#69728a]">Loading your profile…</p>
       ) : (
