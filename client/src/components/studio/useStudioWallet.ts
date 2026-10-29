@@ -7,7 +7,7 @@ import { useSilentWalletConnect } from "./useSilentWalletConnect";
 import { clearWalletTokens, saveWalletToken, useWalletVerified, walletToken } from "./studioWalletProof";
 import { apiRequestV2, buildUrl } from "@/lib/queryClient";
 import { emitSessionChange } from "@/lib/session";
-import { clearProjectSession, getStoredProjectToken, projectApiRequest } from "@/lib/projectApi";
+import { endProjectSession } from "@/lib/projectApi";
 import { requestLegalConsent, storedConsent } from "@/lib/legal";
 
 /** The main app's wallet session (same login as Studio): set after signing, cleared on disconnect. */
@@ -25,10 +25,6 @@ function clearMainAppLogin() {
   fetch(buildUrl("/api/user/logout"), { method: "POST", credentials: "include" }).catch(() => {});
   try { ["nexura:wallet", "nexura:token", "user_profile"].forEach(k => localStorage.removeItem(k)); } catch { /* ignore */ }
   emitSessionChange();
-}
-function endStudioSession() {
-  if (!getStoredProjectToken()) return;
-  projectApiRequest({ method: "POST", endpoint: "/hub/logout" }).catch(() => {}).finally(clearProjectSession);
 }
 
 const SIGN_TIMEOUT_MS = 90 * 1000;
@@ -109,7 +105,7 @@ export function useStudioWallet() {
       setSessionAddress(null);
       clearWalletTokens();
       clearMainAppLogin();
-      endStudioSession();
+      void endProjectSession();
       broadcast({ type: "disconnect" });
     }
   }, [isConnected, address]);
@@ -155,7 +151,7 @@ export function useStudioWallet() {
     setSessionAddress(null);
     clearWalletTokens();
     clearMainAppLogin();
-    endStudioSession();
+    void endProjectSession();
     if (isConnected) disconnect();
     broadcast({ type: "disconnect" });
   }, [isConnected, address, sessionAddress, disconnect]);

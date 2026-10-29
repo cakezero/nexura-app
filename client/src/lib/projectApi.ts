@@ -127,6 +127,12 @@ export function clearProjectSession() {
   notifySessionChanged();
 }
 
+export async function endProjectSession() {
+  if (!getStoredProjectToken()) return;
+  try { await projectApiRequest({ method: "POST", endpoint: "/hub/logout" }); } catch { /* ignore */ }
+  clearProjectSession();
+}
+
 export function isProjectSignedIn(): boolean {
   // Email/password session or Hub session
   if (getStoredProjectToken()) return true;
