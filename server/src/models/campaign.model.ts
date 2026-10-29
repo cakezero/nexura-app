@@ -183,6 +183,7 @@ const campaignSchema = new Schema({
 	publishSignature: {
 		address: { type: String },
 		signature: { type: String },
+		scheme: { type: String, enum: ["typed", "text"], default: "typed" },
 		message: { type: Schema.Types.Mixed },
 		adminId: { type: String },
 		signedAt: { type: Date },

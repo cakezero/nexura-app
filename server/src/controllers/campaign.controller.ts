@@ -6,7 +6,7 @@ import { user } from "@/models/user.model";
 import { getCampaignContractStartDate, performIntuitionOnchainAction } from "@/utils/account";
 import { normalizeCampaignDateInput, normalizeCampaignDatesForResponse, parseDate } from "@/utils/dates";
 import { uploadImg } from "@/utils/img.utils";
-import { recoverStudioSignature } from "@/utils/studioSignature";
+import { recoverStudioSignature, signatureScheme } from "@/utils/studioSignature";
 import {
 	OK,
 	INTERNAL_SERVER_ERROR,
@@ -1029,6 +1029,7 @@ export const publishCampaign = async (req: GlobalRequest, res: GlobalResponse) =
 		(campaignExists as any).publishSignature = {
 			address: signerAddress,
 			signature: req.body.signature,
+			scheme: signatureScheme(req.body.scheme),
 			message: req.body.message,
 			adminId,
 			signedAt: new Date(String(req.body.message.signedAt)),

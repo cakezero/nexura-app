@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Dialog, DialogActions, PanelTitle, Row, SmallButton, StatusPill, Value, maskEmail } from "./ProfileUI";
+import { Card, Dialog, DialogActions, PanelTitle, Row, SmallButton, StatusPill, Value, maskEmail } from "./ProfileUI";
 import type { StudioProfile } from "./useStudioProfile";
 import { CodeInput, ErrorText, EyeToggle, PasswordMatch, StrengthBar, errorMessage, passwordOk } from "../auth/AuthUI";
 import { clearProjectSession, projectApiRequest, storeProjectSession } from "@/lib/projectApi";
@@ -293,13 +293,12 @@ export default function SecurityPanel({ p }: { p: StudioProfile }) {
   };
 
   if (settingUp) {
-    return <AuthenticatorSetup onCancel={() => setSettingUp(false)} onDone={async () => { setSettingUp(false); await p.reload(); }} />;
+    return <Card><AuthenticatorSetup onCancel={() => setSettingUp(false)} onDone={async () => { setSettingUp(false); await p.reload(); }} /></Card>;
   }
 
   return (
-    <>
-      <PanelTitle>Security</PanelTitle>
-      <div className="w-full pt-[8px]">
+    <Card title="Security" text="Protect your account.">
+      <div className="w-full pt-[18px]">
         <Row title="Email address" text="The email associated with your account.">
           <Value>{email || "No email on this account"}</Value>
           {email && <StatusPill tone="green">Verified</StatusPill>}
@@ -326,6 +325,6 @@ export default function SecurityPanel({ p }: { p: StudioProfile }) {
           <DialogActions onCancel={() => setOffOpen(false)} confirmLabel="Turn off" busy={busy} />
         </form>
       </Dialog>
-    </>
+    </Card>
   );
 }

@@ -14,7 +14,7 @@ import GettingStarted from "@/components/docs/content/GettingStartedOnNexura";
 import TechnicalOverview from "@/components/docs/content/TechnicalOverview";
 import ArchitecturalLayer from "@/components/docs/content/ArchitecturalLayer";
 import FAQs from "@/components/docs/content/FAQs";
-import Legal from "@/components/docs/content/Legal";
+import Legal, { LEGAL_SECTIONS } from "@/components/docs/content/Legal";
 
 const docsContentMap: any = {
   introduction: Introduction,
@@ -83,17 +83,7 @@ const docsSectionsMap: any = {
   faqs: [
     { id: "frequently-asked-questions", title: "Frequently Asked Questions", level: 1 },
   ],
-  legal: [
-    { id: "legal", title: "Terms, Policies and Disclaimer", level: 1 },
-    { id: "terms-of-use", title: "Terms of Use", level: 3 },
-    { id: "changes-to-terms", title: "Changes to Terms", level: 3 },
-    { id: "privacy-policy", title: "Privacy Policy", level: 3 },
-    { id: "information-we-collect", title: "Information We Collect", level: 3 },
-    { id: "how-we-share-information", title: "How We Share Information", level: 3 },
-    { id: "your-choices", title: "Your Choices and Rights", level: 3 },
-    { id: "children", title: "Children", level: 3 },
-    { id: "contact", title: "Contact", level: 3 },
-  ],
+  legal: LEGAL_SECTIONS,
 };
 
 const Docs = () => {

@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback } from "react";
-import { useAccount, useSignTypedData } from "wagmi";
+import { useAccount, useSignMessage, useSignTypedData } from "wagmi";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
-import { createWalletClient, custom, recoverTypedDataAddress, type EIP1193Provider } from "viem";
+import { createWalletClient, custom, recoverMessageAddress, recoverTypedDataAddress, type EIP1193Provider } from "viem";
 import { useSilentWalletConnect } from "./useSilentWalletConnect";
 
 // Same EIP-712 data the server verifies for every studio action
@@ -22,6 +22,34 @@ export const SIGN_TYPES = {
 export type StudioActionMessage = {
   hub: string; action: string; proposal: string; proposalId: string; signer: string; signedAt: string;
 };
+
+export type SignatureScheme = "typed" | "text";
+
+// Plain-message form for wallets that can't sign EIP-712 (must match the server)
+export const studioActionText = (m: StudioActionMessage) =>
+  `Nexura Studio\nAction: ${m.action}\nHub: ${m.hub}\nSubject: ${m.proposal}\nID: ${m.proposalId}\nSigner: ${m.signer}\nSigned at: ${m.signedAt}`;
+
+type WalletError = { code?: number; name?: string; shortMessage?: string; details?: string; message?: string };
+
+const isRejection = (err: unknown) => {
+  const e = err as WalletError;
+  return e?.code === 4001 || e?.code === 5000 || e?.name === "UserRejectedRequestError" || /reject|denied|cancel/i.test(e?.message ?? "");
+};
+
+const walletReason = (err: unknown) => {
+  const e = err as WalletError;
+  if (isRejection(err)) return "You declined the signature in your wallet.";
+  return (e?.name === "UnknownRpcError" && e.details) || e?.shortMessage || e?.message || "The wallet could not sign.";
+};
+
+async function typedOrText(typed: () => Promise<`0x${string}`>, text: () => Promise<`0x${string}`>) {
+  try {
+    return { signature: await typed(), scheme: "typed" as SignatureScheme };
+  } catch (err) {
+    if (isRejection(err)) throw err;
+    return { signature: await text(), scheme: "text" as SignatureScheme };
+  }
+}
 
 type Injected = { provider: EIP1193Provider; account: string };
 
@@ -71,7 +99,7 @@ async function injectedAccount(preferred?: string | null): Promise<Injected | nu
 }
 
 /**
- * Signs a studio action with the person's wallet (EIP-712, no transaction or gas).
+ * Signs a studio action with the person's wallet (EIP-712, or a plain message if the wallet can't; no gas).
  * Uses the live wagmi connection when there is one; otherwise signs straight through the wallet
  * extension, so a wallet the studio already shows never has to be connected again.
  * The connect modal only opens when no browser wallet is available at all.
@@ -79,6 +107,7 @@ async function injectedAccount(preferred?: string | null): Promise<Injected | nu
 export function useStudioSigner() {
   const { address, isConnected } = useAccount();
   const { signTypedDataAsync } = useSignTypedData();
+  const { signMessageAsync } = useSignMessage();
   const { openConnectModal } = useConnectModal();
   const silentConnect = useSilentWalletConnect();
 
@@ -91,13 +120,18 @@ export function useStudioSigner() {
       }
     };
     const typed = { domain: SIGN_DOMAIN, types: SIGN_TYPES, primaryType: "StudioAction" as const, message };
+    const text = studioActionText(message);
 
     let account: string | null = isConnected && address ? address : await silentConnect(preferred).catch(() => null);
-    let signature: `0x${string}`;
+    let signed: { signature: `0x${string}`; scheme: SignatureScheme };
     try {
       if (account) {
         checkLinked(account);
-        signature = await signTypedDataAsync({ account: account as `0x${string}`, ...typed });
+        const acct = account as `0x${string}`;
+        signed = await typedOrText(
+          () => signTypedDataAsync({ account: acct, ...typed }),
+          () => signMessageAsync({ account: acct, message: text }),
+        );
       } else {
         const direct = await injectedAccount(preferred);
         if (!direct) {
@@ -107,15 +141,16 @@ export function useStudioSigner() {
         account = direct.account;
         checkLinked(account);
         const client = createWalletClient({ account: account as `0x${string}`, transport: custom(direct.provider) });
-        signature = await client.signTypedData(typed);
+        signed = await typedOrText(() => client.signTypedData(typed), () => client.signMessage({ message: text }));
       }
     } catch (err) {
-      // Wallet errors are long; their short message says what actually happened
-      const e = err as { shortMessage?: string; message?: string };
-      throw new Error(e?.shortMessage || e?.message || "The wallet could not sign.");
+      throw new Error(walletReason(err));
     }
-    const recovered = await recoverTypedDataAddress({ ...typed, signature });
+    const { signature, scheme } = signed;
+    const recovered = scheme === "text"
+      ? await recoverMessageAddress({ message: text, signature })
+      : await recoverTypedDataAddress({ ...typed, signature });
     if (recovered.toLowerCase() !== account.toLowerCase()) throw new Error("The signature doesn't match the connected wallet.");
-    return { signature, message, address: account };
-  }, [address, isConnected, signTypedDataAsync, openConnectModal, silentConnect]);
+    return { signature, scheme, message, address: account };
+  }, [address, isConnected, signTypedDataAsync, signMessageAsync, openConnectModal, silentConnect]);
 }

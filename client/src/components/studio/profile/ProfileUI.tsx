@@ -8,6 +8,16 @@ export function PanelTitle({ children }: { children: ReactNode }) {
   return <h3 className="text-[20px] font-semibold leading-[23px] tracking-[-0.4px] text-[#1c2533]">{children}</h3>;
 }
 
+export function Card({ title, text, id, children }: { title?: string; text?: string; id?: string; children: ReactNode }) {
+  return (
+    <section id={id} className="flex w-full scroll-mt-[20px] flex-col items-start rounded-[40px] border-[1.25px] border-[rgba(28,37,51,0.09)] bg-white px-[20px] py-[28px] md:px-[32px]">
+      {title && <h3 className="text-[18px] font-semibold leading-[20.7px] tracking-[-0.36px] text-[#1c2533]">{title}</h3>}
+      {text && <p className="pt-[4px] text-[13px] leading-[20.15px] text-[#69728a]">{text}</p>}
+      {children}
+    </section>
+  );
+}
+
 export function Row({ title, text, children, last = false, align = "center", below }: {
   title: string; text: string; children?: ReactNode; last?: boolean; align?: "center" | "start";
   /** Content shown full width under the title (long values such as a description). */

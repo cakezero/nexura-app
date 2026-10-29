@@ -227,7 +227,7 @@ export const EMPTY_SNAPSHOT: GovernanceSnapshot = {
 };
 
 /** The EIP-712 payload a wallet signs, sent alongside every governance request. */
-export type SignedPayload = { signature: string; message: Record<string, string> };
+export type SignedPayload = { signature: string; scheme?: "typed" | "text"; message: Record<string, string> };
 
 export const fetchGovernance = () =>
   projectApiRequest<GovernanceSnapshot>({ method: "GET", endpoint: "/hub/governance" });

@@ -269,7 +269,8 @@ export default function StudioHeader({ title, showLogo = false, network: control
             <div role="menu" style={{ ...POPOVER, right: 0, width: 200, borderRadius: 16, padding: 5 }}>
               {signedIn ? (
                 <>
-                  <Link role="menuitem" href="/studio-dashboard/hub-profile" onClick={() => setOpen(null)} className={menuItem}>Profile</Link>
+                  <Link role="menuitem" href="/studio-dashboard/hub-profile" onClick={() => setOpen(null)} className={menuItem}>Project Profile</Link>
+                  <Link role="menuitem" href="/studio-dashboard/account-settings" onClick={() => setOpen(null)} className={menuItem}>Account settings</Link>
                   <a role="menuitem" href={NEXURA_MAIN_APP_URL} className={menuItem}>Back to Main App</a>
                 </>
               ) : (

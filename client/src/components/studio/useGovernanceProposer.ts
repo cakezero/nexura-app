@@ -50,8 +50,8 @@ export function useGovernanceProposer() {
       signedAt: new Date().toISOString(),
     };
     // Signs through the shown wallet without asking to connect it again
-    const { signature } = await signStudioAction(message, { linked: gov.signerWallets?.[me.id], preferred: sessionWallet.address });
-    return { signature, message };
+    const { signature, scheme } = await signStudioAction(message, { linked: gov.signerWallets?.[me.id], preferred: sessionWallet.address });
+    return { signature, scheme, message };
   };
 
   /**
@@ -62,9 +62,9 @@ export function useGovernanceProposer() {
     if (me && !gov.signerIds.includes(me.id)) throw new Error("Only signers can make proposals. Ask a signer to add you in Admin Management.");
     if (typeof action !== "function") await checkProposal(action);
     const ref = newProposalId();
-    const { signature, message } = await sign("Propose", title, ref);
+    const signed = await sign("Propose", title, ref);
     const resolved = typeof action === "function" ? await action() : action;
-    const snap = await submitProposal({ ref, title, change, action: resolved, clientUrl: window.location.origin, signature, message });
+    const snap = await submitProposal({ ref, title, change, action: resolved, clientUrl: window.location.origin, ...signed });
     setGov(snap);
     notifyGovernanceChanged();
     return snap.proposals.find(p => p.id === ref) ?? null;

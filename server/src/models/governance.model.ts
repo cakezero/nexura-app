@@ -29,6 +29,7 @@ const governanceSignatureSchema = new Schema({
 	kind: { type: String, enum: ["propose", "approve", "reject", "execute"], required: true },
 	address: { type: String, required: true },
 	signature: { type: String, required: true },
+	scheme: { type: String, enum: ["typed", "text"], default: "typed" },
 	message: { type: Schema.Types.Mixed, required: true },
 	signedAt: { type: Date, required: true },
 }, { _id: false });
