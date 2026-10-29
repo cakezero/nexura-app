@@ -94,7 +94,7 @@ export function noticeParts(n: ProjectNotice): { who: string; parts: NoticePart[
   const d = n.details?.[0];
   if (n.kind === "username" && d) return { who: handle(d.to ?? ""), parts: ["changed their username from ", v(handle(d.from ?? "")), " to ", v(handle(d.to ?? ""))] };
   const who = n.actorName ? handle(n.actorName) : "An admin";
-  if (n.kind === "campaign" && d) return { who, parts: [`${d.from === "Scheduled" ? "scheduled" : "published"} the campaign `, v(d.to ?? "")] };
+  if (n.kind === "campaign" && d) return { who: n.actorName ? who : "The Owner or a Super Admin", parts: [`${d.from === "Scheduled" ? "scheduled" : "published"} a campaign titled `, v(d.to ?? "")] };
   if (n.details?.length) return { who, parts: joinParts(n.details.map(detailParts)) };
   const names = n.changes.map(c => c === "categories" ? "tags" : c);
   const list = names.length <= 1 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
