@@ -1,4 +1,5 @@
 import logger from "@/config/logger";
+import { recordHubActivity } from "@/utils/hubNotifications";
 import { campaign, campaignCompleted } from "@/models/campaign.model";
 import { hub } from "@/models/hub.model";
 import { referredUsers } from "@/models/referrer.model";
@@ -1138,6 +1139,7 @@ export const publishCampaign = async (req: GlobalRequest, res: GlobalResponse) =
 		campaignExists.status = publishedStatus;
 		await campaignExists.save();
 		await syncCampaignXp(campaignExists._id);
+		void recordHubActivity(req, "campaign", [{ field: "campaign", to: String(campaignExists.title ?? ""), from: publishedStatus }]);
 
 		res.status(OK).json({ message: "campaign published" });
 	} catch (error: any) {

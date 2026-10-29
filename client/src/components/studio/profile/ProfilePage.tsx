@@ -43,7 +43,6 @@ export default function ProfilePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Links such as ?tab=accounts (notifications, social sign-in returns) land on that card
   useEffect(() => {
     if (!p.loading && section) document.getElementById(section)?.scrollIntoView({ behavior: "smooth" });
   }, [p.loading, section]);

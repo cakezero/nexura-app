@@ -9,7 +9,7 @@ import { ChainLogo, NETWORKS, NetworkList, POPOVER, POPOVER_TITLE, getInjectedWa
 import { useStudioNetwork } from "@/lib/studioNetwork";
 import { OPEN_PROPOSALS_EVENT, useProposalNotifications } from "./useProposalNotifications";
 import NotificationsPanel from "./NotificationsPanel";
-import { describeNotice, useProjectNotifications } from "./useProjectNotifications";
+import { describeNotice, noticeUrl, useProjectNotifications } from "./useProjectNotifications";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 
@@ -85,10 +85,10 @@ export default function StudioHeader({ title, showLogo = false, network: control
     const newest = fresh[0];
     const d = describeNotice(newest);
     toast({
-      title: fresh.length > 1 ? `${fresh.length} project settings changes` : "Project settings changed",
+      title: fresh.length > 1 ? `${fresh.length} new updates` : newest.kind === "campaign" ? "Campaign is live" : "Project settings changed",
       description: `${d.who} ${d.what}.`,
       action: (
-        <ToastAction altText="View changes" onClick={() => { markNoticesRead([newest.id]); router.push(`/studio-dashboard/hub-profile?tab=${newest.tab}`); }}>
+        <ToastAction altText="View changes" onClick={() => { markNoticesRead([newest.id]); router.push(noticeUrl(newest)); }}>
           View
         </ToastAction>
       ),
@@ -213,8 +213,9 @@ export default function StudioHeader({ title, showLogo = false, network: control
             <NotificationsPanel
               items={notifications} notices={notices} unread={unread} onOpen={openProposal} onMarkRead={markRead}
               onMarkNoticesRead={markNoticesRead}
-              onOpenNotice={n => { setOpen(null); router.push(`/studio-dashboard/hub-profile?tab=${n.tab}`); }}
+              onOpenNotice={n => { setOpen(null); router.push(noticeUrl(n)); }}
               onViewAll={openProposal}
+              onViewChanges={() => { setOpen(null); router.push("/studio-dashboard/admin-management?tab=history"); }}
             />
           )}
         </div>

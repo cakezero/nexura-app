@@ -12,6 +12,9 @@ import { useLiveRefresh } from "../../hooks/use-live-refresh";
 import StudioDropdown from "../studio/StudioDropdown";
 import { OPEN_PROPOSALS_EVENT } from "../studio/useProposalNotifications";
 import { RECOMMENDED_SIGNERS } from "../studio/SignerReminder";
+import ActivityFeed, { CATEGORY_LABEL, type FeedCategory, type FeedItem } from "../studio/ActivityFeed";
+import { noticeParts, type NoticePart, type ProjectNotice } from "../studio/useProjectNotifications";
+import { useRouter } from "next/navigation";
 import { EMAIL_RE } from "@/lib/email";
 import {
   type BackendRole, type GovernanceSnapshot, type Proposal, type ProposalAction, type ProposalStatus, type SignedPayload,
@@ -31,8 +34,8 @@ type PendingInvite = {
   expiresAt?: string;
 };
 
-type Tab = "team" | "proposals" | "roles" | "signers";
-const TABS: Tab[] = ["team", "proposals", "roles", "signers"];
+type Tab = "team" | "proposals" | "roles" | "signers" | "history";
+const TABS: Tab[] = ["team", "proposals", "roles", "signers", "history"];
 type ProposalFilter = ProposalStatus | "all";
 const FILTERS: ProposalFilter[] = ["pending", "executed", "rejected", "all"];
 const EMPTY_PROPOSALS: Record<ProposalFilter, string> = {
@@ -253,6 +256,7 @@ const thCenter = thStyle.replace("text-left", "text-center");
 // ─── Main component ──────────────────────────────────────────────────────────
 export default function AdminManagement() {
   const { toast } = useToast();
+  const router = useRouter();
 
   const [admins, setAdmins] = useState<TeamMember[]>([]);
   const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
@@ -311,6 +315,15 @@ export default function AdminManagement() {
 
   useEffect(() => { fetchTeam(); }, [fetchTeam]);
 
+  const [activity, setActivity] = useState<ProjectNotice[] | null>(null);
+  const [historyFilter, setHistoryFilter] = useState<FeedCategory | "all">("all");
+  useEffect(() => {
+    if (tab !== "history") return;
+    projectApiRequest<{ items?: ProjectNotice[] }>({ method: "GET", endpoint: "/hub/activity" })
+      .then(r => setActivity(r.items ?? []))
+      .catch(() => setActivity(a => a ?? []));
+  }, [tab]);
+
   // The notification bell switches an already-open page to its Proposals tab
   useEffect(() => {
     const openProposals = () => { setTab("proposals"); setFilter("pending"); };
@@ -322,7 +335,7 @@ export default function AdminManagement() {
   const roleOf = useCallback((m: TeamMember) => studioRole(m, ownerId), [ownerId]);
   const me = admins.find(a => a._id === meId);
   const myRole: StudioRole = me ? roleOf(me) : ((getStoredProjectInfo()?.role === "superadmin") ? "superadmin" : "admin");
-  const tabs =([["team", "Team"], ["proposals", "Proposals"], ["roles", "Roles & permissions"], ["signers", "Signers"]] as [Tab, string][])
+  const tabs =([["team", "Team"], ["proposals", "Proposals"], ["roles", "Roles & permissions"], ["signers", "Signers"], ["history", "Hub activity"]] as [Tab, string][])
     .filter(([id]) => id !== "proposals" || myRole !== "admin");
   useEffect(() => { if (me && myRole === "admin" && tab === "proposals") setTab("team"); }, [me, myRole, tab, setTab]);
 
@@ -490,6 +503,58 @@ export default function AdminManagement() {
     all: gov.proposals.length,
   };
   const visibleProposals = gov.proposals.filter(p => filter === "all" || p.status === filter);
+
+  const openProposalList = () => { setTab("proposals"); setFilter("all"); };
+  const roleName = (r: BackendRole) => (r === "superadmin" ? "a Super Admin" : "an Admin");
+  const proposalParts = (a: ProposalAction, title: string): NoticePart[] => {
+    switch (a.kind) {
+      case "invite": return ["to invite ", { value: a.email }, ` as ${roleName(a.role)}`];
+      case "revokeInvite": return ["to cancel the invitation for ", { value: a.email }];
+      case "member": return ["to make ", { value: `@${a.adminName}` }, ` ${roleName(a.toRole)}`];
+      case "revoke": return ["to remove ", { value: `@${a.adminName}` }, " from the hub"];
+      case "signer": return [a.add ? "to add " : "to remove ", { value: `@${a.adminName}` }, " as a signer"];
+      case "replaceSigner": return ["to replace signer ", { value: `@${a.oldName}` }, " with ", { value: `@${a.newName}` }];
+      case "transferOwnership": return ["to transfer ownership to ", { value: a.newOwnerName ? `@${a.newOwnerName}` : "another admin" }];
+      case "thresholds": return ["to change approvals needed from ", { value: String(a.prevApproval) }, " to ", { value: String(a.approval) }];
+      case "endCampaign": return ["to end the campaign ", { value: a.campaignTitle ?? title }];
+      case "editCampaign": return ["to edit the campaign ", { value: a.campaignTitle ?? title }];
+      default: return [{ value: title }];
+    }
+  };
+  const historyItems: FeedItem[] = [
+    ...(activity ?? []).map(n => {
+      const d = noticeParts(n);
+      const category: FeedCategory = n.kind === "username" ? "team" : n.kind === "campaign" ? "campaign" : "settings";
+      return {
+        id: n.id, who: d.who, parts: d.parts, at: n.createdAt, category,
+        onOpen: category === "team" ? undefined
+          : () => router.push(category === "campaign" ? "/studio-dashboard/campaigns-tab" : `/studio-dashboard/hub-profile?tab=${n.tab}`),
+      };
+    }),
+    ...gov.proposals.flatMap(p => [
+      {
+        id: p.id, who: `@${p.proposedBy.name}`, parts: ["proposed ", ...proposalParts(p.action, p.title)], at: p.createdAt, category: "proposal" as const,
+        status: p.status === "executed" ? "approved" as const : p.status, onOpen: openProposalList,
+      },
+      ...Object.entries(p.votes ?? {}).filter(([id]) => id !== p.proposedBy.id).map(([id, vote]) => {
+        const name = admins.find(a => a._id === id)?.name;
+        return {
+          id: `${p.id}:${id}`, who: name ? `@${name}` : "A former admin",
+          parts: [`${vote === "approve" ? "approved" : "rejected"} `, { value: `@${p.proposedBy.name}` }, "’s proposal ", ...proposalParts(p.action, p.title)],
+          at: p.signatures?.[id]?.signedAt ?? p.resolvedAt ?? p.createdAt, category: "proposal" as const, onOpen: openProposalList,
+          status: vote === "approve" ? "approved" as const : "rejected" as const,
+        };
+      }),
+      ...(p.status !== "pending" && p.resolvedAt ? [{
+        id: `${p.id}:outcome`, who: `@${p.proposedBy.name}’s`,
+        parts: ["proposal ", ...proposalParts(p.action, p.title), ` was ${p.status === "executed" ? "executed" : "rejected"}`],
+        at: p.resolvedAt, category: "proposal" as const, onOpen: openProposalList,
+        status: p.status === "executed" ? "executed" as const : "rejected" as const,
+      }] : []),
+    ]),
+  ];
+  const historyCount = (c: FeedCategory | "all") => c === "all" ? historyItems.length : historyItems.filter(i => i.category === c).length;
+  const shownHistory = historyFilter === "all" ? historyItems : historyItems.filter(i => i.category === historyFilter);
 
   // Signer candidates: Super Admins who aren't signers yet and have no signer change waiting
   const pendingSignerChange = (adminId: string) =>
@@ -801,6 +866,27 @@ export default function AdminManagement() {
                 })}
               </div>
             )}
+          </div>
+        )}
+
+        {/* ─── HUB ACTIVITY ─────────────────────────────────────────────── */}
+        {tab === "history" && (
+          <div className="mt-[18px]">
+            <SegmentedTabs<FeedCategory | "all">
+              label="Activity type" value={historyFilter} onChange={setHistoryFilter}
+              items={(["all", "settings", "team", "proposal", "campaign"] as const).map(c => ({
+                id: c, label: `${c === "all" ? "All" : CATEGORY_LABEL[c]} · ${historyCount(c)}`,
+              }))}
+            />
+            <section className="mt-[16px] rounded-[40px] border-[0.833px] border-solid border-[rgba(28,37,51,0.09)] bg-white px-[20px] pb-[14px] pt-[4px] md:px-[28px]">
+              {activity === null ? (
+                <p className="py-[28px] text-[14px] text-[#69728a]">Loading activity…</p>
+              ) : shownHistory.length === 0 ? (
+                <p className="py-[28px] text-center text-[14px] text-[#69728a]">Nothing here yet.</p>
+              ) : (
+                <ActivityFeed items={shownHistory} />
+              )}
+            </section>
           </div>
         )}
 

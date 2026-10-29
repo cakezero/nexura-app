@@ -13,7 +13,6 @@ import { STUDIO_X_RETURN_KEY, getAuthUrl } from "@/lib/generateXAuthUrl";
 import CategoryPicker, { CategoryTags } from "../auth/CategoryPicker";
 import { MAX_HUB_CATEGORIES } from "@/lib/hubCategories";
 
-/** Where a setup step sends you: a card on Project Profile, or the Account settings page. */
 export type SetupTarget = "project" | "accounts" | "account";
 
 type Availability = { state: "idle" | "checking" | "ok" | "bad"; reason?: string };
@@ -393,7 +392,6 @@ export function ProjectPanel({ p }: { p: StudioProfile }) {
         Edit <img src="/studio-profile/edit.svg" alt="" className="size-[12.988px]" />
       </SmallButton>
     );
-    // A description is too long to sit right-aligned beside its title
     if (f.key === "description") {
       return (
         <Row

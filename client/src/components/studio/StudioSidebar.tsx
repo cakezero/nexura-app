@@ -170,7 +170,6 @@ export default function StudioSidebar({
           })}
         </nav>
 
-        {/* Signed-in admin -- opens account settings */}
         <button
           onClick={() => navigate("accountSettings")}
           aria-label="Account settings"
