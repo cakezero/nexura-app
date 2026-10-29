@@ -21,7 +21,7 @@ import { uploadImg } from "@/utils/img.utils";
 import { FileTypeError, uploadFile } from "@/utils/file.utils";
 import { isHubOwner, ownsHubRecord, submissionInHub } from "@/utils/hubOwnership";
 import { USERNAME_RULE, usernameTaken } from "@/utils/hubAccounts";
-import { notifyProjectChange } from "@/utils/hubNotifications";
+import { notifyProjectChange, recordHubActivity } from "@/utils/hubNotifications";
 import { hubNotification } from "@/models/hubNotification.model";
 
 const OWNER_ONLY_SOCIALS = "only the studio Owner can connect or disconnect its X, Discord and Telegram";
@@ -269,7 +269,7 @@ export const updateIds = async (req: GlobalRequest, res: GlobalResponse) => {
       await userHub.findByIdAndUpdate(req.admin.hub, updatePayload);
     } else {
       await hub.findByIdAndUpdate(req.admin.hub, updatePayload);
-      void notifyProjectChange(req, ["discord"]);
+      void notifyProjectChange(req, ["discord"], [{ field: "discord", to: updatePayload.discordServer || "connected" }]);
     }
 
     res.status(OK).json({ message: "ids updated successfully" });
@@ -337,7 +337,7 @@ export const disconnectHubDiscord = async (req: GlobalRequest, res: GlobalRespon
       discordServer: "",
       discordSessionId: "",
     });
-    void notifyProjectChange(req, ["discord"]);
+    void notifyProjectChange(req, ["discord"], [{ field: "discord" }]);
 
     res.status(OK).json({ message: "discord disconnected" });
   } catch (error) {
@@ -447,7 +447,10 @@ export const updateHub = async (req: GlobalRequest, res: GlobalResponse) => {
     // The other Owner/Super Admins hear about project settings changes (they don't go through proposals)
     const changed = Object.keys(safeBody).filter(f => String(before?.[f] ?? "") !== safeBody[f]);
     if (categories && categories.join() !== (before?.categories ?? []).join()) changed.push("categories");
-    void notifyProjectChange(req, changed);
+    const details = changed.map(f => f === "categories"
+      ? { field: f, from: (before?.categories ?? []).join(", "), to: categories!.join(", ") }
+      : { field: f, from: String(before?.[f] ?? ""), to: safeBody[f] });
+    void notifyProjectChange(req, changed, details);
     res.status(OK).json(updatedHub);
   } catch (error) {
     if (error instanceof FileTypeError) {
@@ -1614,15 +1617,36 @@ export const getHubNotifications = async (req: GlobalRequest, res: GlobalRespons
   try {
     const items = await hubNotification.find({ hub: req.admin?.hub, recipients: req.id })
       .sort({ createdAt: -1 }).limit(50).lean() as any[];
-    res.status(OK).json({
-      items: items.map(n => ({
-        id: String(n._id), kind: n.kind, actorName: n.actorName, changes: n.changes ?? [], tab: n.tab ?? "project",
-        createdAt: n.createdAt, readByMe: (n.readBy ?? []).some((r: unknown) => String(r) === String(req.id)),
-      })),
-    });
+    res.status(OK).json({ items: items.map(n => noticeJson(n, req.id)) });
   } catch (error) {
     logger.error(error);
     res.status(INTERNAL_SERVER_ERROR).json({ error: "error loading notifications" });
+  }
+};
+
+const noticeJson = (n: any, me?: string) => ({
+  id: String(n._id), kind: n.kind, actorName: n.actorName, changes: n.changes ?? [], details: n.details ?? [],
+  tab: n.tab ?? "project", createdAt: n.createdAt, readByMe: (n.readBy ?? []).some((r: unknown) => String(r) === String(me)),
+});
+
+export const getHubActivity = async (req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const hubId = req.admin?.hub;
+    const [items, launched] = await Promise.all([
+      hubNotification.find({ hub: hubId, kind: { $ne: "campaign" } }).sort({ createdAt: -1 }).limit(200).lean() as Promise<any[]>,
+      campaign.find({ hub: hubId, status: { $in: ["Active", "Scheduled", "Ended"] } }).select("title status publishSignature createdAt updatedAt").sort({ createdAt: -1 }).limit(100).lean() as Promise<any[]>,
+    ]);
+    const publisherIds = [...new Set(launched.map(c => c.publishSignature?.adminId).filter((id): id is string => mongoose.Types.ObjectId.isValid(id ?? "")))];
+    const names = new Map((await hubAdmin.find({ _id: { $in: publisherIds } }).select("name").lean() as any[]).map(a => [String(a._id), String(a.name ?? "")]));
+    const campaigns = launched.map(c => ({
+      id: `campaign:${c._id}`, kind: "campaign", actorName: names.get(String(c.publishSignature?.adminId)) ?? "",
+      changes: ["campaign"], details: [{ field: "campaign", from: c.status === "Scheduled" ? "Scheduled" : "Active", to: String(c.title ?? "") }],
+      tab: "project", createdAt: c.publishSignature?.signedAt ?? c.createdAt, readByMe: true,
+    }));
+    res.status(OK).json({ items: [...items.map(n => noticeJson(n, req.id)), ...campaigns] });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "error loading the change history" });
   }
 };
 
@@ -1676,6 +1700,7 @@ export const changeUsername = async (req: GlobalRequest, res: GlobalResponse) =>
       res.status(FORBIDDEN).json({ error: `You can change your username only ${MAX_USERNAME_CHANGES} times.` });
       return;
     }
+    void recordHubActivity(req, "username", [{ field: "username", from: String(req.admin?.name ?? ""), to: updated.name }]);
     res.status(OK).json({ name: updated.name, usernameChanges: updated.usernameChanges, changesLeft: Math.max(0, MAX_USERNAME_CHANGES - updated.usernameChanges) });
   } catch (error) {
     logger.error(error);

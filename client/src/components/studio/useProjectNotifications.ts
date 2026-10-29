@@ -5,8 +5,10 @@ import { PROJECT_SESSION_EVENT, getStoredProjectToken, isProjectSessionActive, p
 
 const POLL_MS = 30_000;
 
+export type ChangeDetail = { field: string; from?: string; to?: string };
+
 export type ProjectNotice = {
-  id: string; kind: "project"; actorName: string; changes: string[]; tab: "project" | "accounts";
+  id: string; kind: "project" | "username" | "campaign"; actorName: string; changes: string[]; details?: ChangeDetail[]; tab: "project" | "accounts";
   createdAt: string; readByMe: boolean;
 };
 
@@ -56,9 +58,53 @@ export function useProjectNotifications() {
   return { items, unread: items.filter(n => !n.readByMe).length, markRead };
 }
 
-/** "Ada changed the website and description." */
-export function describeNotice(n: ProjectNotice) {
-  const list = n.changes.length <= 1 ? n.changes.join("")
-    : `${n.changes.slice(0, -1).join(", ")} and ${n.changes[n.changes.length - 1]}`;
-  return { who: n.actorName || "An admin", what: `changed the ${list || "project settings"}` };
+
+export type NoticePart = string | { value: string; href?: string };
+
+const v = (value: string, href?: string): NoticePart => ({ value, href });
+const link = (url: string) => v(url.replace(/^https?:\/\//, "").replace(/\/$/, ""), url);
+const handle = (s: string) => `@${s.replace(/^@/, "")}`;
+
+function fromTo(noun: string, from: string | undefined, to: string | undefined, show: (s: string) => NoticePart): NoticePart[] {
+  if (from && to) return [`updated the ${noun} from `, show(from), " to ", show(to)];
+  if (to) return [`added the ${noun} `, show(to)];
+  if (from) return [`removed the ${noun} `, show(from)];
+  return [`updated the ${noun}`];
 }
+
+function detailParts({ field, from, to }: ChangeDetail): NoticePart[] {
+  switch (field) {
+    case "name": return fromTo("project name", from, to, s => v(s));
+    case "website": return fromTo("website", from, to, link);
+    case "categories": return fromTo("tags", from, to, s => v(s));
+    case "description": return [to ? "updated the description" : "removed the description"];
+    case "logo": return ["updated the project picture"];
+    case "document": return ["updated the project document"];
+    case "xAccount": return to ? ["linked the X account ", v(handle(to))] : ["unlinked the X account ", ...(from ? [v(handle(from))] : [])];
+    case "discord": return to ? ["connected the Discord server ", v(to)] : ["disconnected Discord"];
+    case "telegram": return to ? ["connected Telegram ", v(to)] : ["disconnected Telegram"];
+    default: return [`updated the ${field}`];
+  }
+}
+
+const joinParts = (lists: NoticePart[][]): NoticePart[] =>
+  lists.flatMap((l, i) => [...(i === 0 ? [] : [i === lists.length - 1 ? " and " : ", "]), ...l]);
+
+export function noticeParts(n: ProjectNotice): { who: string; parts: NoticePart[] } {
+  const d = n.details?.[0];
+  if (n.kind === "username" && d) return { who: handle(d.to ?? ""), parts: ["changed their username from ", v(handle(d.from ?? "")), " to ", v(handle(d.to ?? ""))] };
+  const who = n.actorName ? handle(n.actorName) : "An admin";
+  if (n.kind === "campaign" && d) return { who, parts: [`${d.from === "Scheduled" ? "scheduled" : "published"} the campaign `, v(d.to ?? "")] };
+  if (n.details?.length) return { who, parts: joinParts(n.details.map(detailParts)) };
+  const names = n.changes.map(c => c === "categories" ? "tags" : c);
+  const list = names.length <= 1 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+  return { who, parts: [`updated the ${list || "project settings"}`] };
+}
+
+export function describeNotice(n: ProjectNotice) {
+  const { who, parts } = noticeParts(n);
+  return { who, what: parts.map(p => typeof p === "string" ? p : p.value).join("") };
+}
+
+export const noticeUrl = (n: ProjectNotice) =>
+  n.kind === "campaign" ? "/studio-dashboard/campaigns-tab" : `/studio-dashboard/hub-profile?tab=${n.tab}`;

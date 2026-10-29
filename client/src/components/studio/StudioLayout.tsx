@@ -69,7 +69,7 @@ export default function StudioLayout({ children, title = "Nexura Studio", hideHe
 
         <div className="flex-1 flex flex-col overflow-hidden">
           {!hideHeader && (
-            <div className="hidden md:block">
+            <div className="hidden bg-[#f7f5ff] md:block">
               <StudioHeader title={title} />
             </div>
           )}
