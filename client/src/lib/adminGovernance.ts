@@ -83,7 +83,7 @@ export const ROLE_LABEL: Record<StudioRole, string> = {
 };
 
 export const ROLE_SUMMARY: Record<StudioRole, string> = {
-  owner: "Everything a Super Admin can do, and always a signer.",
+  owner: "Everything a Super Admin can do, always a signer, and the only one who connects or disconnects the project's socials.",
   superadmin: "Creates, publishes and funds campaigns, makes payments and edits the project profile.",
   admin: "Validates tasks manually. Cannot create, publish, edit, disable, close or fund campaigns, and cannot make payments.",
 };
@@ -92,7 +92,7 @@ export const ROLE_SUMMARY: Record<StudioRole, string> = {
 export type Permission =
   | "validateTasks" | "publishCampaigns" | "editCampaigns" | "proposeCloseDisable"
   | "fundCampaigns" | "makePayments" | "withdrawRewards"
-  | "editProfile"
+  | "editProfile" | "viewSocials" | "manageSocials"
   | "alwaysSigner" | "proposeChanges" | "voteProposals"
   | "manageAdmins";
 
@@ -114,7 +114,14 @@ export const PERMISSION_GROUPS: { title: string; items: { id: Permission; label:
       { id: "withdrawRewards", label: "Withdraw unclaimed rewards" },
     ],
   },
-  { title: "Project", items: [{ id: "editProfile", label: "Edit the project profile" }] },
+  {
+    title: "Project",
+    items: [
+      { id: "editProfile", label: "Edit the project profile" },
+      { id: "viewSocials", label: "See connected project accounts" },
+      { id: "manageSocials", label: "Connect or disconnect project X, Discord and Telegram" },
+    ],
+  },
   {
     title: "Governance",
     items: [
@@ -132,7 +139,7 @@ const ALL_PERMISSIONS = PERMISSION_GROUPS.flatMap(g => g.items.map(i => i.id));
 
 const ROLE_PERMISSIONS: Record<StudioRole, Set<Permission>> = {
   owner: new Set(ALL_PERMISSIONS),
-  superadmin: new Set(ALL_PERMISSIONS.filter(p => p !== "alwaysSigner")),
+  superadmin: new Set(ALL_PERMISSIONS.filter(p => p !== "alwaysSigner" && p !== "manageSocials")),
   admin: new Set<Permission>(["validateTasks"]),
 };
 

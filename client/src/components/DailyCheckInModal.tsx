@@ -99,17 +99,15 @@ export default function DailyCheckInModal({ open, onOpenChange, onCheckInSuccess
     }
   }, [justClaimed]);
 
-  // Trigger XP counter animation after GIF finishes playing
   useEffect(() => {
-    if (gifLoaded && claimRewardXp > 0) {
-      const timer = setTimeout(() => {
-        animateXp(claimRewardXp);
-        // Stop the GIF from looping by hiding it after one playthrough
-        setGifDone(true);
-      }, CHEST_GIF_DURATION_MS);
-      return () => clearTimeout(timer);
-    }
-  }, [gifLoaded, claimRewardXp]);
+    if (claimRewardXp > 0) animateXp(claimRewardXp);
+  }, [claimRewardXp]);
+
+  useEffect(() => {
+    if (!gifLoaded) return;
+    const timer = setTimeout(() => setGifDone(true), CHEST_GIF_DURATION_MS);
+    return () => clearTimeout(timer);
+  }, [gifLoaded]);
 
 
   ///////////// TEST
@@ -941,14 +939,11 @@ const isUpcoming = streak < m.day;
               onPlaying={() => setGifLoaded(true)}
             >
               <source src="/chest.webm" type="video/webm" />
-              <source src="/chest.mp4" type="video/mp4" onError={() => { setGifDone(true); animateXp(claimRewardXp); }} />
+              <source src="/chest.mp4" type="video/mp4" onError={() => setGifDone(true)} />
             </video>
           )}
         </div>
 
-        {/* XP BELOW MEDIA (NOT INSIDE) — always shown once claimed so the
-            counter reserves its space (no layout shift). It sits at +0 XP
-            during the reward video, then counts up once the video ends. */}
         {claimed && (
           <div className="mb-3">
             <div className="text-[#E990F7] text-3xl font-bold">
