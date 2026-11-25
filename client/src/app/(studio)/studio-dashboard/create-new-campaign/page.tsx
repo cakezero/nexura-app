@@ -230,6 +230,16 @@ export default function Page() {
 
   // ?edit=<id> reopens a draft where it was left, or a live campaign for editing
   const [loaded, setLoaded] = useState<{ state: BuilderState | null; coverUrl: string | null; live: boolean } | null>(null);
+  const [scoreStats, setScoreStats] = useState<{ totalUsers: number; buckets: { fromPct: number; toPct: number; users: number }[] } | null>(null);
+  useEffect(() => {
+    projectApiRequest<{ total: number; histogram: number[] }>({ method: "GET", endpoint: "/hub/nexura-score-levels" })
+      .then((d) => {
+        if (!Array.isArray(d?.histogram)) return;
+        const buckets = Array.from({ length: 10 }, (_, i) => ({ fromPct: i * 10, toPct: i * 10 + 10, users: d.histogram.slice(i * 10, i === 9 ? 101 : i * 10 + 10).reduce((a, b) => a + b, 0) }));
+        setScoreStats({ totalUsers: d.total, buckets });
+      })
+      .catch(() => setScoreStats(null));
+  }, []);
   const [loadError, setLoadError] = useState("");
   useEffect(() => {
     projectApiRequest<HubMe>({ method: "GET", endpoint: "/hub/me" })
@@ -531,6 +541,7 @@ export default function Page() {
         <CreateNewCampaigns
           initialState={loaded.state}
           initialCoverUrl={loaded.coverUrl}
+          retentionStats={scoreStats}
           mode={loaded.live ? "live" : "create"}
           walletAddress={wallet.address}
           onConnectWallet={wallet.connect}

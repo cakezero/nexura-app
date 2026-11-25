@@ -1,5 +1,6 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { NexuraScoreInfoButton } from "@/components/studio/NexuraScoreExplainer";
+import { ScoreLevels } from "@/components/studio/ScoreLevels";
 import {
   ArrowLeft,
   ArrowRight,
@@ -1294,6 +1295,7 @@ function RewardsStep(props: {
           <span>%</span>
         </div>
         <p className="mt-2 text-[12px] text-[#98A0B3]">The Nexura score a participant needs to be reward-eligible.</p>
+        <ScoreLevels value={props.retentionReq} onPick={props.onRetention} />
       </section>
 
       <section className="mt-4 rounded-[28px] bg-white p-5 md:p-6">

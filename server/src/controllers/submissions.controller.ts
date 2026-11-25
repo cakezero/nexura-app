@@ -135,6 +135,28 @@ function liveStatus(c: any): "Active" | "Upcoming" | "Ended" {
 }
 
 /** GET /hub/submission-campaigns — the hub's published campaigns with review and participation counts. */
+export const RETENTION_LEVELS = [100, 90, 80, 70, 50] as const;
+export const levelCounts = (values: Array<number | null>) => {
+  const v = values.filter((x): x is number => x !== null);
+  return { total: v.length, levels: RETENTION_LEVELS.map(min => ({ min, count: v.filter(x => x >= min).length })) };
+};
+
+/** GET /hub/nexura-score-levels: how many Nexura members have each Nexura score (0–100). */
+export const getNexuraScoreLevels = async (_req: GlobalRequest, res: GlobalResponse) => {
+  try {
+    const rows = await user.aggregate([
+      { $match: { "nexuraScore.rate": { $type: "number" } } },
+      { $group: { _id: { $round: ["$nexuraScore.rate", 0] }, n: { $sum: 1 } } },
+    ]) as Array<{ _id: number; n: number }>;
+    const histogram = Array.from({ length: 101 }, () => 0);
+    for (const r of rows) { const i = Math.min(100, Math.max(0, Math.round(r._id))); histogram[i] = (histogram[i] ?? 0) + r.n; }
+    res.status(OK).json({ total: histogram.reduce((a, b) => a + b, 0), histogram });
+  } catch (error) {
+    logger.error(error);
+    res.status(INTERNAL_SERVER_ERROR).json({ error: "Failed to load Nexura scores" });
+  }
+};
+
 export const getSubmissionCampaigns = async (req: GlobalRequest, res: GlobalResponse) => {
   try {
     const scope = await campaignScope(String(req.admin.hub));
@@ -355,6 +377,7 @@ export const getCampaignSubmissionDetails = async (req: GlobalRequest, res: Glob
         averageRetention: avg(participants.map(p => p.retentionRate)),
         averageNexuraScore: avg(participants.map(p => p.nexuraScore)),
         meetingRequirement: requirement === null ? null : participants.filter(p => p.meetsRequirement).length,
+        retention: levelCounts(joins.map(j => scoreCampaignRetention(stages, doneByUser.get(String(j.user)) ?? new Map(), new Date(j.createdAt).getTime(), now).retentionRate)),
         pendingSubmissions: submissions.filter(s => s.status === "pending").length,
         approvedSubmissions: submissions.filter(s => s.status === "done").length,
         rejectedSubmissions: submissions.filter(s => s.status === "retry").length,

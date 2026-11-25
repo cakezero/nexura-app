@@ -95,6 +95,20 @@ export const performIntuitionOnchainAction = (params: { action: string; userId: 
 	return run;
 };
 
+export const sendServerContractTx = (call: { address: GlobalAddress; abi: readonly unknown[]; functionName: string; args: readonly unknown[]; value?: bigint }) => {
+	const send = async () => {
+		const nonce = await nextNonce();
+		const hash = await getWalletClient().writeContract({ ...call, account: getAccount(), chain, nonce } as any);
+		lastNonce = { value: nonce, at: Date.now() };
+		const receipt = await getPublicClient().waitForTransactionReceipt({ hash, timeout: 120_000 });
+		if (receipt.status !== "success") throw new Error(`transaction ${hash} reverted`);
+		return hash;
+	};
+	const run = sendQueue.then(send, send);
+	sendQueue = run.catch(() => {});
+	return run;
+};
+
 const sendOnchainAction = async ({ action, contractAddress, userId, level }: { action: string; userId: string; level?: string; contractAddress?: string }) => {
 	const call = ({
 		"join": { address: contractAddress, fn: "function joinCampaign(string memory userId)", functionName: "joinCampaign" },

@@ -16,7 +16,7 @@ import { markMyFeedbackSeen, myFeedback, replyToMyFeedback, submitFeedback } fro
 import { fetchHubCampaigns, publishCampaign } from "@/controllers/campaign.controller";
 import { requireStudioPayment } from "@/controllers/studioPayment.controller";
 import { validateCampaignSubmissions, validateCampaignSubmissionsBulk, getCampaignSubmissions, getHub, getHubAdmins, updateIds, checkUsernameAvailable, changeUsername, getHubNotifications, getHubActivity, markHubNotificationsRead } from "@/controllers/hub.controller";
-import { getSubmissionCampaigns, getCampaignSubmissionDetails } from "@/controllers/submissions.controller";
+import { getSubmissionCampaigns, getCampaignSubmissionDetails, getNexuraScoreLevels } from "@/controllers/submissions.controller";
 import { disableTwoFactor, enableTwoFactor, setupTwoFactor, verifyTwoFactorLogin, TWO_FACTOR_PURPOSE } from "@/controllers/twoFactor.controller";
 import { getRetentionDraft, saveRetentionDraft } from "@/controllers/retentionDraft.controller";
 import hubAppRoutes from "./hub.app.routes";
@@ -33,6 +33,7 @@ router
   .get("/campaign-submissions", authenticateHubAdmin2, getCampaignSubmissions)
   .get("/submission-campaigns", authenticateHubAdmin2, getSubmissionCampaigns)
   .get("/campaign-submission-details", authenticateHubAdmin2, getCampaignSubmissionDetails)
+  .get("/nexura-score-levels", authenticateHubAdmin2, getNexuraScoreLevels)
   .post("/validate-campaign-submissions", authenticateHubAdmin2, validateCampaignSubmissions)
   .post("/validate-campaign-submissions-bulk", authenticateHubAdmin2, validateCampaignSubmissionsBulk)
   .get("/me", authenticateHubAdmin2, getHub)

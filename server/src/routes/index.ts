@@ -21,6 +21,8 @@ import { createAdmin, adminLogin, checkAdminSignInWallet, forgotAdminPassword, r
 import { authenticateUser2, authenticateAdmin, authenticateUser } from "@/middlewares/auth.middleware";
 import userHubRoutes from "./userHub.routes.ts";
 import { studioGate } from "@/middlewares/studioGate";
+import { socialGraphGate } from "@/middlewares/socialGraphGate";
+import socialGraphRoutes from "./socialGraph.routes.ts";
 import { attemptGuard, authIpLimiter, codeSendLimiter, twoFactorAccount } from "@/middlewares/authGuard";
 // import testSeedRoutes from "./test-seed.routes.ts";
 import { confirmHubEmailValidation, validateHubEmail, adminConnectDiscord, discordAdminCallback, proveWallet } from "@/controllers/hub.auth.controller.ts";
@@ -64,6 +66,7 @@ router
   .use("/lesson", lessonRoutes)
   .post("/hub-auth/validate-email", studioGate, codeSendLimiter, validateHubEmail)
 	.post("/auth/confirm-hub-email-validation", studioGate, authIpLimiter, attemptGuard("hub-email-code"), confirmHubEmailValidation)
+	.use("/graph", socialGraphGate, socialGraphRoutes)
 	.use("/user", authenticateUser, userRoutes);
 
 export default router;

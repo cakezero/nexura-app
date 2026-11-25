@@ -199,9 +199,10 @@ const userSchema = new Schema({
 		type: mongoose.Schema.Types.ObjectId,
 		ref: "campaign",
 	}],
-	// Nexura score: average campaign retention across settled campaigns (see utils/retention.ts)
 	nexuraScore: {
 		rate: { type: Number, default: null },
+		retention: { type: Number, default: null },
+		trust: { type: Number, default: 0 },
 		campaigns: { type: Number, default: 0 },
 		updatedAt: { type: Date },
 	},
