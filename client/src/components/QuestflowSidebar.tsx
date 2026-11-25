@@ -14,6 +14,8 @@ import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import AnimatedBackground from "./AnimatedBackground";
+import { Network } from "lucide-react";
+import { isSocialGraphOn } from "@/lib/socialGraph/config";
 
 const mainNavItems = [
   { title: "Learn", subtitle: "", icon: "/sidebar-icons/learn.png", href: "/learn", activeClass: "nav-learn-active" },
@@ -21,6 +23,7 @@ const mainNavItems = [
   { title: "Referrals", icon: "/sidebar-icons/referrals.png", href: "/referrals", activeClass: "nav-referrals-active" },
   { title: "Quests", icon: "/sidebar-icons/quests.png", href: "/quests", activeClass: "nav-quests-active" },
   { title: "Campaigns", icon: "/sidebar-icons/campaigns.png", href: "/campaigns", activeClass: "nav-campaigns-active" },
+  { title: "Social Graph", icon: "", href: "/social-graph", activeClass: "nav-studio-active", testAppOnly: true },
   { title: "Ecosystem Dapps", icon: "/sidebar-icons/ecosystem-dapps.png", href: "/ecosystem-dapps", activeClass: "nav-ecosystem-dapps-active" },
   { title: "Leaderboard", icon: "/sidebar-icons/leaderboard.png", href: "/leaderboard", activeClass: "nav-leaderboard-active" },
   { title: "Portal Claims", icon: "/sidebar-icons/portal-claims.png", href: "/portal-claims", activeClass: "nav-portal-claims-active" },
@@ -85,9 +88,9 @@ export default function NexuraSidebar() {
                 mounted ? "translate-x-0 opacity-100" : "-translate-x-4 opacity-0"
               }`}
             >
-              {mainNavItems.map((item) => {
+              {mainNavItems.filter((item) => !("testAppOnly" in item) || (mounted && isSocialGraphOn())).map((item) => {
                 const isActive =
-                  pathname === item.href ||
+                  pathname === item.href || (item.href === "/social-graph" && pathname.startsWith("/social-graph/")) ||
                   (item.href === "/" && (pathname === "/" || pathname === "/discover"));
                 return (
                   <SidebarMenuItem key={item.title}>
@@ -103,11 +106,15 @@ export default function NexuraSidebar() {
                         className="w-full flex items-center gap-1 group-data-[collapsible=icon]:justify-center"
                         data-testid={`nav-${item.title.toLowerCase().replace(/\s+/g, "-")}`}
                       >
-                        <img
-                          src={item.icon}
-                          alt={item.title}
-                          className="w-5 h-5 flex-shrink-0 object-contain"
-                        />
+                        {item.icon ? (
+                          <img
+                            src={item.icon}
+                            alt={item.title}
+                            className="w-5 h-5 flex-shrink-0 object-contain"
+                          />
+                        ) : (
+                          <Network className="w-5 h-5 flex-shrink-0" aria-hidden />
+                        )}
                         <span className="text-sm font-medium truncate transition-[opacity,max-width,margin-left] duration-300 ease-in-out overflow-hidden max-w-[180px] ml-2 group-data-[collapsible=icon]:max-w-0 group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:ml-0">
                           {item.title}
                         </span>

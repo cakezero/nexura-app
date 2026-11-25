@@ -4,13 +4,14 @@ import { campaignQuest } from "@/models/quests.model";
 import { campaignQuestCompleted } from "@/models/questsCompleted.models";
 import { user } from "@/models/user.model";
 import { parseDate } from "@/utils/dates";
+import { blendedScore, trustScores } from "@/utils/graphTrust";
 
 /*
  * Retention: how much of a campaign's journey a person completes.
  *
  * A stage counts once every task in it is done, and it stays counted (retention doesn't expire).
  * Campaign retention = completed stages / all stages, e.g. 3 of 6 stages = 50%.
- * Nexura score = the average of a person's campaign retention across the campaigns that are
+ * Retention score = the average of a person's campaign retention across the campaigns that are
  * settled for them: the campaign has ended, or they completed every stage. A campaign still running
  * that they haven't finished doesn't pull their score down yet.
  */
@@ -87,7 +88,7 @@ const isEnded = (c: any, nowMs: number) => {
 };
 
 export type UserCampaignRetention = { campaignId: string; stagesCompleted: number; stagesTotal: number; retentionRate: number | null; settled: boolean };
-export type UserRetention = { nexuraScore: number | null; campaigns: number; perCampaign: Map<string, UserCampaignRetention> };
+export type UserRetention = { nexuraScore: number | null; retentionScore: number | null; trust: number; campaigns: number; perCampaign: Map<string, UserCampaignRetention> };
 
 /** Computes campaign retention and the Nexura score for these people from their task completions. */
 export async function computeRetention(userIds: string[], nowMs = Date.now()): Promise<Map<string, UserRetention>> {
@@ -118,7 +119,7 @@ export async function computeRetention(userIds: string[], nowMs = Date.now()): P
     doneByUser.get(uid)!.set(String(d.campaignQuest), doneAt(d));
   }
 
-  for (const uid of userIds) result.set(uid, { nexuraScore: null, campaigns: 0, perCampaign: new Map() });
+  for (const uid of userIds) result.set(uid, { nexuraScore: null, retentionScore: null, trust: 0, campaigns: 0, perCampaign: new Map() });
   for (const j of joins) {
     const uid = String(j.user);
     const cid = String(j.campaign);
@@ -134,7 +135,25 @@ export async function computeRetention(userIds: string[], nowMs = Date.now()): P
       settled: isEnded(c, nowMs) || score.stagesCompleted === score.stagesTotal,
     });
   }
-  for (const r of result.values()) Object.assign(r, nexuraScoreFrom([...r.perCampaign.values()]));
+  for (const r of result.values()) {
+    const { nexuraScore, campaigns } = nexuraScoreFrom([...r.perCampaign.values()]);
+    Object.assign(r, { nexuraScore, retentionScore: nexuraScore, campaigns });
+  }
+
+  const scored = [...result.entries()].filter(([, v]) => v.retentionScore !== null);
+  if (scored.length) {
+    const [trust, people] = await Promise.all([
+      trustScores(),
+      user.find({ _id: { $in: scored.map(([id]) => id) } }).select("_id address").lean() as Promise<any[]>,
+    ]);
+    if (trust.ok) {
+      const addressOf = new Map(people.map((p) => [String(p._id), String(p.address ?? "").toLowerCase()]));
+      for (const [id, v] of scored) {
+        v.trust = trust.ranks.get(addressOf.get(id) ?? "") ?? 0;
+        v.nexuraScore = blendedScore(v.retentionScore, v.trust);
+      }
+    }
+  }
   return result;
 }
 
@@ -152,7 +171,7 @@ export async function refreshUserRetention(userId: unknown): Promise<void> {
       },
     }));
     if (writes.length) await campaignCompleted.bulkWrite(writes as any);
-    await user.updateOne({ _id: uid }, { $set: { nexuraScore: { rate: r.nexuraScore, campaigns: r.campaigns, updatedAt: new Date() } } });
+    await user.updateOne({ _id: uid }, { $set: { nexuraScore: { rate: r.nexuraScore, retention: r.retentionScore, trust: r.trust, campaigns: r.campaigns, updatedAt: new Date() } } });
   } catch (err) {
     logger.error("retention refresh failed:", err);
   }

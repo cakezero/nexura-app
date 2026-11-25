@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { RetentionLevels } from "@/components/studio/ScoreLevels";
 import { AlertTriangle, Check, CheckCircle2, ChevronDown, Clock, Copy, Inbox, Lock, Search, Users } from "lucide-react";
 import { Input } from "../ui/input";
 import { cn } from "../../lib/utils";
@@ -55,7 +56,7 @@ type Claimer = {
 
 type CampaignDetails = {
   campaign: { _id: string; title: string; status: LiveStatus; nexuraScoreRequirementPct: number | null };
-  stats: { pendingSubmissions: number; approvedSubmissions: number; rejectedSubmissions: number };
+  stats: { participants?: number; pendingSubmissions: number; approvedSubmissions: number; rejectedSubmissions: number; retention?: { total: number; levels: { min: number; count: number }[] } };
   participants: Claimer[];
   submissions: CampaignSubmission[];
 };
@@ -337,6 +338,16 @@ function CampaignView({ campaignId, refreshKey, onBack }: { campaignId: string; 
           </div>
         ))}
       </div>
+
+      {stats.retention && (stats.participants ?? 0) > 0 && (
+        <div className={cn(CARD, "mt-[20px] p-[18px]")}>
+          <div className="mb-[12px] flex items-baseline justify-between gap-[12px]">
+            <span className="text-[14px] font-semibold text-[#1c2533]">Retention of everyone who joined</span>
+            <span className="text-[12.5px] text-[#69728a]">{compact(stats.participants ?? 0)} joined</span>
+          </div>
+          <RetentionLevels retention={stats.retention} joined={stats.participants ?? 0} />
+        </div>
+      )}
 
       <div className="mt-[24px] flex gap-6 border-b-[1.25px] border-[rgba(28,37,51,0.09)]">
         {([

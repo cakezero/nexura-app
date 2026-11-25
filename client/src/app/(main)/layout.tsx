@@ -9,6 +9,7 @@ import ProjectLogoutButton from "@/components/ProjectLogoutButton";
 import AnimatedBackground from "@/components/AnimatedBackground";
 import AnalyticsBackground from "@/components/AnalyticsBackground";
 import { isStudioLive } from "@/lib/studioAvailability";
+import { isSocialGraphOn } from "@/lib/socialGraph/config";
 import SupportWidget from "@/components/support/SupportWidget";
 import { useAuth } from "@/lib/auth";
 
@@ -32,7 +33,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       location.startsWith("/studio/reset-password");
 
     document.body.classList.toggle("studio-theme", isStudioRoute && isStudioLive());
-    document.body.classList.toggle("nexura-studio-light", location === "/nexura-studio" && isStudioLive());
+    document.body.classList.toggle("nexura-studio-light", (location === "/nexura-studio" && isStudioLive()) || (location.startsWith("/social-graph") && isSocialGraphOn()));
 
     return () => {
       document.body.classList.remove("studio-theme", "nexura-studio-light");

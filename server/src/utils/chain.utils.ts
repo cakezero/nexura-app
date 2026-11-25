@@ -37,6 +37,8 @@ const intuitionTestnet = defineChain({
 	},
 });
 
-const chain = network === "mainnet" ? intuitionMainnet : intuitionTestnet;
+const base = network === "mainnet" ? intuitionMainnet : intuitionTestnet;
+const rpcOverride = process.env.INTUITION_RPC_URL?.trim();
+const chain = rpcOverride ? { ...base, rpcUrls: { default: { http: [rpcOverride] } } } : base;
 
 export default chain;
